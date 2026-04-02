@@ -25,14 +25,58 @@ export function getDb() {
     const prodPath = join(process.cwd(), 'drizzle')
     const migrationsFolder = existsSync(join(devPath, 'meta')) ? devPath : prodPath
 
-    try {
-      migrate(_db, { migrationsFolder })
-    } catch (err) {
-      // Legacy DB (created by old schema.sql before Drizzle) — tables already
-      // exist so the migration fails with "table already exists". Fix it by
-      // ensuring the new tables exist and stamping all migrations as applied.
-      const msg = String(err && typeof err === 'object' && 'message' in err ? err.message : err)
-      if (msg.includes('already exists')) {
+    // Check for legacy DB (pre-Drizzle) and handle migration
+    const existingTables = sqlite.query(
+      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
+    ).all() as { name: string }[]
+    console.log('[db] Existing tables:', existingTables.map((t) => t.name).join(', '))
+    console.log('[db] Migrations folder:', migrationsFolder)
+    console.log('[db] Migrations folder exists:', existsSync(migrationsFolder))
+    console.log('[db] Journal exists:', existsSync(join(migrationsFolder, 'meta/_journal.json')))
+
+    const hasLegacyTables = existingTables.some((t) => t.name === 'devices')
+    const hasDrizzleMeta = existingTables.some((t) => t.name === '__drizzle_migrations')
+
+    if (hasLegacyTables && !hasDrizzleMeta) {
+      console.log('[db] Legacy DB detected (no __drizzle_migrations). Bootstrapping...')
+      // Add new tables the old schema didn't have
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS admin_accounts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          created_at TEXT DEFAULT (datetime('now'))
+        );
+      `)
+      sqlite.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
+      `)
+      // Create the Drizzle tracking table and stamp with far-future timestamp
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+          id SERIAL PRIMARY KEY,
+          hash text NOT NULL,
+          created_at numeric
+        );
+      `)
+      sqlite.exec(`
+        INSERT INTO __drizzle_migrations (hash, created_at)
+        VALUES ('legacy_stamp', 9999999999999);
+      `)
+      console.log('[db] Legacy bootstrap complete')
+    } else if (hasLegacyTables && hasDrizzleMeta) {
+      // Fix up any bad stamps from prior migration attempts
+      const stamps = sqlite.query('SELECT id, hash, created_at FROM __drizzle_migrations').all()
+      console.log('[db] Existing migration stamps:', JSON.stringify(stamps))
+      const maxCreatedAt = stamps.reduce((max: number, s: any) => Math.max(max, Number(s.created_at ?? 0)), 0)
+      if (maxCreatedAt < 9999999999000) {
+        console.log('[db] Bad stamps detected, fixing...')
+        sqlite.exec(`DELETE FROM __drizzle_migrations;`)
+        sqlite.exec(`
+          INSERT INTO __drizzle_migrations (hash, created_at)
+          VALUES ('legacy_stamp', 9999999999999);
+        `)
+        // Add new tables
         sqlite.exec(`
           CREATE TABLE IF NOT EXISTS admin_accounts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,19 +84,17 @@ export function getDb() {
             password_hash TEXT NOT NULL,
             created_at TEXT DEFAULT (datetime('now'))
           );
+        `)
+        sqlite.exec(`
           CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
         `)
-        // Wipe any bad stamps from prior migration attempts and insert a
-        // far-future stamp so Drizzle considers all current migrations applied.
-        sqlite.exec(`DELETE FROM __drizzle_migrations;`)
-        sqlite.exec(`
-          INSERT INTO __drizzle_migrations (hash, created_at)
-          VALUES ('legacy_stamp', 9999999999999);
-        `)
-      } else {
-        throw err
+        console.log('[db] Stamps fixed')
       }
     }
+
+    console.log('[db] Running Drizzle migrate...')
+    migrate(_db, { migrationsFolder })
+    console.log('[db] Migration complete')
   }
   return _db
 }
