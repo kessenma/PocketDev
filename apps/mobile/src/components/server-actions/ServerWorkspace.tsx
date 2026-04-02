@@ -1,0 +1,150 @@
+import React from 'react'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { spacing, typographyScale, borderRadius } from '@pocketdev/shared/theme'
+import { useTheme } from '../../contexts/ThemeContext'
+import { useAdaptiveLayout } from '../../hooks/useAdaptiveLayout'
+import { useServerActionsStore } from '../../stores/server-actions'
+import SplitViewLayout from '../layout/SplitViewLayout'
+import ServerErrorList from './ServerErrorList'
+import ServerHealthHero from './ServerHealthHero'
+import ServerMetricGrid from './ServerMetricGrid'
+import ServerNetworkList from './ServerNetworkList'
+import ServerPortList from './ServerPortList'
+import ServerQuickActions from './ServerQuickActions'
+import ServerSegmentedControl from './ServerSegmentedControl'
+
+const VIEW_OPTIONS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'activity', label: 'Activity' },
+  { value: 'errors', label: 'Errors' },
+] as const
+
+export default function ServerWorkspace() {
+  const { colors } = useTheme()
+  const { layoutMode } = useAdaptiveLayout()
+  const serverLabel = useServerActionsStore((state) => state.serverLabel)
+  const uptime = useServerActionsStore((state) => state.uptime)
+  const activeView = useServerActionsStore((state) => state.activeView)
+  const metrics = useServerActionsStore((state) => state.metrics)
+  const ports = useServerActionsStore((state) => state.ports)
+  const network = useServerActionsStore((state) => state.network)
+  const errors = useServerActionsStore((state) => state.errors)
+  const actions = useServerActionsStore((state) => state.actions)
+  const lastActionMessage = useServerActionsStore((state) => state.lastActionMessage)
+  const isRefreshing = useServerActionsStore((state) => state.isRefreshing)
+  const selectView = useServerActionsStore((state) => state.selectView)
+  const refresh = useServerActionsStore((state) => state.refresh)
+  const previewAction = useServerActionsStore((state) => state.previewAction)
+
+  const overviewView = layoutMode === 'tabletSplit'
+    ? (
+      <SplitViewLayout
+        leading={
+          <View style={styles.stack}>
+            <ServerMetricGrid metrics={metrics} />
+            <ServerPortList ports={ports} />
+          </View>
+        }
+        trailing={
+          <View style={styles.stack}>
+            <ServerQuickActions actions={actions} onRunAction={previewAction} />
+            <ServerErrorList errors={errors.slice(0, 2)} />
+          </View>
+        }
+        leadingWidth={420}
+      />
+    )
+    : (
+      <View style={styles.stack}>
+        <ServerMetricGrid metrics={metrics} />
+        <ServerPortList ports={ports} />
+        <ServerQuickActions actions={actions} onRunAction={previewAction} />
+        <ServerErrorList errors={errors.slice(0, 2)} />
+      </View>
+    )
+
+  const activityView = (
+    <View style={styles.stack}>
+      <ServerNetworkList entries={network} />
+      <ServerPortList ports={ports} />
+      <ServerQuickActions actions={actions} onRunAction={previewAction} />
+    </View>
+  )
+
+  const errorsView = (
+    <View style={styles.stack}>
+      <ServerErrorList errors={errors} />
+      <ServerQuickActions actions={actions} onRunAction={previewAction} />
+    </View>
+  )
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <ServerHealthHero
+        serverLabel={serverLabel}
+        uptime={uptime}
+        incidentCount={errors.length}
+        summary="Prototype the mobile ops surface now, then swap the mock store for your server transport once the backend test harness is in place."
+      />
+
+      <View style={styles.header}>
+        <ServerSegmentedControl
+          value={activeView}
+          options={VIEW_OPTIONS}
+          onChange={selectView}
+        />
+        <Text
+          accessibilityRole="button"
+          onPress={refresh}
+          style={[styles.refreshLink, { color: isRefreshing ? colors.textTertiary : colors.primary }]}
+        >
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </Text>
+      </View>
+
+      <View style={[styles.messageBanner, { backgroundColor: colors.backgroundSecondary }]}>
+        <Text style={[styles.messageText, { color: colors.textSecondary }]}>
+          {lastActionMessage}
+        </Text>
+      </View>
+
+      {activeView === 'overview' ? overviewView : null}
+      {activeView === 'activity' ? activityView : null}
+      {activeView === 'errors' ? errorsView : null}
+    </ScrollView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    gap: spacing[4],
+    paddingBottom: spacing[8],
+  },
+  header: {
+    gap: spacing[3],
+  },
+  refreshLink: {
+    ...typographyScale.sm,
+    fontWeight: '700',
+    alignSelf: 'flex-start',
+  },
+  messageBanner: {
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+  },
+  messageText: {
+    ...typographyScale.sm,
+  },
+  stack: {
+    gap: spacing[4],
+    flex: 1,
+  },
+})

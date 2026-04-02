@@ -1,0 +1,20 @@
+{
+  "name": "@pocketdev/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types/index.ts",
+    "./theme": "./src/theme/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./crypto": "./src/crypto/index.ts"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^2.2.3",
+    "@noble/hashes": "^2.0.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

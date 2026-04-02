@@ -1,0 +1,135 @@
+import { Elysia, t } from 'elysia'
+import { authenticateRequest } from '../services/auth.ts'
+import {
+  GitServiceError,
+  getGitSummary,
+  getGitChanges,
+  getGitDiff,
+  getGitHistory,
+  getGitBranches,
+  checkoutBranch,
+  commitStaged,
+  pushCurrent,
+} from '../services/git.ts'
+
+function handleError(error: unknown, set: { status?: number | string }) {
+  const message = error instanceof Error ? error.message : 'Git operation failed'
+  if (error instanceof GitServiceError) {
+    set.status = error.statusCode
+    return { error: message, code: error.code }
+  }
+  set.status = 500
+  return { error: message, code: 'command_failed' }
+}
+
+export const gitRoutes = new Elysia({ prefix: '/git' })
+  .get('/summary', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      console.log('[git] GET /git/summary')
+      return await getGitSummary()
+    } catch (error) {
+      return handleError(error, set)
+    }
+  })
+
+  .get('/changes', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      return { changes: await getGitChanges() }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  })
+
+  .get('/diff', async ({ request, query, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      const staged = query.staged === '1'
+      return await getGitDiff(query.path, staged)
+    } catch (error) {
+      return handleError(error, set)
+    }
+  }, {
+    query: t.Object({
+      path: t.String(),
+      staged: t.Optional(t.String()),
+    }),
+  })
+
+  .get('/history', async ({ request, query, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      const limit = query.limit ? parseInt(query.limit, 10) : undefined
+      return { commits: await getGitHistory(limit) }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  }, {
+    query: t.Object({
+      limit: t.Optional(t.String()),
+    }),
+  })
+
+  .get('/branches', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      return { branches: await getGitBranches() }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  })
+
+  .post('/checkout', async ({ request, body, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      const summary = await checkoutBranch(body.branchName)
+      return { ok: true, summary }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  }, {
+    body: t.Object({
+      branchName: t.String(),
+    }),
+  })
+
+  .post('/commit', async ({ request, body, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      const summary = await commitStaged(body.message)
+      return { ok: true, summary }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  }, {
+    body: t.Object({
+      message: t.String(),
+    }),
+  })
+
+  .post('/push', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      const summary = await pushCurrent()
+      return { ok: true, summary }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  })

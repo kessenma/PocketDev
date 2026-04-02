@@ -1,0 +1,30 @@
+FROM oven/bun:1 AS base
+WORKDIR /app
+
+# Install dependencies
+FROM base AS deps
+COPY package.json pnpm-lock.yaml* bun.lock* ./
+RUN bun install --frozen-lockfile 2>/dev/null || bun install
+
+# Build
+FROM base AS build
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN bun build src/index.ts --outdir dist --target bun
+
+# Runtime
+FROM base AS runtime
+WORKDIR /app
+
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/src/db/schema.sql ./src/db/schema.sql
+
+ENV POCKETDEV_DATA_DIR=/opt/pocketdev/data
+ENV POCKETDEV_PORT=4387
+
+EXPOSE 4387
+
+VOLUME ["/opt/pocketdev/data"]
+
+CMD ["bun", "run", "dist/index.js"]

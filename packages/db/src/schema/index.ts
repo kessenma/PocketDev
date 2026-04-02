@@ -1,0 +1,1 @@
+export { installs } from './installs'

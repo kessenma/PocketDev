@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.turbo/
+*.tsbuildinfo
+
+# TanStack Start / Vinxi / Nitro
+.vinxi/
+.output/
+.nitro/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+
+# Example apps (reference only, not part of the project)
+apps/0-examples/
+
+# React Native
+apps/mobile/ios/build/
+apps/mobile/ios/Pods/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/.gradle/
+apps/mobile/vendor/bundle/
+
+# SQLite (agent local DB)
+*.db
+*.sqlite
+
+# MCP config (local tool setup)
+.mcp.json
+
+# IDE
+.idea/
+*.swp

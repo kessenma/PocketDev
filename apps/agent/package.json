@@ -1,0 +1,20 @@
+{
+  "name": "@pocketdev/agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "kill": "node ../../scripts/kill-agent-port.js",
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "check-types": "tsc --noEmit",
+    "start": "bun run dist/index.js"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@pocketdev/shared": "workspace:^",
+    "elysia": "^1.4.28"
+  }
+}

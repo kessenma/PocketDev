@@ -1,0 +1,29 @@
+{
+  "name": "pocketdev",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "dev:web": "pnpm --filter @pocketdev/web dev",
+    "local:testing": "node scripts/local-testing.js",
+    "start:web": "pnpm --filter @pocketdev/web start",
+    "kill:web": "pnpm --filter @pocketdev/web kill-port",
+    "dev:mobile": "pnpm --dir apps/mobile run kill && pnpm --filter mobile start",
+    "ios": "pnpm --filter mobile ios",
+    "android": "pnpm --filter mobile android",
+    "lint": "turbo run lint",
+    "check-types": "turbo run check-types",
+    "db:generate": "pnpm --filter @pocketdev/db exec drizzle-kit generate",
+    "db:migrate": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit migrate",
+    "db:push": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit push",
+    "db:studio": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@8.15.4",
+  "engines": {
+    "node": ">=22"
+  }
+}
