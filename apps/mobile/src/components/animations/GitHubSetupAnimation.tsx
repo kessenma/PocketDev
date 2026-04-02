@@ -3,6 +3,7 @@ import { Dimensions, Image, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Assets } from '../../../assets'
 import { palette } from '@pocketdev/shared/theme'
+import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -113,6 +114,7 @@ type Props = {
 export default function GitHubSetupAnimation({ onComplete }: Props) {
   const { isDark } = useTheme()
   const overlayOpacity = useSharedValue(0)
+  const { triggerExit } = useExitFade(overlayOpacity, onComplete)
   const iconOpacity = useSharedValue(0)
   const iconScale = useSharedValue(0.7)
 
@@ -134,11 +136,11 @@ export default function GitHubSetupAnimation({ onComplete }: Props) {
     const lastShapeArrives = ICON_FADE_IN + SHAPES.length * SHAPE_STAGGER + SHAPE_DURATION
     const totalDuration = lastShapeArrives + HOLD_DURATION
     const timeout = setTimeout(() => {
-      onComplete()
+      triggerExit()
     }, totalDuration)
 
     return () => clearTimeout(timeout)
-  }, [overlayOpacity, iconOpacity, iconScale, onComplete])
+  }, [overlayOpacity, iconOpacity, iconScale, triggerExit])
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,

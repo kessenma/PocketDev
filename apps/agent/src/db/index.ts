@@ -135,6 +135,10 @@ export function updateDeviceLastSeen(id: string) {
     .run()
 }
 
+export function deleteDevice(id: string) {
+  getDb().delete(schema.devices).where(eq(schema.devices.id, id)).run()
+}
+
 export function getDeviceCount(): number {
   const row = getDb().select({ count: count() }).from(schema.devices).get()
   return row?.count ?? 0

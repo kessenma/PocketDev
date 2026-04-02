@@ -9,6 +9,9 @@ import AiInspectSheet from '../components/setup/AiInspectSheet'
 import GitWizardSheet from '../components/setup/GitWizardSheet'
 import ClaudeWizardSheet from '../components/setup/ClaudeWizardSheet'
 import CodexWizardSheet from '../components/setup/CodexWizardSheet'
+import PythonWizardSheet from '../components/setup/PythonWizardSheet'
+import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
+import PackageInstallAnimation from '../components/animations/PackageInstallAnimation'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import type { ToolCheck } from '@pocketdev/shared/types'
@@ -37,6 +40,9 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showGitHubAnimation, setShowGitHubAnimation] = useState(false)
   const [showClaudeWizard, setShowClaudeWizard] = useState(false)
   const [showCodexWizard, setShowCodexWizard] = useState(false)
+  const [showPkgWizard, setShowPkgWizard] = useState(false)
+  const [showPkgAnimation, setShowPkgAnimation] = useState(false)
+  const [showPythonWizard, setShowPythonWizard] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
     navigation.replace('Main')
@@ -69,6 +75,27 @@ export default function ServerSetupScreen({ navigation }: Props) {
 
   const handleCodexWizardComplete = useCallback(() => {
     setShowCodexWizard(false)
+  }, [])
+
+  const handlePkgWizard = useCallback(() => {
+    setShowPkgWizard(true)
+  }, [])
+
+  const handlePkgWizardComplete = useCallback(() => {
+    setShowPkgWizard(false)
+    setShowPkgAnimation(true)
+  }, [])
+
+  const handlePkgAnimationComplete = useCallback(() => {
+    setShowPkgAnimation(false)
+  }, [])
+
+  const handlePythonWizard = useCallback(() => {
+    setShowPythonWizard(true)
+  }, [])
+
+  const handlePythonWizardComplete = useCallback(() => {
+    setShowPythonWizard(false)
   }, [])
 
   const handleInstall = useCallback((tool: ToolCheck) => {
@@ -126,7 +153,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} onGitWizard={handleGitWizard} onClaudeWizard={handleClaudeWizard} onCodexWizard={handleCodexWizard} />
+        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} onGitWizard={handleGitWizard} onClaudeWizard={handleClaudeWizard} onCodexWizard={handleCodexWizard} onPkgWizard={handlePkgWizard} onPythonWizard={handlePythonWizard} />
 
         <View style={styles.footer}>
           <TouchableOpacity
@@ -182,10 +209,25 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onClose={() => setShowCodexWizard(false)}
           onComplete={handleCodexWizardComplete}
         />
+
+        <PackageManagerWizardSheet
+          visible={showPkgWizard}
+          onClose={() => setShowPkgWizard(false)}
+          onComplete={handlePkgWizardComplete}
+        />
+
+        <PythonWizardSheet
+          visible={showPythonWizard}
+          onClose={() => setShowPythonWizard(false)}
+          onComplete={handlePythonWizardComplete}
+        />
       </View>
       {showConnected && <ConnectedAnimation onComplete={handleConnectedComplete} />}
       {showGitHubAnimation && (
         <GitHubSetupAnimation onComplete={handleGitHubAnimationComplete} />
+      )}
+      {showPkgAnimation && (
+        <PackageInstallAnimation onComplete={handlePkgAnimationComplete} />
       )}
     </AnimatedGradientBackground>
   )

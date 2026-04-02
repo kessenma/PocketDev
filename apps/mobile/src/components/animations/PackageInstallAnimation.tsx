@@ -3,6 +3,7 @@ import { Dimensions, Image, StyleSheet, View } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Assets } from '../../../assets'
 import { palette } from '@pocketdev/shared/theme'
+import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -115,6 +116,7 @@ type Props = {
 export default function PackageInstallAnimation({ onComplete }: Props) {
   const { isDark } = useTheme()
   const overlayOpacity = useSharedValue(0)
+  const { triggerExit } = useExitFade(overlayOpacity, onComplete)
 
   useEffect(() => {
     overlayOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) })
@@ -123,11 +125,11 @@ export default function PackageInstallAnimation({ onComplete }: Props) {
     const logosFinished = tilesFinished + LOGOS.length * LOGO_STAGGER + LOGO_FADE_IN
     const totalDuration = logosFinished + HOLD_DURATION
     const timeout = setTimeout(() => {
-      onComplete()
+      triggerExit()
     }, totalDuration)
 
     return () => clearTimeout(timeout)
-  }, [overlayOpacity, onComplete])
+  }, [overlayOpacity, triggerExit])
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,

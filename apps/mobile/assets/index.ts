@@ -26,4 +26,13 @@ export const Assets = {
   pnpmBlack: require('./pnpm-black.png'),
   npmWhite: require('./npm-white.png'),
   npmBlack: require('./npm-black.png'),
+  rustWhite: require('./rust-white.png'),
+  rustBlack: require('./rust-black.png'),
+  cppWhite: require('./cpp-white.png'),
+  cppBlack: require('./cpp-black.png'),
+  javaWhite: require('./java-white.png'),
+  javaBlack: require('./java-black.png'),
+  pythonWhite: require('./python-white.png'),
+  pythonBlack: require('./python-black.png'),
+  ohmyzshBlack: require('./ohmyzsh-black.png'),
 };

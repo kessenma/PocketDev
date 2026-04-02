@@ -3,6 +3,7 @@ import { Dimensions, Image, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Assets } from '../../../assets'
 import { palette } from '@pocketdev/shared/theme'
+import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -108,6 +109,7 @@ type Props = {
 export default function CodexSetupAnimation({ onComplete }: Props) {
   const { isDark } = useTheme()
   const overlayOpacity = useSharedValue(0)
+  const { triggerExit } = useExitFade(overlayOpacity, onComplete)
   const iconOpacity = useSharedValue(0)
   const iconScale = useSharedValue(0.6)
 
@@ -126,11 +128,11 @@ export default function CodexSetupAnimation({ onComplete }: Props) {
     const lastSlabArrives = ICON_FADE_IN + SLABS.length * SLAB_STAGGER + SLAB_DURATION
     const totalDuration = lastSlabArrives + HOLD_DURATION
     const timeout = setTimeout(() => {
-      onComplete()
+      triggerExit()
     }, totalDuration)
 
     return () => clearTimeout(timeout)
-  }, [overlayOpacity, iconOpacity, iconScale, onComplete])
+  }, [overlayOpacity, iconOpacity, iconScale, triggerExit])
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,

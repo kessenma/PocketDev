@@ -314,6 +314,43 @@ async function checkDocker(): Promise<ToolCheck> {
   }
 }
 
+async function checkPython(): Promise<ToolCheck> {
+  const path = await which('python3')
+  if (!path) {
+    return {
+      id: 'python', name: 'Python', status: 'missing', auth_status: 'not_applicable',
+      version: null, path: null, required: false,
+      install_command: 'sudo apt-get install -y python3 python3-pip python3-venv',
+      auth_command: null, details: {},
+    }
+  }
+
+  const version = await getVersion('python3 --version')
+
+  // Check pip
+  const pipPath = (await which('pip3')) ?? (await which('pip'))
+  const pipVersion = pipPath ? await getVersion(`"${pipPath}" --version`) : null
+
+  upsertToolPath('python', path, version)
+
+  if (!pipPath) {
+    return {
+      id: 'python', name: 'Python', status: 'misconfigured', auth_status: 'not_applicable',
+      version, path, required: false,
+      install_command: 'sudo apt-get install -y python3-pip python3-venv',
+      auth_command: null,
+      details: { pip_version: null, pip_path: null },
+    }
+  }
+
+  return {
+    id: 'python', name: 'Python', status: 'installed', auth_status: 'not_applicable',
+    version, path, required: false,
+    install_command: null, auth_command: null,
+    details: { pip_version: pipVersion, pip_path: pipPath },
+  }
+}
+
 // ─── Database detection (Docker containers) ─────────────────────────────
 
 /** Known database Docker image prefixes */
@@ -405,6 +442,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkBun(),
     checkPnpm(),
     checkChromium(),
+    checkPython(),
   ])
 
   // ready = git configured + node + npm + at least one AI CLI installed & authenticated

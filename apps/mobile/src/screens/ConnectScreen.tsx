@@ -34,6 +34,7 @@ export default function ConnectScreen({ navigation }: Props) {
   const { layoutMode } = useAdaptiveLayout()
   const setPaired = useConnectionStore((s) => s.setPaired)
   const unpair = useConnectionStore((s) => s.unpair)
+  const connect = useConnectionStore((s) => s.connect)
   const existingServer = useConnectionStore((s) => s.server)
 
   const [connectionInput, setConnectionInput] = useState('')
@@ -97,15 +98,23 @@ export default function ConnectScreen({ navigation }: Props) {
         {/* Existing connection banner */}
         {existingServer && (
           <View style={[styles.existingConnection, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(37,99,235,0.08)', borderColor: isDark ? 'rgba(96,165,250,0.26)' : 'rgba(37,99,235,0.16)' }]}>
-            <View style={styles.existingConnectionInfo}>
+            <TouchableOpacity
+              style={styles.existingConnectionInfo}
+              onPress={() => {
+                connect()
+                navigation.replace('ServerSetup')
+              }}
+              activeOpacity={0.7}
+            >
               <Server color={colors.primary} size={16} strokeWidth={2.25} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.existingConnectionLabel, { color: colors.textSecondary }]}>Currently connected</Text>
+                <Text style={[styles.existingConnectionLabel, { color: colors.textSecondary }]}>Tap to reconnect</Text>
                 <Text style={[styles.existingConnectionHost, { color: colors.text }]}>
                   {existingServer.ip}:{existingServer.port}
                 </Text>
               </View>
-            </View>
+              <ArrowRight color={colors.primary} size={16} strokeWidth={2.25} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.unpairButton, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(220,38,38,0.1)', borderColor: isDark ? 'rgba(239,68,68,0.3)' : 'rgba(220,38,38,0.2)' }]}
               onPress={unpair}

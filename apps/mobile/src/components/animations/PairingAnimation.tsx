@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { Dimensions, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { palette } from '@pocketdev/shared/theme'
+import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
   useAnimatedProps,
@@ -39,20 +40,21 @@ type Props = {
 export default function PairingAnimation({ onComplete }: Props) {
   const { isDark } = useTheme()
   const overlayOpacity = useSharedValue(0)
+  const { triggerExit } = useExitFade(overlayOpacity, onComplete)
 
   useEffect(() => {
     // Fade in the overlay
     overlayOpacity.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.cubic) })
 
-    // Hold for a beat after phone turns blue, then complete
+    // Hold for a beat after phone turns blue, then exit
     const allLinesArrived = LINE_ARRIVE_DURATION + LINE_STAGGER * (LINE_COUNT - 1) + 100
     const totalDuration = allLinesArrived + 300 + 600
     const timeout = setTimeout(() => {
-      onComplete()
+      triggerExit()
     }, totalDuration)
 
     return () => clearTimeout(timeout)
-  }, [overlayOpacity, onComplete])
+  }, [overlayOpacity, triggerExit])
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,

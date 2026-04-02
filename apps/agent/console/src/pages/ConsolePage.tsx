@@ -110,7 +110,14 @@ export function ConsolePage() {
         />
 
         {/* Paired Devices */}
-        <DeviceList devices={status.devices} />
+        <DeviceList
+          devices={status.devices}
+          onDeviceRemoved={(id) => {
+            if (status) {
+              setStatus({ ...status, devices: status.devices.filter((d) => d.id !== id) })
+            }
+          }}
+        />
       </main>
     </div>
   )

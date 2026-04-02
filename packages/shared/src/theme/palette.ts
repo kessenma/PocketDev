@@ -77,5 +77,9 @@ export const palette = {
     claude: '#D4A574',
     codex: '#0D1117',
     docker: '#1D63ED',
+    python: '#306998',
+    rust: '#CE422B',
+    java: '#5382A1',
+    cpp: '#00599C',
   },
 } as const

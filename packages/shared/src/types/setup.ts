@@ -118,6 +118,21 @@ export interface CodexSetupStatus {
 export type CodexWizardStep = 'detect' | 'install' | 'authenticate' | 'verify'
 export type CodexWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
+// ─── Python wizard types ──────────────────────────────────────────
+
+export interface PythonSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  pip_installed: boolean
+  pip_version: string | null
+  pip_path: string | null
+  venv_available: boolean
+}
+
+export type PythonWizardStep = 'detect' | 'install' | 'verify'
+export type PythonWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
 // ─── Package Manager wizard types ──────────────────────────────────
 
 export interface PkgToolInfo {

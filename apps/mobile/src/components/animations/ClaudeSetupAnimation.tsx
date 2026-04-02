@@ -3,6 +3,7 @@ import { Dimensions, Image, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Assets } from '../../../assets'
 import { palette } from '@pocketdev/shared/theme'
+import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -81,6 +82,7 @@ type Props = {
 export default function ClaudeSetupAnimation({ onComplete }: Props) {
   const { isDark } = useTheme()
   const overlayOpacity = useSharedValue(0)
+  const { triggerExit } = useExitFade(overlayOpacity, onComplete)
   const iconOpacity = useSharedValue(0)
   const iconScale = useSharedValue(0.5)
 
@@ -99,11 +101,11 @@ export default function ClaudeSetupAnimation({ onComplete }: Props) {
     const lastRingDone = ICON_FADE_IN + RING_COUNT * RING_STAGGER + RING_EXPAND_DURATION
     const totalDuration = lastRingDone + HOLD_DURATION
     const timeout = setTimeout(() => {
-      onComplete()
+      triggerExit()
     }, totalDuration)
 
     return () => clearTimeout(timeout)
-  }, [overlayOpacity, iconOpacity, iconScale, onComplete])
+  }, [overlayOpacity, iconOpacity, iconScale, triggerExit])
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,

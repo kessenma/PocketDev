@@ -11,6 +11,8 @@ interface Props {
   onGitWizard?: (tool: ToolCheck) => void
   onClaudeWizard?: (tool: ToolCheck) => void
   onCodexWizard?: (tool: ToolCheck) => void
+  onPkgWizard?: (tool: ToolCheck) => void
+  onPythonWizard?: (tool: ToolCheck) => void
 }
 
 function StatusIcon({ tool }: { tool: ToolCheck }) {
@@ -45,7 +47,7 @@ function statusColor(tool: ToolCheck): string {
   return '#22c55e'
 }
 
-export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard, onClaudeWizard, onCodexWizard }: Props) {
+export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard, onClaudeWizard, onCodexWizard, onPkgWizard, onPythonWizard }: Props) {
   const { colors } = useTheme()
 
   // Git gets a dedicated wizard instead of generic install/configure buttons
@@ -60,7 +62,14 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
   const isCodex = tool.id === 'codex_cli'
   const codexNeedsAction = isCodex && (tool.status === 'missing' || tool.auth_status === 'unauthenticated')
 
-  const hasWizard = isGit || isClaude || isCodex
+  // Package managers get a bulk wizard
+  const isPkgManager = tool.id === 'node' || tool.id === 'npm' || tool.id === 'nvm' || tool.id === 'pnpm' || tool.id === 'bun'
+  const pkgNeedsAction = isPkgManager && tool.status === 'missing'
+
+  const isPython = tool.id === 'python'
+  const pythonNeedsAction = isPython && (tool.status === 'missing' || tool.status === 'misconfigured')
+
+  const hasWizard = isGit || isClaude || isCodex || isPkgManager || isPython
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -128,6 +137,30 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Codex</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {pkgNeedsAction && onPkgWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onPkgWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Package Managers</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {pythonNeedsAction && onPythonWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onPythonWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Python</Text>
           </TouchableOpacity>
         </View>
       )}

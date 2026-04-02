@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
-import { Smartphone, Clock } from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { Smartphone, Clock, Trash2 } from 'lucide-react'
+import { removeDevice } from '#/lib/api'
 
 interface Device {
   id: string
@@ -11,9 +14,24 @@ interface Device {
 
 interface Props {
   devices: Device[]
+  onDeviceRemoved?: (id: string) => void
 }
 
-export function DeviceList({ devices }: Props) {
+export function DeviceList({ devices, onDeviceRemoved }: Props) {
+  const [removingId, setRemovingId] = useState<string | null>(null)
+
+  async function handleRemove(id: string) {
+    setRemovingId(id)
+    try {
+      await removeDevice(id)
+      onDeviceRemoved?.(id)
+    } catch {
+      // ignore
+    } finally {
+      setRemovingId(null)
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -48,9 +66,20 @@ export function DeviceList({ devices }: Props) {
                       : 'Never connected'}
                   </div>
                 </div>
-                {device.platform && (
-                  <Badge variant="secondary">{device.platform}</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {device.platform && (
+                    <Badge variant="secondary">{device.platform}</Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleRemove(device.id)}
+                    disabled={removingId === device.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

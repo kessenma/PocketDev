@@ -17,6 +17,14 @@ async function get(path: string) {
   return response
 }
 
+async function del(path: string) {
+  const response = await fetch(`${BASE}${path}`, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+  })
+  return response
+}
+
 export async function checkHealth(): Promise<{
   hasAdmin: boolean
   paired: boolean
@@ -100,5 +108,11 @@ export interface PrerequisitesReport {
 export async function fetchPrerequisites(): Promise<PrerequisitesReport> {
   const res = await get('/prerequisites')
   if (!res.ok) throw new Error('Failed to fetch prerequisites')
+  return res.json()
+}
+
+export async function removeDevice(id: string) {
+  const res = await del(`/devices/${id}`)
+  if (!res.ok) throw new Error('Failed to remove device')
   return res.json()
 }
