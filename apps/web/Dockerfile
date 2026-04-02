@@ -48,8 +48,9 @@ COPY --from=build /app/apps/web/tsconfig.json ./tsconfig.json
 COPY --from=build /app/packages/shared /app/packages/shared
 COPY --from=build /app/packages/db /app/packages/db
 
-# Install script — copied last so edits don't bust the build cache
+# Install script and agent bundle — copied last so edits don't bust the build cache
 COPY apps/web/install.sh ./install.sh
+COPY apps/web/public/agent-bundle.tar.gz ./public/agent-bundle.tar.gz
 
 ENV NODE_ENV=production
 ENV PORT=3000

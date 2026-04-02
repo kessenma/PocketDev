@@ -136,10 +136,15 @@ mkdir -p "$INSTALL_DIR" "$DATA_DIR"
 
 info "Downloading agent bundle..."
 BUNDLE_TMP="$(mktemp)"
-HTTP_CODE=$(curl -fsSL -w '%{http_code}' -o "$BUNDLE_TMP" "$BUNDLE_URL" 2>/dev/null || echo "000")
-if [ "$HTTP_CODE" != "200" ]; then
+# -w writes http_code to stdout; -o writes body to file; -f makes curl fail on HTTP errors
+if ! curl -fSL --progress-bar -o "$BUNDLE_TMP" "$BUNDLE_URL"; then
   rm -f "$BUNDLE_TMP"
-  fail "Failed to download agent bundle (HTTP $HTTP_CODE). Is pocketdev.run up?"
+  fail "Failed to download agent bundle from $BUNDLE_URL"
+fi
+# Verify we got a real tarball (not an HTML error page)
+if ! tar -tzf "$BUNDLE_TMP" >/dev/null 2>&1; then
+  rm -f "$BUNDLE_TMP"
+  fail "Downloaded file is not a valid tarball. Check $BUNDLE_URL"
 fi
 ok "Bundle downloaded"
 
