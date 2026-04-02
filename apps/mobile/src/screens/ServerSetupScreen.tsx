@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useCallback, useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
+import ConnectedAnimation from '../components/ConnectedAnimation'
 import { ArrowRight, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
 
 type Props = {
@@ -27,6 +28,11 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [inspectCommand, setInspectCommand] = useState('')
   const [inspectOutput, setInspectOutput] = useState('')
   const [showInspect, setShowInspect] = useState(false)
+  const [showConnected, setShowConnected] = useState(false)
+
+  const handleConnectedComplete = useCallback(() => {
+    navigation.replace('Main')
+  }, [navigation])
 
   const handleInstall = useCallback((tool: ToolCheck) => {
     setInstallTool(tool)
@@ -91,7 +97,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
               styles.continueButton,
               { backgroundColor: report?.ready ? colors.primary : colors.border },
             ]}
-            onPress={() => navigation.replace('Main')}
+            onPress={() => setShowConnected(true)}
             disabled={!report?.ready}
             activeOpacity={0.7}
           >
@@ -101,7 +107,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.replace('Main')} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => setShowConnected(true)} activeOpacity={0.7}>
             <Text style={[styles.skipText, { color: colors.textTertiary }]}>Skip for now</Text>
           </TouchableOpacity>
         </View>
@@ -122,6 +128,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onFixCommand={handleFixCommand}
         />
       </View>
+      {showConnected && <ConnectedAnimation onComplete={handleConnectedComplete} />}
     </AnimatedGradientBackground>
   )
 }

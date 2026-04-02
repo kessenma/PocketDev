@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import {
   View,
   Text,
@@ -22,7 +22,8 @@ import SplitViewLayout from '../components/layout/SplitViewLayout'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
 import QRScanner, { type QRScanResult } from '../components/QRScanner'
-import { ArrowRight, Link, ScanLine, Server, Sparkles } from 'lucide-react-native'
+import { ArrowRight, Link, ScanLine, Server, Sparkles, Unplug } from 'lucide-react-native'
+import PairingAnimation from '../components/PairingAnimation'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connect'>
@@ -32,11 +33,18 @@ export default function ConnectScreen({ navigation }: Props) {
   const { colors, isDark } = useTheme()
   const { layoutMode } = useAdaptiveLayout()
   const setPaired = useConnectionStore((s) => s.setPaired)
+  const unpair = useConnectionStore((s) => s.unpair)
+  const existingServer = useConnectionStore((s) => s.server)
 
   const [connectionInput, setConnectionInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scannerVisible, setScannerVisible] = useState(false)
+  const [showPairing, setShowPairing] = useState(false)
+
+  const handlePairingComplete = useCallback(() => {
+    navigation.replace('ServerSetup')
+  }, [navigation])
 
   const parsed = parseConnectionString(connectionInput)
   const canSubmit = parsed !== null && !loading
@@ -57,7 +65,7 @@ export default function ConnectScreen({ navigation }: Props) {
     try {
       const result = await pairWithServer(parsed.host, parsed.port, parsed.code)
       setPaired({ ip: parsed.host, port: parsed.port, deviceId: result.deviceId })
-      navigation.replace('ServerSetup')
+      setShowPairing(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to connect')
     } finally {
@@ -74,7 +82,7 @@ export default function ConnectScreen({ navigation }: Props) {
       pairWithServer(result.host, result.port, normalizeSetupCode(result.code).trim())
         .then((pairResult) => {
           setPaired({ ip: result.host, port: result.port, deviceId: pairResult.deviceId })
-          navigation.replace('ServerSetup')
+          setShowPairing(true)
         })
         .catch((e) => {
           setError(e instanceof Error ? e.message : 'Failed to connect')
@@ -86,6 +94,29 @@ export default function ConnectScreen({ navigation }: Props) {
   const form = (
     <LiquidGlassCard style={styles.formCard}>
       <View style={styles.form}>
+        {/* Existing connection banner */}
+        {existingServer && (
+          <View style={[styles.existingConnection, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(37,99,235,0.08)', borderColor: isDark ? 'rgba(96,165,250,0.26)' : 'rgba(37,99,235,0.16)' }]}>
+            <View style={styles.existingConnectionInfo}>
+              <Server color={colors.primary} size={16} strokeWidth={2.25} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.existingConnectionLabel, { color: colors.textSecondary }]}>Currently connected</Text>
+                <Text style={[styles.existingConnectionHost, { color: colors.text }]}>
+                  {existingServer.ip}:{existingServer.port}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.unpairButton, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(220,38,38,0.1)', borderColor: isDark ? 'rgba(239,68,68,0.3)' : 'rgba(220,38,38,0.2)' }]}
+              onPress={unpair}
+              activeOpacity={0.7}
+            >
+              <Unplug color={colors.error} size={16} strokeWidth={2.25} />
+              <Text style={[styles.unpairButtonText, { color: colors.error }]}>Disconnect</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* QR Scanner Button */}
         <TouchableOpacity
           style={[styles.scanButton, { backgroundColor: colors.primary }]}
@@ -219,6 +250,7 @@ export default function ConnectScreen({ navigation }: Props) {
         onScan={handleQRScan}
         onClose={() => setScannerVisible(false)}
       />
+      {showPairing && <PairingAnimation onComplete={handlePairingComplete} />}
     </AnimatedGradientBackground>
   )
 }
@@ -365,6 +397,39 @@ const styles = StyleSheet.create({
   heroBody: {
     ...typographyScale.lg,
     marginTop: spacing[3],
+  },
+  existingConnection: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  existingConnectionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+  },
+  existingConnectionLabel: {
+    ...typographyScale.xs,
+    fontWeight: '500',
+  },
+  existingConnectionHost: {
+    ...typographyScale.sm,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  unpairButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[2],
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing[2],
+  },
+  unpairButtonText: {
+    ...typographyScale.sm,
+    fontWeight: '600',
   },
 })
 
