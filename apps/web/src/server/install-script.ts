@@ -96,7 +96,12 @@ step "Step 2/4: Setting up Bun runtime"
 
 if ! command -v bun >/dev/null 2>&1; then
   info "Installing Bun..."
-  curl -fsSL https://bun.sh/install | bash >/dev/null 2>&1
+  # Download installer to a temp file first, then run it.
+  # Piping curl|bash inside a curl|bash script causes stdin conflicts.
+  BUN_INSTALLER="\$(mktemp)"
+  curl -fsSL https://bun.sh/install -o "\$BUN_INSTALLER"
+  bash "\$BUN_INSTALLER" </dev/null
+  rm -f "\$BUN_INSTALLER"
   # Source bun into current shell
   export BUN_INSTALL="\$HOME/.bun"
   export PATH="\$BUN_INSTALL/bin:\$PATH"
