@@ -31,7 +31,8 @@ export function getDb() {
       // Legacy DB (created by old schema.sql before Drizzle) — tables already
       // exist so the migration fails with "table already exists". Fix it by
       // ensuring the new tables exist and stamping all migrations as applied.
-      if (err instanceof Error && err.message.includes('already exists')) {
+      const msg = String(err && typeof err === 'object' && 'message' in err ? err.message : err)
+      if (msg.includes('already exists')) {
         sqlite.exec(`
           CREATE TABLE IF NOT EXISTS admin_accounts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
