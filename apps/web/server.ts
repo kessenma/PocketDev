@@ -42,6 +42,23 @@ async function start() {
         return handleInstallScript(req)
       }
 
+      // Serve pre-built agent bundle
+      if (url.pathname === '/agent/bundle') {
+        const bundlePath = path.resolve(import.meta.dir, 'public', 'agent-bundle.tar.gz')
+        if (fs.existsSync(bundlePath)) {
+          return new Response(Bun.file(bundlePath), {
+            headers: {
+              'Content-Type': 'application/gzip',
+              'Content-Disposition': 'attachment; filename="agent-bundle.tar.gz"',
+              'Cache-Control': 'public, max-age=300',
+            },
+          })
+        }
+        return new Response('Agent bundle not available. Run: bash scripts/build-agent-bundle.sh', {
+          status: 404,
+        })
+      }
+
       // Try serving static files from client dist
       if (url.pathname !== '/' && !url.pathname.startsWith('/_server')) {
         const filePath = path.join(CLIENT_DIR, url.pathname)

@@ -13,6 +13,7 @@
     "android": "pnpm --filter mobile android",
     "lint": "turbo run lint",
     "check-types": "turbo run check-types",
+    "build:agent-bundle": "bash scripts/build-agent-bundle.sh",
     "db:generate": "pnpm --filter @pocketdev/db exec drizzle-kit generate",
     "db:migrate": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit migrate",
     "db:push": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit push",

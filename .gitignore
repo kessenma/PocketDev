@@ -30,6 +30,9 @@ apps/mobile/android/app/build/
 apps/mobile/android/.gradle/
 apps/mobile/vendor/bundle/
 
+# Agent bundle (built artifact served by web app)
+apps/web/public/agent-bundle.tar.gz
+
 # SQLite (agent local DB)
 *.db
 *.sqlite
