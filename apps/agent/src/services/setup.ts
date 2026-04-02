@@ -99,6 +99,30 @@ export function isSetupActive(): boolean {
   return true
 }
 
+/** Get the current active setup code, or null */
+export function getSetupCode(): string | null {
+  if (!isSetupActive()) return null
+  return setupState?.code ?? null
+}
+
+/** Set a custom setup code (from the web console) with 24h expiry */
+export function setCustomCode(code: string): void {
+  setupState = {
+    code,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+  }
+}
+
+/** Regenerate an auto-generated setup code and return it */
+export function refreshSetupCode(): string {
+  const code = generateSetupCode()
+  setupState = {
+    code,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+  }
+  return code
+}
+
 /** Attempt to pair a device. Returns server info on success, null on failure. */
 export function pairDevice(
   code: string,

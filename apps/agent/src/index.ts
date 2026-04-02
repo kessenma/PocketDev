@@ -13,6 +13,7 @@ import { gitRoutes } from './routes/git.ts'
 import { serverActionsRoutes } from './routes/server-actions.ts'
 import { planRoutes } from './routes/plans.ts'
 import { screenshotRoutes } from './services/preview-screenshot.ts'
+import { consoleRoutes, consoleStaticRoutes } from './routes/console.ts'
 import { initSetup, getServerKeypair } from './services/setup.ts'
 import { getDb } from './db/index.ts'
 
@@ -22,7 +23,7 @@ if (process.env.POCKETDEV_DEV_MODE === '1') {
   console.log('⚠️  DEV MODE ENABLED - authentication disabled, auto-pairing active')
 }
 
-// Initialize database on startup
+// Initialize database + run migrations on startup
 getDb()
 
 // Generate server keypair on first boot
@@ -39,20 +40,32 @@ new Elysia()
     }
     console.error('Server error:', error)
   })
-  .use(healthRoutes)
-  .use(setupRoutes)
-  .use(prerequisitesRoutes)
-  .use(databaseRoutes)
-  .use(containerRoutes)
-  .use(capabilitiesRoutes)
-  .use(gitRoutes)
-  .use(serverActionsRoutes)
-  .use(planRoutes)
-  .use(fileRoutes)
-  .use(wsRoutes)
-  .use(terminalWsRoutes)
-  .use(screenshotRoutes)
-  .use(proxyRoutes)
+  .group('/PocketDev', (app) => app
+    // Health check (no auth)
+    .use(healthRoutes)
+    // Console API (admin setup, login, passcode, status)
+    .use(consoleRoutes)
+    // API routes (most require device auth)
+    .group('/api', (api) => api
+      .use(setupRoutes)
+      .use(prerequisitesRoutes)
+      .use(databaseRoutes)
+      .use(containerRoutes)
+      .use(capabilitiesRoutes)
+      .use(gitRoutes)
+      .use(serverActionsRoutes)
+      .use(planRoutes)
+      .use(fileRoutes)
+    )
+    // WebSocket routes
+    .use(wsRoutes)
+    .use(terminalWsRoutes)
+    // Preview proxy + screenshot
+    .use(screenshotRoutes)
+    .use(proxyRoutes)
+    // Console SPA static files (must be last — catch-all)
+    .use(consoleStaticRoutes)
+  )
   .listen(PORT)
 
 console.log(`🔧 PocketDev Agent running on port ${PORT}`)

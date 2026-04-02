@@ -25,6 +25,10 @@ import type {
   PlanEntry,
 } from '@pocketdev/shared/types'
 
+function apiUrl(ip: string, port: number, path: string): string {
+  return `http://${ip}:${port}/PocketDev/api${path}`
+}
+
 export async function pairWithServer(
   ip: string,
   port: number,
@@ -34,7 +38,7 @@ export async function pairWithServer(
   const keypair = generateDeviceKeypair()
   const publicKeyHex = Buffer.from(keypair.publicKey).toString('hex')
 
-  const response = await fetch(`http://${ip}:${port}/setup/pair`, {
+  const response = await fetch(apiUrl(ip, port, '/pair'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -56,15 +60,15 @@ export async function pairWithServer(
 }
 
 export function buildWsUrl(ip: string, port: number): string {
-  return `ws://${ip}:${port}/ws`
+  return `ws://${ip}:${port}/PocketDev/ws`
 }
 
 export function buildTerminalWsUrl(ip: string, port: number): string {
-  return `ws://${ip}:${port}/ws/terminal`
+  return `ws://${ip}:${port}/PocketDev/ws/terminal`
 }
 
 export async function fetchPrerequisites(ip: string, port: number) {
-  const response = await fetch(`http://${ip}:${port}/setup/prerequisites`, {
+  const response = await fetch(apiUrl(ip, port, '/prerequisites'), {
     headers: {
       Authorization: await buildPocketDevAuthorizationHeader(),
     },
@@ -74,7 +78,7 @@ export async function fetchPrerequisites(ip: string, port: number) {
 }
 
 export async function fetchTaskList(ip: string, port: number) {
-  const response = await fetch(`http://${ip}:${port}/tasks`, {
+  const response = await fetch(apiUrl(ip, port, '/tasks'), {
     headers: {
       Authorization: await buildPocketDevAuthorizationHeader(),
     },
@@ -84,7 +88,7 @@ export async function fetchTaskList(ip: string, port: number) {
 }
 
 export async function fetchContainers(ip: string, port: number): Promise<ContainerSummary[]> {
-  const response = await fetch(`http://${ip}:${port}/containers`, {
+  const response = await fetch(apiUrl(ip, port, '/containers'), {
     headers: {
       Authorization: await buildPocketDevAuthorizationHeader(),
     },
@@ -110,7 +114,7 @@ export async function fetchContainerLogs(
   })
 
   const response = await fetch(
-    `http://${ip}:${port}/containers/${encodeURIComponent(request.container_id)}/logs?${query.toString()}`,
+    apiUrl(ip, port, `/containers/${encodeURIComponent(request.container_id)}/logs?${query.toString()}`),
     {
       headers: {
         Authorization: await buildPocketDevAuthorizationHeader(),
@@ -132,7 +136,7 @@ export async function fetchFileTree(
   depth = 3,
 ): Promise<FileTreeResponse> {
   const query = new URLSearchParams({ path, depth: String(depth) })
-  const response = await fetch(`http://${ip}:${port}/files/tree?${query.toString()}`, {
+  const response = await fetch(apiUrl(ip, port, `/files/tree?${query.toString()}`), {
     headers: {
       Authorization: await buildPocketDevAuthorizationHeader(),
     },
@@ -147,7 +151,7 @@ export async function fetchFileContent(
   path: string,
 ): Promise<FileReadResponse> {
   const query = new URLSearchParams({ path })
-  const response = await fetch(`http://${ip}:${port}/files/read?${query.toString()}`, {
+  const response = await fetch(apiUrl(ip, port, `/files/read?${query.toString()}`), {
     headers: {
       Authorization: await buildPocketDevAuthorizationHeader(),
     },
@@ -160,7 +164,7 @@ export async function fetchCapabilities(
   ip: string,
   port: number,
 ): Promise<ServerCapabilities> {
-  const response = await fetch(`http://${ip}:${port}/capabilities`, {
+  const response = await fetch(apiUrl(ip, port, '/capabilities'), {
     headers: {
       Authorization: await buildPocketDevAuthorizationHeader(),
     },
@@ -172,7 +176,7 @@ export async function fetchCapabilities(
 // ─── Git ─────────────────────────────────────────────────
 
 export async function fetchGitSummary(ip: string, port: number): Promise<GitSummary> {
-  const response = await fetch(`http://${ip}:${port}/git/summary`, {
+  const response = await fetch(apiUrl(ip, port, '/git/summary'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch git summary (${response.status})`)
@@ -180,7 +184,7 @@ export async function fetchGitSummary(ip: string, port: number): Promise<GitSumm
 }
 
 export async function fetchGitChanges(ip: string, port: number): Promise<GitFileChange[]> {
-  const response = await fetch(`http://${ip}:${port}/git/changes`, {
+  const response = await fetch(apiUrl(ip, port, '/git/changes'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch git changes (${response.status})`)
@@ -195,7 +199,7 @@ export async function fetchGitDiff(
   staged: boolean,
 ): Promise<GitDiffResponse> {
   const query = new URLSearchParams({ path, staged: staged ? '1' : '0' })
-  const response = await fetch(`http://${ip}:${port}/git/diff?${query.toString()}`, {
+  const response = await fetch(apiUrl(ip, port, `/git/diff?${query.toString()}`), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch diff (${response.status})`)
@@ -204,7 +208,7 @@ export async function fetchGitDiff(
 
 export async function fetchGitHistory(ip: string, port: number, limit = 20): Promise<GitCommitEntry[]> {
   const query = new URLSearchParams({ limit: String(limit) })
-  const response = await fetch(`http://${ip}:${port}/git/history?${query.toString()}`, {
+  const response = await fetch(apiUrl(ip, port, `/git/history?${query.toString()}`), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch git history (${response.status})`)
@@ -213,7 +217,7 @@ export async function fetchGitHistory(ip: string, port: number, limit = 20): Pro
 }
 
 export async function fetchGitBranches(ip: string, port: number): Promise<GitBranchEntry[]> {
-  const response = await fetch(`http://${ip}:${port}/git/branches`, {
+  const response = await fetch(apiUrl(ip, port, '/git/branches'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch branches (${response.status})`)
@@ -227,7 +231,7 @@ async function postGitMutation(
   path: string,
   body?: Record<string, string>,
 ): Promise<GitMutationResult | GitErrorResponse> {
-  const response = await fetch(`http://${ip}:${port}/git/${path}`, {
+  const response = await fetch(apiUrl(ip, port, `/git/${path}`), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -253,7 +257,7 @@ export async function postGitPush(ip: string, port: number) {
 // ─── Server Actions ──────────────────────────────────────
 
 export async function fetchServerSummary(ip: string, port: number): Promise<ServerActionsSummary> {
-  const response = await fetch(`http://${ip}:${port}/server-actions/summary`, {
+  const response = await fetch(apiUrl(ip, port, '/server-actions/summary'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch server summary (${response.status})`)
@@ -261,7 +265,7 @@ export async function fetchServerSummary(ip: string, port: number): Promise<Serv
 }
 
 export async function fetchServerPorts(ip: string, port: number): Promise<ServerPortEntry[]> {
-  const response = await fetch(`http://${ip}:${port}/server-actions/ports`, {
+  const response = await fetch(apiUrl(ip, port, '/server-actions/ports'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch ports (${response.status})`)
@@ -270,7 +274,7 @@ export async function fetchServerPorts(ip: string, port: number): Promise<Server
 }
 
 export async function fetchServerNetwork(ip: string, port: number): Promise<ServerNetworkEntry[]> {
-  const response = await fetch(`http://${ip}:${port}/server-actions/network`, {
+  const response = await fetch(apiUrl(ip, port, '/server-actions/network'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch network stats (${response.status})`)
@@ -279,7 +283,7 @@ export async function fetchServerNetwork(ip: string, port: number): Promise<Serv
 }
 
 export async function fetchServerErrors(ip: string, port: number): Promise<ServerErrorEntry[]> {
-  const response = await fetch(`http://${ip}:${port}/server-actions/errors`, {
+  const response = await fetch(apiUrl(ip, port, '/server-actions/errors'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch errors (${response.status})`)
@@ -288,7 +292,7 @@ export async function fetchServerErrors(ip: string, port: number): Promise<Serve
 }
 
 export async function fetchServerActions(ip: string, port: number): Promise<ServerActionDefinition[]> {
-  const response = await fetch(`http://${ip}:${port}/server-actions/actions`, {
+  const response = await fetch(apiUrl(ip, port, '/server-actions/actions'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch actions (${response.status})`)
@@ -297,7 +301,7 @@ export async function fetchServerActions(ip: string, port: number): Promise<Serv
 }
 
 export async function runServerAction(ip: string, port: number, actionId: string): Promise<ServerActionResult> {
-  const response = await fetch(`http://${ip}:${port}/server-actions/actions/${encodeURIComponent(actionId)}/run`, {
+  const response = await fetch(apiUrl(ip, port, `/server-actions/actions/${encodeURIComponent(actionId)}/run`), {
     method: 'POST',
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
@@ -308,7 +312,7 @@ export async function runServerAction(ip: string, port: number, actionId: string
 // ─── Plans ───────────────────────────────────────────────
 
 export async function fetchActivePlan(ip: string, port: number): Promise<PlanEntry | null> {
-  const response = await fetch(`http://${ip}:${port}/plans/active`, {
+  const response = await fetch(apiUrl(ip, port, '/plans/active'), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch active plan (${response.status})`)
@@ -318,7 +322,7 @@ export async function fetchActivePlan(ip: string, port: number): Promise<PlanEnt
 
 export async function fetchPlanHistory(ip: string, port: number, limit = 20): Promise<PlanEntry[]> {
   const query = new URLSearchParams({ limit: String(limit) })
-  const response = await fetch(`http://${ip}:${port}/plans/history?${query.toString()}`, {
+  const response = await fetch(apiUrl(ip, port, `/plans/history?${query.toString()}`), {
     headers: { Authorization: await buildPocketDevAuthorizationHeader() },
   })
   if (!response.ok) throw new Error(`Failed to fetch plan history (${response.status})`)

@@ -7,6 +7,7 @@ FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/agent/package.json ./apps/agent/package.json
+COPY apps/agent/console/package.json ./apps/agent/console/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/db/package.json ./packages/db/package.json
 RUN pnpm install --frozen-lockfile
@@ -29,6 +30,14 @@ COPY packages/db/ ./packages/db/
 COPY package.json ./
 RUN cd apps/web && npx vite build
 
+# Build the console SPA (served as static files by the agent)
+FROM base AS console-build
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/agent/console/node_modules ./apps/agent/console/node_modules
+COPY apps/agent/console/ ./apps/agent/console/
+COPY package.json ./
+RUN cd apps/agent/console && npx vite build
+
 # Build the agent bundle (pre-built tarball served to install script)
 FROM oven/bun:1 AS agent-build
 WORKDIR /app
@@ -39,10 +48,12 @@ COPY apps/agent/ ./apps/agent/
 COPY packages/shared/ ./packages/shared/
 COPY package.json ./
 RUN cd apps/agent && bun build src/index.ts --outdir dist --target bun
+# Stage the tarball contents
 RUN mkdir -p /tmp/bundle/pocketdev-agent \
     && cp apps/agent/dist/index.js /tmp/bundle/pocketdev-agent/ \
-    && cp apps/agent/src/db/schema.sql /tmp/bundle/pocketdev-agent/ \
-    && tar -czf /tmp/agent-bundle.tar.gz -C /tmp/bundle pocketdev-agent
+    && cp -r apps/agent/drizzle /tmp/bundle/pocketdev-agent/drizzle
+COPY --from=console-build /app/apps/agent/console/dist /tmp/bundle/pocketdev-agent/console
+RUN tar -czf /tmp/agent-bundle.tar.gz -C /tmp/bundle pocketdev-agent
 
 # Production — use bun for fast runtime
 FROM oven/bun:1 AS production

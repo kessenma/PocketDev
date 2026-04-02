@@ -4,37 +4,54 @@ set -euo pipefail
 # Build the PocketDev agent into a distributable tarball.
 # Output: apps/web/public/agent-bundle.tar.gz
 #
+# Includes:
+#   - dist/index.js    (bundled agent server)
+#   - drizzle/         (SQLite migration files)
+#   - console/         (built console SPA static files)
+#
 # Usage: bash scripts/build-agent-bundle.sh
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AGENT_DIR="$REPO_ROOT/apps/agent"
+CONSOLE_DIR="$AGENT_DIR/console"
 WEB_PUBLIC="$REPO_ROOT/apps/web/public"
 BUNDLE_NAME="agent-bundle.tar.gz"
 STAGING_DIR="$(mktemp -d)"
 
 echo "Building PocketDev agent bundle..."
 
-# 1. Install dependencies and build the agent
+# 1. Install dependencies
 echo "  → Installing dependencies..."
 cd "$REPO_ROOT"
 pnpm install
 
+# 2. Build console SPA
+echo "  → Building console SPA..."
+cd "$CONSOLE_DIR"
+pnpm build
+
+# 3. Build agent
 echo "  → Building agent..."
 cd "$AGENT_DIR"
 bun run build
 
-# 2. Stage files for the tarball
+# 4. Stage files for the tarball
 echo "  → Staging bundle..."
 mkdir -p "$STAGING_DIR/pocketdev-agent"
 cp "$AGENT_DIR/dist/index.js" "$STAGING_DIR/pocketdev-agent/index.js"
-cp "$AGENT_DIR/src/db/schema.sql" "$STAGING_DIR/pocketdev-agent/schema.sql"
 
-# 3. Create tarball
+# Copy Drizzle migrations
+cp -r "$AGENT_DIR/drizzle" "$STAGING_DIR/pocketdev-agent/drizzle"
+
+# Copy console SPA build output
+cp -r "$CONSOLE_DIR/dist" "$STAGING_DIR/pocketdev-agent/console"
+
+# 5. Create tarball
 echo "  → Creating tarball..."
 mkdir -p "$WEB_PUBLIC"
 tar -czf "$WEB_PUBLIC/$BUNDLE_NAME" -C "$STAGING_DIR" pocketdev-agent
 
-# 4. Clean up
+# 6. Clean up
 rm -rf "$STAGING_DIR"
 
 SIZE=$(du -h "$WEB_PUBLIC/$BUNDLE_NAME" | cut -f1)

@@ -3,7 +3,7 @@ import type { ServerCapabilities, ServerProvider, ProviderAvailability, ServerPr
 import { authenticateRequest } from '../services/auth.ts'
 import { getToolRecord, type ToolPathRow } from '../db/index.ts'
 
-function toAvailability(row: ToolPathRow | null): ProviderAvailability {
+function toAvailability(row: ToolPathRow | undefined): ProviderAvailability {
   if (!row?.path) return 'not_installed'
   if (row.authenticated) return 'available'
   return 'installed_no_auth'

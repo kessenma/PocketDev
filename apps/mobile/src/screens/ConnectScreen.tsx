@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useState } from 'react'
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
-import RNClipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../contexts/ThemeContext'
 import { pairWithServer } from '../services/api'
 import { useConnectionStore } from '../stores/connection'
@@ -21,7 +20,8 @@ import AdaptiveShell from '../components/layout/AdaptiveShell'
 import SplitViewLayout from '../components/layout/SplitViewLayout'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
-import { ArrowRight, Cable, KeyRound, Server, Sparkles } from 'lucide-react-native'
+import QRScanner, { type QRScanResult } from '../components/QRScanner'
+import { ArrowRight, Cable, KeyRound, ScanLine, Server, Sparkles } from 'lucide-react-native'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connect'>
@@ -37,36 +37,11 @@ export default function ConnectScreen({ navigation }: Props) {
   const [codeInput, setCodeInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [scannerVisible, setScannerVisible] = useState(false)
 
   const normalizedCode = normalizeSetupCode(codeInput)
-
   const canSubmit = ip.trim() && port.trim() && normalizedCode.trim() && !loading
 
-  // DEBUG: log touch + clipboard events
-  const logEvent = useCallback((field: string, event: string) => {
-    console.log(`[PASTE-DEBUG] ${field} -> ${event}`)
-    if (event === 'focus') {
-      RNClipboard.getString().then(
-        (c: string) => console.log(`[PASTE-DEBUG] clipboard has: "${c.slice(0, 50)}"`),
-        (e: unknown) => console.log(`[PASTE-DEBUG] clipboard error:`, e),
-      )
-    }
-  }, [])
-
-  // DEBUG: manual paste button
-  const handleDebugPaste = useCallback(async (setter: (v: string) => void, label: string) => {
-    try {
-      const content = await RNClipboard.getString()
-      console.log(`[PASTE-DEBUG] manual paste into ${label}: "${content}"`)
-      if (content) {
-        setter(content)
-      } else {
-        console.log(`[PASTE-DEBUG] clipboard is EMPTY`)
-      }
-    } catch (e) {
-      console.log(`[PASTE-DEBUG] paste error:`, e)
-    }
-  }, [])
   const inputStyle = {
     backgroundColor: isDark ? 'rgba(23, 23, 23, 0.7)' : 'rgba(250, 250, 250, 0.92)',
   }
@@ -93,9 +68,50 @@ export default function ConnectScreen({ navigation }: Props) {
     }
   }
 
+  function handleQRScan(result: QRScanResult) {
+    setScannerVisible(false)
+    setIp(result.host)
+    setPort(String(result.port))
+    setCodeInput(result.code)
+    // Auto-connect after a brief delay for state to settle
+    setTimeout(() => {
+      setError(null)
+      setLoading(true)
+      pairWithServer(result.host, result.port, normalizeSetupCode(result.code).trim())
+        .then((pairResult) => {
+          setPaired({ ip: result.host, port: result.port, deviceId: pairResult.deviceId })
+          navigation.replace('ServerSetup')
+        })
+        .catch((e) => {
+          setError(e instanceof Error ? e.message : 'Failed to connect')
+        })
+        .finally(() => setLoading(false))
+    }, 100)
+  }
+
   const form = (
     <LiquidGlassCard style={styles.formCard}>
       <View style={styles.form}>
+        {/* QR Scanner Button */}
+        <TouchableOpacity
+          style={[styles.scanButton, { backgroundColor: colors.primary }]}
+          onPress={() => setScannerVisible(true)}
+          activeOpacity={0.7}
+        >
+          <ScanLine color={colors.primaryText} size={20} strokeWidth={2.25} />
+          <Text style={[styles.scanButtonText, { color: colors.primaryText }]}>
+            Scan QR Code
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerText, { color: colors.textTertiary }]}>
+            or enter manually
+          </Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        </View>
+
         <View style={styles.row}>
           <View style={styles.ipField}>
             <View style={styles.labelRow}>
@@ -103,23 +119,14 @@ export default function ConnectScreen({ navigation }: Props) {
               <Text style={[styles.label, { color: colors.textSecondary }]}>Server IP</Text>
             </View>
             <TextInput
-              style={[
-                styles.input,
-                inputStyle,
-                { color: colors.text, borderColor: colors.border },
-              ]}
+              style={[styles.input, inputStyle, { color: colors.text, borderColor: colors.border }]}
               value={ip}
-              onChangeText={(t) => { console.log(`[PASTE-DEBUG] ip onChangeText: "${t}"`); setIp(t) }}
-              onFocus={() => logEvent('ip', 'focus')}
-              onBlur={() => logEvent('ip', 'blur')}
-              onPressIn={() => logEvent('ip', 'pressIn')}
-              onPressOut={() => logEvent('ip', 'pressOut')}
+              onChangeText={setIp}
               placeholder={getDefaultHost()}
               placeholderTextColor={colors.textTertiary}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="default"
-              contextMenuHidden={false}
             />
           </View>
           <View style={styles.portField}>
@@ -128,75 +135,35 @@ export default function ConnectScreen({ navigation }: Props) {
               <Text style={[styles.label, { color: colors.textSecondary }]}>Port</Text>
             </View>
             <TextInput
-              style={[
-                styles.input,
-                inputStyle,
-                { color: colors.text, borderColor: colors.border },
-              ]}
+              style={[styles.input, inputStyle, { color: colors.text, borderColor: colors.border }]}
               value={port}
-              onChangeText={(t) => { console.log(`[PASTE-DEBUG] port onChangeText: "${t}"`); setPort(t) }}
-              onFocus={() => logEvent('port', 'focus')}
-              onBlur={() => logEvent('port', 'blur')}
-              onPressIn={() => logEvent('port', 'pressIn')}
-              onPressOut={() => logEvent('port', 'pressOut')}
+              onChangeText={setPort}
               placeholder="4387"
               placeholderTextColor={colors.textTertiary}
               keyboardType="default"
-              contextMenuHidden={false}
             />
           </View>
         </View>
 
         <View style={styles.labelRow}>
           <KeyRound color={colors.textSecondary} size={14} strokeWidth={2.25} />
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Setup Code</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Passcode</Text>
         </View>
         <TextInput
-          style={[
-            styles.input,
-            inputStyle,
-            { color: colors.text, borderColor: colors.border },
-          ]}
+          style={[styles.input, inputStyle, { color: colors.text, borderColor: colors.border }]}
           value={codeInput}
-          onChangeText={(t) => { console.log(`[PASTE-DEBUG] code onChangeText: "${t}"`); setCodeInput(t) }}
-          onFocus={() => logEvent('code', 'focus')}
-          onBlur={() => logEvent('code', 'blur')}
-          onPressIn={() => logEvent('code', 'pressIn')}
-          onPressOut={() => logEvent('code', 'pressOut')}
+          onChangeText={setCodeInput}
           placeholder="ABCD-1234"
           placeholderTextColor={colors.textTertiary}
           autoCapitalize="characters"
           autoCorrect={false}
           keyboardType="default"
           maxLength={32}
-          contextMenuHidden={false}
         />
 
         <Text style={[styles.helperText, { color: colors.textTertiary }]}>
           iOS simulator uses localhost. Android emulator uses 10.0.2.2.
         </Text>
-
-        {/* DEBUG: manual paste buttons */}
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-          <TouchableOpacity
-            style={{ backgroundColor: 'rgba(255,0,0,0.3)', padding: 8, borderRadius: 6, flex: 1 }}
-            onPress={() => handleDebugPaste(setIp, 'ip')}
-          >
-            <Text style={{ color: '#fff', textAlign: 'center', fontSize: 12 }}>Paste → IP</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ backgroundColor: 'rgba(255,0,0,0.3)', padding: 8, borderRadius: 6, flex: 1 }}
-            onPress={() => handleDebugPaste(setPort, 'port')}
-          >
-            <Text style={{ color: '#fff', textAlign: 'center', fontSize: 12 }}>Paste → Port</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ backgroundColor: 'rgba(255,0,0,0.3)', padding: 8, borderRadius: 6, flex: 1 }}
-            onPress={() => handleDebugPaste(setCodeInput, 'code')}
-          >
-            <Text style={{ color: '#fff', textAlign: 'center', fontSize: 12 }}>Paste → Code</Text>
-          </TouchableOpacity>
-        </View>
 
         {error ? (
           <View style={[styles.errorBox, { backgroundColor: colors.errorBackground }]}>
@@ -268,6 +235,12 @@ export default function ConnectScreen({ navigation }: Props) {
           )}
         </AdaptiveShell>
       </KeyboardAvoidingView>
+
+      <QRScanner
+        visible={scannerVisible}
+        onScan={handleQRScan}
+        onClose={() => setScannerVisible(false)}
+      />
     </AnimatedGradientBackground>
   )
 }
@@ -361,6 +334,30 @@ const styles = StyleSheet.create({
   buttonText: {
     ...typographyScale.base,
     fontWeight: '600',
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[2],
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing[4],
+  },
+  scanButtonText: {
+    ...typographyScale.base,
+    fontWeight: '600',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    ...typographyScale.sm,
   },
   heroCard: {
     flex: 1,

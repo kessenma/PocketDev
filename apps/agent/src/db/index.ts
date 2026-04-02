@@ -1,101 +1,131 @@
+import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { Database } from 'bun:sqlite'
-import { readFileSync, mkdirSync } from 'node:fs'
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
+import { eq, desc, sql, count } from 'drizzle-orm'
+import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import * as schema from './schema/index.ts'
 
 const DATA_DIR = process.env.POCKETDEV_DATA_DIR ?? join(process.cwd(), 'data')
 
-let db: Database
+let _db: ReturnType<typeof drizzle<typeof schema>>
 
-export function getDb(): Database {
-  if (!db) {
+export function getDb() {
+  if (!_db) {
     mkdirSync(DATA_DIR, { recursive: true })
 
-    db = new Database(join(DATA_DIR, 'pocketdev.db'))
-    db.exec('PRAGMA journal_mode = WAL;')
-    db.exec('PRAGMA foreign_keys = ON;')
+    const sqlite = new Database(join(DATA_DIR, 'pocketdev.db'))
+    sqlite.exec('PRAGMA journal_mode = WAL;')
+    sqlite.exec('PRAGMA foreign_keys = ON;')
 
-    // Run schema
-    const schema = readFileSync(join(import.meta.dir, 'schema.sql'), 'utf-8')
-    db.exec(schema)
+    _db = drizzle(sqlite, { schema })
+
+    // Run migrations on startup
+    migrate(_db, { migrationsFolder: join(import.meta.dir, '../../drizzle') })
   }
-  return db
+  return _db
 }
 
-// Device operations
-export function getDevices() {
-  return getDb().query('SELECT * FROM devices').all() as DeviceRow[]
+// Re-export schema for direct table access
+export { schema }
+
+// ─── Inferred types ─────────────────────────────────────
+
+export type DeviceRow = typeof schema.devices.$inferSelect
+export type TaskRow = typeof schema.tasks.$inferSelect
+export type PlanRow = typeof schema.plans.$inferSelect
+export type PlanStepRow = typeof schema.planSteps.$inferSelect
+export type PlanQuestionRow = typeof schema.planQuestions.$inferSelect
+export type PlanMessageRow = typeof schema.planMessages.$inferSelect
+export type ToolPathRow = typeof schema.toolPaths.$inferSelect
+export type AdminAccountRow = typeof schema.adminAccounts.$inferSelect
+
+// ─── Device operations ──────────────────────────────────
+
+export function getDevices(): DeviceRow[] {
+  return getDb().select().from(schema.devices).all()
 }
 
-export function getDevice(id: string) {
-  return getDb().query('SELECT * FROM devices WHERE id = ?').get(id) as DeviceRow | null
+export function getDevice(id: string): DeviceRow | undefined {
+  return getDb().select().from(schema.devices).where(eq(schema.devices.id, id)).get()
 }
 
 export function insertDevice(id: string, publicKey: string, name: string | null, platform: string | null) {
-  getDb()
-    .query('INSERT INTO devices (id, public_key, name, platform) VALUES (?, ?, ?, ?)')
-    .run(id, publicKey, name, platform)
+  getDb().insert(schema.devices).values({ id, publicKey: publicKey, name, platform }).run()
 }
 
 export function updateDeviceLastSeen(id: string) {
   getDb()
-    .query("UPDATE devices SET last_seen_at = datetime('now') WHERE id = ?")
-    .run(id)
+    .update(schema.devices)
+    .set({ lastSeenAt: sql`datetime('now')` })
+    .where(eq(schema.devices.id, id))
+    .run()
 }
 
 export function getDeviceCount(): number {
-  const row = getDb().query('SELECT COUNT(*) as count FROM devices').get() as { count: number }
-  return row.count
+  const row = getDb().select({ count: count() }).from(schema.devices).get()
+  return row?.count ?? 0
 }
 
-// Server config operations
+// ─── Server config operations ───────────────────────────
+
 export function getConfig(key: string): string | null {
-  const row = getDb().query('SELECT value FROM server_config WHERE key = ?').get(key) as { value: string } | null
+  const row = getDb()
+    .select()
+    .from(schema.serverConfig)
+    .where(eq(schema.serverConfig.key, key))
+    .get()
   return row?.value ?? null
 }
 
 export function setConfig(key: string, value: string) {
   getDb()
-    .query('INSERT OR REPLACE INTO server_config (key, value) VALUES (?, ?)')
-    .run(key, value)
+    .insert(schema.serverConfig)
+    .values({ key, value })
+    .onConflictDoUpdate({ target: schema.serverConfig.key, set: { value } })
+    .run()
 }
 
-// Task operations
+// ─── Task operations ────────────────────────────────────
+
 export function insertTask(id: string, prompt: string, agentType: string, workingDirectory: string | null) {
-  getDb()
-    .query('INSERT INTO tasks (id, prompt, agent_type, working_directory) VALUES (?, ?, ?, ?)')
-    .run(id, prompt, agentType, workingDirectory)
+  getDb().insert(schema.tasks).values({ id, prompt, agentType, workingDirectory }).run()
 }
 
 export function updateTaskStatus(id: string, status: string, exitCode?: number) {
   const now = new Date().toISOString()
   if (status === 'running') {
-    getDb().query('UPDATE tasks SET status = ?, started_at = ? WHERE id = ?').run(status, now, id)
+    getDb().update(schema.tasks).set({ status, startedAt: now }).where(eq(schema.tasks.id, id)).run()
   } else if (status === 'completed' || status === 'failed' || status === 'killed') {
     getDb()
-      .query('UPDATE tasks SET status = ?, completed_at = ?, exit_code = ? WHERE id = ?')
-      .run(status, now, exitCode ?? null, id)
+      .update(schema.tasks)
+      .set({ status, completedAt: now, exitCode: exitCode ?? null })
+      .where(eq(schema.tasks.id, id))
+      .run()
   } else {
-    getDb().query('UPDATE tasks SET status = ? WHERE id = ?').run(status, id)
+    getDb().update(schema.tasks).set({ status }).where(eq(schema.tasks.id, id)).run()
   }
 }
 
-export function getTask(id: string) {
-  return getDb().query('SELECT * FROM tasks WHERE id = ?').get(id) as TaskRow | null
+export function getTask(id: string): TaskRow | undefined {
+  return getDb().select().from(schema.tasks).where(eq(schema.tasks.id, id)).get()
 }
 
-export function getRecentTasks(limit = 20) {
+export function getRecentTasks(limit = 20): TaskRow[] {
   return getDb()
-    .query('SELECT * FROM tasks ORDER BY created_at DESC LIMIT ?')
-    .all(limit) as TaskRow[]
+    .select()
+    .from(schema.tasks)
+    .orderBy(desc(schema.tasks.createdAt))
+    .limit(limit)
+    .all()
 }
 
 export function insertTaskLog(taskId: string, stream: string, line: string) {
-  getDb()
-    .query('INSERT INTO task_logs (task_id, stream, line) VALUES (?, ?, ?)')
-    .run(taskId, stream, line)
+  getDb().insert(schema.taskLogs).values({ taskId, stream, line }).run()
 }
 
-// Tool path operations
+// ─── Tool path operations ───────────────────────────────
+
 export function upsertToolPath(
   toolId: string,
   path: string,
@@ -103,49 +133,63 @@ export function upsertToolPath(
   authenticated?: boolean,
 ) {
   getDb()
-    .query(
-      `INSERT INTO tool_paths (tool_id, path, version, authenticated, detected_at)
-       VALUES (?, ?, ?, ?, datetime('now'))
-       ON CONFLICT(tool_id) DO UPDATE SET
-         path = excluded.path,
-         version = excluded.version,
-         authenticated = COALESCE(?, authenticated),
-         detected_at = datetime('now')`,
-    )
-    .run(toolId, path, version, authenticated ? 1 : 0, authenticated !== undefined ? (authenticated ? 1 : 0) : null)
+    .insert(schema.toolPaths)
+    .values({
+      toolId,
+      path,
+      version,
+      authenticated: authenticated ? 1 : 0,
+    })
+    .onConflictDoUpdate({
+      target: schema.toolPaths.toolId,
+      set: {
+        path,
+        version,
+        ...(authenticated !== undefined ? { authenticated: authenticated ? 1 : 0 } : {}),
+        detectedAt: sql`datetime('now')`,
+      },
+    })
+    .run()
 }
 
 export function getToolPath(toolId: string): string | null {
   const row = getDb()
-    .query('SELECT path FROM tool_paths WHERE tool_id = ?')
-    .get(toolId) as { path: string } | null
+    .select({ path: schema.toolPaths.path })
+    .from(schema.toolPaths)
+    .where(eq(schema.toolPaths.toolId, toolId))
+    .get()
   return row?.path ?? null
 }
 
-export function getToolRecord(toolId: string): ToolPathRow | null {
+export function getToolRecord(toolId: string): ToolPathRow | undefined {
   return getDb()
-    .query('SELECT * FROM tool_paths WHERE tool_id = ?')
-    .get(toolId) as ToolPathRow | null
+    .select()
+    .from(schema.toolPaths)
+    .where(eq(schema.toolPaths.toolId, toolId))
+    .get()
 }
 
 export function getAllToolPaths(): Record<string, string> {
   const rows = getDb()
-    .query('SELECT tool_id, path FROM tool_paths')
-    .all() as { tool_id: string; path: string }[]
+    .select({ toolId: schema.toolPaths.toolId, path: schema.toolPaths.path })
+    .from(schema.toolPaths)
+    .all()
   const result: Record<string, string> = {}
   for (const row of rows) {
-    result[row.tool_id] = row.path
+    result[row.toolId] = row.path
   }
   return result
 }
 
 export function setToolAuthenticated(toolId: string, authenticated: boolean) {
   getDb()
-    .query('UPDATE tool_paths SET authenticated = ? WHERE tool_id = ?')
-    .run(authenticated ? 1 : 0, toolId)
+    .update(schema.toolPaths)
+    .set({ authenticated: authenticated ? 1 : 0 })
+    .where(eq(schema.toolPaths.toolId, toolId))
+    .run()
 }
 
-// ─── Plan operations ─────────────────────────────────────
+// ─── Plan operations ────────────────────────────────────
 
 export function insertPlan(
   id: string,
@@ -155,8 +199,9 @@ export function insertPlan(
   agentName: string,
 ) {
   getDb()
-    .query('INSERT INTO plans (id, task_id, title, description, agent_name) VALUES (?, ?, ?, ?, ?)')
-    .run(id, taskId, title, description, agentName)
+    .insert(schema.plans)
+    .values({ id, taskId, title, description, agentName })
+    .run()
 }
 
 export function insertPlanStep(
@@ -169,8 +214,9 @@ export function insertPlanStep(
   sortOrder: number,
 ) {
   getDb()
-    .query('INSERT INTO plan_steps (id, plan_id, kind, title, description, file_path, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(id, planId, kind, title, description, filePath, sortOrder)
+    .insert(schema.planSteps)
+    .values({ id, planId, kind, title, description, filePath, sortOrder })
+    .run()
 }
 
 export function insertPlanQuestion(
@@ -180,137 +226,103 @@ export function insertPlanQuestion(
   required: boolean,
 ) {
   getDb()
-    .query('INSERT INTO plan_questions (id, plan_id, question, required) VALUES (?, ?, ?, ?)')
-    .run(id, planId, question, required ? 1 : 0)
+    .insert(schema.planQuestions)
+    .values({ id, planId, question, required: required ? 1 : 0 })
+    .run()
 }
 
 export function updatePlanQuestionAnswer(questionId: string, answer: string) {
   getDb()
-    .query('UPDATE plan_questions SET answer = ? WHERE id = ?')
-    .run(answer, questionId)
+    .update(schema.planQuestions)
+    .set({ answer })
+    .where(eq(schema.planQuestions.id, questionId))
+    .run()
 }
 
 export function insertPlanMessage(id: string, planId: string, role: string, text: string) {
   getDb()
-    .query('INSERT INTO plan_messages (id, plan_id, role, text) VALUES (?, ?, ?, ?)')
-    .run(id, planId, role, text)
+    .insert(schema.planMessages)
+    .values({ id, planId, role, text })
+    .run()
 }
 
 export function resolvePlan(planId: string, status: string, notes?: string) {
   getDb()
-    .query("UPDATE plans SET status = ?, notes = ?, resolved_at = datetime('now') WHERE id = ?")
-    .run(status, notes ?? null, planId)
+    .update(schema.plans)
+    .set({ status, notes: notes ?? null, resolvedAt: sql`datetime('now')` })
+    .where(eq(schema.plans.id, planId))
+    .run()
 }
 
 export function updatePlanStepCompleted(stepId: string, completed: boolean) {
   getDb()
-    .query('UPDATE plan_steps SET completed = ? WHERE id = ?')
-    .run(completed ? 1 : 0, stepId)
+    .update(schema.planSteps)
+    .set({ completed: completed ? 1 : 0 })
+    .where(eq(schema.planSteps.id, stepId))
+    .run()
 }
 
-export function getActivePlan(): PlanRow | null {
+export function getActivePlan(): PlanRow | undefined {
   return getDb()
-    .query("SELECT * FROM plans WHERE status = 'pending' ORDER BY created_at DESC LIMIT 1")
-    .get() as PlanRow | null
+    .select()
+    .from(schema.plans)
+    .where(eq(schema.plans.status, 'pending'))
+    .orderBy(desc(schema.plans.createdAt))
+    .limit(1)
+    .get()
 }
 
-export function getPlanById(planId: string): PlanRow | null {
-  return getDb()
-    .query('SELECT * FROM plans WHERE id = ?')
-    .get(planId) as PlanRow | null
+export function getPlanById(planId: string): PlanRow | undefined {
+  return getDb().select().from(schema.plans).where(eq(schema.plans.id, planId)).get()
 }
 
 export function getPlanSteps(planId: string): PlanStepRow[] {
   return getDb()
-    .query('SELECT * FROM plan_steps WHERE plan_id = ? ORDER BY sort_order')
-    .all(planId) as PlanStepRow[]
+    .select()
+    .from(schema.planSteps)
+    .where(eq(schema.planSteps.planId, planId))
+    .orderBy(schema.planSteps.sortOrder)
+    .all()
 }
 
 export function getPlanQuestions(planId: string): PlanQuestionRow[] {
   return getDb()
-    .query('SELECT * FROM plan_questions WHERE plan_id = ?')
-    .all(planId) as PlanQuestionRow[]
+    .select()
+    .from(schema.planQuestions)
+    .where(eq(schema.planQuestions.planId, planId))
+    .all()
 }
 
 export function getPlanMessages(planId: string): PlanMessageRow[] {
   return getDb()
-    .query('SELECT * FROM plan_messages WHERE plan_id = ? ORDER BY created_at')
-    .all(planId) as PlanMessageRow[]
+    .select()
+    .from(schema.planMessages)
+    .where(eq(schema.planMessages.planId, planId))
+    .orderBy(schema.planMessages.createdAt)
+    .all()
 }
 
 export function getPlanHistory(limit = 20): PlanRow[] {
   return getDb()
-    .query("SELECT * FROM plans WHERE status != 'pending' ORDER BY resolved_at DESC LIMIT ?")
-    .all(limit) as PlanRow[]
+    .select()
+    .from(schema.plans)
+    .where(sql`${schema.plans.status} != 'pending'`)
+    .orderBy(desc(schema.plans.resolvedAt))
+    .limit(limit)
+    .all()
 }
 
-export interface PlanRow {
-  id: string
-  task_id: string
-  title: string
-  description: string | null
-  agent_name: string | null
-  status: string
-  notes: string | null
-  created_at: string
-  resolved_at: string | null
+// ─── Admin account operations ───────────────────────────
+
+export function hasAdminAccount(): boolean {
+  const row = getDb().select({ count: count() }).from(schema.adminAccounts).get()
+  return (row?.count ?? 0) > 0
 }
 
-export interface PlanStepRow {
-  id: string
-  plan_id: string
-  kind: string
-  title: string
-  description: string | null
-  file_path: string | null
-  completed: number
-  sort_order: number
+export function getAdminAccount(): AdminAccountRow | undefined {
+  return getDb().select().from(schema.adminAccounts).limit(1).get()
 }
 
-export interface PlanQuestionRow {
-  id: string
-  plan_id: string
-  question: string
-  answer: string | null
-  required: number
-}
-
-export interface PlanMessageRow {
-  id: string
-  plan_id: string
-  role: string
-  text: string
-  created_at: string
-}
-
-// Row types (SQLite returns)
-export interface ToolPathRow {
-  tool_id: string
-  path: string
-  version: string | null
-  installed: number
-  authenticated: number
-  detected_at: string
-  manually_set: number
-}
-
-export interface DeviceRow {
-  id: string
-  public_key: string
-  name: string | null
-  platform: string | null
-  created_at: string
-  last_seen_at: string
-}
-
-export interface TaskRow {
-  id: string
-  prompt: string
-  agent_type: string
-  status: string
-  working_directory: string | null
-  created_at: string
-  started_at: string | null
-  completed_at: string | null
-  exit_code: number | null
+export function insertAdminAccount(email: string, passwordHash: string) {
+  getDb().insert(schema.adminAccounts).values({ email, passwordHash }).run()
 }

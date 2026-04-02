@@ -141,17 +141,17 @@ function rowToPlanEntry(row: PlanRow): PlanEntry {
 
   return {
     id: row.id,
-    taskId: row.task_id,
+    taskId: row.taskId,
     title: row.title,
     description: row.description ?? '',
-    agentName: row.agent_name ?? '',
+    agentName: row.agentName ?? '',
     status: row.status as PlanEntry['status'],
     steps: steps.map((s) => ({
       id: s.id,
       kind: s.kind as PlanStep['kind'],
       title: s.title,
       description: s.description ?? '',
-      filePath: s.file_path ?? undefined,
+      filePath: s.filePath ?? undefined,
       completed: s.completed === 1,
     })),
     questions: questions.map((q) => ({
@@ -164,10 +164,10 @@ function rowToPlanEntry(row: PlanRow): PlanEntry {
       id: m.id,
       role: m.role as 'agent' | 'user',
       text: m.text,
-      createdAt: m.created_at,
+      createdAt: m.createdAt ?? '',
     })),
     notes: row.notes ?? undefined,
-    createdAt: row.created_at,
-    resolvedAt: row.resolved_at ?? undefined,
+    createdAt: row.createdAt ?? '',
+    resolvedAt: row.resolvedAt ?? undefined,
   }
 }

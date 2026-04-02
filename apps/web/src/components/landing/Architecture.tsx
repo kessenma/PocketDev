@@ -1,4 +1,5 @@
 import { Badge } from '#/components/ui/badge'
+import { buttonVariants } from '#/components/ui/button'
 
 export function Architecture() {
   return (
@@ -36,6 +37,16 @@ export function Architecture() {
           <Badge variant="outline" className="px-4 py-2 text-sm font-mono">
             Filesystem + Dev Server
           </Badge>
+        </div>
+
+        <div className="mt-10 flex justify-center">
+          <a
+            href="/architecture"
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            Deep dive
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
         </div>
       </div>
     </section>

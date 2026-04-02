@@ -30,7 +30,7 @@ async function authenticate(authHeader: string | null): Promise<string | null> {
 
     const message = new TextEncoder().encode(String(timestamp))
     const sigBytes = fromHex(signature)
-    const pubKeyBytes = fromHex(device.public_key)
+    const pubKeyBytes = fromHex(device.publicKey)
 
     const valid = await verify(sigBytes, message, pubKeyBytes)
     if (!valid) return null

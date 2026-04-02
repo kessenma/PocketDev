@@ -2,18 +2,7 @@ import { Elysia, t } from 'elysia'
 import { hasDevices, isSetupActive, pairDevice } from '../services/setup.ts'
 
 export const setupRoutes = new Elysia()
-  .get('/setup', ({ set }) => {
-    if (hasDevices()) {
-      set.status = 404
-      return { error: 'Setup already completed' }
-    }
-    if (!isSetupActive()) {
-      set.status = 404
-      return { error: 'Setup mode not active' }
-    }
-    return { status: 'awaiting_pairing' }
-  })
-  .post('/setup/pair', ({ body, set }) => {
+  .post('/pair', ({ body, set }) => {
     if (hasDevices()) {
       set.status = 403
       return { error: 'Already paired' }

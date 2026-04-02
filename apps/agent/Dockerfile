@@ -18,7 +18,8 @@ WORKDIR /app
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/src/db/schema.sql ./src/db/schema.sql
+COPY --from=build /app/drizzle ./drizzle
+COPY --from=build /app/console/dist ./console
 
 ENV POCKETDEV_DATA_DIR=/opt/pocketdev/data
 ENV POCKETDEV_PORT=4387

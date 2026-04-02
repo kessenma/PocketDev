@@ -44,7 +44,7 @@ export async function authenticateRequest(authHeader: string | null): Promise<st
 
   const message = new TextEncoder().encode(String(decoded.timestamp))
   const sigBytes = fromHex(decoded.signature)
-  const pubKeyBytes = fromHex(device.public_key)
+  const pubKeyBytes = fromHex(device.publicKey)
 
   const valid = await verify(sigBytes, message, pubKeyBytes)
   if (!valid) return null
