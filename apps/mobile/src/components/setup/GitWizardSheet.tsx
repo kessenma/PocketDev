@@ -32,6 +32,7 @@ interface WizardState {
   publicKey: string | null
   userName: string
   userEmail: string
+  githubUsername: string | null
   error: string | null
   allConfigured: boolean
 }
@@ -43,6 +44,7 @@ type WizardAction =
   | { type: 'GO_BACK' }
   | { type: 'SET_IDENTITY'; name: string; email: string }
   | { type: 'SET_PUBLIC_KEY'; key: string }
+  | { type: 'SET_GITHUB_USERNAME'; username: string }
   | { type: 'RETRY' }
 
 function getInitialState(): WizardState {
@@ -57,6 +59,7 @@ function getInitialState(): WizardState {
     publicKey: null,
     userName: '',
     userEmail: '',
+    githubUsername: null,
     error: null,
     allConfigured: false,
   }
@@ -103,6 +106,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           sshStatus: ss,
           userName: ss.git_user_name ?? '',
           userEmail: ss.git_user_email ?? '',
+          githubUsername: ss.github_username,
           allConfigured: true,
         }
       }
@@ -118,6 +122,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         sshStatus: ss,
         userName: ss.git_user_name ?? '',
         userEmail: ss.git_user_email ?? '',
+        githubUsername: ss.github_username,
         publicKey: null,
       }
     }
@@ -167,6 +172,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case 'SET_PUBLIC_KEY':
       return { ...state, publicKey: action.key }
 
+    case 'SET_GITHUB_USERNAME':
+      return { ...state, githubUsername: action.username }
+
     case 'RETRY': {
       const newStatuses = { ...state.stepStatuses }
       newStatuses[state.currentStep] = 'active'
@@ -208,9 +216,9 @@ export default function GitWizardSheet({ visible, onClose, onComplete }: Props) 
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
             Your server is fully configured for Git and GitHub.
           </Text>
-          {state.sshStatus?.github_username && (
+          {state.githubUsername && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              Connected as @{state.sshStatus.github_username}
+              Connected as @{state.githubUsername}
             </Text>
           )}
           {state.userName && (

@@ -31,6 +31,10 @@ export type {
   CodexSetupStatus,
   CodexWizardStep,
   CodexWizardStepStatus,
+  PkgToolInfo,
+  PkgManagerStatus,
+  PkgWizardStep,
+  PkgWizardStepStatus,
 } from './setup.ts'
 export type {
   PlanStepKind,

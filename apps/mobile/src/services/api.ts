@@ -29,6 +29,7 @@ import type {
   GitTestConnectionResult,
   ClaudeSetupStatus,
   CodexSetupStatus,
+  PkgManagerStatus,
 } from '@pocketdev/shared/types'
 
 function apiUrl(ip: string, port: number, path: string): string {
@@ -432,4 +433,23 @@ export async function postVerifyCodexAuth(ip: string, port: number): Promise<Cod
   })
   if (!response.ok) throw new Error(`Failed to verify Codex auth (${response.status})`)
   return response.json() as Promise<CodexSetupStatus>
+}
+
+// ─── Package Manager Setup ──────────────────────────────────────────
+
+export async function fetchPkgSetupStatus(ip: string, port: number): Promise<PkgManagerStatus> {
+  const response = await fetch(apiUrl(ip, port, '/pkg-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch package manager status (${response.status})`)
+  return response.json() as Promise<PkgManagerStatus>
+}
+
+export async function postVerifyPkgSetup(ip: string, port: number): Promise<PkgManagerStatus> {
+  const response = await fetch(apiUrl(ip, port, '/pkg-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify package managers (${response.status})`)
+  return response.json() as Promise<PkgManagerStatus>
 }

@@ -5,9 +5,11 @@ import type { ToolCheck, PrerequisitesReport, ToolStatus, AuthStatus, DatabaseIn
 
 /** Run a command in a login shell so nvm/homebrew PATH entries are visible */
 async function exec(cmd: string): Promise<{ stdout: string; exitCode: number }> {
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
   const proc = Bun.spawn(['bash', '-lc', cmd], {
     stdout: 'pipe',
     stderr: 'pipe',
+    env: { ...process.env, HOME: home },
   })
   const stdout = await new Response(proc.stdout).text()
   await proc.exited

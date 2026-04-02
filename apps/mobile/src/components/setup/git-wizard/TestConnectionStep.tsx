@@ -9,6 +9,7 @@ import { CheckCircle, XCircle, RefreshCw, ArrowRight, ChevronLeft } from 'lucide
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'test-connection' }
+  | { type: 'SET_GITHUB_USERNAME'; username: string }
   | { type: 'GO_BACK' }
 
 interface Props {
@@ -36,6 +37,9 @@ export default function TestConnectionStep({ dispatch }: Props) {
       setSuccess(result.success)
       setGithubUser(result.github_username)
       setRawOutput(result.output)
+      if (result.success && result.github_username) {
+        dispatch({ type: 'SET_GITHUB_USERNAME', username: result.github_username })
+      }
       if (!result.success) {
         setErrorMsg(result.error ?? 'Connection failed')
       }

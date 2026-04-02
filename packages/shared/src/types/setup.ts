@@ -117,3 +117,21 @@ export interface CodexSetupStatus {
 
 export type CodexWizardStep = 'detect' | 'install' | 'authenticate' | 'verify'
 export type CodexWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
+// ─── Package Manager wizard types ──────────────────────────────────
+
+export interface PkgToolInfo {
+  installed: boolean
+  version: string | null
+  path: string | null
+}
+
+export interface PkgManagerStatus {
+  nvm: { installed: boolean; version: string | null }
+  npm: PkgToolInfo
+  pnpm: PkgToolInfo
+  bun: PkgToolInfo
+}
+
+export type PkgWizardStep = 'detect' | 'review' | 'install' | 'verify'
+export type PkgWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'

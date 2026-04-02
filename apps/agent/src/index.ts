@@ -13,6 +13,7 @@ import { gitRoutes } from './routes/git.ts'
 import { gitSetupRoutes } from './routes/git-setup.ts'
 import { claudeSetupRoutes } from './routes/claude-setup.ts'
 import { codexSetupRoutes } from './routes/codex-setup.ts'
+import { pkgSetupRoutes } from './routes/pkg-setup.ts'
 import { serverActionsRoutes } from './routes/server-actions.ts'
 import { planRoutes } from './routes/plans.ts'
 import { screenshotRoutes } from './services/preview-screenshot.ts'
@@ -59,6 +60,7 @@ new Elysia()
       .use(gitSetupRoutes)
       .use(claudeSetupRoutes)
       .use(codexSetupRoutes)
+      .use(pkgSetupRoutes)
       .use(serverActionsRoutes)
       .use(planRoutes)
       .use(fileRoutes)
