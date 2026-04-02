@@ -104,3 +104,16 @@ export interface ClaudeSetupStatus {
 
 export type ClaudeWizardStep = 'detect' | 'install' | 'authenticate' | 'verify'
 export type ClaudeWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
+// ─── Codex CLI wizard types ────────────────────────────────────────
+
+export interface CodexSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  authenticated: boolean
+  auth_output: string | null
+}
+
+export type CodexWizardStep = 'detect' | 'install' | 'authenticate' | 'verify'
+export type CodexWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'

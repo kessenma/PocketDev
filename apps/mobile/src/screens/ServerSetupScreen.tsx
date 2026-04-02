@@ -8,6 +8,7 @@ import InstallSheet from '../components/setup/InstallSheet'
 import AiInspectSheet from '../components/setup/AiInspectSheet'
 import GitWizardSheet from '../components/setup/GitWizardSheet'
 import ClaudeWizardSheet from '../components/setup/ClaudeWizardSheet'
+import CodexWizardSheet from '../components/setup/CodexWizardSheet'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import type { ToolCheck } from '@pocketdev/shared/types'
@@ -35,6 +36,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showGitWizard, setShowGitWizard] = useState(false)
   const [showGitHubAnimation, setShowGitHubAnimation] = useState(false)
   const [showClaudeWizard, setShowClaudeWizard] = useState(false)
+  const [showCodexWizard, setShowCodexWizard] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
     navigation.replace('Main')
@@ -59,6 +61,14 @@ export default function ServerSetupScreen({ navigation }: Props) {
 
   const handleClaudeWizardComplete = useCallback(() => {
     setShowClaudeWizard(false)
+  }, [])
+
+  const handleCodexWizard = useCallback(() => {
+    setShowCodexWizard(true)
+  }, [])
+
+  const handleCodexWizardComplete = useCallback(() => {
+    setShowCodexWizard(false)
   }, [])
 
   const handleInstall = useCallback((tool: ToolCheck) => {
@@ -116,7 +126,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} onGitWizard={handleGitWizard} onClaudeWizard={handleClaudeWizard} />
+        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} onGitWizard={handleGitWizard} onClaudeWizard={handleClaudeWizard} onCodexWizard={handleCodexWizard} />
 
         <View style={styles.footer}>
           <TouchableOpacity
@@ -165,6 +175,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           visible={showClaudeWizard}
           onClose={() => setShowClaudeWizard(false)}
           onComplete={handleClaudeWizardComplete}
+        />
+
+        <CodexWizardSheet
+          visible={showCodexWizard}
+          onClose={() => setShowCodexWizard(false)}
+          onComplete={handleCodexWizardComplete}
         />
       </View>
       {showConnected && <ConnectedAnimation onComplete={handleConnectedComplete} />}

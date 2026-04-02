@@ -28,6 +28,9 @@ export type {
   ClaudeSetupStatus,
   ClaudeWizardStep,
   ClaudeWizardStepStatus,
+  CodexSetupStatus,
+  CodexWizardStep,
+  CodexWizardStepStatus,
 } from './setup.ts'
 export type {
   PlanStepKind,

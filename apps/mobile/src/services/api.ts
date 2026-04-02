@@ -28,6 +28,7 @@ import type {
   GitConfigureResult,
   GitTestConnectionResult,
   ClaudeSetupStatus,
+  CodexSetupStatus,
 } from '@pocketdev/shared/types'
 
 function apiUrl(ip: string, port: number, path: string): string {
@@ -412,4 +413,23 @@ export async function postVerifyClaudeAuth(ip: string, port: number): Promise<Cl
   })
   if (!response.ok) throw new Error(`Failed to verify Claude auth (${response.status})`)
   return response.json() as Promise<ClaudeSetupStatus>
+}
+
+// ─── Codex CLI Setup ──────────────────────────────────────────────
+
+export async function fetchCodexSetupStatus(ip: string, port: number): Promise<CodexSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/codex-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Codex CLI status (${response.status})`)
+  return response.json() as Promise<CodexSetupStatus>
+}
+
+export async function postVerifyCodexAuth(ip: string, port: number): Promise<CodexSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/codex-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify Codex auth (${response.status})`)
+  return response.json() as Promise<CodexSetupStatus>
 }

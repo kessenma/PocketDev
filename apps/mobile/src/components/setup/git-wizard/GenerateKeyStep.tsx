@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import {
-  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Alert,
 } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../../../contexts/ThemeContext'
@@ -131,14 +131,34 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
 
       {/* Generate button (no existing key) */}
       {!showOverwriteWarning && !publicKey && !loading && (
-        <TouchableOpacity
-          style={[styles.generateButton, { backgroundColor: colors.primary }]}
-          onPress={() => generateKey(false)}
-          activeOpacity={0.7}
-        >
-          <Key color={colors.primaryText} size={18} strokeWidth={2.25} />
-          <Text style={[styles.buttonText, { color: colors.primaryText }]}>Generate SSH Key</Text>
-        </TouchableOpacity>
+        <>
+          <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+              PocketDev will create a secure Ed25519 SSH key pair on your server. This key allows your server to authenticate with GitHub without a password.
+            </Text>
+            <Text style={[styles.infoDetail, { color: colors.textTertiary }]}>
+              The key will be stored at ~/.ssh/id_ed25519
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.generateButton, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              Alert.alert(
+                'Generate SSH Key',
+                'This will create a new SSH key pair on your server. The private key stays on your server and the public key will be shared with GitHub.\n\nProceed?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Generate Key', onPress: () => generateKey(false) },
+                ],
+              )
+            }}
+            activeOpacity={0.7}
+          >
+            <Key color={colors.primaryText} size={18} strokeWidth={2.25} />
+            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Generate SSH Key</Text>
+          </TouchableOpacity>
+        </>
       )}
 
       {loading && (
@@ -256,6 +276,20 @@ const styles = StyleSheet.create({
   warningButtonText: {
     ...typographyScale.sm,
     fontWeight: '600',
+  },
+  infoCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  infoText: {
+    ...typographyScale.sm,
+    lineHeight: 20,
+  },
+  infoDetail: {
+    ...typographyScale.xs,
+    fontFamily: 'monospace',
   },
   generateButton: {
     flexDirection: 'row',

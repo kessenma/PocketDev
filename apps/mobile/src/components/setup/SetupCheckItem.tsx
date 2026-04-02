@@ -10,6 +10,7 @@ interface Props {
   onAuthenticate: (tool: ToolCheck) => void
   onGitWizard?: (tool: ToolCheck) => void
   onClaudeWizard?: (tool: ToolCheck) => void
+  onCodexWizard?: (tool: ToolCheck) => void
 }
 
 function StatusIcon({ tool }: { tool: ToolCheck }) {
@@ -44,7 +45,7 @@ function statusColor(tool: ToolCheck): string {
   return '#22c55e'
 }
 
-export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard, onClaudeWizard }: Props) {
+export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard, onClaudeWizard, onCodexWizard }: Props) {
   const { colors } = useTheme()
 
   // Git gets a dedicated wizard instead of generic install/configure buttons
@@ -55,7 +56,11 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
   const isClaude = tool.id === 'claude_cli'
   const claudeNeedsAction = isClaude && (tool.status === 'missing' || tool.auth_status === 'unauthenticated')
 
-  const hasWizard = isGit || isClaude
+  // Codex CLI gets a dedicated wizard
+  const isCodex = tool.id === 'codex_cli'
+  const codexNeedsAction = isCodex && (tool.status === 'missing' || tool.auth_status === 'unauthenticated')
+
+  const hasWizard = isGit || isClaude || isCodex
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -111,6 +116,18 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Claude</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {codexNeedsAction && onCodexWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onCodexWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Codex</Text>
           </TouchableOpacity>
         </View>
       )}

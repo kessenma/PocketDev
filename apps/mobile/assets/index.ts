@@ -17,4 +17,13 @@ export const Assets = {
   dockerBlack: require('./docker-black.png'),
   nvmWhite: require('./nvm-white.png'),
   nvmBlack: require('./nvm-black.png'),
+  githubAddSshScreen: require('./github-add-ssh-web-screen.png'),
+  chromiumWhite: require('./chromium-white.png'),
+  chromiumBlack: require('./chromium-black.png'),
+  bunWhite: require('./bun-white.png'),
+  bunBlack: require('./bun-black.png'),
+  pnpmWhite: require('./pnpm-white.png'),
+  pnpmBlack: require('./pnpm-black.png'),
+  npmWhite: require('./npm-white.png'),
+  npmBlack: require('./npm-black.png'),
 };

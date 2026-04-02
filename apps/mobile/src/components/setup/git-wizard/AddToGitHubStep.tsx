@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Linking, Image, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Image, ScrollView, Dimensions } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
@@ -106,6 +106,18 @@ export default function AddToGitHubStep({ dispatch, publicKey }: Props) {
           number={4}
           text='Click "Add SSH Key"'
           colors={colors}
+        />
+      </View>
+
+      {/* Reference screenshot */}
+      <View style={[styles.screenshotCard, { borderColor: colors.border }]}>
+        <Text style={[styles.screenshotLabel, { color: colors.textTertiary }]}>
+          Here's what it looks like
+        </Text>
+        <Image
+          source={Assets.githubAddSshScreen}
+          style={styles.screenshot}
+          resizeMode="contain"
         />
       </View>
 
@@ -238,6 +250,24 @@ const styles = StyleSheet.create({
   linkButtonText: {
     ...typographyScale.xs,
     fontWeight: '600',
+  },
+  screenshotCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    paddingTop: spacing[3],
+  },
+  screenshotLabel: {
+    ...typographyScale.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    paddingHorizontal: spacing[3],
+    marginBottom: spacing[2],
+  },
+  screenshot: {
+    width: Dimensions.get('window').width - spacing[4] * 2 - 2,
+    height: 200,
+    alignSelf: 'center',
   },
   confirmButton: {
     flexDirection: 'row',
