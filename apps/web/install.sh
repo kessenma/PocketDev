@@ -56,24 +56,31 @@ ok "Linux $ARCH ($OS_TYPE)"
 # ─── Step 1: Install required packages ───────────────────────────
 step "Step 1/4: Installing required packages"
 
+APT_UPDATED=false
+
 install_pkg() {
   case "$OS_TYPE" in
     ubuntu|debian|pop|linuxmint|zorin)
-      apt-get update -qq >/dev/null 2>&1
-      apt-get install -y -qq "$@" >/dev/null 2>&1
+      if [ "$APT_UPDATED" = false ]; then
+        info "Updating package lists (this may take a moment)..."
+        apt-get update -qq 2>&1 | tail -1 || true
+        APT_UPDATED=true
+      fi
+      apt-get install -y -qq "$@" 2>&1 | tail -2 || { fail "apt-get install $* failed"; }
       ;;
     centos|fedora|rhel|rocky|almalinux|amzn)
-      dnf install -y "$@" >/dev/null 2>&1 || yum install -y "$@" >/dev/null 2>&1
+      dnf install -y "$@" 2>&1 | tail -2 || yum install -y "$@" 2>&1 | tail -2 || { fail "dnf/yum install $* failed"; }
       ;;
     arch|manjaro)
-      pacman -Sy --noconfirm --needed "$@" >/dev/null 2>&1
+      pacman -Sy --noconfirm --needed "$@" 2>&1 | tail -2 || { fail "pacman install $* failed"; }
       ;;
     alpine)
-      apk add "$@" >/dev/null 2>&1
+      apk add "$@" 2>&1 | tail -2 || { fail "apk add $* failed"; }
       ;;
     *)
       warn "Unknown OS '$OS_TYPE' — trying apt-get"
-      apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq "$@" >/dev/null 2>&1
+      apt-get update -qq 2>&1 | tail -1 || true
+      apt-get install -y -qq "$@" 2>&1 | tail -2 || { fail "apt-get install $* failed"; }
       ;;
   esac
 }
@@ -82,7 +89,13 @@ for pkg in curl unzip; do
   if ! command -v "$pkg" >/dev/null 2>&1; then
     info "Installing $pkg..."
     install_pkg "$pkg"
-    ok "$pkg installed"
+    if command -v "$pkg" >/dev/null 2>&1; then
+      ok "$pkg installed"
+    else
+      fail "Failed to install $pkg"
+    fi
+  else
+    ok "$pkg already installed"
   fi
 done
 
