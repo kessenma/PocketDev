@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/bun-sqlite'
 import { Database } from 'bun:sqlite'
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 import { eq, desc, sql, count } from 'drizzle-orm'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import * as schema from './schema/index.ts'
 
@@ -21,7 +21,12 @@ export function getDb() {
     _db = drizzle(sqlite, { schema })
 
     // Run migrations on startup
-    migrate(_db, { migrationsFolder: join(import.meta.dir, '../../drizzle') })
+    // In dev: import.meta.dir is src/db/, drizzle/ is at ../../drizzle
+    // In production: index.js is at /opt/pocketdev/, drizzle/ is at ./drizzle
+    const devPath = join(import.meta.dir, '../../drizzle')
+    const prodPath = join(process.cwd(), 'drizzle')
+    const migrationsFolder = existsSync(join(devPath, 'meta')) ? devPath : prodPath
+    migrate(_db, { migrationsFolder })
   }
   return _db
 }
