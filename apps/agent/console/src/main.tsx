@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import './styles.css'
 import { SetupPage } from './pages/SetupPage'
 import { LoginPage } from './pages/LoginPage'
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/console" element={<ConsolePage />} />
         <Route path="*" element={<Navigate to="/setup" replace />} />
       </Routes>
+      <Toaster theme="dark" position="bottom-center" richColors />
     </BrowserRouter>
   </StrictMode>,
 )

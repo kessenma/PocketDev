@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Platform,
   ScrollView,
 } from 'react-native'
-import Clipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../contexts/ThemeContext'
 import { pairWithServer } from '../services/api'
 import { useConnectionStore } from '../stores/connection'
@@ -23,14 +22,7 @@ import SplitViewLayout from '../components/layout/SplitViewLayout'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
 import QRScanner, { type QRScanResult } from '../components/QRScanner'
-import {
-  ArrowRight,
-  ClipboardPaste,
-  Link,
-  ScanLine,
-  Server,
-  Sparkles,
-} from 'lucide-react-native'
+import { ArrowRight, Link, ScanLine, Server, Sparkles } from 'lucide-react-native'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connect'>
@@ -45,7 +37,6 @@ export default function ConnectScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scannerVisible, setScannerVisible] = useState(false)
-  const inputRef = useRef<TextInput>(null)
 
   const parsed = parseConnectionString(connectionInput)
   const canSubmit = parsed !== null && !loading
@@ -77,7 +68,6 @@ export default function ConnectScreen({ navigation }: Props) {
   function handleQRScan(result: QRScanResult) {
     setScannerVisible(false)
     setConnectionInput(`pocketdev://${result.host}:${result.port}/${result.code}`)
-    // Auto-connect after a brief delay for state to settle
     setTimeout(() => {
       setError(null)
       setLoading(true)
@@ -91,26 +81,6 @@ export default function ConnectScreen({ navigation }: Props) {
         })
         .finally(() => setLoading(false))
     }, 100)
-  }
-
-  async function handlePasteButton() {
-    try {
-      const content = await Clipboard.getString()
-      console.log(`[PASTE-DEBUG] Manual paste button pressed`)
-      console.log(`[PASTE-DEBUG] Clipboard content: "${content}"`)
-      console.log(`[PASTE-DEBUG] Content length: ${content.length}`)
-      if (content) {
-        setConnectionInput(content.trim())
-        const p = parseConnectionString(content.trim())
-        console.log(`[PASTE-DEBUG] Parsed result:`, p)
-      } else {
-        console.log(`[PASTE-DEBUG] Clipboard was empty`)
-        setError('Clipboard is empty')
-      }
-    } catch (e) {
-      console.log(`[PASTE-DEBUG] Clipboard read error:`, e)
-      setError(`Clipboard error: ${e instanceof Error ? e.message : String(e)}`)
-    }
   }
 
   const form = (
@@ -140,36 +110,18 @@ export default function ConnectScreen({ navigation }: Props) {
           <Link color={colors.textSecondary} size={14} strokeWidth={2.25} />
           <Text style={[styles.labelText, { color: colors.textSecondary }]}>Connection URL</Text>
         </View>
-        <View style={styles.inputRow}>
-          <TextInput
-            ref={inputRef}
-            style={[styles.input, styles.inputFlex, inputStyle, { color: colors.text, borderColor: colors.border }]}
-            value={connectionInput}
-            onChangeText={(text) => {
-              console.log(`[PASTE-DEBUG] onChangeText fired, length=${text.length}, value="${text.slice(0, 80)}"`)
-              setConnectionInput(text)
-            }}
-            onFocus={() => {
-              console.log(`[PASTE-DEBUG] TextInput focused`)
-              Clipboard.getString().then(
-                (c: string) => console.log(`[PASTE-DEBUG] Clipboard on focus: "${c.slice(0, 80)}" (len=${c.length})`),
-                (e: unknown) => console.log(`[PASTE-DEBUG] Clipboard read on focus failed:`, e),
-              )
-            }}
-            placeholder="pocketdev://192.168.1.1:4387/ABCD1234"
-            placeholderTextColor={colors.textTertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-          />
-          <TouchableOpacity
-            style={[styles.pasteButton, { backgroundColor: colors.primary }]}
-            onPress={handlePasteButton}
-            activeOpacity={0.7}
-          >
-            <ClipboardPaste color={colors.primaryText} size={18} strokeWidth={2.25} />
-          </TouchableOpacity>
-        </View>
+        <TextInput
+          style={[styles.input, inputStyle, { color: colors.text, borderColor: colors.border }]}
+          value={connectionInput}
+          onChangeText={setConnectionInput}
+          placeholder="pocketdev://192.168.1.1:4387/ABCD1234"
+          placeholderTextColor={colors.textTertiary}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="off"
+          textContentType="none"
+          keyboardType="default"
+        />
 
         {parsed ? (
           <View style={[styles.parsedInfo, { backgroundColor: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(22,163,74,0.08)', borderColor: isDark ? 'rgba(34,197,94,0.2)' : 'rgba(22,163,74,0.15)' }]}>
@@ -321,25 +273,12 @@ const styles = StyleSheet.create({
   formCard: {
     padding: spacing[5],
   },
-  inputRow: {
-    flexDirection: 'row',
-    gap: spacing[2],
-  },
-  inputFlex: {
-    flex: 1,
-  },
   input: {
     ...typographyScale.base,
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
-  },
-  pasteButton: {
-    borderRadius: borderRadius.lg,
-    width: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   parsedInfo: {
     padding: spacing[3],
@@ -434,7 +373,6 @@ function parseConnectionString(input: string): { host: string; port: number; cod
   const trimmed = input.trim()
   if (!trimmed) return null
 
-  // pocketdev://host:port/code
   const urlMatch = trimmed.match(/^pocketdev:\/\/([^:/]+):(\d+)\/(.+)$/i)
   if (urlMatch) {
     const code = normalizeSetupCode(urlMatch[3]!)

@@ -4,9 +4,10 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Button } from '#/components/ui/button'
 import { Separator } from '#/components/ui/separator'
+import { CopyButton } from './CopyButton'
 import { QRCodeDisplay } from './QRCodeDisplay'
 import { setPasscode, refreshPasscode } from '#/lib/api'
-import { QrCode, Copy, RefreshCw, Check, Smartphone } from 'lucide-react'
+import { QrCode, RefreshCw, Smartphone } from 'lucide-react'
 
 interface Props {
   passcode: string | null
@@ -18,10 +19,13 @@ interface Props {
 export function ConnectionWizard({ passcode, serverIp, port, onPasscodeChanged }: Props) {
   const [customCode, setCustomCode] = useState('')
   const [loading, setLoading] = useState(false)
-  const [copied, setCopied] = useState(false)
 
   const qrPayload = passcode
     ? JSON.stringify({ host: serverIp, port, code: passcode })
+    : null
+
+  const connectionUrl = passcode
+    ? `pocketdev://${serverIp}:${port}/${passcode}`
     : null
 
   async function handleSetPasscode(e: FormEvent) {
@@ -45,17 +49,6 @@ export function ConnectionWizard({ passcode, serverIp, port, onPasscodeChanged }
     } finally {
       setLoading(false)
     }
-  }
-
-  const connectionUrl = passcode
-    ? `pocketdev://${serverIp}:${port}/${passcode}`
-    : null
-
-  function handleCopy() {
-    if (!connectionUrl) return
-    navigator.clipboard.writeText(connectionUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -109,26 +102,19 @@ export function ConnectionWizard({ passcode, serverIp, port, onPasscodeChanged }
             {/* Manual connection info */}
             <div className="space-y-3">
               <p className="text-sm font-medium">Manual Connection</p>
-              <div className="rounded-lg border border-border bg-muted/50 p-4 font-mono text-sm space-y-2">
-                <p className="break-all text-primary font-bold">{connectionUrl}</p>
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  <p>Server: {serverIp}:{port}</p>
-                  <p>Passcode: {passcode}</p>
-                </div>
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 p-4 font-mono text-sm">
+                <p className="flex-1 break-all text-primary font-bold">{connectionUrl}</p>
+                <CopyButton value={connectionUrl!} size="icon" variant="ghost" />
               </div>
-              <Button variant="outline" size="sm" onClick={handleCopy} className="w-full">
-                {copied ? (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy connection details
-                  </>
-                )}
-              </Button>
+              <div className="text-xs text-muted-foreground space-y-0.5 px-1">
+                <p>Server: {serverIp}:{port}</p>
+                <p>Passcode: {passcode}</p>
+              </div>
+              <CopyButton
+                value={connectionUrl!}
+                label="Copy connection URL"
+                className="w-full"
+              />
             </div>
           </>
         ) : (

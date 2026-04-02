@@ -1,5 +1,5 @@
 export type RootStackParamList = {
-  Connect: undefined
+  Connect: { url?: string } | undefined
   ServerSetup: undefined
   Main: undefined
   TaskDetail: { taskId: string }
