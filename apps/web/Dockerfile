@@ -18,7 +18,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
-COPY apps/web/ ./apps/web/
+COPY apps/web/src ./apps/web/src
+COPY apps/web/public ./apps/web/public
+COPY apps/web/server.ts ./apps/web/server.ts
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/web/tsconfig.json ./apps/web/tsconfig.json
+COPY apps/web/vite.config.ts ./apps/web/vite.config.ts
+COPY apps/web/components.json ./apps/web/components.json
 COPY packages/shared/ ./packages/shared/
 COPY packages/db/ ./packages/db/
 COPY package.json ./
@@ -43,6 +49,9 @@ COPY --from=build /app/apps/web/tsconfig.json ./tsconfig.json
 # Shared package (runtime dependency)
 COPY --from=build /app/packages/shared /app/packages/shared
 COPY --from=build /app/packages/db /app/packages/db
+
+# Install script — copied last so edits don't bust the build cache
+COPY apps/web/install.sh ./install.sh
 
 ENV NODE_ENV=production
 ENV PORT=3000

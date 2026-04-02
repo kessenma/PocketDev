@@ -1,9 +1,10 @@
 import { readFileSync } from 'fs'
-import { resolve } from 'path'
+import { join } from 'path'
 import { db } from '@pocketdev/db'
 import { installs } from '@pocketdev/db/schema'
 
-const SCRIPT_PATH = resolve(import.meta.dirname, '../../install.sh')
+// server.ts runs from /app/apps/web (Docker WORKDIR), install.sh is in same dir
+const SCRIPT_PATH = join(process.cwd(), 'install.sh')
 
 function getScript(): string {
   return readFileSync(SCRIPT_PATH, 'utf-8')
