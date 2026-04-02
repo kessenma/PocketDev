@@ -3,9 +3,15 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        VITE_APP_URL: ${VITE_APP_URL:-https://pocketdev.run}
+    restart: always
+    env_file:
+      - .env
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - VITE_APP_URL=${VITE_APP_URL}
-      - NODE_ENV=production
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      VITE_APP_URL: ${VITE_APP_URL}
