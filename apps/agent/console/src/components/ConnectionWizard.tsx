@@ -47,9 +47,13 @@ export function ConnectionWizard({ passcode, serverIp, port, onPasscodeChanged }
     }
   }
 
+  const connectionUrl = passcode
+    ? `pocketdev://${serverIp}:${port}/${passcode}`
+    : null
+
   function handleCopy() {
-    const text = `http://${serverIp}:${port}/PocketDev\nPasscode: ${passcode}`
-    navigator.clipboard.writeText(text)
+    if (!connectionUrl) return
+    navigator.clipboard.writeText(connectionUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -105,15 +109,12 @@ export function ConnectionWizard({ passcode, serverIp, port, onPasscodeChanged }
             {/* Manual connection info */}
             <div className="space-y-3">
               <p className="text-sm font-medium">Manual Connection</p>
-              <div className="rounded-lg border border-border bg-muted/50 p-4 font-mono text-sm space-y-1">
-                <p>
-                  <span className="text-muted-foreground">Server:</span>{' '}
-                  {serverIp}:{port}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Passcode:</span>{' '}
-                  <span className="font-bold text-primary">{passcode}</span>
-                </p>
+              <div className="rounded-lg border border-border bg-muted/50 p-4 font-mono text-sm space-y-2">
+                <p className="break-all text-primary font-bold">{connectionUrl}</p>
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  <p>Server: {serverIp}:{port}</p>
+                  <p>Passcode: {passcode}</p>
+                </div>
               </div>
               <Button variant="outline" size="sm" onClick={handleCopy} className="w-full">
                 {copied ? (

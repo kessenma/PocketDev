@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import {
   View,
   Text,
@@ -8,7 +8,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native'
+import Clipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../contexts/ThemeContext'
 import { pairWithServer } from '../services/api'
 import { useConnectionStore } from '../stores/connection'
@@ -21,7 +23,14 @@ import SplitViewLayout from '../components/layout/SplitViewLayout'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
 import QRScanner, { type QRScanResult } from '../components/QRScanner'
-import { ArrowRight, Cable, KeyRound, ScanLine, Server, Sparkles } from 'lucide-react-native'
+import {
+  ArrowRight,
+  ClipboardPaste,
+  Link,
+  ScanLine,
+  Server,
+  Sparkles,
+} from 'lucide-react-native'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connect'>
@@ -32,15 +41,14 @@ export default function ConnectScreen({ navigation }: Props) {
   const { layoutMode } = useAdaptiveLayout()
   const setPaired = useConnectionStore((s) => s.setPaired)
 
-  const [ip, setIp] = useState(getDefaultHost())
-  const [port, setPort] = useState('4387')
-  const [codeInput, setCodeInput] = useState('')
+  const [connectionInput, setConnectionInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scannerVisible, setScannerVisible] = useState(false)
+  const inputRef = useRef<TextInput>(null)
 
-  const normalizedCode = normalizeSetupCode(codeInput)
-  const canSubmit = ip.trim() && port.trim() && normalizedCode.trim() && !loading
+  const parsed = parseConnectionString(connectionInput)
+  const canSubmit = parsed !== null && !loading
 
   const inputStyle = {
     backgroundColor: isDark ? 'rgba(23, 23, 23, 0.7)' : 'rgba(250, 250, 250, 0.92)',
@@ -51,15 +59,13 @@ export default function ConnectScreen({ navigation }: Props) {
   }
 
   async function handleConnect() {
+    if (!parsed) return
     setError(null)
     setLoading(true)
 
     try {
-      const portNum = parseInt(port, 10)
-      if (isNaN(portNum)) throw new Error('Invalid port number')
-
-      const result = await pairWithServer(ip.trim(), portNum, normalizedCode.trim())
-      setPaired({ ip: ip.trim(), port: portNum, deviceId: result.deviceId })
+      const result = await pairWithServer(parsed.host, parsed.port, parsed.code)
+      setPaired({ ip: parsed.host, port: parsed.port, deviceId: result.deviceId })
       navigation.replace('ServerSetup')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to connect')
@@ -70,9 +76,7 @@ export default function ConnectScreen({ navigation }: Props) {
 
   function handleQRScan(result: QRScanResult) {
     setScannerVisible(false)
-    setIp(result.host)
-    setPort(String(result.port))
-    setCodeInput(result.code)
+    setConnectionInput(`pocketdev://${result.host}:${result.port}/${result.code}`)
     // Auto-connect after a brief delay for state to settle
     setTimeout(() => {
       setError(null)
@@ -87,6 +91,26 @@ export default function ConnectScreen({ navigation }: Props) {
         })
         .finally(() => setLoading(false))
     }, 100)
+  }
+
+  async function handlePasteButton() {
+    try {
+      const content = await Clipboard.getString()
+      console.log(`[PASTE-DEBUG] Manual paste button pressed`)
+      console.log(`[PASTE-DEBUG] Clipboard content: "${content}"`)
+      console.log(`[PASTE-DEBUG] Content length: ${content.length}`)
+      if (content) {
+        setConnectionInput(content.trim())
+        const p = parseConnectionString(content.trim())
+        console.log(`[PASTE-DEBUG] Parsed result:`, p)
+      } else {
+        console.log(`[PASTE-DEBUG] Clipboard was empty`)
+        setError('Clipboard is empty')
+      }
+    } catch (e) {
+      console.log(`[PASTE-DEBUG] Clipboard read error:`, e)
+      setError(`Clipboard error: ${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   const form = (
@@ -107,63 +131,61 @@ export default function ConnectScreen({ navigation }: Props) {
         <View style={styles.dividerRow}>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           <Text style={[styles.dividerText, { color: colors.textTertiary }]}>
-            or enter manually
+            or paste connection URL
           </Text>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.ipField}>
-            <View style={styles.labelRow}>
-              <Server color={colors.textSecondary} size={14} strokeWidth={2.25} />
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Server IP</Text>
-            </View>
-            <TextInput
-              style={[styles.input, inputStyle, { color: colors.text, borderColor: colors.border }]}
-              value={ip}
-              onChangeText={setIp}
-              placeholder={getDefaultHost()}
-              placeholderTextColor={colors.textTertiary}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="default"
-            />
-          </View>
-          <View style={styles.portField}>
-            <View style={styles.labelRow}>
-              <Cable color={colors.textSecondary} size={14} strokeWidth={2.25} />
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Port</Text>
-            </View>
-            <TextInput
-              style={[styles.input, inputStyle, { color: colors.text, borderColor: colors.border }]}
-              value={port}
-              onChangeText={setPort}
-              placeholder="4387"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="default"
-            />
-          </View>
-        </View>
-
         <View style={styles.labelRow}>
-          <KeyRound color={colors.textSecondary} size={14} strokeWidth={2.25} />
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Passcode</Text>
+          <Link color={colors.textSecondary} size={14} strokeWidth={2.25} />
+          <Text style={[styles.labelText, { color: colors.textSecondary }]}>Connection URL</Text>
         </View>
-        <TextInput
-          style={[styles.input, inputStyle, { color: colors.text, borderColor: colors.border }]}
-          value={codeInput}
-          onChangeText={setCodeInput}
-          placeholder="ABCD-1234"
-          placeholderTextColor={colors.textTertiary}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          keyboardType="default"
-          maxLength={32}
-        />
+        <View style={styles.inputRow}>
+          <TextInput
+            ref={inputRef}
+            style={[styles.input, styles.inputFlex, inputStyle, { color: colors.text, borderColor: colors.border }]}
+            value={connectionInput}
+            onChangeText={(text) => {
+              console.log(`[PASTE-DEBUG] onChangeText fired, length=${text.length}, value="${text.slice(0, 80)}"`)
+              setConnectionInput(text)
+            }}
+            onFocus={() => {
+              console.log(`[PASTE-DEBUG] TextInput focused`)
+              Clipboard.getString().then(
+                (c: string) => console.log(`[PASTE-DEBUG] Clipboard on focus: "${c.slice(0, 80)}" (len=${c.length})`),
+                (e: unknown) => console.log(`[PASTE-DEBUG] Clipboard read on focus failed:`, e),
+              )
+            }}
+            placeholder="pocketdev://192.168.1.1:4387/ABCD1234"
+            placeholderTextColor={colors.textTertiary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
+          <TouchableOpacity
+            style={[styles.pasteButton, { backgroundColor: colors.primary }]}
+            onPress={handlePasteButton}
+            activeOpacity={0.7}
+          >
+            <ClipboardPaste color={colors.primaryText} size={18} strokeWidth={2.25} />
+          </TouchableOpacity>
+        </View>
 
-        <Text style={[styles.helperText, { color: colors.textTertiary }]}>
-          iOS simulator uses localhost. Android emulator uses 10.0.2.2.
-        </Text>
+        {parsed ? (
+          <View style={[styles.parsedInfo, { backgroundColor: isDark ? 'rgba(34,197,94,0.1)' : 'rgba(22,163,74,0.08)', borderColor: isDark ? 'rgba(34,197,94,0.2)' : 'rgba(22,163,74,0.15)' }]}>
+            <Text style={[styles.parsedText, { color: colors.textSecondary }]}>
+              <Text style={{ fontWeight: '600' }}>{parsed.host}</Text>:{parsed.port} · {parsed.code}
+            </Text>
+          </View>
+        ) : connectionInput.length > 0 ? (
+          <Text style={[styles.helperText, { color: colors.error }]}>
+            Could not parse connection URL. Expected format: pocketdev://host:port/code
+          </Text>
+        ) : (
+          <Text style={[styles.helperText, { color: colors.textTertiary }]}>
+            Copy the connection URL from your server's console, then paste it here.
+          </Text>
+        )}
 
         {error ? (
           <View style={[styles.errorBox, { backgroundColor: colors.errorBackground }]}>
@@ -201,7 +223,11 @@ export default function ConnectScreen({ navigation }: Props) {
       >
         <AdaptiveShell maxWidth={1200} style={styles.transparentBackground}>
           {layoutMode === 'phone' ? (
-            <View style={styles.phoneConnect}>
+            <ScrollView
+              style={styles.phoneConnect}
+              contentContainerStyle={styles.phoneConnectContent}
+              keyboardShouldPersistTaps="handled"
+            >
               <View
                 style={[styles.titleIconBadge, titleIconBadgeStyle]}
               >
@@ -212,7 +238,7 @@ export default function ConnectScreen({ navigation }: Props) {
                 Pair with your dev server
               </Text>
               {form}
-            </View>
+            </ScrollView>
           ) : (
             <SplitViewLayout
               leading={
@@ -254,7 +280,10 @@ const styles = StyleSheet.create({
   },
   phoneConnect: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  phoneConnectContent: {
+    flexGrow: 1,
+    justifyContent: 'center' as const,
   },
   titleIconBadge: {
     width: 56,
@@ -285,22 +314,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing[2],
   },
+  labelText: {
+    ...typographyScale.sm,
+    fontWeight: '500',
+  },
   formCard: {
     padding: spacing[5],
   },
-  row: {
+  inputRow: {
     flexDirection: 'row',
-    gap: spacing[3],
+    gap: spacing[2],
   },
-  ipField: {
-    flex: 2,
-  },
-  portField: {
+  inputFlex: {
     flex: 1,
-  },
-  label: {
-    ...typographyScale.sm,
-    fontWeight: '500',
   },
   input: {
     ...typographyScale.base,
@@ -308,6 +334,21 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
+  },
+  pasteButton: {
+    borderRadius: borderRadius.lg,
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  parsedInfo: {
+    padding: spacing[3],
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+  },
+  parsedText: {
+    ...typographyScale.sm,
+    textAlign: 'center',
   },
   helperText: {
     ...typographyScale.sm,
@@ -388,8 +429,20 @@ const styles = StyleSheet.create({
   },
 })
 
-function getDefaultHost(): string {
-  return Platform.OS === 'android' ? '10.0.2.2' : 'localhost'
+/** Parse a connection string in the format: pocketdev://host:port/code */
+function parseConnectionString(input: string): { host: string; port: number; code: string } | null {
+  const trimmed = input.trim()
+  if (!trimmed) return null
+
+  // pocketdev://host:port/code
+  const urlMatch = trimmed.match(/^pocketdev:\/\/([^:/]+):(\d+)\/(.+)$/i)
+  if (urlMatch) {
+    const code = normalizeSetupCode(urlMatch[3]!)
+    if (!code) return null
+    return { host: urlMatch[1]!, port: parseInt(urlMatch[2]!, 10), code }
+  }
+
+  return null
 }
 
 function normalizeSetupCode(value: string): string {

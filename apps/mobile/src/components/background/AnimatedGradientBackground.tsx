@@ -11,18 +11,29 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated'
-import { palette } from '@pocketdev/shared/theme'
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
-type BlobConfig = {
+// Bauhaus palette matching the web SVG graphics
+const BAUHAUS = {
+  blue: '#2D5FE5',
+  red: '#D93025',
+  yellow: '#E8B83D',
+  black: '#1a1a1a',
+} as const
+
+type ShapeConfig = {
   id: string
+  shape: 'circle' | 'rect'
   color: string
-  size: number
+  width: number
+  height: number
   initialX: number
   initialY: number
   rangeX: number
   rangeY: number
+  rotation?: number
+  breathe?: boolean
   duration: number
   delay: number
   opacity: number
@@ -41,9 +52,10 @@ type Props = {
   children?: React.ReactNode
 }
 
-function AnimatedBlob({ config }: { config: BlobConfig }) {
+function AnimatedShape({ config }: { config: ShapeConfig }) {
   const translateX = useSharedValue(0)
   const translateY = useSharedValue(0)
+  const scale = useSharedValue(1)
 
   useEffect(() => {
     translateX.value = withDelay(
@@ -81,10 +93,26 @@ function AnimatedBlob({ config }: { config: BlobConfig }) {
         true,
       ),
     )
-  }, [config.delay, config.duration, config.rangeX, config.rangeY, translateX, translateY])
+
+    if (config.breathe) {
+      scale.value = withDelay(
+        config.delay,
+        withRepeat(
+          withTiming(1.08, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+          -1,
+          true,
+        ),
+      )
+    }
+  }, [config.delay, config.duration, config.rangeX, config.rangeY, config.breathe, translateX, translateY, scale])
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }, { translateY: translateY.value }],
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { rotate: `${config.rotation ?? 0}deg` },
+      { scale: scale.value },
+    ],
   }))
 
   return (
@@ -93,11 +121,11 @@ function AnimatedBlob({ config }: { config: BlobConfig }) {
       style={[
         styles.blob,
         {
-          left: config.initialX - config.size / 2,
-          top: config.initialY - config.size / 2,
-          width: config.size,
-          height: config.size,
-          borderRadius: config.size / 2,
+          left: config.initialX - config.width / 2,
+          top: config.initialY - config.height / 2,
+          width: config.width,
+          height: config.height,
+          borderRadius: config.shape === 'circle' ? config.width / 2 : 0,
           backgroundColor: config.color,
           opacity: config.opacity,
         },
@@ -132,130 +160,184 @@ export default function AnimatedGradientBackground({
     transform: [{ scale: contentScale.value }],
   }))
 
-  const blobConfigs: BlobConfig[] =
+  const shapeConfigs: ShapeConfig[] =
     variant === 'setup'
       ? [
+          // Large blue circle — dominant, top-left, breathes like web arch-graphic
           {
-            id: 'blob1',
-            color: colors.primaryHover,
-            size: SCREEN_WIDTH * 1.34,
-            initialX: SCREEN_WIDTH * 0.1,
-            initialY: SCREEN_HEIGHT * 0.08,
-            rangeX: 24,
-            rangeY: 20,
+            id: 'blue-circle',
+            shape: 'circle',
+            color: BAUHAUS.blue,
+            width: SCREEN_WIDTH * 0.7,
+            height: SCREEN_WIDTH * 0.7,
+            initialX: SCREEN_WIDTH * 0.15,
+            initialY: SCREEN_HEIGHT * 0.12,
+            rangeX: 18,
+            rangeY: 14,
+            breathe: true,
             duration: 6200,
             delay: 0,
-            opacity: isDark ? 0.16 : 0.12,
+            opacity: isDark ? 0.2 : 0.14,
           },
+          // Red square — top-right accent
           {
-            id: 'blob2',
-            color: colors.accent,
-            size: SCREEN_WIDTH * 0.96,
-            initialX: SCREEN_WIDTH * 0.92,
-            initialY: SCREEN_HEIGHT * 0.16,
-            rangeX: 28,
-            rangeY: 22,
+            id: 'red-square',
+            shape: 'rect',
+            color: BAUHAUS.red,
+            width: SCREEN_WIDTH * 0.28,
+            height: SCREEN_WIDTH * 0.28,
+            initialX: SCREEN_WIDTH * 0.82,
+            initialY: SCREEN_HEIGHT * 0.08,
+            rangeX: 12,
+            rangeY: 16,
+            rotation: 12,
             duration: 7000,
             delay: 300,
-            opacity: isDark ? 0.14 : 0.1,
+            opacity: isDark ? 0.18 : 0.12,
           },
+          // Yellow horizontal bar — mid-screen
           {
-            id: 'blob3',
-            color: colors.backgroundSecondary,
-            size: SCREEN_WIDTH * 1.22,
-            initialX: SCREEN_WIDTH * 0.56,
-            initialY: SCREEN_HEIGHT * 0.44,
+            id: 'yellow-bar',
+            shape: 'rect',
+            color: BAUHAUS.yellow,
+            width: SCREEN_WIDTH * 0.55,
+            height: SCREEN_WIDTH * 0.14,
+            initialX: SCREEN_WIDTH * 0.6,
+            initialY: SCREEN_HEIGHT * 0.42,
             rangeX: 20,
-            rangeY: 30,
+            rangeY: 10,
+            rotation: -6,
             duration: 7600,
             delay: 180,
-            opacity: isDark ? 0.24 : 0.18,
+            opacity: isDark ? 0.2 : 0.14,
           },
+          // Small black circle — lower-left
           {
-            id: 'blob4',
-            color: colors.primary,
-            size: SCREEN_WIDTH * 1.05,
-            initialX: SCREEN_WIDTH * 0.18,
-            initialY: SCREEN_HEIGHT * 0.86,
-            rangeX: 26,
-            rangeY: 24,
+            id: 'black-circle',
+            shape: 'circle',
+            color: BAUHAUS.black,
+            width: SCREEN_WIDTH * 0.22,
+            height: SCREEN_WIDTH * 0.22,
+            initialX: SCREEN_WIDTH * 0.2,
+            initialY: SCREEN_HEIGHT * 0.72,
+            rangeX: 14,
+            rangeY: 18,
             duration: 6800,
             delay: 540,
-            opacity: isDark ? 0.14 : 0.1,
+            opacity: isDark ? 0.16 : 0.1,
           },
+          // Blue vertical bar — bottom-right
           {
-            id: 'blob5',
-            color: isDark ? palette.primary[200] : palette.accent[100],
-            size: SCREEN_WIDTH * 0.78,
-            initialX: SCREEN_WIDTH * 0.84,
-            initialY: SCREEN_HEIGHT * 0.76,
-            rangeX: 18,
-            rangeY: 28,
+            id: 'blue-bar',
+            shape: 'rect',
+            color: BAUHAUS.blue,
+            width: SCREEN_WIDTH * 0.12,
+            height: SCREEN_WIDTH * 0.5,
+            initialX: SCREEN_WIDTH * 0.85,
+            initialY: SCREEN_HEIGHT * 0.7,
+            rangeX: 10,
+            rangeY: 22,
+            rotation: 4,
             duration: 8200,
             delay: 760,
-            opacity: isDark ? 0.1 : 0.08,
+            opacity: isDark ? 0.14 : 0.1,
           },
         ]
       : [
+          // Large blue circle — hero element, breathes
           {
-            id: 'blob1',
-            color: colors.primary,
-            size: SCREEN_WIDTH * 1.28,
-            initialX: SCREEN_WIDTH * 0.22,
-            initialY: SCREEN_HEIGHT * 0.12,
-            rangeX: 40,
-            rangeY: 34,
-            duration: 4200,
-            delay: 0,
-            opacity: isDark ? 0.18 : 0.14,
-          },
-          {
-            id: 'blob2',
-            color: colors.accent,
-            size: SCREEN_WIDTH * 1.02,
-            initialX: SCREEN_WIDTH * 0.78,
-            initialY: SCREEN_HEIGHT * 0.2,
-            rangeX: 52,
-            rangeY: 38,
+            id: 'blue-circle',
+            shape: 'circle',
+            color: BAUHAUS.blue,
+            width: SCREEN_WIDTH * 0.75,
+            height: SCREEN_WIDTH * 0.75,
+            initialX: SCREEN_WIDTH * 0.25,
+            initialY: SCREEN_HEIGHT * 0.15,
+            rangeX: 24,
+            rangeY: 20,
+            breathe: true,
             duration: 5200,
-            delay: 350,
-            opacity: isDark ? 0.16 : 0.12,
+            delay: 0,
+            opacity: isDark ? 0.22 : 0.16,
           },
+          // Red square — offset right, tilted
           {
-            id: 'blob3',
-            color: colors.primaryHover,
-            size: SCREEN_WIDTH * 1.18,
-            initialX: SCREEN_WIDTH * 0.48,
-            initialY: SCREEN_HEIGHT * 0.54,
+            id: 'red-square',
+            shape: 'rect',
+            color: BAUHAUS.red,
+            width: SCREEN_WIDTH * 0.32,
+            height: SCREEN_WIDTH * 0.32,
+            initialX: SCREEN_WIDTH * 0.78,
+            initialY: SCREEN_HEIGHT * 0.22,
+            rangeX: 18,
+            rangeY: 22,
+            rotation: 15,
+            duration: 4800,
+            delay: 350,
+            opacity: isDark ? 0.2 : 0.14,
+          },
+          // Yellow wide bar — horizontal band across middle
+          {
+            id: 'yellow-bar',
+            shape: 'rect',
+            color: BAUHAUS.yellow,
+            width: SCREEN_WIDTH * 0.65,
+            height: SCREEN_WIDTH * 0.16,
+            initialX: SCREEN_WIDTH * 0.5,
+            initialY: SCREEN_HEIGHT * 0.48,
             rangeX: 30,
-            rangeY: 44,
+            rangeY: 12,
+            rotation: -8,
             duration: 4700,
             delay: 180,
-            opacity: isDark ? 0.14 : 0.1,
+            opacity: isDark ? 0.18 : 0.12,
           },
+          // Black tall rect — vertical accent, left side
           {
-            id: 'blob4',
-            color: colors.backgroundSecondary,
-            size: SCREEN_WIDTH * 0.92,
-            initialX: SCREEN_WIDTH * 0.16,
-            initialY: SCREEN_HEIGHT * 0.8,
-            rangeX: 46,
-            rangeY: 36,
-            duration: 3600,
-            delay: 650,
-            opacity: isDark ? 0.28 : 0.2,
-          },
-          {
-            id: 'blob5',
-            color: isDark ? palette.primary[300] : palette.accent[200],
-            size: SCREEN_WIDTH * 0.9,
-            initialX: SCREEN_WIDTH * 0.84,
-            initialY: SCREEN_HEIGHT * 0.78,
-            rangeX: 34,
-            rangeY: 46,
+            id: 'black-rect',
+            shape: 'rect',
+            color: BAUHAUS.black,
+            width: SCREEN_WIDTH * 0.14,
+            height: SCREEN_WIDTH * 0.56,
+            initialX: SCREEN_WIDTH * 0.12,
+            initialY: SCREEN_HEIGHT * 0.55,
+            rangeX: 16,
+            rangeY: 26,
+            rotation: 3,
             duration: 5600,
+            delay: 650,
+            opacity: isDark ? 0.18 : 0.12,
+          },
+          // Small red circle — bottom-right punctuation
+          {
+            id: 'red-circle',
+            shape: 'circle',
+            color: BAUHAUS.red,
+            width: SCREEN_WIDTH * 0.18,
+            height: SCREEN_WIDTH * 0.18,
+            initialX: SCREEN_WIDTH * 0.75,
+            initialY: SCREEN_HEIGHT * 0.78,
+            rangeX: 20,
+            rangeY: 16,
+            duration: 4200,
             delay: 500,
-            opacity: isDark ? 0.12 : 0.1,
+            opacity: isDark ? 0.16 : 0.1,
+          },
+          // Blue bar — bottom, wider
+          {
+            id: 'blue-bar',
+            shape: 'rect',
+            color: BAUHAUS.blue,
+            width: SCREEN_WIDTH * 0.48,
+            height: SCREEN_WIDTH * 0.1,
+            initialX: SCREEN_WIDTH * 0.4,
+            initialY: SCREEN_HEIGHT * 0.88,
+            rangeX: 22,
+            rangeY: 10,
+            rotation: 6,
+            duration: 6000,
+            delay: 400,
+            opacity: isDark ? 0.14 : 0.1,
           },
         ]
 
@@ -267,8 +349,8 @@ export default function AnimatedGradientBackground({
         style={[styles.softOverlay, overlayStyle]}
       />
       <View pointerEvents="none" style={styles.blobLayer}>
-        {blobConfigs.map((config) => (
-          <AnimatedBlob key={config.id} config={config} />
+        {shapeConfigs.map((config) => (
+          <AnimatedShape key={config.id} config={config} />
         ))}
       </View>
       {animDone ? (
