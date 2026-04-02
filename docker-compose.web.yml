@@ -8,6 +8,8 @@ services:
     restart: always
     env_file:
       - .env
+    volumes:
+      - ./apps/web/install.sh:/app/apps/web/install.sh:ro
     ports:
       - "${WEB_PORT:-3000}:3000"
     environment:
