@@ -5,6 +5,7 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { ConnectionWizard } from '#/components/ConnectionWizard'
 import { DeviceList } from '#/components/DeviceList'
+import { SetupStatus } from '#/components/SetupStatus'
 import { checkHealth, fetchStatus, logout, type ConsoleStatus } from '#/lib/api'
 import { Server, LogOut, Activity } from 'lucide-react'
 
@@ -96,6 +97,9 @@ export function ConsolePage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Server Setup Status */}
+        <SetupStatus />
 
         {/* Connection Wizard */}
         <ConnectionWizard

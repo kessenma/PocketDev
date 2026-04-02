@@ -6,11 +6,13 @@ import { useSetupStore } from '../stores/setup'
 import SetupChecklist from '../components/setup/SetupChecklist'
 import InstallSheet from '../components/setup/InstallSheet'
 import AiInspectSheet from '../components/setup/AiInspectSheet'
+import GitWizardSheet from '../components/setup/GitWizardSheet'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import ConnectedAnimation from '../components/ConnectedAnimation'
+import GitHubSetupAnimation from '../components/GitHubSetupAnimation'
 import { ArrowRight, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
 
 type Props = {
@@ -29,10 +31,25 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [inspectOutput, setInspectOutput] = useState('')
   const [showInspect, setShowInspect] = useState(false)
   const [showConnected, setShowConnected] = useState(false)
+  const [showGitWizard, setShowGitWizard] = useState(false)
+  const [showGitHubAnimation, setShowGitHubAnimation] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
     navigation.replace('Main')
   }, [navigation])
+
+  const handleGitWizard = useCallback(() => {
+    setShowGitWizard(true)
+  }, [])
+
+  const handleGitWizardComplete = useCallback(() => {
+    setShowGitWizard(false)
+    setShowGitHubAnimation(true)
+  }, [])
+
+  const handleGitHubAnimationComplete = useCallback(() => {
+    setShowGitHubAnimation(false)
+  }, [])
 
   const handleInstall = useCallback((tool: ToolCheck) => {
     setInstallTool(tool)
@@ -89,7 +106,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} />
+        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} onGitWizard={handleGitWizard} />
 
         <View style={styles.footer}>
           <TouchableOpacity
@@ -127,8 +144,17 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onClose={() => setShowInspect(false)}
           onFixCommand={handleFixCommand}
         />
+
+        <GitWizardSheet
+          visible={showGitWizard}
+          onClose={() => setShowGitWizard(false)}
+          onComplete={handleGitWizardComplete}
+        />
       </View>
       {showConnected && <ConnectedAnimation onComplete={handleConnectedComplete} />}
+      {showGitHubAnimation && (
+        <GitHubSetupAnimation onComplete={handleGitHubAnimationComplete} />
+      )}
     </AnimatedGradientBackground>
   )
 }

@@ -8,6 +8,7 @@ interface Props {
   tool: ToolCheck
   onInstall: (tool: ToolCheck) => void
   onAuthenticate: (tool: ToolCheck) => void
+  onGitWizard?: (tool: ToolCheck) => void
 }
 
 function StatusIcon({ tool }: { tool: ToolCheck }) {
@@ -42,14 +43,20 @@ function statusColor(tool: ToolCheck): string {
   return '#22c55e'
 }
 
-export default function SetupCheckItem({ tool, onInstall, onAuthenticate }: Props) {
+export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard }: Props) {
   const { colors } = useTheme()
-  const showInstall = tool.status === 'missing' && tool.install_command
+
+  // Git gets a dedicated wizard instead of generic install/configure buttons
+  const isGit = tool.id === 'git'
+  const gitNeedsAction = isGit && (tool.status === 'missing' || tool.status === 'misconfigured' || tool.auth_status === 'unauthenticated')
+
+  const showInstall = !isGit && tool.status === 'missing' && tool.install_command
   const showAuth =
+    !isGit &&
     tool.status !== 'missing' &&
     tool.auth_status === 'unauthenticated' &&
     tool.auth_command
-  const showConfigure = tool.status === 'misconfigured' && tool.auth_command
+  const showConfigure = !isGit && tool.status === 'misconfigured' && tool.auth_command
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -77,6 +84,18 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate }: Prop
           )}
         </View>
       </View>
+
+      {gitNeedsAction && onGitWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onGitWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Git</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {(showInstall || showAuth || showConfigure) && (
         <View style={styles.actions}>

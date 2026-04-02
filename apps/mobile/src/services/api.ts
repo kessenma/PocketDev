@@ -23,6 +23,10 @@ import type {
   ServerActionDefinition,
   ServerActionResult,
   PlanEntry,
+  GitSshStatus,
+  GitSshKeyResult,
+  GitConfigureResult,
+  GitTestConnectionResult,
 } from '@pocketdev/shared/types'
 
 function apiUrl(ip: string, port: number, path: string): string {
@@ -328,4 +332,64 @@ export async function fetchPlanHistory(ip: string, port: number, limit = 20): Pr
   if (!response.ok) throw new Error(`Failed to fetch plan history (${response.status})`)
   const data = (await response.json()) as { plans: PlanEntry[] }
   return data.plans
+}
+
+// ─── Git Setup ──────────────────────────────────────────
+
+export async function fetchGitSshStatus(ip: string, port: number): Promise<GitSshStatus> {
+  const response = await fetch(apiUrl(ip, port, '/git-setup/ssh-status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch git SSH status (${response.status})`)
+  return response.json() as Promise<GitSshStatus>
+}
+
+export async function postGenerateSshKey(ip: string, port: number, overwrite = false): Promise<GitSshKeyResult> {
+  const response = await fetch(apiUrl(ip, port, '/git-setup/generate-key'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ overwrite }),
+  })
+  if (!response.ok) throw new Error(`Failed to generate SSH key (${response.status})`)
+  return response.json() as Promise<GitSshKeyResult>
+}
+
+export async function fetchGitPublicKey(ip: string, port: number): Promise<string | null> {
+  const response = await fetch(apiUrl(ip, port, '/git-setup/public-key'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (response.status === 404) return null
+  if (!response.ok) throw new Error(`Failed to fetch public key (${response.status})`)
+  const data = (await response.json()) as { public_key: string }
+  return data.public_key
+}
+
+export async function postConfigureGitIdentity(
+  ip: string,
+  port: number,
+  name: string,
+  email: string,
+): Promise<GitConfigureResult> {
+  const response = await fetch(apiUrl(ip, port, '/git-setup/configure-identity'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ name, email }),
+  })
+  if (!response.ok) throw new Error(`Failed to configure git identity (${response.status})`)
+  return response.json() as Promise<GitConfigureResult>
+}
+
+export async function postTestGitConnection(ip: string, port: number): Promise<GitTestConnectionResult> {
+  const response = await fetch(apiUrl(ip, port, '/git-setup/test-connection'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to test git connection (${response.status})`)
+  return response.json() as Promise<GitTestConnectionResult>
 }

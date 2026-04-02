@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { upsertToolPath } from '../db/index.ts'
 import type { ToolCheck, PrerequisitesReport, ToolStatus, AuthStatus, DatabaseInfo } from '@pocketdev/shared/types'
 
@@ -46,6 +47,19 @@ async function checkGit(): Promise<ToolCheck> {
   const { stdout: userName } = await exec('git config --global user.name')
   const { stdout: userEmail } = await exec('git config --global user.email')
 
+  // Check SSH key existence
+  const sshDir = join(process.env.HOME ?? '/root', '.ssh')
+  const sshKeyExists = existsSync(join(sshDir, 'id_ed25519')) ||
+    existsSync(join(sshDir, 'id_ecdsa')) ||
+    existsSync(join(sshDir, 'id_rsa'))
+
+  // Quick GitHub SSH connectivity check
+  let githubConnected = false
+  if (sshKeyExists) {
+    const { stdout: sshOut } = await exec('ssh -T git@github.com 2>&1')
+    githubConnected = /Hi\s+[^!]+!/.test(sshOut) || sshOut.includes('successfully authenticated')
+  }
+
   const configured = !!userName && !!userEmail
   const status: ToolStatus = configured ? 'installed' : 'misconfigured'
   const authStatus: AuthStatus = configured ? 'authenticated' : 'unauthenticated'
@@ -57,7 +71,12 @@ async function checkGit(): Promise<ToolCheck> {
     version, path, required: true,
     install_command: null,
     auth_command: configured ? null : 'git config --global user.name "Your Name" && git config --global user.email "you@example.com"',
-    details: { user_name: userName || null, user_email: userEmail || null },
+    details: {
+      user_name: userName || null,
+      user_email: userEmail || null,
+      ssh_key_exists: sshKeyExists ? 'true' : 'false',
+      github_connected: githubConnected ? 'true' : 'false',
+    },
   }
 }
 

@@ -78,3 +78,27 @@ export async function refreshPasscode() {
   if (!res.ok) throw new Error('Failed to refresh passcode')
   return res.json()
 }
+
+export interface ToolCheck {
+  id: string
+  name: string
+  status: 'installed' | 'missing' | 'misconfigured'
+  auth_status: 'authenticated' | 'unauthenticated' | 'unknown' | 'not_applicable'
+  version: string | null
+  path: string | null
+  required: boolean
+  details: Record<string, string | null>
+}
+
+export interface PrerequisitesReport {
+  os: string
+  arch: string
+  tools: ToolCheck[]
+  ready: boolean
+}
+
+export async function fetchPrerequisites(): Promise<PrerequisitesReport> {
+  const res = await get('/prerequisites')
+  if (!res.ok) throw new Error('Failed to fetch prerequisites')
+  return res.json()
+}

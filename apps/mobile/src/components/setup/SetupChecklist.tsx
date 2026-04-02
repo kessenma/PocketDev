@@ -10,9 +10,10 @@ import type { ToolCheck } from '@pocketdev/shared/types'
 interface Props {
   onInstall: (tool: ToolCheck) => void
   onAuthenticate: (tool: ToolCheck) => void
+  onGitWizard: (tool: ToolCheck) => void
 }
 
-export default function SetupChecklist({ onInstall, onAuthenticate }: Props) {
+export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard }: Props) {
   const { colors } = useTheme()
   const { report, loading, error, fetchPrerequisites } = useSetupStore()
 
@@ -63,6 +64,7 @@ export default function SetupChecklist({ onInstall, onAuthenticate }: Props) {
                 tool={tool}
                 onInstall={onInstall}
                 onAuthenticate={onAuthenticate}
+                onGitWizard={onGitWizard}
               />
             ))}
           </View>
@@ -75,6 +77,7 @@ export default function SetupChecklist({ onInstall, onAuthenticate }: Props) {
                 tool={tool}
                 onInstall={onInstall}
                 onAuthenticate={onAuthenticate}
+                onGitWizard={onGitWizard}
               />
             ))}
           </View>

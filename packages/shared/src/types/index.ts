@@ -19,6 +19,12 @@ export type {
   DatabaseTemplate,
   DatabaseCreateRequest,
   PrerequisitesReport,
+  GitSshStatus,
+  GitSshKeyResult,
+  GitConfigureResult,
+  GitTestConnectionResult,
+  GitWizardStep,
+  GitWizardStepStatus,
 } from './setup.ts'
 export type {
   PlanStepKind,
