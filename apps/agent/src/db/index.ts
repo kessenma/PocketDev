@@ -20,50 +20,38 @@ export function getDb() {
 
     _db = drizzle(sqlite, { schema })
 
-    // If this DB was created by the old schema.sql (pre-Drizzle), stamp the
-    // initial migration as already applied so Drizzle doesn't try to re-create
-    // existing tables.
-    const hasDrizzleMeta = sqlite.query(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations'",
-    ).get()
-    const hasLegacyTables = sqlite.query(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='devices'",
-    ).get()
-    if (!hasDrizzleMeta && hasLegacyTables) {
-      // Create the Drizzle migrations tracking table and mark migration 0000 as done
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS __drizzle_migrations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          hash TEXT NOT NULL,
-          created_at NUMERIC
-        );
-      `)
-      // Add the admin_accounts table that the old schema didn't have
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS admin_accounts (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          email TEXT NOT NULL UNIQUE,
-          password_hash TEXT NOT NULL,
-          created_at TEXT DEFAULT (datetime('now'))
-        );
-        CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
-      `)
-      // Stamp the initial migration as applied.
-      // created_at must be >= the migration's "when" value from _journal.json
-      // so Drizzle's "created_at < folderMillis" check correctly skips it.
-      sqlite.exec(`
-        INSERT INTO __drizzle_migrations (hash, created_at)
-        VALUES ('legacy_stamp', 9999999999999);
-      `)
-    }
-
     // Run migrations on startup
-    // In dev: import.meta.dir is src/db/, drizzle/ is at ../../drizzle
-    // In production: index.js is at /opt/pocketdev/, drizzle/ is at ./drizzle
     const devPath = join(import.meta.dir, '../../drizzle')
     const prodPath = join(process.cwd(), 'drizzle')
     const migrationsFolder = existsSync(join(devPath, 'meta')) ? devPath : prodPath
-    migrate(_db, { migrationsFolder })
+
+    try {
+      migrate(_db, { migrationsFolder })
+    } catch (err) {
+      // Legacy DB (created by old schema.sql before Drizzle) — tables already
+      // exist so the migration fails with "table already exists". Fix it by
+      // ensuring the new tables exist and stamping all migrations as applied.
+      if (err instanceof Error && err.message.includes('already exists')) {
+        sqlite.exec(`
+          CREATE TABLE IF NOT EXISTS admin_accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+          );
+          CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
+        `)
+        // Wipe any bad stamps from prior migration attempts and insert a
+        // far-future stamp so Drizzle considers all current migrations applied.
+        sqlite.exec(`DELETE FROM __drizzle_migrations;`)
+        sqlite.exec(`
+          INSERT INTO __drizzle_migrations (hash, created_at)
+          VALUES ('legacy_stamp', 9999999999999);
+        `)
+      } else {
+        throw err
+      }
+    }
   }
   return _db
 }
