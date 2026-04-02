@@ -24,6 +24,7 @@ import {
   ModelSelector,
   getModelById,
   getProviderById,
+  type ModelProviderId,
 } from '../components/model-selector'
 import { useNewTaskDraftStore } from '../stores/new-task-draft'
 
@@ -48,8 +49,8 @@ export default function NewTaskScreen({ navigation: _navigation }: Props) {
   const submitDraft = useNewTaskDraftStore((state) => state.submitDraft)
 
   const recentPrompts = getRecentPrompts()
-  const selectedProvider = getProviderById(selectedProviderId)
-  const selectedModel = getModelById(selectedProviderId, selectedModelId)
+  const selectedProvider = getProviderById(selectedProviderId as ModelProviderId)
+  const selectedModel = getModelById(selectedProviderId as ModelProviderId, selectedModelId)
 
   function handleRun() {
     if (prompt.trim()) {
@@ -73,7 +74,7 @@ export default function NewTaskScreen({ navigation: _navigation }: Props) {
 
       <ModelSelector
         providers={MODEL_PROVIDERS}
-        selectedProviderId={selectedProviderId}
+        selectedProviderId={selectedProviderId as ModelProviderId}
         selectedModelId={selectedModelId}
         onSelectProvider={selectProvider}
         onSelectModel={selectModel}

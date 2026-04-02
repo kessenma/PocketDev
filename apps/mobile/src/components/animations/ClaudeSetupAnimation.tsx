@@ -197,7 +197,7 @@ type AccentConfig = (typeof ACCENTS)[number]
 
 function OrbitingAccent({ config }: { config: AccentConfig }) {
   const opacity = useSharedValue(0)
-  const rotation = useSharedValue(config.startAngle)
+  const rotation = useSharedValue<number>(config.startAngle)
 
   useEffect(() => {
     const delay = ICON_FADE_IN + config.delay * RING_STAGGER

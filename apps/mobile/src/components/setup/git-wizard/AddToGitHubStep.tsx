@@ -94,7 +94,7 @@ export default function AddToGitHubStep({ dispatch, publicKey }: Props) {
         />
         <InstructionStep
           number={2}
-          text='Name it "PocketDev" (or anything you\'ll recognize)'
+          text={'Name it "PocketDev" (or anything you\'ll recognize)'}
           colors={colors}
         />
         <InstructionStep
