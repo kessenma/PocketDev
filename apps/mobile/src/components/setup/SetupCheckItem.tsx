@@ -9,6 +9,7 @@ interface Props {
   onInstall: (tool: ToolCheck) => void
   onAuthenticate: (tool: ToolCheck) => void
   onGitWizard?: (tool: ToolCheck) => void
+  onClaudeWizard?: (tool: ToolCheck) => void
 }
 
 function StatusIcon({ tool }: { tool: ToolCheck }) {
@@ -43,20 +44,25 @@ function statusColor(tool: ToolCheck): string {
   return '#22c55e'
 }
 
-export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard }: Props) {
+export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard, onClaudeWizard }: Props) {
   const { colors } = useTheme()
 
   // Git gets a dedicated wizard instead of generic install/configure buttons
   const isGit = tool.id === 'git'
   const gitNeedsAction = isGit && (tool.status === 'missing' || tool.status === 'misconfigured' || tool.auth_status === 'unauthenticated')
 
-  const showInstall = !isGit && tool.status === 'missing' && tool.install_command
+  // Claude CLI gets a dedicated wizard
+  const isClaude = tool.id === 'claude_cli'
+  const claudeNeedsAction = isClaude && (tool.status === 'missing' || tool.auth_status === 'unauthenticated')
+
+  const hasWizard = isGit || isClaude
+  const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
-    !isGit &&
+    !hasWizard &&
     tool.status !== 'missing' &&
     tool.auth_status === 'unauthenticated' &&
     tool.auth_command
-  const showConfigure = !isGit && tool.status === 'misconfigured' && tool.auth_command
+  const showConfigure = !hasWizard && tool.status === 'misconfigured' && tool.auth_command
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -93,6 +99,18 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Git</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {claudeNeedsAction && onClaudeWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onClaudeWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Claude</Text>
           </TouchableOpacity>
         </View>
       )}

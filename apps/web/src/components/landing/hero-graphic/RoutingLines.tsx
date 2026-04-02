@@ -37,6 +37,8 @@ function routePath(index: number): string {
   ].join(' ')
 }
 
+import { palette } from '@pocketdev/shared/theme'
+
 const LINE_COUNT = 7
 
 export const routePaths = Array.from({ length: LINE_COUNT }, (_, i) =>
@@ -51,7 +53,7 @@ export function RoutingLines() {
           key={i}
           d={d}
           fill="none"
-          stroke="#1a1a1a"
+          stroke={palette.bauhaus.black}
           strokeWidth="6"
           strokeLinecap="round"
         />

@@ -25,6 +25,9 @@ export type {
   GitTestConnectionResult,
   GitWizardStep,
   GitWizardStepStatus,
+  ClaudeSetupStatus,
+  ClaudeWizardStep,
+  ClaudeWizardStepStatus,
 } from './setup.ts'
 export type {
   PlanStepKind,

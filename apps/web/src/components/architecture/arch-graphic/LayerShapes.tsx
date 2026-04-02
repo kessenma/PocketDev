@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { palette } from '@pocketdev/shared/theme'
 
 /**
  * Three Bauhaus primitives representing each system layer:
@@ -28,14 +29,14 @@ export function LayerShapes() {
       />
 
       {/* Mobile device — left */}
-      <rect x="60" y="100" width="50" height="80" rx="10" fill="#1a1a1a" />
+      <rect x="60" y="100" width="50" height="80" rx="10" fill={palette.bauhaus.black} />
 
       {/* Agent server — center, breathing */}
       <motion.circle
         cx="270"
         cy="135"
         r="50"
-        fill="#2D5FE5"
+        fill={palette.bauhaus.blue}
         animate={{ r: [50, 54, 50] }}
         transition={{
           duration: 4,
@@ -45,7 +46,7 @@ export function LayerShapes() {
       />
 
       {/* AI / CLI tools — right */}
-      <rect x="375" y="108" width="54" height="54" rx="4" fill="#D93025" />
+      <rect x="375" y="108" width="54" height="54" rx="4" fill={palette.bauhaus.red} />
     </g>
   )
 }

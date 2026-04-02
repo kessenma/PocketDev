@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { palette } from '@pocketdev/shared/theme'
 import { routePaths } from './RoutingLines'
 
 const PULSE_DURATION = 2.4
@@ -18,7 +19,7 @@ export function SignalPulse() {
           key={i}
           d={d}
           fill="none"
-          stroke="#2D5FE5"
+          stroke={palette.bauhaus.blue}
           strokeWidth="6"
           strokeLinecap="round"
           pathLength={1}

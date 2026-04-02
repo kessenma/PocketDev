@@ -23,7 +23,7 @@ import AnimatedGradientBackground from '../components/background/AnimatedGradien
 import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
 import QRScanner, { type QRScanResult } from '../components/QRScanner'
 import { ArrowRight, Link, ScanLine, Server, Sparkles, Unplug } from 'lucide-react-native'
-import PairingAnimation from '../components/PairingAnimation'
+import PairingAnimation from '../components/animations/PairingAnimation'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connect'>

@@ -65,4 +65,17 @@ export const palette = {
     600: '#dc2626',
     700: '#b91c1c',
   },
+  // Bauhaus animation palette — bold geometric primaries used across web SVGs and mobile animations
+  bauhaus: {
+    blue: '#2D5FE5',
+    red: '#D93025',
+    yellow: '#E8B83D',
+    black: '#1a1a1a',
+  },
+  // Brand backgrounds for tool setup animations
+  brand: {
+    claude: '#D4A574',
+    codex: '#0D1117',
+    docker: '#1D63ED',
+  },
 } as const

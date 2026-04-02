@@ -27,6 +27,7 @@ import type {
   GitSshKeyResult,
   GitConfigureResult,
   GitTestConnectionResult,
+  ClaudeSetupStatus,
 } from '@pocketdev/shared/types'
 
 function apiUrl(ip: string, port: number, path: string): string {
@@ -392,4 +393,23 @@ export async function postTestGitConnection(ip: string, port: number): Promise<G
   })
   if (!response.ok) throw new Error(`Failed to test git connection (${response.status})`)
   return response.json() as Promise<GitTestConnectionResult>
+}
+
+// ─── Claude CLI Setup ──────────────────────────────────────────────
+
+export async function fetchClaudeSetupStatus(ip: string, port: number): Promise<ClaudeSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/claude-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Claude CLI status (${response.status})`)
+  return response.json() as Promise<ClaudeSetupStatus>
+}
+
+export async function postVerifyClaudeAuth(ip: string, port: number): Promise<ClaudeSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/claude-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify Claude auth (${response.status})`)
+  return response.json() as Promise<ClaudeSetupStatus>
 }

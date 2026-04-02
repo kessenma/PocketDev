@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { palette } from '@pocketdev/shared/theme'
 
 /**
  * The total ping-pong cycle of SignalPulse:
@@ -20,12 +21,12 @@ export function PhoneShape() {
       ry="10"
       animate={{
         fill: [
-          '#1a1a1a',
-          '#1a1a1a',
-          '#2D5FE5',
-          '#2D5FE5',
-          '#1a1a1a',
-          '#1a1a1a',
+          palette.bauhaus.black,
+          palette.bauhaus.black,
+          palette.bauhaus.blue,
+          palette.bauhaus.blue,
+          palette.bauhaus.black,
+          palette.bauhaus.black,
         ],
       }}
       transition={{

@@ -11,6 +11,7 @@ import { containerRoutes } from './routes/containers.ts'
 import { capabilitiesRoutes } from './routes/capabilities.ts'
 import { gitRoutes } from './routes/git.ts'
 import { gitSetupRoutes } from './routes/git-setup.ts'
+import { claudeSetupRoutes } from './routes/claude-setup.ts'
 import { serverActionsRoutes } from './routes/server-actions.ts'
 import { planRoutes } from './routes/plans.ts'
 import { screenshotRoutes } from './services/preview-screenshot.ts'
@@ -55,6 +56,7 @@ new Elysia()
       .use(capabilitiesRoutes)
       .use(gitRoutes)
       .use(gitSetupRoutes)
+      .use(claudeSetupRoutes)
       .use(serverActionsRoutes)
       .use(planRoutes)
       .use(fileRoutes)

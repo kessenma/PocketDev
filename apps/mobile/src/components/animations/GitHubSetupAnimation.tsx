@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react'
 import { Dimensions, Image, StyleSheet } from 'react-native'
-import { useTheme } from '../contexts/ThemeContext'
-import { Assets } from '../../assets'
+import { useTheme } from '../../contexts/ThemeContext'
+import { Assets } from '../../../assets'
+import { palette } from '@pocketdev/shared/theme'
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -13,12 +14,7 @@ import Animated, {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
-const BAUHAUS = {
-  blue: '#2D5FE5',
-  red: '#D93025',
-  yellow: '#E8B83D',
-  black: '#1a1a1a',
-} as const
+const BAUHAUS = palette.bauhaus
 
 // Timing
 const ICON_FADE_IN = 300

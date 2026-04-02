@@ -14,13 +14,9 @@ import Animated, {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
-// Bauhaus palette matching the web SVG graphics
-const BAUHAUS = {
-  blue: '#2D5FE5',
-  red: '#D93025',
-  yellow: '#E8B83D',
-  black: '#1a1a1a',
-} as const
+import { palette } from '@pocketdev/shared/theme'
+
+const BAUHAUS = palette.bauhaus
 
 type ShapeConfig = {
   id: string

@@ -11,9 +11,10 @@ interface Props {
   onInstall: (tool: ToolCheck) => void
   onAuthenticate: (tool: ToolCheck) => void
   onGitWizard: (tool: ToolCheck) => void
+  onClaudeWizard: (tool: ToolCheck) => void
 }
 
-export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard }: Props) {
+export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard, onClaudeWizard }: Props) {
   const { colors } = useTheme()
   const { report, loading, error, fetchPrerequisites } = useSetupStore()
 
@@ -65,6 +66,7 @@ export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard 
                 onInstall={onInstall}
                 onAuthenticate={onAuthenticate}
                 onGitWizard={onGitWizard}
+                onClaudeWizard={onClaudeWizard}
               />
             ))}
           </View>
@@ -78,6 +80,7 @@ export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard 
                 onInstall={onInstall}
                 onAuthenticate={onAuthenticate}
                 onGitWizard={onGitWizard}
+                onClaudeWizard={onClaudeWizard}
               />
             ))}
           </View>

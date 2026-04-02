@@ -91,3 +91,16 @@ export interface GitTestConnectionResult {
 
 export type GitWizardStep = 'detect' | 'install' | 'generate-key' | 'add-to-github' | 'test-connection' | 'configure-identity'
 export type GitWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
+// ─── Claude CLI wizard types ────────────────────────────────────────
+
+export interface ClaudeSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  authenticated: boolean
+  auth_output: string | null
+}
+
+export type ClaudeWizardStep = 'detect' | 'install' | 'authenticate' | 'verify'
+export type ClaudeWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'

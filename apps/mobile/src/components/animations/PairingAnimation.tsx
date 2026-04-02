@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { Dimensions, StyleSheet } from 'react-native'
-import { useTheme } from '../contexts/ThemeContext'
+import { useTheme } from '../../contexts/ThemeContext'
+import { palette } from '@pocketdev/shared/theme'
 import Animated, {
   Easing,
   useAnimatedProps,
@@ -16,10 +17,7 @@ const AnimatedLine = Animated.createAnimatedComponent(Line)
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
-const BAUHAUS = {
-  blue: '#2D5FE5',
-  black: '#1a1a1a',
-} as const
+const BAUHAUS = palette.bauhaus
 
 // Phone dimensions (centered)
 const PHONE_W = 60

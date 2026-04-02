@@ -12,6 +12,8 @@ export const pathMobileToAgentLow = 'M 110 140 C 155 160, 175 160, 220 140'
 export const pathAgentToAI = 'M 320 130 C 340 115, 355 115, 375 130'
 export const pathAgentToAILow = 'M 320 140 C 340 155, 355 155, 375 140'
 
+import { palette } from '@pocketdev/shared/theme'
+
 const allPaths = [
   pathMobileToAgent,
   pathMobileToAgentLow,
@@ -27,7 +29,7 @@ export function FlowPaths() {
           key={i}
           d={d}
           fill="none"
-          stroke="#1a1a1a"
+          stroke={palette.bauhaus.black}
           strokeWidth="3"
           strokeLinecap="round"
         />

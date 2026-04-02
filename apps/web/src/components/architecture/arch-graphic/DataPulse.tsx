@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { palette } from '@pocketdev/shared/theme'
 import {
   pathMobileToAgent,
   pathMobileToAgentLow,
@@ -18,10 +19,10 @@ const DURATION = 2.0
  */
 
 const pulses = [
-  { d: pathMobileToAgent, delay: 0, color: '#2D5FE5', reverse: false },
-  { d: pathMobileToAgentLow, delay: 0.3, color: '#2D5FE5', reverse: true },
-  { d: pathAgentToAI, delay: 0.6, color: '#D93025', reverse: false },
-  { d: pathAgentToAILow, delay: 0.9, color: '#D93025', reverse: true },
+  { d: pathMobileToAgent, delay: 0, color: palette.bauhaus.blue, reverse: false },
+  { d: pathMobileToAgentLow, delay: 0.3, color: palette.bauhaus.blue, reverse: true },
+  { d: pathAgentToAI, delay: 0.6, color: palette.bauhaus.red, reverse: false },
+  { d: pathAgentToAILow, delay: 0.9, color: palette.bauhaus.red, reverse: true },
 ]
 
 export function DataPulse() {

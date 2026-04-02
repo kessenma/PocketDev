@@ -7,12 +7,13 @@ import SetupChecklist from '../components/setup/SetupChecklist'
 import InstallSheet from '../components/setup/InstallSheet'
 import AiInspectSheet from '../components/setup/AiInspectSheet'
 import GitWizardSheet from '../components/setup/GitWizardSheet'
+import ClaudeWizardSheet from '../components/setup/ClaudeWizardSheet'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
-import ConnectedAnimation from '../components/ConnectedAnimation'
-import GitHubSetupAnimation from '../components/GitHubSetupAnimation'
+import ConnectedAnimation from '../components/animations/ConnectedAnimation'
+import GitHubSetupAnimation from '../components/animations/GitHubSetupAnimation'
 import { ArrowRight, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
 
 type Props = {
@@ -33,6 +34,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showConnected, setShowConnected] = useState(false)
   const [showGitWizard, setShowGitWizard] = useState(false)
   const [showGitHubAnimation, setShowGitHubAnimation] = useState(false)
+  const [showClaudeWizard, setShowClaudeWizard] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
     navigation.replace('Main')
@@ -49,6 +51,14 @@ export default function ServerSetupScreen({ navigation }: Props) {
 
   const handleGitHubAnimationComplete = useCallback(() => {
     setShowGitHubAnimation(false)
+  }, [])
+
+  const handleClaudeWizard = useCallback(() => {
+    setShowClaudeWizard(true)
+  }, [])
+
+  const handleClaudeWizardComplete = useCallback(() => {
+    setShowClaudeWizard(false)
   }, [])
 
   const handleInstall = useCallback((tool: ToolCheck) => {
@@ -106,7 +116,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} onGitWizard={handleGitWizard} />
+        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} onGitWizard={handleGitWizard} onClaudeWizard={handleClaudeWizard} />
 
         <View style={styles.footer}>
           <TouchableOpacity
@@ -149,6 +159,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           visible={showGitWizard}
           onClose={() => setShowGitWizard(false)}
           onComplete={handleGitWizardComplete}
+        />
+
+        <ClaudeWizardSheet
+          visible={showClaudeWizard}
+          onClose={() => setShowClaudeWizard(false)}
+          onComplete={handleClaudeWizardComplete}
         />
       </View>
       {showConnected && <ConnectedAnimation onComplete={handleConnectedComplete} />}
