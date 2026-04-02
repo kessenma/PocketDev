@@ -6,11 +6,12 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
+COPY apps/agent/package.json ./apps/agent/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/db/package.json ./packages/db/package.json
 RUN pnpm install --frozen-lockfile
 
-# Build the app
+# Build the web app
 FROM base AS build
 ARG VITE_APP_URL
 ENV VITE_APP_URL=$VITE_APP_URL
@@ -27,6 +28,21 @@ COPY packages/shared/ ./packages/shared/
 COPY packages/db/ ./packages/db/
 COPY package.json ./
 RUN cd apps/web && npx vite build
+
+# Build the agent bundle (pre-built tarball served to install script)
+FROM oven/bun:1 AS agent-build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/agent/node_modules ./apps/agent/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY apps/agent/ ./apps/agent/
+COPY packages/shared/ ./packages/shared/
+COPY package.json ./
+RUN cd apps/agent && bun build src/index.ts --outdir dist --target bun
+RUN mkdir -p /tmp/bundle/pocketdev-agent \
+    && cp apps/agent/dist/index.js /tmp/bundle/pocketdev-agent/ \
+    && cp apps/agent/src/db/schema.sql /tmp/bundle/pocketdev-agent/ \
+    && tar -czf /tmp/agent-bundle.tar.gz -C /tmp/bundle pocketdev-agent
 
 # Production — use bun for fast runtime
 FROM oven/bun:1 AS production
@@ -48,9 +64,9 @@ COPY --from=build /app/apps/web/tsconfig.json ./tsconfig.json
 COPY --from=build /app/packages/shared /app/packages/shared
 COPY --from=build /app/packages/db /app/packages/db
 
-# Install script and agent bundle — copied last so edits don't bust the build cache
+# Install script and agent bundle
 COPY apps/web/install.sh ./install.sh
-COPY apps/web/public/agent-bundle.tar.gz ./public/agent-bundle.tar.gz
+COPY --from=agent-build /tmp/agent-bundle.tar.gz ./public/agent-bundle.tar.gz
 
 ENV NODE_ENV=production
 ENV PORT=3000
