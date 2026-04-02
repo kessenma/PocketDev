@@ -135,6 +135,14 @@ export function updateDeviceLastSeen(id: string) {
     .run()
 }
 
+export function updateDeviceName(id: string, name: string) {
+  getDb()
+    .update(schema.devices)
+    .set({ name })
+    .where(eq(schema.devices.id, id))
+    .run()
+}
+
 export function deleteDevice(id: string) {
   getDb().delete(schema.devices).where(eq(schema.devices.id, id)).run()
 }

@@ -67,6 +67,17 @@ export async function pairWithServer(
   return data
 }
 
+export async function unpairFromServer(ip: string, port: number): Promise<void> {
+  try {
+    await fetch(apiUrl(ip, port, '/unpair'), {
+      method: 'DELETE',
+      headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+    })
+  } catch {
+    // Best-effort — server may be unreachable
+  }
+}
+
 export function buildWsUrl(ip: string, port: number): string {
   return `ws://${ip}:${port}/PocketDev/ws`
 }

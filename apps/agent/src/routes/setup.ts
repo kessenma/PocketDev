@@ -1,7 +1,19 @@
 import { Elysia, t } from 'elysia'
 import { isSetupActive, pairDevice } from '../services/setup.ts'
+import { authenticateRequest } from '../services/auth.ts'
+import { deleteDevice } from '../db/index.ts'
 
 export const setupRoutes = new Elysia()
+  .delete('/unpair', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    deleteDevice(deviceId)
+    return { ok: true }
+  })
   .post('/pair', ({ body, set }) => {
     if (!isSetupActive()) {
       set.status = 403

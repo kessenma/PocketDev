@@ -13,7 +13,7 @@ import {
   sessionCookieHeader,
 } from '../services/console-auth.ts'
 import { hasDevices } from '../services/setup.ts'
-import { hasAdminAccount, getDevices, deleteDevice } from '../db/index.ts'
+import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
@@ -147,6 +147,21 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
     const code = regeneratePasscode()
     return { ok: true, code }
+  })
+
+  // ─── Rename device (requires session) ─────────────────
+  .patch('/devices/:id', ({ request, params, body, set }) => {
+    if (!validateSession(request.headers.get('cookie'))) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    updateDeviceName(params.id, body.name)
+    return { ok: true }
+  }, {
+    body: t.Object({
+      name: t.String(),
+    }),
   })
 
   // ─── Delete device (requires session) ─────────────────

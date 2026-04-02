@@ -117,6 +117,11 @@ export function ConsolePage() {
               setStatus({ ...status, devices: status.devices.filter((d) => d.id !== id) })
             }
           }}
+          onDeviceRenamed={(id, name) => {
+            if (status) {
+              setStatus({ ...status, devices: status.devices.map((d) => d.id === id ? { ...d, name } : d) })
+            }
+          }}
         />
       </main>
     </div>

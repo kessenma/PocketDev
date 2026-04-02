@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ConnectionStatus } from '../services/websocket'
 import { PocketDevWebSocket } from '../services/websocket'
-import { buildWsUrl } from '../services/api'
+import { buildWsUrl, unpairFromServer } from '../services/api'
 import { getServer, clearAll, type StoredServer } from '../services/storage'
 import type { WsMessage } from '@pocketdev/shared/types'
 import { useTaskStore } from './tasks'
@@ -61,7 +61,11 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   },
 
   unpair: () => {
-    get().ws?.disconnect()
+    const { server, ws } = get()
+    ws?.disconnect()
+    if (server) {
+      unpairFromServer(server.ip, server.port)
+    }
     clearAll()
     set({ ws: null, server: null, status: 'disconnected' })
   },

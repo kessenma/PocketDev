@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import { Smartphone, Clock, Trash2 } from 'lucide-react'
-import { removeDevice } from '#/lib/api'
+import { Input } from '#/components/ui/input'
+import { Smartphone, Clock, Trash2, Pencil, Check, X } from 'lucide-react'
+import { removeDevice, renameDevice } from '#/lib/api'
 
 interface Device {
   id: string
@@ -15,10 +16,13 @@ interface Device {
 interface Props {
   devices: Device[]
   onDeviceRemoved?: (id: string) => void
+  onDeviceRenamed?: (id: string, name: string) => void
 }
 
-export function DeviceList({ devices, onDeviceRemoved }: Props) {
+export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props) {
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
 
   async function handleRemove(id: string) {
     setRemovingId(id)
@@ -30,6 +34,26 @@ export function DeviceList({ devices, onDeviceRemoved }: Props) {
     } finally {
       setRemovingId(null)
     }
+  }
+
+  function startEditing(device: Device) {
+    setEditingId(device.id)
+    setEditName(device.name || '')
+  }
+
+  async function handleRename(id: string) {
+    const trimmed = editName.trim()
+    if (!trimmed) {
+      setEditingId(null)
+      return
+    }
+    try {
+      await renameDevice(id, trimmed)
+      onDeviceRenamed?.(id, trimmed)
+    } catch {
+      // ignore
+    }
+    setEditingId(null)
   }
 
   return (
@@ -57,8 +81,44 @@ export function DeviceList({ devices, onDeviceRemoved }: Props) {
                 key={device.id}
                 className="flex items-center justify-between rounded-lg border border-border p-3"
               >
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{device.name || 'Unknown device'}</p>
+                <div className="space-y-1 min-w-0 flex-1 mr-3">
+                  {editingId === device.id ? (
+                    <form
+                      className="flex items-center gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        handleRename(device.id)
+                      }}
+                    >
+                      <Input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="h-7 text-sm"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') setEditingId(null)
+                        }}
+                      />
+                      <Button type="submit" variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setEditingId(null)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium truncate">{device.name || 'Unknown device'}</p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => startEditing(device)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
                     {device.lastSeenAt

@@ -111,6 +111,17 @@ export async function fetchPrerequisites(): Promise<PrerequisitesReport> {
   return res.json()
 }
 
+export async function renameDevice(id: string, name: string) {
+  const res = await fetch(`${BASE}/devices/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+    credentials: 'same-origin',
+  })
+  if (!res.ok) throw new Error('Failed to rename device')
+  return res.json()
+}
+
 export async function removeDevice(id: string) {
   const res = await del(`/devices/${id}`)
   if (!res.ok) throw new Error('Failed to remove device')
