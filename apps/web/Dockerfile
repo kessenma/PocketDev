@@ -19,12 +19,10 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY apps/web/src ./apps/web/src
-COPY apps/web/public ./apps/web/public
 COPY apps/web/server.ts ./apps/web/server.ts
 COPY apps/web/package.json ./apps/web/package.json
 COPY apps/web/tsconfig.json ./apps/web/tsconfig.json
 COPY apps/web/vite.config.ts ./apps/web/vite.config.ts
-COPY apps/web/components.json ./apps/web/components.json
 COPY packages/shared/ ./packages/shared/
 COPY packages/db/ ./packages/db/
 COPY package.json ./
