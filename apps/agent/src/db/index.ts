@@ -48,10 +48,12 @@ export function getDb() {
         );
         CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
       `)
-      // Stamp the initial migration as applied
+      // Stamp the initial migration as applied.
+      // created_at must be >= the migration's "when" value from _journal.json
+      // so Drizzle's "created_at < folderMillis" check correctly skips it.
       sqlite.exec(`
         INSERT INTO __drizzle_migrations (hash, created_at)
-        VALUES ('0000_military_surge', ${Date.now()});
+        VALUES ('legacy_stamp', 9999999999999);
       `)
     }
 
