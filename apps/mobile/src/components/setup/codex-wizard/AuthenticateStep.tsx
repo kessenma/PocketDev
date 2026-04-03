@@ -122,7 +122,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     session?.authenticated
       ? 'Codex sign-in completed. Continue to verify the CLI and sync the cached provider state.'
       : session?.state === 'awaiting_choice'
-        ? 'Choose how you want to sign in. ChatGPT opens a browser flow; Device Code lets you continue from another device.'
+        ? 'Choose how you want to sign in. Device Code is recommended from mobile because ChatGPT sign-in redirects to localhost on the same machine running Codex CLI.'
       : session?.state === 'awaiting_code'
         ? 'Finish the browser flow, then paste any one-time code here if Codex asks for it.'
         : session?.state === 'awaiting_browser'
@@ -173,23 +173,23 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Choose sign-in method</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              API key setup is intentionally omitted here. Pick one of the supported interactive login methods.
+              API key setup is intentionally omitted here. Use Device Code when signing in from your phone. The ChatGPT browser flow only works if the browser is running on the same machine as the Codex CLI session because it redirects to `localhost:1455`.
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-              onPress={() => void handleChooseMethod('1')}
-              activeOpacity={0.7}
-            >
-              <Globe color={colors.primaryText} size={18} strokeWidth={2.25} />
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Sign in with ChatGPT</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: colors.border }]}
               onPress={() => void handleChooseMethod('2')}
               activeOpacity={0.7}
             >
-              <Smartphone color={colors.text} size={18} strokeWidth={2.25} />
-              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Use Device Code</Text>
+              <Smartphone color={colors.primaryText} size={18} strokeWidth={2.25} />
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Use Device Code</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: colors.border }]}
+              onPress={() => void handleChooseMethod('1')}
+              activeOpacity={0.7}
+            >
+              <Globe color={colors.text} size={18} strokeWidth={2.25} />
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Sign in with ChatGPT</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -198,7 +198,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Browser step</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              Open the OpenAI page on this device or another browser, then return here once the flow continues.
+              Open the OpenAI page in a browser that matches the selected flow. If you chose ChatGPT sign-in, that browser must be on the same machine running Codex CLI. If you chose Device Code, you can continue on this device or any other browser.
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}

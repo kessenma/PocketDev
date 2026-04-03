@@ -14,8 +14,12 @@ const URL_PATTERN = /https:\/\/[^\s\]\)>"']+/g
 const ERROR_PATTERNS = [/^error:/im, /^fatal:/im, /permission denied/im, /command not found/im]
 // NOTE: Do NOT include /welcome/i — "Welcome to Claude Code" appears on first run before login
 const AUTH_SUCCESS_PATTERNS = [/successfully authenticated/i, /logged in as/i, /you are logged in/i]
-// Detect the first-run theme selector so we can auto-pick it
-const THEME_SELECTOR_PATTERN = /choose the text style|Dark mode|Light mode/i
+// Interactive prompt patterns to auto-answer
+const THEME_SELECTOR_PATTERN = /choose the text style/i
+const LOGIN_METHOD_PATTERN = /select login method/i
+// Detect the OAuth URL prompt
+const URL_PROMPT_PATTERN = /browser didn't open|use the url below/i
+const CODE_PROMPT_PATTERN = /paste code here/i
 // Strip ANSI codes for cleaner pattern matching
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b\][\d;]*[^\x07]*\x07/g
 
@@ -60,6 +64,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
   }, [server])
 
   const themeHandledRef = useRef(false)
+  const loginMethodHandledRef = useRef(false)
 
   const {
     output, hasError, done, connected,
@@ -78,6 +83,14 @@ export default function AuthenticateStep({ dispatch }: Props) {
         return
       }
 
+      // Auto-select login method — send "1" for Claude subscription
+      if (!loginMethodHandledRef.current && LOGIN_METHOD_PATTERN.test(cleanChunk)) {
+        loginMethodHandledRef.current = true
+        console.log('[claude-auth] Login method selector detected, auto-selecting Claude subscription')
+        setTimeout(() => sendInput('1\n'), 500)
+        return
+      }
+
       // Detect auth success in output
       for (const p of AUTH_SUCCESS_PATTERNS) {
         if (p.test(cleanChunk) && phaseRef.current !== 'done') {
@@ -86,14 +99,21 @@ export default function AuthenticateStep({ dispatch }: Props) {
         }
       }
 
-      // Detect OAuth URL in cumulative output
-      const urls = cleanFull.match(URL_PATTERN)
-      if (urls && !oauthUrl) {
-        const authUrl = urls.find((u) =>
-          u.includes('anthropic.com') || u.includes('claude.ai') || u.includes('oauth') || u.includes('auth'),
-        ) ?? urls[urls.length - 1]
-        setOauthUrl(authUrl)
-        setPhase('url-detected')
+      // Detect OAuth URL — the URL appears after "Browser didn't open"
+      // Check full output since the URL may span multiple chunks
+      if (URL_PROMPT_PATTERN.test(cleanFull) || CODE_PROMPT_PATTERN.test(cleanChunk)) {
+        const urls = cleanFull.match(URL_PATTERN)
+        if (urls && !oauthUrl) {
+          // Find the OAuth URL — it will contain claude.com or anthropic.com
+          const authUrl = urls.find((u) =>
+            u.includes('claude.com') || u.includes('anthropic.com') || u.includes('oauth'),
+          ) ?? urls[urls.length - 1]
+          if (authUrl) {
+            console.log('[claude-auth] OAuth URL detected:', authUrl.slice(0, 60))
+            setOauthUrl(authUrl)
+            setPhase('url-detected')
+          }
+        }
       }
 
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
