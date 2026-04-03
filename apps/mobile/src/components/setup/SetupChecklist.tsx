@@ -72,17 +72,15 @@ export default function SetupChecklist({
           {report && (
             <View style={styles.serverInfoRow}>
               <View style={[styles.serverInfoCard, { backgroundColor: bauhaus.black }]}>
-                <Text style={[styles.serverInfoLabel, { color: 'rgba(255,255,255,0.55)' }]}>System</Text>
-                <Text style={[styles.serverInfoValue, { color: '#ffffff' }]}>{report.os}</Text>
-              </View>
-              <View style={[styles.serverInfoCard, { backgroundColor: bauhaus.yellow }]}>
-                <Text style={[styles.serverInfoLabel, { color: 'rgba(26,26,26,0.6)' }]}>Arch</Text>
-                <Text style={[styles.serverInfoValue, { color: bauhaus.black }]}>{report.arch}</Text>
+                <Text style={[styles.serverInfoLabel, { color: 'rgba(255,255,255,0.55)' }]}>Workspace</Text>
+                <Text style={[styles.serverInfoValue, { color: '#ffffff' }]}>
+                  {report.ready ? 'Coding tools ready' : 'Tool setup in progress'}
+                </Text>
               </View>
             </View>
           )}
 
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Required</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Core Tools</Text>
           <View style={styles.section}>
             {required.map((tool) => (
               <SetupCheckItem
@@ -101,7 +99,7 @@ export default function SetupChecklist({
             ))}
           </View>
 
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Optional</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Extra Tools</Text>
           <View style={styles.section}>
             {optional.map((tool) => (
               <SetupCheckItem

@@ -33,6 +33,7 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
 // ─── Constants & patterns ───────────────────────────────────────────
 
 const AUTH_URL_PATTERN = /https:\/\/[^\s\])>"']+/g
+const WRAPPED_AUTH_URL_PATTERN = /https:\/\/(?:[^\s\])>"']|\s+(?=[A-Za-z0-9%._~:/?#[\]@!$&'()*+,;=\-]))+/g
 // Includes CSI private mode sequences such as ESC[?2026h that Claude emits heavily.
 const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]/g
 const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
@@ -100,6 +101,14 @@ function derivePrompt(output: string): string | null {
   return null
 }
 
+function extractAuthUrls(text: string): string[] {
+  const directMatches = text.match(AUTH_URL_PATTERN) ?? []
+  const wrappedMatches = (text.match(WRAPPED_AUTH_URL_PATTERN) ?? [])
+    .map((url) => url.replace(/\s+/g, ''))
+
+  return Array.from(new Set([...wrappedMatches, ...directMatches]))
+}
+
 function parseAuthState(session: InternalAuthSession): {
   state: ClaudeAuthSessionState
   authUrl: string | null
@@ -110,10 +119,10 @@ function parseAuthState(session: InternalAuthSession): {
   const prompt = derivePrompt(session.output)
 
   // Extract OAuth URL — check both cleaned and raw output since ANSI stripping
-  // can mangle URLs. The raw output preserves the URL but may have escape codes around it.
-  const rawUrls = session.output.match(AUTH_URL_PATTERN)
-  const cleanUrls = clean.match(AUTH_URL_PATTERN)
-  const allUrls = [...(cleanUrls ?? []), ...(rawUrls ?? [])]
+  // can mangle URLs, and wrapped TTY output may split long OAuth query strings.
+  const rawUrls = extractAuthUrls(session.output)
+  const cleanUrls = extractAuthUrls(clean)
+  const allUrls = [...cleanUrls, ...rawUrls]
   const authUrl = allUrls.find((u) =>
     u.includes('claude.com') || u.includes('anthropic.com') || u.includes('oauth'),
   ) ?? allUrls[allUrls.length - 1] ?? null
@@ -219,6 +228,7 @@ function refreshSessionState(session: InternalAuthSession) {
 }
 
 export const __test = {
+  extractAuthUrls,
   normalizeOutputForMatching,
 }
 

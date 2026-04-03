@@ -103,11 +103,11 @@ export default function ServerSetupScreen({ navigation }: Props) {
 
   const handleBlockedCodexWizard = useCallback(() => {
     Alert.alert(
-      'Install package managers first',
-      codexBlockedReason ?? 'Install package managers first to make npm available for Codex.',
+      'Enable package tools first',
+      codexBlockedReason ?? 'Enable package tools first so Codex can use npm.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Package Managers', onPress: () => setShowPkgWizard(true) },
+        { text: 'Open Package Tools', onPress: () => setShowPkgWizard(true) },
       ],
     )
   }, [codexBlockedReason])
@@ -209,14 +209,14 @@ export default function ServerSetupScreen({ navigation }: Props) {
             </TouchableOpacity>
             <View style={styles.eyebrowRow}>
               <ShieldCheck color={colors.textTertiary} size={14} strokeWidth={2.25} />
-              <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Server readiness</Text>
+              <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Workspace readiness</Text>
             </View>
             <Animated.View style={[styles.titleRow, { transform: [{ scale: titleScale }] }]}>
               <Wrench color={colors.primary} size={24} strokeWidth={2.2} />
-              <Text style={[styles.title, { color: colors.text }]}>Server Setup</Text>
+              <Text style={[styles.title, { color: colors.text }]}>Workspace Tools</Text>
             </Animated.View>
             <Animated.Text style={[styles.subtitle, { color: colors.textSecondary, opacity: subtitleOpacity }]}>
-              Ensure your server has the required developer tools
+              Enable the tools your paired workspace uses for coding tasks
             </Animated.Text>
           </Animated.View>
           <Animated.View style={[styles.headerMetaRow, { transform: [{ translateY: metaTranslateY }] }]}>
@@ -229,14 +229,14 @@ export default function ServerSetupScreen({ navigation }: Props) {
                 },
               ]}
             >
-              <Text style={[styles.statusBlockLabel, { color: report?.ready ? bauhaus.black : colors.textTertiary }]}>Readiness</Text>
+              <Text style={[styles.statusBlockLabel, { color: report?.ready ? bauhaus.black : colors.textTertiary }]}>Workspace</Text>
               <Text style={[styles.statusBlockValue, { color: report?.ready ? bauhaus.black : colors.text }]}>
                 {report?.ready ? 'Ready' : 'In Progress'}
               </Text>
             </View>
             <View style={[styles.statusBlock, { backgroundColor: bauhaus.blue, borderColor: bauhaus.blue }]}>
               <Text style={[styles.statusBlockLabel, { color: 'rgba(255,255,255,0.72)' }]}>Mode</Text>
-              <Text style={[styles.statusBlockValue, { color: '#ffffff' }]}>Setup Board</Text>
+              <Text style={[styles.statusBlockValue, { color: '#ffffff' }]}>Guided Setup</Text>
             </View>
           </Animated.View>
         </View>
