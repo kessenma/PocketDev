@@ -1,4 +1,4 @@
-import type { TaskStatus, ChangeType, DevicePlatform, AgentType } from '../schema/enums.ts'
+import type { TaskStatus, ChangeType, DevicePlatform, AgentType } from '../schema/enums.js'
 
 export interface Device {
   id: string

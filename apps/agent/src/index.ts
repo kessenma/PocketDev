@@ -4,6 +4,7 @@ import { setupRoutes } from './routes/setup.ts'
 import { fileRoutes } from './routes/files.ts'
 import { wsRoutes } from './services/ws.ts'
 import { terminalWsRoutes } from './services/terminal-ws.ts'
+import { consoleTerminalWsRoutes } from './services/console-terminal-ws.ts'
 import { proxyRoutes } from './services/proxy.ts'
 import { prerequisitesRoutes } from './routes/prerequisites.ts'
 import { databaseRoutes } from './routes/databases.ts'
@@ -70,6 +71,7 @@ new Elysia()
     // WebSocket routes
     .use(wsRoutes)
     .use(terminalWsRoutes)
+    .use(consoleTerminalWsRoutes)
     // Preview proxy + screenshot
     .use(screenshotRoutes)
     .use(proxyRoutes)

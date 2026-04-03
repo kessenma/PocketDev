@@ -3,7 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-sans: "Avenir Next", "Futura", "Helvetica Neue", sans-serif;
 }
 
 * {
@@ -44,25 +44,40 @@ body {
 }
 
 :root {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #262626;
+  --card-foreground: #fafafa;
+  --popover: #262626;
+  --popover-foreground: #fafafa;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #171717;
+  --secondary-foreground: #fafafa;
+  --muted: #171717;
+  --muted-foreground: #a3a3a3;
+  --accent: #a855f7;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: rgb(64 64 64 / 0.5);
+  --input: rgb(82 82 82 / 0.4);
+  --ring: #3b82f6;
   --radius: 0.625rem;
+  --surface-strong: #0a0a0a;
+  --surface-soft: #171717;
+  --surface-paper: #fafafa;
+  --text-soft: #a3a3a3;
+  --bauhaus-blue: #2D5FE5;
+  --bauhaus-red: #D93025;
+  --bauhaus-yellow: #E8B83D;
+  --bauhaus-black: #1a1a1a;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --text-base-size: 1rem;
+  --text-base-line: 1.5rem;
+  --text-2xl-size: 1.5rem;
+  --text-2xl-line: 2rem;
 }
 
 @layer base {
@@ -71,6 +86,11 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at top left, color-mix(in srgb, var(--bauhaus-yellow) 14%, transparent), transparent 24%),
+      linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--surface-strong) 94%, black) 100%);
+    font-size: var(--text-base-size);
+    line-height: var(--text-base-line);
   }
   html {
     @apply font-sans;

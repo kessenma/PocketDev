@@ -1,4 +1,4 @@
-import { palette } from './palette.ts'
+import { palette } from './palette.js'
 
 export const lightTheme = {
   background: palette.neutral[50],

@@ -77,14 +77,17 @@ export function SetupStatus() {
   }, [load])
 
   return (
-    <Card>
+    <Card className="rounded-[2rem] border border-black/10 bg-[linear-gradient(135deg,#f4f0e8_0%,#f4f0e8_76%,#1d4ed8_76%,#1d4ed8_100%)] text-black shadow-[0_16px_60px_rgba(0,0,0,0.18)]">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Wrench className="h-5 w-5" />
-            Server Setup
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+          <div className="space-y-1">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-black/50">Readiness Grid</p>
+            <CardTitle className="flex items-center gap-2 text-black">
+              <Wrench className="h-5 w-5" />
+              Server Setup
+            </CardTitle>
+          </div>
+          <Button variant="outline" size="sm" className="border-black/15 bg-white/60 text-black hover:bg-white" onClick={load} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
@@ -95,46 +98,54 @@ export function SetupStatus() {
         )}
 
         {report && (
-          <div className="space-y-3">
-            {/* Readiness badge */}
-            <div className="flex items-center gap-2">
-              <Badge variant={report.ready ? 'default' : 'secondary'}>
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={report.ready ? 'default' : 'secondary'} className={report.ready ? 'bg-black text-[#f4f0e8]' : 'bg-[#f0c419] text-black'}>
                 {report.ready ? 'Ready' : 'Setup Incomplete'}
               </Badge>
-              <span className="text-xs text-muted-foreground">
+              <Badge variant="outline" className="border-black/15 bg-white/50 text-black">
                 {report.os}
-              </span>
+              </Badge>
             </div>
 
-            {/* Tool list */}
-            <div className="divide-y divide-border rounded-lg border border-border">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {report.tools.map((tool) => (
-                <div key={tool.id} className="flex items-start gap-3 px-3 py-2.5">
-                  <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${statusDotColor(tool)}`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{tool.name}</span>
-                      {tool.required && (
-                        <span className="text-[10px] font-medium uppercase text-muted-foreground">Required</span>
-                      )}
-                      {tool.version && tool.status !== 'missing' && (
-                        <span className="font-mono text-xs text-muted-foreground">v{tool.version}</span>
-                      )}
+                <div
+                  key={tool.id}
+                  className="relative aspect-square overflow-hidden rounded-[1.6rem] border border-black/12 bg-black p-4 text-[#f4f0e8] shadow-[0_10px_32px_rgba(0,0,0,0.2)]"
+                >
+                  <div className={`absolute right-0 top-0 h-16 w-16 rounded-bl-[1.6rem] ${statusDotColor(tool)} opacity-95`} />
+                  <div className="relative flex h-full flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold tracking-tight">{tool.name}</p>
+                          {tool.required && (
+                            <p className="mt-1 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/55">Required</p>
+                          )}
+                        </div>
+                        <div className={`mt-1 h-3 w-3 shrink-0 rounded-full ${statusDotColor(tool)}`} />
+                      </div>
+                      {tool.version && tool.status !== 'missing' ? (
+                        <p className="font-mono text-xs text-[#f4f0e8]/65">v{tool.version}</p>
+                      ) : null}
                     </div>
-                    <p className={`text-xs ${statusColor(tool)}`}>
-                      {statusLabel(tool)}
-                    </p>
-                    {tool.id === 'git' && tool.status !== 'missing' && (
-                      <GitDetails tool={tool} />
-                    )}
+
+                    <div className="space-y-2">
+                      <p className={`text-sm font-medium ${statusColor(tool)}`}>
+                        {statusLabel(tool)}
+                      </p>
+                      {tool.id === 'git' && tool.status !== 'missing' ? (
+                        <GitDetails tool={tool} />
+                      ) : null}
+                    </div>
                   </div>
-                  {tool.status !== 'installed' && tool.status !== 'misconfigured' ? null : null}
                 </div>
               ))}
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              Use the PocketDev mobile app to install and configure tools.
+            <p className="text-xs uppercase tracking-[0.22em] text-black/55">
+              Install and authenticate tools from the PocketDev mobile app.
             </p>
           </div>
         )}

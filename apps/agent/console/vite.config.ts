@@ -11,6 +11,17 @@ export default defineConfig({
       '#': resolve(__dirname, 'src'),
     },
   },
+  server: {
+    proxy: {
+      '/PocketDev/ws/console/terminal': {
+        target: 'http://localhost:4387',
+        ws: true,
+      },
+      '/PocketDev/api': {
+        target: 'http://localhost:4387',
+      },
+    },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

@@ -7,5 +7,5 @@ export {
   type DevicePlatform,
   agentTypeEnum,
   type AgentType,
-} from './enums.ts'
-export { TABLE_NAMES } from './tables.ts'
+} from './enums.js'
+export { TABLE_NAMES } from './tables.js'

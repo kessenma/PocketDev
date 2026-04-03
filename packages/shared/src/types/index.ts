@@ -2,13 +2,13 @@ export type {
   CommandType,
   EventType,
   WsMessage,
-} from './messages.ts'
+} from './messages.js'
 export type {
   Device,
   Task,
   FileChange,
   InstallRecord,
-} from './models.ts'
+} from './models.js'
 export type {
   ToolStatus,
   AuthStatus,
@@ -38,7 +38,7 @@ export type {
   PkgManagerStatus,
   PkgWizardStep,
   PkgWizardStepStatus,
-} from './setup.ts'
+} from './setup.js'
 export type {
   PlanStepKind,
   PlanStatus,
@@ -54,7 +54,7 @@ export type {
   PlanMessageCommand,
   PlanAcceptCommand,
   PlanDenyCommand,
-} from './plan.ts'
+} from './plan.js'
 export type {
   ServerMetricTone,
   ServerActionsSummary,
@@ -64,13 +64,13 @@ export type {
   ServerErrorEntry,
   ServerActionDefinition,
   ServerActionResult,
-} from './server-actions.ts'
+} from './server-actions.js'
 export type {
   ProviderAvailability,
   ServerProviderId,
   ServerProvider,
   ServerCapabilities,
-} from './capabilities.ts'
+} from './capabilities.js'
 export type {
   GitFileChangeKind,
   GitRemoteStatus,
@@ -84,12 +84,12 @@ export type {
   GitCommitRequest,
   GitErrorResponse,
   GitMutationResult,
-} from './git.ts'
+} from './git.js'
 export type {
   TreeEntry,
   FileTreeResponse,
   FileReadResponse,
-} from './files.ts'
+} from './files.js'
 export type {
   ContainerStatus,
   ContainerLogsDirection,
@@ -102,4 +102,4 @@ export type {
   ContainerLogsFollowRequest,
   ContainerLogsChunkEvent,
   ContainerLogsStoppedEvent,
-} from './docker.ts'
+} from './docker.js'

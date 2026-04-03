@@ -57,13 +57,14 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
   }
 
   return (
-    <Card>
+    <Card className="h-full rounded-[2rem] border border-black/12 bg-[#f4f0e8] text-black shadow-[0_14px_40px_rgba(0,0,0,0.12)]">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-black/45">Device Roster</p>
+        <CardTitle className="flex items-center gap-2 text-black">
           <Smartphone className="h-5 w-5" />
           Paired Devices
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-black/60">
           {devices.length === 0
             ? 'No devices paired yet.'
             : `${devices.length} device${devices.length > 1 ? 's' : ''} paired`}
@@ -77,10 +78,7 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
         ) : (
           <div className="space-y-3">
             {devices.map((device) => (
-              <div
-                key={device.id}
-                className="flex items-center justify-between rounded-lg border border-border p-3"
-              >
+              <div key={device.id} className="flex items-center justify-between rounded-[1.4rem] border border-black/10 bg-white/70 p-3">
                 <div className="space-y-1 min-w-0 flex-1 mr-3">
                   {editingId === device.id ? (
                     <form
@@ -119,7 +117,7 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
                       </Button>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-xs text-black/55">
                     <Clock className="h-3 w-3" />
                     {device.lastSeenAt
                       ? `Last seen ${new Date(device.lastSeenAt).toLocaleString()}`

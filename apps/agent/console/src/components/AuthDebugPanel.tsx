@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
@@ -12,6 +12,7 @@ export function AuthDebugPanel() {
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [showTermLog, setShowTermLog] = useState(false)
+  const [live, setLive] = useState(true)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -30,9 +31,27 @@ export function AuthDebugPanel() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!expanded) return
+
+    if (!info) {
+      void refresh()
+    }
+
+    if (!live) return
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void refresh()
+      }
+    }, 1500)
+
+    return () => window.clearInterval(interval)
+  }, [expanded, info, live, refresh])
+
   return (
-    <Card className="border-dashed border-yellow-500/40">
-      <CardHeader className="cursor-pointer" onClick={() => { setExpanded(!expanded); if (!expanded && !info) refresh() }}>
+    <Card className="rounded-[2rem] border border-dashed border-yellow-500/40 bg-[#161616] shadow-[0_10px_32px_rgba(0,0,0,0.18)]">
+      <CardHeader className="cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <CardTitle className="flex items-center gap-2 text-sm">
           <Bug className="h-4 w-4 text-yellow-500" />
           Auth &amp; Terminal Debug
@@ -42,10 +61,19 @@ export function AuthDebugPanel() {
 
       {expanded && (
         <CardContent className="space-y-4">
-          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
-            <RefreshCw className={`mr-2 h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={live ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setLive((current) => !current)}
+            >
+              Live: {live ? 'On' : 'Off'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+              <RefreshCw className={`mr-2 h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 

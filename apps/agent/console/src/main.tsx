@@ -6,6 +6,9 @@ import './styles.css'
 import { SetupPage } from './pages/SetupPage'
 import { LoginPage } from './pages/LoginPage'
 import { ConsolePage } from './pages/ConsolePage'
+import { applyConsoleTheme } from './theme'
+
+applyConsoleTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
