@@ -33,10 +33,13 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
 // ─── Constants & patterns ───────────────────────────────────────────
 
 const AUTH_URL_PATTERN = /https:\/\/[^\s\])>"']+/g
-const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[=>][\x20-\x2F]*[\x30-\x7E]?/g
-// PTY output often strips spaces after ANSI removal, so patterns use \s* between words
+// Includes CSI private mode sequences such as ESC[?2026h that Claude emits heavily.
+const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]/g
+const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
+// PTY output often redraws the screen and strips spacing, so patterns allow
+// optional whitespace between words and support a few prompt variants.
 const THEME_PATTERN = /choose\s*the\s*text\s*style|Dark\s*mode|Light\s*mode/i
-const LOGIN_METHOD_PATTERN = /select\s*login\s*method/i
+const LOGIN_METHOD_PATTERN = /select\s*login\s*method|claude\s*account\s*with\s*subscription|anthropic\s*console\s*account/i
 const BROWSER_DIDNT_OPEN_PATTERN = /browser\s*didn.t\s*open|use\s*the\s*url\s*below/i
 const CODE_PROMPT_PATTERN = /paste\s*code\s*here/i
 const AUTH_SUCCESS_PATTERNS = [/successfully\s*authenticated/i, /logged\s*in\s*as/i, /you\s*are\s*logged\s*in/i]
@@ -71,14 +74,23 @@ function stripAnsi(text: string): string {
   return text.replace(ANSI_RE, '')
 }
 
+function normalizeOutputForMatching(text: string): string {
+  return stripAnsi(text)
+    .replace(/\r/g, '\n')
+    .replace(CONTROL_RE, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
 function getOutputExcerpt(output: string): string | null {
-  const trimmed = stripAnsi(output).trim()
+  const trimmed = normalizeOutputForMatching(output)
   if (!trimmed) return null
   return trimmed.slice(-OUTPUT_EXCERPT_LENGTH)
 }
 
 function derivePrompt(output: string): string | null {
-  const clean = stripAnsi(output)
+  const clean = normalizeOutputForMatching(output)
   const lines = clean.split('\n').map((l) => l.trim()).filter(Boolean)
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i]
@@ -168,7 +180,7 @@ function toAuthStatus(session: InternalAuthSession): ClaudeAuthSessionStatus {
 }
 
 function refreshSessionState(session: InternalAuthSession) {
-  session.cleanOutput = stripAnsi(session.output)
+  session.cleanOutput = normalizeOutputForMatching(session.output)
   const derived = parseAuthState(session)
 
   // Auto-answer theme selector — Claude Code uses an ink TUI in raw mode.
@@ -204,6 +216,10 @@ function refreshSessionState(session: InternalAuthSession) {
     ? (derived.error ?? session.error ?? 'Claude authentication failed.')
     : derived.error
   session.updatedAt = Date.now()
+}
+
+export const __test = {
+  normalizeOutputForMatching,
 }
 
 async function finalizeSession(sessionId: string) {
