@@ -1,10 +1,12 @@
 import type { ClaudeSetupStatus } from '@pocketdev/shared/types'
 
-/** Run a command in a login shell so PATH entries are visible */
+/** Run a command in a login shell with HOME explicitly set */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
   const proc = Bun.spawn(['bash', '-lc', cmd], {
     stdout: 'pipe',
     stderr: 'pipe',
+    env: { ...process.env, HOME: home },
   })
 
   const timer = setTimeout(() => proc.kill(), timeoutMs)

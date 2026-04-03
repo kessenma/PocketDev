@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useRef, useCallback } from 'react'
 import {
   View,
   Text,
@@ -10,10 +10,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../stores/connection'
 import { useSetupStore } from '../../stores/setup'
-import { buildTerminalWsUrl } from '../../services/api'
-import { buildPocketDevAuthorizationHeader } from '../../services/auth'
-import { createReactNativeWebSocket } from '../../services/websocket'
-import { getSudoPassword, saveSudoPassword } from '../../services/secure-storage'
+import { useTerminalCommand } from '../../hooks/useTerminalCommand'
 import SudoPrompt from './SudoPrompt'
 import TerminalView, { type TerminalViewRef } from '../shared/TerminalView'
 import type { ToolCheck } from '@pocketdev/shared/types'
@@ -36,20 +33,21 @@ const ERROR_PATTERNS = [
   /no such file or directory/im,
 ]
 
-const SUDO_PROMPT_PATTERN = /\[sudo\] password for/
-
 export default function InstallSheet({ visible, tool, command, onClose, onAiInspect }: Props) {
   const { colors } = useTheme()
-  const server = useConnectionStore((s) => s.server)
   const ws = useConnectionStore((s) => s.ws)
   const report = useSetupStore((s) => s.report)
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
-
-  const [output, setOutput] = useState('')
-  const [hasError, setHasError] = useState(false)
-  const [showSudoPrompt, setShowSudoPrompt] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
   const terminalRef = useRef<TerminalViewRef>(null)
+
+  const {
+    output, hasError, showSudoPrompt,
+    sendCommand, submitSudoPassword, cancelSudoPrompt, reset, disconnect,
+  } = useTerminalCommand({
+    initialCommand: command ?? undefined,
+    errorPatterns: ERROR_PATTERNS,
+    onOutput: () => setTimeout(() => terminalRef.current?.scrollToEnd(), 50),
+  })
 
   // Check if any AI CLI is authenticated for AI assist
   const hasAuthenticatedCli = report?.tools.some(
@@ -59,103 +57,15 @@ export default function InstallSheet({ visible, tool, command, onClose, onAiInsp
       t.auth_status === 'authenticated',
   ) ?? false
 
-  // Connect terminal WebSocket when sheet opens
-  useEffect(() => {
-    if (!visible || !server || !command) return
-
-    let cancelled = false
-
-    ;(async () => {
-      const url = buildTerminalWsUrl(server.ip, server.port)
-      const authHeader = await buildPocketDevAuthorizationHeader()
-      const termWs = createReactNativeWebSocket(url, { Authorization: authHeader })
-      if (cancelled) { termWs.close(); return }
-
-      wsRef.current = termWs
-
-      setOutput('')
-      setHasError(false)
-
-      termWs.onopen = () => {
-        termWs.send(JSON.stringify({ type: 'terminal.input', data: command + '\n' }))
-      }
-
-      termWs.onmessage = (event) => {
-        let text: string
-        try {
-          const msg = JSON.parse(event.data as string)
-          if (msg.type === 'terminal.output') text = msg.data
-          else if (msg.type === 'terminal.exited') { text = `\n[Process exited: ${msg.exitCode}]\n` }
-          else return
-        } catch {
-          text = event.data as string
-        }
-
-        setOutput((prev) => {
-          const updated = prev + text
-
-          if (SUDO_PROMPT_PATTERN.test(text)) {
-            handleSudoNeeded()
-          }
-
-          for (const pattern of ERROR_PATTERNS) {
-            if (pattern.test(text)) {
-              setHasError(true)
-              break
-            }
-          }
-
-          return updated
-        })
-
-        setTimeout(() => terminalRef.current?.scrollToEnd(), 50)
-      }
-
-      termWs.onclose = () => {
-        wsRef.current = null
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      wsRef.current?.close()
-      wsRef.current = null
-    }
-  }, [visible, server, command])
-
-  const handleSudoNeeded = useCallback(async () => {
-    if (!server) return
-
-    const stored = await getSudoPassword(server.ip)
-    if (stored && wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: stored + '\n' }))
-      return
-    }
-
-    setShowSudoPrompt(true)
-  }, [server])
-
-  function handleSudoSubmit(password: string, remember: boolean) {
-    setShowSudoPrompt(false)
-    if (wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: password + '\n' }))
-    }
-    if (remember && server) {
-      saveSudoPassword(server.ip, password)
-    }
-  }
-
   function handleDone() {
-    wsRef.current?.close()
+    disconnect()
     fetchPrerequisites()
     onClose()
   }
 
   function handleRetry() {
-    setHasError(false)
-    if (wsRef.current && command) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: command + '\n' }))
-    }
+    reset()
+    if (command) sendCommand(command)
   }
 
   function handleAiInspect() {
@@ -249,8 +159,8 @@ ${outputLines}`
 
         <SudoPrompt
           visible={showSudoPrompt}
-          onSubmit={handleSudoSubmit}
-          onCancel={() => setShowSudoPrompt(false)}
+          onSubmit={submitSudoPassword}
+          onCancel={cancelSudoPrompt}
         />
       </View>
     </Modal>

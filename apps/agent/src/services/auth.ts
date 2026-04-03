@@ -35,19 +35,32 @@ export async function authenticateRequest(authHeader: string | null): Promise<st
   if (process.env.POCKETDEV_DEV_MODE === '1') return 'dev-device'
 
   const decoded = decodeAuthToken(authHeader)
-  if (!decoded) return null
+  if (!decoded) {
+    console.warn('[auth] Failed to decode auth token. Header present:', !!authHeader, 'Header prefix:', authHeader?.slice(0, 20))
+    return null
+  }
 
-  if (Math.abs(Date.now() - decoded.timestamp) > 30_000) return null
+  const timeDiff = Math.abs(Date.now() - decoded.timestamp)
+  if (timeDiff > 30_000) {
+    console.warn(`[auth] Timestamp rejected: diff=${timeDiff}ms, deviceId=${decoded.deviceId}`)
+    return null
+  }
 
   const device = getDevice(decoded.deviceId)
-  if (!device) return null
+  if (!device) {
+    console.warn(`[auth] Device not found: ${decoded.deviceId}`)
+    return null
+  }
 
   const message = new TextEncoder().encode(String(decoded.timestamp))
   const sigBytes = fromHex(decoded.signature)
   const pubKeyBytes = fromHex(device.publicKey)
 
   const valid = await verify(sigBytes, message, pubKeyBytes)
-  if (!valid) return null
+  if (!valid) {
+    console.warn(`[auth] Signature verification failed for device ${decoded.deviceId}`)
+    return null
+  }
 
   updateDeviceLastSeen(decoded.deviceId)
   return decoded.deviceId

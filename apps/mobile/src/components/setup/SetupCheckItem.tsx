@@ -1,8 +1,28 @@
 import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image, type ImageSourcePropType } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import type { ToolCheck } from '@pocketdev/shared/types'
+import { Assets } from '../../../assets'
+
+const toolAssetMap: Record<string, { light: ImageSourcePropType; dark: ImageSourcePropType }> = {
+  git: { light: Assets.githubBlack, dark: Assets.githubWhite },
+  docker: { light: Assets.dockerBlack, dark: Assets.dockerWhite },
+  python: { light: Assets.pythonBlack, dark: Assets.pythonWhite },
+  node: { light: Assets.nodeBlack, dark: Assets.nodeWhite },
+  npm: { light: Assets.npmBlack, dark: Assets.npmWhite },
+  nvm: { light: Assets.nvmBlack, dark: Assets.nvmWhite },
+  pnpm: { light: Assets.pnpmBlack, dark: Assets.pnpmWhite },
+  bun: { light: Assets.bunBlack, dark: Assets.bunWhite },
+  claude_cli: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
+  codex_cli: { light: Assets.codexBlack, dark: Assets.codexWhite },
+  rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
+  java: { light: Assets.javaBlack, dark: Assets.javaWhite },
+  cpp: { light: Assets.cppBlack, dark: Assets.cppWhite },
+  postgresql: { light: Assets.postgresqlBlack, dark: Assets.postgresqlWhite },
+  mongodb: { light: Assets.mongodbBlack, dark: Assets.mongodbWhite },
+  chromium: { light: Assets.chromiumBlack, dark: Assets.chromiumWhite },
+}
 
 interface Props {
   tool: ToolCheck
@@ -48,7 +68,9 @@ function statusColor(tool: ToolCheck): string {
 }
 
 export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard, onClaudeWizard, onCodexWizard, onPkgWizard, onPythonWizard }: Props) {
-  const { colors } = useTheme()
+  const { colors, isDark } = useTheme()
+  const asset = toolAssetMap[tool.id]
+  const logoSource = asset ? (isDark ? asset.dark : asset.light) : null
 
   // Git gets a dedicated wizard instead of generic install/configure buttons
   const isGit = tool.id === 'git'
@@ -81,7 +103,14 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.header}>
-        <View style={[styles.statusDot, { backgroundColor: statusColor(tool) }]} />
+        <View style={styles.logoContainer}>
+          {logoSource ? (
+            <Image source={logoSource} style={styles.logo} resizeMode="contain" />
+          ) : (
+            <View style={[styles.logoFallback, { backgroundColor: colors.surface }]} />
+          )}
+          <View style={[styles.statusDot, { backgroundColor: statusColor(tool) }]} />
+        </View>
         <View style={styles.info}>
           <View style={styles.nameRow}>
             <Text style={[styles.name, { color: colors.text }]}>{tool.name}</Text>
@@ -205,11 +234,31 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing[3],
   },
+  logoContainer: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  logo: {
+    width: 28,
+    height: 28,
+  },
+  logoFallback: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+  },
   statusDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginTop: 5,
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   info: {
     flex: 1,

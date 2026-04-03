@@ -2,25 +2,23 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
-import { useConnectionStore } from '../../../stores/connection'
-import { buildTerminalWsUrl } from '../../../services/api'
-import { buildPocketDevAuthorizationHeader } from '../../../services/auth'
-import { createReactNativeWebSocket } from '../../../services/websocket'
-import { getSudoPassword, saveSudoPassword } from '../../../services/secure-storage'
+import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
-import { Check, Clock, RefreshCw, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react-native'
+import { Check, Clock, RefreshCw, AlertCircle } from 'lucide-react-native'
 import type { PkgManagerStatus } from '@pocketdev/shared/types'
 import { buildInstallPlan } from './ReviewStep'
 
-const SUDO_PROMPT_PATTERN = /\[sudo\] password for/
-const ERROR_PATTERNS = [/^E: /m, /^error:/im, /^fatal:/im, /permission denied/im, /curl.*error/im]
+// Marker pattern: sent as a separate echo after each install command.
+// We scan the full accumulated output so split chunks don't matter.
+const DONE_PATTERN = /__PKGDONE_(\w+)_(\d+)__/g
 
 type ToolInstallStatus = 'queued' | 'installing' | 'done' | 'failed'
 
 interface ToolProgress {
   id: string
   name: string
+  description: string
   command: string
   status: ToolInstallStatus
   logo: any
@@ -47,6 +45,7 @@ function buildToolQueue(pkgStatus: PkgManagerStatus, isDark: boolean): ToolProgr
     queue.push({
       id: 'nvm',
       name: 'nvm',
+      description: 'Installing Node Version Manager to ~/.nvm',
       command: nvmItem.commands[0],
       status: 'queued',
       logo: isDark ? Assets.nvmWhite : Assets.nvmBlack,
@@ -54,11 +53,12 @@ function buildToolQueue(pkgStatus: PkgManagerStatus, isDark: boolean): ToolProgr
   }
 
   if (npmItem) {
-    // Need to source nvm first, then install node
+    // Source nvm so `nvm install` works in the same session
     const sourceNvm = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
     queue.push({
       id: 'npm',
       name: 'Node.js + npm',
+      description: 'Installing latest LTS Node.js via nvm',
       command: `${sourceNvm} && ${npmItem.commands[0]}`,
       status: 'queued',
       logo: isDark ? Assets.npmWhite : Assets.npmBlack,
@@ -69,6 +69,7 @@ function buildToolQueue(pkgStatus: PkgManagerStatus, isDark: boolean): ToolProgr
     queue.push({
       id: 'pnpm',
       name: 'pnpm',
+      description: 'Installing pnpm to ~/.local/share/pnpm',
       command: pnpmItem.commands[0],
       status: 'queued',
       logo: isDark ? Assets.pnpmWhite : Assets.pnpmBlack,
@@ -80,122 +81,98 @@ function buildToolQueue(pkgStatus: PkgManagerStatus, isDark: boolean): ToolProgr
 
 export default function InstallStep({ pkgStatus, dispatch }: Props) {
   const { colors, isDark } = useTheme()
-  const server = useConnectionStore((s) => s.server)
   const [toolQueue, setToolQueue] = useState<ToolProgress[]>(() => buildToolQueue(pkgStatus, isDark))
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [output, setOutput] = useState('')
-  const [showOutput, setShowOutput] = useState(false)
-  const [showSudoPrompt, setShowSudoPrompt] = useState(false)
+  const [currentOutput, setCurrentOutput] = useState('')
   const [allDone, setAllDone] = useState(false)
-  const [hasError, setHasError] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
   const currentIndexRef = useRef(0)
   const toolQueueRef = useRef(toolQueue)
+  const processedMarkersRef = useRef<Set<string>>(new Set())
+  const scrollRef = useRef<ScrollView>(null)
+  const sendNextRef = useRef<(index: number) => void>(() => {})
 
-  // Keep refs in sync
   useEffect(() => { toolQueueRef.current = toolQueue }, [toolQueue])
   useEffect(() => { currentIndexRef.current = currentIndex }, [currentIndex])
 
-  const installTool = useCallback(async (index: number) => {
-    if (!server) return
+  // Track whether the shell is actually responsive
+  const shellReadyRef = useRef(false)
+
+  const {
+    hasError, showSudoPrompt,
+    sendCommand, submitSudoPassword, cancelSudoPrompt,
+  } = useTerminalCommand({
+    // Send a simple echo on connect to verify the shell works
+    initialCommand: 'echo __SHELL_READY__',
+    persistent: true,
+    onOutput: (chunk, fullOutput) => {
+      // Wait for shell readiness confirmation before doing anything
+      if (!shellReadyRef.current) {
+        if (fullOutput.includes('__SHELL_READY__')) {
+          shellReadyRef.current = true
+          // Shell is alive — start the first install
+          setTimeout(() => sendNextRef.current(0), 200)
+        }
+        return
+      }
+
+      // Track per-tool output for the expanded card
+      setCurrentOutput((prev) => prev + chunk)
+
+      // Scan full output for completion markers
+      DONE_PATTERN.lastIndex = 0
+      let match: RegExpExecArray | null
+      while ((match = DONE_PATTERN.exec(fullOutput)) !== null) {
+        const toolId = match[1]
+        const exitCode = match[2]
+        const markerKey = `${toolId}_${exitCode}`
+
+        if (processedMarkersRef.current.has(markerKey)) continue
+        processedMarkersRef.current.add(markerKey)
+
+        const idx = currentIndexRef.current
+        if (exitCode === '0') {
+          setToolQueue((prev) => prev.map((t) => t.id === toolId ? { ...t, status: 'done' as const } : t))
+          setTimeout(() => sendNextRef.current(idx + 1), 600)
+        } else {
+          setToolQueue((prev) => prev.map((t) => t.id === toolId ? { ...t, status: 'failed' as const } : t))
+        }
+      }
+
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
+    },
+  })
+
+  const doSendNext = useCallback((index: number) => {
     const queue = toolQueueRef.current
     if (index >= queue.length) {
+      sendCommand('exit')
       setAllDone(true)
       return
     }
 
     const tool = queue[index]
-
-    // Mark current tool as installing
+    setCurrentIndex(index)
+    setCurrentOutput('')
     setToolQueue((prev) => prev.map((t, i) => i === index ? { ...t, status: 'installing' as const } : t))
-    setOutput('')
-    setHasError(false)
 
-    const url = buildTerminalWsUrl(server.ip, server.port)
-    const authHeader = await buildPocketDevAuthorizationHeader()
-    const termWs = createReactNativeWebSocket(url, { Authorization: authHeader })
+    // Send install command on its own, then the marker as a separate command.
+    // Using sendCommand twice instead of embedding \n ensures both lines
+    // are properly delivered as separate inputs to the PTY.
+    sendCommand(tool.command)
+    setTimeout(() => {
+      sendCommand(`echo __PKGDONE_${tool.id}_$?__`)
+    }, 100)
+  }, [sendCommand])
 
-    wsRef.current = termWs
-    let sawError = false
-
-    termWs.onopen = () => {
-      termWs.send(JSON.stringify({ type: 'terminal.input', data: tool.command + '\n' }))
-      // Send exit after the command so the terminal closes when done
-      // Using a slight delay and wrapping to ensure it runs after the command completes
-      setTimeout(() => {
-        termWs.send(JSON.stringify({ type: 'terminal.input', data: 'exit\n' }))
-      }, 500)
-    }
-
-    termWs.onmessage = (event) => {
-      let text: string
-      try {
-        const msg = JSON.parse(event.data as string)
-        if (msg.type === 'terminal.output') text = msg.data
-        else if (msg.type === 'terminal.exited') text = `\n[exited: ${msg.exitCode}]\n`
-        else return
-      } catch { text = event.data as string }
-
-      setOutput((prev) => {
-        if (SUDO_PROMPT_PATTERN.test(text)) handleSudoNeeded()
-        for (const p of ERROR_PATTERNS) {
-          if (p.test(text)) { sawError = true; setHasError(true); break }
-        }
-        return prev + text
-      })
-    }
-
-    termWs.onclose = () => {
-      wsRef.current = null
-      const idx = currentIndexRef.current
-
-      if (sawError) {
-        setToolQueue((prev) => prev.map((t, i) => i === idx ? { ...t, status: 'failed' as const } : t))
-        setHasError(true)
-      } else {
-        setToolQueue((prev) => prev.map((t, i) => i === idx ? { ...t, status: 'done' as const } : t))
-        // Move to next tool
-        const nextIndex = idx + 1
-        setCurrentIndex(nextIndex)
-        // Small delay so user can see the checkmark appear
-        setTimeout(() => installTool(nextIndex), 600)
-      }
-    }
-  }, [server])
-
-  // Start installation on mount
-  useEffect(() => {
-    installTool(0)
-    return () => {
-      wsRef.current?.close()
-      wsRef.current = null
-    }
-  }, [])
-
-  const handleSudoNeeded = useCallback(async () => {
-    if (!server) return
-    const stored = await getSudoPassword(server.ip)
-    if (stored && wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: stored + '\n' }))
-      return
-    }
-    setShowSudoPrompt(true)
-  }, [server])
-
-  function handleSudoSubmit(password: string, remember: boolean) {
-    setShowSudoPrompt(false)
-    wsRef.current?.send(JSON.stringify({ type: 'terminal.input', data: password + '\n' }))
-    if (remember && server) saveSudoPassword(server.ip, password)
-  }
+  // Keep ref in sync so onOutput callback can call it
+  useEffect(() => { sendNextRef.current = doSendNext }, [doSendNext])
 
   function handleContinue() {
     dispatch({ type: 'STEP_COMPLETE', step: 'install' })
   }
 
   function handleRetry() {
-    setHasError(false)
-    // Re-run the current (failed) tool
-    installTool(currentIndex)
+    doSendNext(currentIndex)
   }
 
   const completedCount = toolQueue.filter((t) => t.status === 'done').length
@@ -211,68 +188,84 @@ export default function InstallStep({ pkgStatus, dispatch }: Props) {
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {allDone
             ? 'All package managers have been installed.'
-            : `Setting up your development tools...`}
+            : 'Setting up your development tools...'}
         </Text>
       </View>
 
       {/* Tool progress cards */}
       <ScrollView style={styles.cardList} contentContainerStyle={styles.cardListContent} showsVerticalScrollIndicator={false}>
-        {toolQueue.map((tool) => (
-          <View key={tool.id} style={[styles.toolCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Image source={tool.logo} style={styles.toolLogo} resizeMode="contain" />
-            <View style={styles.toolInfo}>
-              <Text style={[styles.toolName, { color: colors.text }]}>{tool.name}</Text>
-              <Text style={[styles.toolStatus, {
-                color: tool.status === 'done' ? '#22c55e'
-                  : tool.status === 'failed' ? colors.error
-                  : tool.status === 'installing' ? colors.primary
-                  : colors.textTertiary,
-              }]}>
-                {tool.status === 'queued' && 'Waiting...'}
-                {tool.status === 'installing' && 'Installing...'}
-                {tool.status === 'done' && 'Installed'}
-                {tool.status === 'failed' && 'Failed'}
-              </Text>
-            </View>
-            <View style={styles.toolStatusIcon}>
-              {tool.status === 'queued' && <Clock color={colors.textTertiary} size={18} strokeWidth={2} />}
-              {tool.status === 'installing' && <ActivityIndicator color={colors.primary} size="small" />}
-              {tool.status === 'done' && (
-                <View style={[styles.doneCircle, { backgroundColor: '#22c55e' }]}>
-                  <Check color="#fff" size={12} strokeWidth={3} />
+        {toolQueue.map((tool) => {
+          const isActive = tool.status === 'installing'
+          const isFailed = tool.status === 'failed'
+          const isExpanded = isActive || isFailed
+
+          return (
+            <View key={tool.id} style={[
+              styles.toolCard,
+              { backgroundColor: colors.surface, borderColor: isActive ? colors.primary : isFailed ? colors.error : colors.border },
+              isActive && styles.toolCardActive,
+            ]}>
+              {/* Card header row */}
+              <View style={styles.toolHeader}>
+                <Image source={tool.logo} style={styles.toolLogo} resizeMode="contain" />
+                <View style={styles.toolInfo}>
+                  <Text style={[styles.toolName, { color: colors.text }]}>{tool.name}</Text>
+                  <Text style={[styles.toolStatus, {
+                    color: tool.status === 'done' ? '#22c55e'
+                      : tool.status === 'failed' ? colors.error
+                      : tool.status === 'installing' ? colors.primary
+                      : colors.textTertiary,
+                  }]}>
+                    {tool.status === 'queued' && 'Waiting...'}
+                    {tool.status === 'installing' && tool.description}
+                    {tool.status === 'done' && 'Installed'}
+                    {tool.status === 'failed' && 'Failed — see output below'}
+                  </Text>
+                </View>
+                <View style={styles.toolStatusIcon}>
+                  {tool.status === 'queued' && <Clock color={colors.textTertiary} size={18} strokeWidth={2} />}
+                  {tool.status === 'installing' && <ActivityIndicator color={colors.primary} size="small" />}
+                  {tool.status === 'done' && (
+                    <View style={[styles.doneCircle, { backgroundColor: '#22c55e' }]}>
+                      <Check color="#fff" size={12} strokeWidth={3} />
+                    </View>
+                  )}
+                  {tool.status === 'failed' && (
+                    <View style={[styles.doneCircle, { backgroundColor: colors.error }]}>
+                      <AlertCircle color="#fff" size={12} strokeWidth={3} />
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Expanded: command + live output */}
+              {isExpanded && (
+                <View style={styles.expandedSection}>
+                  {/* Command being run */}
+                  <View style={[styles.commandBlock, { backgroundColor: colors.background }]}>
+                    <Text style={[styles.commandPrefix, { color: colors.textTertiary }]}>$</Text>
+                    <Text style={[styles.commandText, { color: colors.text }]} numberOfLines={2}>
+                      {tool.command}
+                    </Text>
+                  </View>
+
+                  {/* Live output */}
+                  <ScrollView
+                    ref={isActive ? scrollRef : undefined}
+                    style={[styles.outputBox, { backgroundColor: colors.background }]}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                  >
+                    <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
+                      {currentOutput || 'Waiting for output...'}
+                    </Text>
+                  </ScrollView>
                 </View>
               )}
-              {tool.status === 'failed' && (
-                <View style={[styles.doneCircle, { backgroundColor: colors.error }]}>
-                  <AlertCircle color="#fff" size={12} strokeWidth={3} />
-                </View>
-              )}
             </View>
-          </View>
-        ))}
+          )
+        })}
       </ScrollView>
-
-      {/* Collapsible terminal output */}
-      <TouchableOpacity
-        style={[styles.outputToggle, { borderColor: colors.border }]}
-        onPress={() => setShowOutput(!showOutput)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-          Terminal output
-        </Text>
-        {showOutput
-          ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
-          : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
-      </TouchableOpacity>
-
-      {showOutput && (
-        <ScrollView style={[styles.outputBox, { backgroundColor: colors.background }]} nestedScrollEnabled>
-          <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-            {output || 'Waiting for output...'}
-          </Text>
-        </ScrollView>
-      )}
 
       {/* Actions */}
       {allDone && !hasError && (
@@ -299,8 +292,8 @@ export default function InstallStep({ pkgStatus, dispatch }: Props) {
 
       <SudoPrompt
         visible={showSudoPrompt}
-        onSubmit={handleSudoSubmit}
-        onCancel={() => setShowSudoPrompt(false)}
+        onSubmit={submitSudoPassword}
+        onCancel={cancelSudoPrompt}
       />
     </View>
   )
@@ -326,14 +319,21 @@ const styles = StyleSheet.create({
   },
   cardListContent: {
     gap: spacing[2],
+    paddingBottom: spacing[2],
   },
   toolCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[3],
+    gap: spacing[3],
+  },
+  toolCardActive: {
+    borderWidth: 1.5,
+  },
+  toolHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[3],
-    padding: spacing[4],
-    borderWidth: 1,
-    borderRadius: borderRadius.lg,
   },
   toolLogo: {
     width: 32,
@@ -364,27 +364,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  outputToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
+  expandedSection: {
+    gap: spacing[2],
   },
-  outputToggleText: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+  commandBlock: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    borderRadius: borderRadius.md,
+    padding: spacing[2],
+    paddingHorizontal: spacing[3],
+  },
+  commandPrefix: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  commandText: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    lineHeight: 16,
+    flex: 1,
   },
   outputBox: {
-    maxHeight: 150,
+    maxHeight: 180,
     borderRadius: borderRadius.md,
     padding: spacing[3],
   },
   outputText: {
-    ...typographyScale.xs,
     fontFamily: 'monospace',
+    fontSize: 11,
     lineHeight: 16,
   },
   actionButton: {

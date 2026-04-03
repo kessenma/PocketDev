@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
+import React, { useState, useEffect, useRef } from 'react'
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
-import { useConnectionStore } from '../../../stores/connection'
-import { buildTerminalWsUrl } from '../../../services/api'
-import { buildPocketDevAuthorizationHeader } from '../../../services/auth'
-import { createReactNativeWebSocket } from '../../../services/websocket'
-import { getSudoPassword, saveSudoPassword } from '../../../services/secure-storage'
+import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
-import TerminalView, { type TerminalViewRef } from '../../shared/TerminalView'
 import { Assets } from '../../../../assets'
-import { CheckCircle, RefreshCw } from 'lucide-react-native'
+import { Check, Clock, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Download } from 'lucide-react-native'
+
+// Marker pattern to detect success/failure
+const MARKER_OK = '___CLAUDE_INSTALL_OK___'
+const MARKER_FAIL = '___CLAUDE_INSTALL_FAIL___'
+const MARKER_PATTERN = /___CLAUDE_INSTALL_(OK|FAIL)___/
 
 const INSTALL_COMMAND = 'curl -fsSL https://claude.ai/install.sh | bash'
-const SUDO_PROMPT_PATTERN = /\[sudo\] password for/
-const ERROR_PATTERNS = [/^E: /m, /^error:/im, /^fatal:/im, /permission denied/im, /curl.*error/im]
+
+type ToolInstallStatus = 'queued' | 'installing' | 'done' | 'failed'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'install' }
@@ -24,99 +24,57 @@ interface Props {
   dispatch: (action: WizardAction) => void
 }
 
+function wrapWithMarker(command: string): string {
+  return `( ${command} ) && echo "${MARKER_OK}" || echo "${MARKER_FAIL}"`
+}
+
 export default function InstallStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
-  const server = useConnectionStore((s) => s.server)
-  const [output, setOutput] = useState('')
-  const [hasError, setHasError] = useState(false)
-  const [showSudoPrompt, setShowSudoPrompt] = useState(false)
-  const [done, setDone] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
-  const terminalRef = useRef<TerminalViewRef>(null)
+  const [status, setStatus] = useState<ToolInstallStatus>('queued')
+  const [showOutput, setShowOutput] = useState(false)
+  const scrollRef = useRef<ScrollView>(null)
 
+  const {
+    output, hasError, showSudoPrompt, connected,
+    sendCommand, submitSudoPassword, cancelSudoPrompt,
+  } = useTerminalCommand({
+    persistent: true,
+    onOutput: (chunk) => {
+      const match = chunk.match(MARKER_PATTERN)
+      if (match) {
+        if (match[1] === 'OK') {
+          setStatus('done')
+        } else {
+          setStatus('failed')
+        }
+      }
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
+    },
+  })
+
+  // Start install when connected
   useEffect(() => {
-    if (!server) return
-    let cancelled = false
-
-    ;(async () => {
-      const url = buildTerminalWsUrl(server.ip, server.port)
-      const authHeader = await buildPocketDevAuthorizationHeader()
-      const termWs = createReactNativeWebSocket(url, { Authorization: authHeader })
-      if (cancelled) { termWs.close(); return }
-
-      wsRef.current = termWs
-      setOutput('')
-      setHasError(false)
-
-      termWs.onopen = () => {
-        termWs.send(JSON.stringify({ type: 'terminal.input', data: INSTALL_COMMAND + '\n' }))
-      }
-
-      termWs.onmessage = (event) => {
-        let text: string
-        try {
-          const msg = JSON.parse(event.data as string)
-          if (msg.type === 'terminal.output') text = msg.data
-          else if (msg.type === 'terminal.exited') text = `\n[Process exited: ${msg.exitCode}]\n`
-          else return
-        } catch { text = event.data as string }
-
-        setOutput((prev) => {
-          const updated = prev + text
-          if (SUDO_PROMPT_PATTERN.test(text)) handleSudoNeeded()
-          for (const p of ERROR_PATTERNS) {
-            if (p.test(text)) { setHasError(true); break }
-          }
-          return updated
-        })
-
-        setTimeout(() => terminalRef.current?.scrollToEnd(), 50)
-      }
-
-      termWs.onclose = () => {
-        wsRef.current = null
-        setDone(true)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      wsRef.current?.close()
-      wsRef.current = null
+    if (connected && status === 'queued') {
+      setStatus('installing')
+      setTimeout(() => sendCommand(wrapWithMarker(INSTALL_COMMAND)), 300)
     }
-  }, [server])
-
-  const handleSudoNeeded = useCallback(async () => {
-    if (!server) return
-    const stored = await getSudoPassword(server.ip)
-    if (stored && wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: stored + '\n' }))
-      return
-    }
-    setShowSudoPrompt(true)
-  }, [server])
-
-  function handleSudoSubmit(password: string, remember: boolean) {
-    setShowSudoPrompt(false)
-    wsRef.current?.send(JSON.stringify({ type: 'terminal.input', data: password + '\n' }))
-    if (remember && server) saveSudoPassword(server.ip, password)
-  }
+  }, [connected]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleContinue() {
     dispatch({ type: 'STEP_COMPLETE', step: 'install' })
   }
 
   function handleRetry() {
-    setHasError(false)
-    setDone(false)
-    setOutput('')
-    if (wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: INSTALL_COMMAND + '\n' }))
-    }
+    setStatus('installing')
+    sendCommand(wrapWithMarker(INSTALL_COMMAND))
   }
+
+  const isDone = status === 'done'
+  const isFailed = status === 'failed' || hasError
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.headerRow}>
         <Image
           source={isDark ? Assets.claudeWhite : Assets.claudeBlack}
@@ -124,29 +82,108 @@ export default function InstallStep({ dispatch }: Props) {
           resizeMode="contain"
         />
         <View style={styles.headerText}>
-          <Text style={[styles.title, { color: colors.text }]}>Install Claude CLI</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {isDone ? 'Installation complete' : 'Install Claude CLI'}
+          </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Installing via the official install script...
+            {isDone
+              ? 'Claude Code CLI is ready on your server.'
+              : 'Installing via the official install script...'}
           </Text>
         </View>
       </View>
 
-      <View style={styles.terminalWrapper}>
-        <TerminalView ref={terminalRef} output={output} placeholder="Connecting..." />
+      {/* Progress card */}
+      <View style={styles.cardList}>
+        <View style={[
+          styles.toolCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: status === 'installing' ? colors.primary
+              : status === 'failed' ? colors.error
+              : colors.border,
+          },
+        ]}>
+          <View style={styles.toolIconWrap}>
+            <Download
+              color={status === 'done' ? '#22c55e'
+                : status === 'installing' ? colors.primary
+                : status === 'failed' ? colors.error
+                : colors.textTertiary}
+              size={20}
+              strokeWidth={2}
+            />
+          </View>
+          <View style={styles.toolInfo}>
+            <Text style={[styles.toolName, { color: colors.text }]}>Claude Code</Text>
+            <Text style={[styles.toolDescription, {
+              color: status === 'done' ? '#22c55e'
+                : status === 'failed' ? colors.error
+                : status === 'installing' ? colors.primary
+                : colors.textTertiary,
+            }]}>
+              {status === 'queued' && 'Waiting to connect...'}
+              {status === 'installing' && 'Downloading and installing...'}
+              {status === 'done' && 'Installed'}
+              {status === 'failed' && 'Installation failed'}
+            </Text>
+          </View>
+          <View style={styles.toolStatusIcon}>
+            {status === 'queued' && <Clock color={colors.textTertiary} size={18} strokeWidth={2} />}
+            {status === 'installing' && <ActivityIndicator color={colors.primary} size="small" />}
+            {status === 'done' && (
+              <View style={[styles.doneCircle, { backgroundColor: '#22c55e' }]}>
+                <Check color="#fff" size={12} strokeWidth={3} />
+              </View>
+            )}
+            {status === 'failed' && (
+              <View style={[styles.doneCircle, { backgroundColor: colors.error }]}>
+                <AlertCircle color="#fff" size={12} strokeWidth={3} />
+              </View>
+            )}
+          </View>
+        </View>
       </View>
 
-      {done && !hasError && (
+      {/* Collapsible terminal output */}
+      <TouchableOpacity
+        style={[styles.outputToggle, { borderColor: colors.border }]}
+        onPress={() => setShowOutput(!showOutput)}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
+          Terminal output
+        </Text>
+        {showOutput
+          ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
+          : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
+      </TouchableOpacity>
+
+      {showOutput && (
+        <ScrollView
+          ref={scrollRef}
+          style={[styles.outputBox, { backgroundColor: colors.background }]}
+          nestedScrollEnabled
+        >
+          <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
+            {output || 'Waiting for output...'}
+          </Text>
+        </ScrollView>
+      )}
+
+      {/* Actions */}
+      {isDone && (
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={handleContinue}
           activeOpacity={0.7}
         >
-          <CheckCircle color={colors.primaryText} size={18} strokeWidth={2.25} />
+          <Check color={colors.primaryText} size={18} strokeWidth={2.5} />
           <Text style={[styles.buttonText, { color: colors.primaryText }]}>Continue</Text>
         </TouchableOpacity>
       )}
 
-      {hasError && (
+      {isFailed && (
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.error }]}
           onPress={handleRetry}
@@ -159,8 +196,8 @@ export default function InstallStep({ dispatch }: Props) {
 
       <SudoPrompt
         visible={showSudoPrompt}
-        onSubmit={handleSudoSubmit}
-        onCancel={() => setShowSudoPrompt(false)}
+        onSubmit={submitSudoPassword}
+        onCancel={cancelSudoPrompt}
       />
     </View>
   )
@@ -191,8 +228,70 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typographyScale.sm,
   },
-  terminalWrapper: {
+  cardList: {
+    gap: spacing[2],
+  },
+  toolCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    padding: spacing[4],
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+  },
+  toolIconWrap: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolInfo: {
     flex: 1,
+    gap: 2,
+  },
+  toolName: {
+    ...typographyScale.base,
+    fontWeight: '600',
+  },
+  toolDescription: {
+    ...typographyScale.xs,
+    fontWeight: '500',
+  },
+  toolStatusIcon: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outputToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+  },
+  outputToggleText: {
+    ...typographyScale.xs,
+    fontWeight: '500',
+  },
+  outputBox: {
+    flex: 1,
+    borderRadius: borderRadius.md,
+    padding: spacing[3],
+  },
+  outputText: {
+    ...typographyScale.xs,
+    fontFamily: 'monospace',
+    lineHeight: 16,
   },
   actionButton: {
     flexDirection: 'row',

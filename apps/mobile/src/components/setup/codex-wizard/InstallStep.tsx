@@ -1,19 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useRef } from 'react'
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
-import { useConnectionStore } from '../../../stores/connection'
-import { buildTerminalWsUrl } from '../../../services/api'
-import { buildPocketDevAuthorizationHeader } from '../../../services/auth'
-import { createReactNativeWebSocket } from '../../../services/websocket'
-import { getSudoPassword, saveSudoPassword } from '../../../services/secure-storage'
+import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
 import TerminalView, { type TerminalViewRef } from '../../shared/TerminalView'
 import { Assets } from '../../../../assets'
 import { CheckCircle, RefreshCw } from 'lucide-react-native'
 
 const INSTALL_COMMAND = 'npm i -g @openai/codex'
-const SUDO_PROMPT_PATTERN = /\[sudo\] password for/
 const ERROR_PATTERNS = [/^E: /m, /^error:/im, /^fatal:/im, /permission denied/im, /npm ERR!/im, /command not found.*npm/im]
 
 type WizardAction =
@@ -26,99 +21,31 @@ interface Props {
 
 export default function InstallStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
-  const server = useConnectionStore((s) => s.server)
-  const [output, setOutput] = useState('')
-  const [hasError, setHasError] = useState(false)
   const [npmMissing, setNpmMissing] = useState(false)
-  const [showSudoPrompt, setShowSudoPrompt] = useState(false)
-  const [done, setDone] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
   const terminalRef = useRef<TerminalViewRef>(null)
 
-  useEffect(() => {
-    if (!server) return
-    let cancelled = false
-
-    ;(async () => {
-      const url = buildTerminalWsUrl(server.ip, server.port)
-      const authHeader = await buildPocketDevAuthorizationHeader()
-      const termWs = createReactNativeWebSocket(url, { Authorization: authHeader })
-      if (cancelled) { termWs.close(); return }
-
-      wsRef.current = termWs
-      setOutput('')
-      setHasError(false)
-      setNpmMissing(false)
-
-      termWs.onopen = () => {
-        termWs.send(JSON.stringify({ type: 'terminal.input', data: INSTALL_COMMAND + '\n' }))
+  const {
+    output, hasError, done, showSudoPrompt,
+    sendCommand, submitSudoPassword, cancelSudoPrompt, reset,
+  } = useTerminalCommand({
+    initialCommand: INSTALL_COMMAND,
+    errorPatterns: ERROR_PATTERNS,
+    onOutput: (chunk) => {
+      if (/command not found.*npm/im.test(chunk) || /npm: not found/im.test(chunk)) {
+        setNpmMissing(true)
       }
-
-      termWs.onmessage = (event) => {
-        let text: string
-        try {
-          const msg = JSON.parse(event.data as string)
-          if (msg.type === 'terminal.output') text = msg.data
-          else if (msg.type === 'terminal.exited') text = `\n[Process exited: ${msg.exitCode}]\n`
-          else return
-        } catch { text = event.data as string }
-
-        setOutput((prev) => {
-          const updated = prev + text
-          if (SUDO_PROMPT_PATTERN.test(text)) handleSudoNeeded()
-          if (/command not found.*npm/im.test(text) || /npm: not found/im.test(text)) {
-            setNpmMissing(true)
-          }
-          for (const p of ERROR_PATTERNS) {
-            if (p.test(text)) { setHasError(true); break }
-          }
-          return updated
-        })
-
-        setTimeout(() => terminalRef.current?.scrollToEnd(), 50)
-      }
-
-      termWs.onclose = () => {
-        wsRef.current = null
-        setDone(true)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      wsRef.current?.close()
-      wsRef.current = null
-    }
-  }, [server])
-
-  const handleSudoNeeded = useCallback(async () => {
-    if (!server) return
-    const stored = await getSudoPassword(server.ip)
-    if (stored && wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: stored + '\n' }))
-      return
-    }
-    setShowSudoPrompt(true)
-  }, [server])
-
-  function handleSudoSubmit(password: string, remember: boolean) {
-    setShowSudoPrompt(false)
-    wsRef.current?.send(JSON.stringify({ type: 'terminal.input', data: password + '\n' }))
-    if (remember && server) saveSudoPassword(server.ip, password)
-  }
+      setTimeout(() => terminalRef.current?.scrollToEnd(), 50)
+    },
+  })
 
   function handleContinue() {
     dispatch({ type: 'STEP_COMPLETE', step: 'install' })
   }
 
   function handleRetry() {
-    setHasError(false)
+    reset()
     setNpmMissing(false)
-    setDone(false)
-    setOutput('')
-    if (wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: INSTALL_COMMAND + '\n' }))
-    }
+    sendCommand(INSTALL_COMMAND)
   }
 
   return (
@@ -173,8 +100,8 @@ export default function InstallStep({ dispatch }: Props) {
 
       <SudoPrompt
         visible={showSudoPrompt}
-        onSubmit={handleSudoSubmit}
-        onCancel={() => setShowSudoPrompt(false)}
+        onSubmit={submitSudoPassword}
+        onCancel={cancelSudoPrompt}
       />
     </View>
   )
