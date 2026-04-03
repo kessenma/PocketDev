@@ -112,6 +112,7 @@ function parseAuthState(output: string, completed: boolean, authenticated: boole
   const prompt = derivePrompt(output)
   const lower = output.toLowerCase()
   const hasFailure = /error|failed|denied|timed out|timed-out/.test(lower)
+  const terminalFailure = /error logging in|token exchange failed|invalid request|bad request/.test(lower)
   const waitingForInput = /enter|paste|code/.test(lower) && !authenticated
 
   if (authenticated) {
@@ -121,6 +122,16 @@ function parseAuthState(output: string, completed: boolean, authenticated: boole
       verificationCode,
       prompt,
       error: null,
+    }
+  }
+
+  if (terminalFailure) {
+    return {
+      state: 'failed',
+      authUrl,
+      verificationCode,
+      prompt,
+      error: prompt ?? 'Codex authentication failed.',
     }
   }
 
@@ -198,7 +209,7 @@ function refreshSessionState(session: InternalAuthSession) {
   session.prompt = derived.prompt
   session.error = session.completed && !session.authenticated
     ? (derived.error ?? session.error ?? 'Codex authentication failed.')
-    : derived.error
+    : (derived.state === 'failed' ? (derived.error ?? session.error ?? 'Codex authentication failed.') : derived.error)
   session.updatedAt = Date.now()
 }
 

@@ -124,6 +124,15 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
         setError(replay.error ?? 'Failed to complete Codex auth callback.')
         return
       }
+      const next = await fetchCodexAuthStatus(server.ip, server.port, session.session_id)
+      syncSession(next)
+      if (next.authenticated) {
+        dispatch({ type: 'STEP_COMPLETE', step: 'authenticate', authSession: next })
+      } else if (next.state === 'failed') {
+        const message = next.error ?? 'Codex authentication failed.'
+        setError(message)
+        dispatch({ type: 'STEP_FAILED', step: 'authenticate', error: message })
+      }
       setCallbackUrl('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to complete Codex auth callback.')

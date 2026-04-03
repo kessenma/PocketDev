@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, Image, TouchableOpacity, TextInput, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native'
+import { View, Text, Image, TouchableOpacity, TextInput, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Linking } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
@@ -12,7 +12,6 @@ import { Assets } from '../../../../assets'
 import { ExternalLink, CheckCircle, RefreshCw, Send, ShieldCheck, ChevronDown } from 'lucide-react-native'
 import CopyButton from '../../shared/CopyButton'
 import type { ClaudeAuthSessionStatus } from '@pocketdev/shared/types'
-import ServerWebBrowserSheet from '../../browser/ServerWebBrowserSheet'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'authenticate' }
@@ -29,8 +28,6 @@ export default function AuthenticateStep({ dispatch }: Props) {
   const [session, setSession] = useState<ClaudeAuthSessionStatus | null>(null)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [browserVisible, setBrowserVisible] = useState(false)
-  const [browserStartUrl, setBrowserStartUrl] = useState<string | null>(null)
   const [openedBrowser, setOpenedBrowser] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,22 +76,13 @@ export default function AuthenticateStep({ dispatch }: Props) {
     return () => clearInterval(timer)
   }, [dispatch, server, session])
 
-  // ─── Auto-open browser when URL appears ───────────────────────────
-
-  useEffect(() => {
-    if (session?.auth_url && !browserVisible && !openedBrowser && !session.authenticated) {
-      setBrowserStartUrl(session.auth_url)
-      setBrowserVisible(true)
-      setOpenedBrowser(true)
-    }
-  }, [browserVisible, openedBrowser, session])
-
   // ─── Handlers ─────────────────────────────────────────────────────
 
   const handleOpenBrowser = useCallback(() => {
     if (!session?.auth_url) return
-    setBrowserStartUrl(session.auth_url)
-    setBrowserVisible(true)
+    Linking.openURL(session.auth_url).catch((err) => {
+      setError(err instanceof Error ? err.message : 'Failed to open the sign-in page.')
+    })
     setOpenedBrowser(true)
   }, [session])
 
@@ -172,7 +160,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Browser step</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              Sign in with your Anthropic account in the browser. The sign-in page should open automatically.
+              Open the Anthropic sign-in page in your phone&apos;s default browser. In-app webviews are avoided because some providers block this sign-in flow.
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
@@ -181,9 +169,10 @@ export default function AuthenticateStep({ dispatch }: Props) {
             >
               <ExternalLink color={colors.primaryText} size={18} strokeWidth={2.25} />
               <Text style={[styles.buttonText, { color: colors.primaryText }]}>
-                {openedBrowser ? 'Re-open browser' : 'Open sign-in page'}
+                {openedBrowser ? 'Re-open in browser' : 'Open sign-in page'}
               </Text>
             </TouchableOpacity>
+            <CopyButton value={session.auth_url} label="Copy URL" />
           </View>
         )}
 
@@ -262,16 +251,6 @@ export default function AuthenticateStep({ dispatch }: Props) {
           <RefreshCw color="#fff" size={16} strokeWidth={2.25} />
           <Text style={[styles.buttonText, { color: '#fff' }]}>Restart sign-in</Text>
         </TouchableOpacity>
-      )}
-
-      {/* In-app browser for OAuth */}
-      {browserStartUrl && (
-        <ServerWebBrowserSheet
-          visible={browserVisible}
-          title="Claude Sign-In"
-          initialUrl={browserStartUrl}
-          onClose={() => setBrowserVisible(false)}
-        />
       )}
     </KeyboardAvoidingView>
   )
