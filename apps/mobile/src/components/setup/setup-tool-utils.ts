@@ -7,5 +7,5 @@ export function getToolById(report: PrerequisitesReport | null, toolId: string):
 export function getCodexBlockedReason(report: PrerequisitesReport | null): string | null {
   const npmTool = getToolById(report, 'npm')
   if (npmTool?.status === 'installed') return null
-  return 'Install package managers first to make npm available for Codex.'
+  return 'Enable package tools first so Codex can use npm.'
 }

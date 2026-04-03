@@ -78,11 +78,11 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const handleCodexWizard = useCallback(() => {
     if (codexBlockedReason) {
       Alert.alert(
-        'Install package managers first',
+        'Enable package tools first',
         codexBlockedReason,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Package Managers', onPress: () => setShowPkgWizard(true) },
+          { text: 'Open Package Tools', onPress: () => setShowPkgWizard(true) },
         ],
       )
       return

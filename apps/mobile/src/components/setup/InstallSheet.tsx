@@ -110,7 +110,7 @@ ${outputLines}`
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>
-            {tool?.name ?? 'Terminal'}
+            {tool?.name ?? 'Workspace Action'}
           </Text>
           <TouchableOpacity onPress={handleDone}>
             <Text style={[styles.doneButton, { color: colors.primary }]}>Done</Text>
@@ -120,7 +120,7 @@ ${outputLines}`
         {command && (
           <View style={[styles.commandBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.commandText, { color: colors.textSecondary }]} numberOfLines={1}>
-              $ {command}
+              Guided setup is running for this tool
             </Text>
           </View>
         )}
@@ -138,20 +138,20 @@ ${outputLines}`
         {hasError && (
           <View style={[styles.errorBar, { backgroundColor: colors.errorBackground }]}>
             <Text style={[styles.errorText, { color: colors.error }]}>
-              Command may have failed
+              This step may need attention
             </Text>
             <View style={styles.errorActions}>
               <TouchableOpacity
                 style={[styles.errorButton, { backgroundColor: colors.surface }]}
                 onPress={handleRetry}
               >
-                <Text style={[styles.errorButtonText, { color: colors.text }]}>Retry</Text>
+                <Text style={[styles.errorButtonText, { color: colors.text }]}>Try Again</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.errorButton, { backgroundColor: colors.primary }]}
                 onPress={handleAiInspect}
               >
-                <Text style={[styles.errorButtonText, { color: colors.primaryText }]}>AI Inspect</Text>
+                <Text style={[styles.errorButtonText, { color: colors.primaryText }]}>Ask AI</Text>
               </TouchableOpacity>
             </View>
           </View>

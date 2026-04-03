@@ -365,15 +365,28 @@ export async function startClaudeAuth(): Promise<ClaudeAuthStartResult> {
   return toAuthStatus(session)
 }
 
-export function getClaudeAuthStatus(sessionId: string): ClaudeAuthSessionStatus {
+export async function getClaudeAuthStatus(sessionId: string): Promise<ClaudeAuthSessionStatus> {
   const session = getSessionOrThrow(sessionId)
+  if (!session.completed && !session.authenticated) {
+    const status = await checkClaudeStatus()
+    if (status.authenticated) {
+      session.authenticated = true
+      session.completed = true
+      session.error = null
+      try {
+        session.terminal.kill()
+      } catch {
+        // Best-effort cleanup; the session state is already authoritative.
+      }
+    }
+  }
   refreshSessionState(session)
   return toAuthStatus(session)
 }
 
 export function submitClaudeAuthInput(sessionId: string, code: string): ClaudeAuthSubmitResult {
   const session = getSessionOrThrow(sessionId)
-  session.terminal.send(`${code.trim()}\n`)
+  session.terminal.send(`${code.trim()}\r`)
   session.state = 'pending'
   session.updatedAt = Date.now()
   return toAuthStatus(session)

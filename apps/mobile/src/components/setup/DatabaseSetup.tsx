@@ -63,7 +63,7 @@ export default function DatabaseSetup({ databases, dockerInstalled, onRefresh }:
         Alert.alert('Error', data.error ?? 'Failed to create database')
       } else {
         Alert.alert(
-          'Database Created',
+          'Service Ready',
           `Connection URI:\n${data.connection_uri}`,
           [{ text: 'OK' }],
         )
@@ -94,9 +94,9 @@ export default function DatabaseSetup({ databases, dockerInstalled, onRefresh }:
   if (!dockerInstalled) {
     return (
       <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Databases</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Workspace Services</Text>
         <Text style={[styles.hint, { color: colors.textSecondary }]}>
-          Install Docker first to provision databases
+          Enable container support first to add project services
         </Text>
       </View>
     )
@@ -104,7 +104,7 @@ export default function DatabaseSetup({ databases, dockerInstalled, onRefresh }:
 
   return (
     <View style={styles.wrapper}>
-      <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Databases</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Workspace Services</Text>
 
       {/* Existing databases */}
       {databases.length > 0 && (
@@ -201,7 +201,7 @@ export default function DatabaseSetup({ databases, dockerInstalled, onRefresh }:
           />
 
           <Text style={[styles.hint, { color: colors.textTertiary }]}>
-            Image: {showCreate.default_image} · Password auto-generated
+            Runtime: {showCreate.default_image} · Credentials auto-generated
           </Text>
 
           <View style={styles.createActions}>

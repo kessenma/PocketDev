@@ -56,11 +56,11 @@ function StatusIcon({ tool }: { tool: ToolCheck }) {
 }
 
 function statusLabel(tool: ToolCheck): string {
-  if (tool.status === 'missing') return 'Not installed'
-  if (tool.status === 'misconfigured') return 'Needs configuration'
-  if (tool.auth_status === 'unauthenticated') return 'Installed, not authenticated'
-  if (tool.auth_status === 'authenticated') return 'Installed & authenticated'
-  return tool.version ? `v${tool.version}` : 'Installed'
+  if (tool.status === 'missing') return 'Needs setup'
+  if (tool.status === 'misconfigured') return 'Needs attention'
+  if (tool.auth_status === 'unauthenticated') return 'Ready to sign in'
+  if (tool.auth_status === 'authenticated') return 'Ready'
+  return tool.version ? `Ready · v${tool.version}` : 'Ready'
 }
 
 function statusColor(tool: ToolCheck): string {
@@ -145,17 +145,12 @@ export default function SetupCheckItem({
           <View style={styles.nameRow}>
             <Text style={[styles.name, { color: colors.text }]}>{tool.name}</Text>
             {tool.required && (
-              <Text style={[styles.required, { color: colors.textTertiary }]}>Required</Text>
+              <Text style={[styles.required, { color: colors.textTertiary }]}>Core</Text>
             )}
           </View>
           <Text style={[styles.status, { color: statusColor(tool) }]}>
             {statusLabel(tool)}
           </Text>
-          {tool.path && (
-            <Text style={[styles.path, { color: colors.textTertiary }]} numberOfLines={1}>
-              {tool.path}
-            </Text>
-          )}
           {tool.details.user_name && (
             <Text style={[styles.path, { color: colors.textTertiary }]}>
               {tool.details.user_name} {'<'}{tool.details.user_email}{'>'}
@@ -172,7 +167,7 @@ export default function SetupCheckItem({
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
-              {gitNeedsAction ? 'Set up Git' : 'Open Git Setup'}
+              {gitNeedsAction ? 'Enable Git' : 'Open Git'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -186,7 +181,7 @@ export default function SetupCheckItem({
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
-              {claudeNeedsAction ? 'Set up Claude' : 'Open Claude Setup'}
+              {claudeNeedsAction ? 'Enable Claude' : 'Open Claude'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -210,7 +205,7 @@ export default function SetupCheckItem({
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
-              {codexNeedsAction ? 'Set up Codex' : 'Open Codex Setup'}
+              {codexNeedsAction ? 'Enable Codex' : 'Open Codex'}
             </Text>
           </TouchableOpacity>
           {codexBlocked && (
@@ -224,7 +219,7 @@ export default function SetupCheckItem({
                   onPress={() => onPkgWizard(tool)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.secondaryActionText, { color: colors.text }]}>Open Package Managers</Text>
+                  <Text style={[styles.secondaryActionText, { color: colors.text }]}>Open Package Tools</Text>
                 </TouchableOpacity>
               )}
             </>
@@ -240,7 +235,7 @@ export default function SetupCheckItem({
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
-              {pkgNeedsAction ? 'Set up Package Managers' : 'Open Package Managers'}
+              {pkgNeedsAction ? 'Enable Package Tools' : 'Open Package Tools'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -254,7 +249,7 @@ export default function SetupCheckItem({
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
-              {pythonNeedsAction ? 'Set up Python' : 'Open Python Setup'}
+              {pythonNeedsAction ? 'Enable Python' : 'Open Python'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -268,7 +263,7 @@ export default function SetupCheckItem({
               onPress={() => onInstall(tool)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.actionText, { color: colors.primaryText }]}>Install</Text>
+              <Text style={[styles.actionText, { color: colors.primaryText }]}>Enable</Text>
             </TouchableOpacity>
           )}
           {(showAuth || showConfigure) && (
@@ -278,7 +273,7 @@ export default function SetupCheckItem({
               activeOpacity={0.7}
             >
               <Text style={[styles.actionText, { color: colors.primaryText }]}>
-                {showConfigure ? 'Configure' : 'Authenticate'}
+                {showConfigure ? 'Finish Setup' : 'Sign In'}
               </Text>
             </TouchableOpacity>
           )}
