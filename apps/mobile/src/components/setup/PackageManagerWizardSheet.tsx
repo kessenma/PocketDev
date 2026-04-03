@@ -184,20 +184,16 @@ export default function PackageManagerWizardSheet({ visible, onClose, onComplete
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
           <View style={styles.completedLogos}>
-            <Image source={isDark ? Assets.nvmWhite : Assets.nvmBlack} style={styles.completedLogo} resizeMode="contain" />
             <Image source={isDark ? Assets.npmWhite : Assets.npmBlack} style={styles.completedLogo} resizeMode="contain" />
             <Image source={isDark ? Assets.pnpmWhite : Assets.pnpmBlack} style={styles.completedLogo} resizeMode="contain" />
             <Image source={isDark ? Assets.bunWhite : Assets.bunBlack} style={styles.completedLogo} resizeMode="contain" />
           </View>
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Package managers are ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Server package tools are ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your server has all the package managers installed.
+            Node.js, npm, pnpm, and Bun are available across the server.
           </Text>
           {state.pkgStatus && (
             <View style={styles.completedVersions}>
-              {state.pkgStatus.nvm.version && (
-                <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>nvm v{state.pkgStatus.nvm.version}</Text>
-              )}
               {state.pkgStatus.npm.version && (
                 <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>npm v{state.pkgStatus.npm.version}</Text>
               )}

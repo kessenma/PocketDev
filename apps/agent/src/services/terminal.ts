@@ -38,6 +38,9 @@ export function createTerminalSession(
       TERM: 'xterm-256color',
       COLUMNS: '80',
       LINES: '24',
+      PATH: process.env.PATH
+        ? `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${process.env.PATH}`
+        : '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
     },
   })
 

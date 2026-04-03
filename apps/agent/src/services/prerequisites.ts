@@ -6,14 +6,14 @@ import {
   checkBun as checkPkgBun,
   checkNode as checkPkgNode,
   checkNpm as checkPkgNpm,
-  checkNvm as checkPkgNvm,
   checkPnpm as checkPkgPnpm,
 } from './pkg-setup.ts'
 
-/** Run a command in a login shell so nvm/homebrew PATH entries are visible */
+/** Run commands in a shell that can see standard system-wide tool locations. */
 async function exec(cmd: string): Promise<{ stdout: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
-  const proc = Bun.spawn(['bash', '-lc', cmd], {
+  const wrapped = `export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"; ${cmd}`
+  const proc = Bun.spawn(['bash', '-lc', wrapped], {
     stdout: 'pipe',
     stderr: 'pipe',
     env: { ...process.env, HOME: home },
@@ -129,34 +129,13 @@ async function checkNpm(): Promise<ToolCheck> {
   }
 }
 
-async function checkNvm(): Promise<ToolCheck> {
-  const nvm = await checkPkgNvm()
-  if (!nvm.installed) {
-    return {
-      id: 'nvm', name: 'nvm', status: 'missing', auth_status: 'not_applicable',
-      version: null, path: null, required: false,
-      install_command: 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash',
-      auth_command: null, details: {},
-    }
-  }
-
-  const nvmDir = `${process.env.HOME}/.nvm`
-  upsertToolPath('nvm', nvmDir, nvm.version)
-
-  return {
-    id: 'nvm', name: 'nvm', status: 'installed', auth_status: 'not_applicable',
-    version: nvm.version, path: nvmDir, required: false,
-    install_command: null, auth_command: null, details: {},
-  }
-}
-
 async function checkClaudeCli(): Promise<ToolCheck> {
   const path = await which('claude')
   if (!path) {
     return {
       id: 'claude_cli', name: 'Claude CLI', status: 'missing', auth_status: 'unauthenticated',
       version: null, path: null, required: true,
-      install_command: 'npm install -g @anthropic-ai/claude-code',
+      install_command: 'sudo npm install -g @anthropic-ai/claude-code',
       auth_command: 'claude auth login', details: {},
     }
   }
@@ -185,7 +164,7 @@ async function checkCodexCli(): Promise<ToolCheck> {
     return {
       id: 'codex_cli', name: 'Codex CLI', status: 'missing', auth_status: 'unauthenticated',
       version: null, path: null, required: true,
-      install_command: 'npm install -g @openai/codex',
+      install_command: 'sudo npm install -g @openai/codex',
       auth_command: 'codex login', details: {},
     }
   }
@@ -214,7 +193,7 @@ async function checkBun(): Promise<ToolCheck> {
     return {
       id: 'bun', name: 'Bun', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'curl -fsSL https://bun.sh/install | bash',
+      install_command: 'sudo npm install -g bun',
       auth_command: null, details: {},
     }
   }
@@ -234,7 +213,7 @@ async function checkPnpm(): Promise<ToolCheck> {
     return {
       id: 'pnpm', name: 'pnpm', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'npm install -g pnpm',
+      install_command: 'sudo npm install -g pnpm',
       auth_command: null, details: {},
     }
   }
@@ -437,7 +416,6 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkGit(),
     checkNode(),
     checkNpm(),
-    checkNvm(),
     checkClaudeCli(),
     checkCodexCli(),
     checkDocker(),
@@ -453,9 +431,9 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
   const nodeReady = tools[1].status === 'installed'
   const npmReady = tools[2].status === 'installed'
   const claudeReady =
-    tools[4].status === 'installed' && tools[4].auth_status === 'authenticated'
+    tools[3].status === 'installed' && tools[3].auth_status === 'authenticated'
   const codexReady =
-    tools[5].status === 'installed' && tools[5].auth_status === 'authenticated'
+    tools[4].status === 'installed' && tools[4].auth_status === 'authenticated'
   const aiReady = claudeReady || codexReady
 
   const ready = gitReady && nodeReady && npmReady && aiReady

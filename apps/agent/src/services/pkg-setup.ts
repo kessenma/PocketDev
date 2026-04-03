@@ -26,16 +26,12 @@ function buildShellCommand(cmd: string): string {
   return `
 export HOME="${getHomeDir()}"
 export SHELL="${getShell()}"
-export NVM_DIR="$HOME/.nvm"
-export PNPM_HOME="$HOME/.local/share/pnpm"
-export BUN_INSTALL="$HOME/.bun"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
+if [ -s "/etc/profile" ]; then . "/etc/profile"; fi
 if [ -s "$HOME/.profile" ]; then . "$HOME/.profile"; fi
 if [ -s "$HOME/.bash_profile" ]; then . "$HOME/.bash_profile"; fi
 if [ -s "$HOME/.bashrc" ]; then . "$HOME/.bashrc"; fi
-if [ -s "$NVM_DIR/nvm.sh" ]; then . "$NVM_DIR/nvm.sh"; fi
-
-export PATH="$HOME/.bun/bin:$PNPM_HOME:$PATH"
 
 ${cmd}
 `.trim()
@@ -162,18 +158,10 @@ async function runInstall(
   }
 }
 
-export async function installNvm(exec: ShellExec = execShell): Promise<PkgInstallResult> {
-  return runInstall(
-    'nvm',
-    'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash',
-    exec,
-  )
-}
-
 export async function installNodeAndNpm(exec: ShellExec = execShell): Promise<PkgInstallResult> {
   return runInstall(
     'npm',
-    'nvm install --lts && nvm alias default "lts/*"',
+    'curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs',
     exec,
   )
 }
@@ -181,7 +169,7 @@ export async function installNodeAndNpm(exec: ShellExec = execShell): Promise<Pk
 export async function installPnpm(exec: ShellExec = execShell): Promise<PkgInstallResult> {
   return runInstall(
     'pnpm',
-    'curl -fsSL https://get.pnpm.io/install.sh | sh -',
+    'sudo npm install -g pnpm',
     exec,
   )
 }
@@ -189,7 +177,7 @@ export async function installPnpm(exec: ShellExec = execShell): Promise<PkgInsta
 export async function installBun(exec: ShellExec = execShell): Promise<PkgInstallResult> {
   return runInstall(
     'bun',
-    'curl -fsSL https://bun.sh/install | bash',
+    'sudo npm install -g bun',
     exec,
   )
 }
@@ -199,8 +187,6 @@ export async function installPkgTool(
   exec: ShellExec = execShell,
 ): Promise<PkgInstallResult> {
   switch (tool) {
-    case 'nvm':
-      return installNvm(exec)
     case 'npm':
       return installNodeAndNpm(exec)
     case 'pnpm':
@@ -208,4 +194,6 @@ export async function installPkgTool(
     case 'bun':
       return installBun(exec)
   }
+
+  throw new Error(`Unsupported package install tool: ${String(tool)}`)
 }

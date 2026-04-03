@@ -5,7 +5,7 @@ import type { ClaudeSetupStatus } from '@pocketdev/shared/types'
  *  but many installers (including Claude Code native) write PATH entries to ~/.bashrc. */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
-  const wrappedCmd = `source ~/.bashrc 2>/dev/null; ${cmd}`
+  const wrappedCmd = `export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"; source ~/.bashrc 2>/dev/null; ${cmd}`
   const proc = Bun.spawn(['bash', '-lc', wrappedCmd], {
     stdout: 'pipe',
     stderr: 'pipe',
@@ -25,6 +25,7 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
 
 // Common paths where claude might be installed but not yet in PATH
 const CLAUDE_PATHS = [
+  '/usr/bin/claude',
   '~/.claude/local/bin/claude',
   '~/.claude/bin/claude',
   '~/.local/bin/claude',

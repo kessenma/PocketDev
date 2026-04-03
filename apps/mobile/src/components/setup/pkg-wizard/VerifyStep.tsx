@@ -6,7 +6,7 @@ import { useConnectionStore } from '../../../stores/connection'
 import { postVerifyPkgSetup } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { Check, X, RefreshCw, ChevronLeft } from 'lucide-react-native'
-import type { PkgManagerStatus, PkgToolInfo } from '@pocketdev/shared/types'
+import type { PkgManagerStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'verify' }
@@ -29,7 +29,6 @@ interface ToolResult {
 
 function buildResults(status: PkgManagerStatus, isDark: boolean): ToolResult[] {
   return [
-    { id: 'nvm', name: 'nvm', installed: status.nvm.installed, version: status.nvm.version, logo: isDark ? Assets.nvmWhite : Assets.nvmBlack },
     { id: 'npm', name: 'Node.js + npm', installed: status.npm.installed, version: status.npm.version, logo: isDark ? Assets.npmWhite : Assets.npmBlack },
     { id: 'pnpm', name: 'pnpm', installed: status.pnpm.installed, version: status.pnpm.version, logo: isDark ? Assets.pnpmWhite : Assets.pnpmBlack },
     { id: 'bun', name: 'Bun', installed: status.bun.installed, version: status.bun.version, logo: isDark ? Assets.bunWhite : Assets.bunBlack },
@@ -53,7 +52,7 @@ export default function VerifyStep({ dispatch }: Props) {
       const toolResults = buildResults(status, isDark)
       setResults(toolResults)
 
-      const allInstalled = status.nvm.installed && status.npm.installed && status.pnpm.installed && status.bun.installed
+      const allInstalled = status.npm.installed && status.pnpm.installed && status.bun.installed
       if (allInstalled) {
         setState('success')
         setTimeout(() => {

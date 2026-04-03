@@ -24,7 +24,6 @@ export const pkgSetupRoutes = new Elysia({ prefix: '/pkg-setup' })
   }, {
     body: t.Object({
       tool: t.Union([
-        t.Literal('nvm'),
         t.Literal('npm'),
         t.Literal('pnpm'),
         t.Literal('bun'),

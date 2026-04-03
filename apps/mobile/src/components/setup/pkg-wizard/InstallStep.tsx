@@ -36,10 +36,9 @@ function buildToolQueue(pkgStatus: PkgManagerStatus, selectedTools: PkgInstallTo
     ...item,
     status: 'queued' as const,
     logo:
-      item.id === 'nvm' ? (isDark ? Assets.nvmWhite : Assets.nvmBlack)
-        : item.id === 'npm' ? (isDark ? Assets.npmWhite : Assets.npmBlack)
-          : item.id === 'pnpm' ? (isDark ? Assets.pnpmWhite : Assets.pnpmBlack)
-            : (isDark ? Assets.bunWhite : Assets.bunBlack),
+      item.id === 'npm' ? (isDark ? Assets.npmWhite : Assets.npmBlack)
+        : item.id === 'pnpm' ? (isDark ? Assets.pnpmWhite : Assets.pnpmBlack)
+          : (isDark ? Assets.bunWhite : Assets.bunBlack),
     output: '',
     error: null,
     expanded: false,
@@ -160,8 +159,8 @@ export default function InstallStep({ pkgStatus, selectedTools, dispatch }: Prop
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {allDone
-            ? 'All package managers are ready on your server.'
-            : 'PocketDev is installing each missing package manager for you.'}
+            ? 'The core package toolchain is now available everywhere on this server.'
+            : 'PocketDev is installing each missing package manager system-wide for you.'}
         </Text>
       </View>
 

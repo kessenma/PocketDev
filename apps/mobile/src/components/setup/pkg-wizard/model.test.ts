@@ -25,7 +25,7 @@ describe('pkg wizard model', () => {
       bun: { installed: false, version: null, path: null },
     }))
 
-    expect(plan.length).toBe(4)
+    expect(plan.length).toBe(3)
     expect(plan.map((item) => item.id)).toContain('bun')
   })
 
@@ -37,8 +37,8 @@ describe('pkg wizard model', () => {
   })
 
   it('builds the install queue from selected tools only', () => {
-    const plan = buildSelectedInstallPlan(createStatus(), ['nvm', 'bun'])
-    expect(plan.map((item) => item.id)).toEqual(['nvm', 'bun'])
+    const plan = buildSelectedInstallPlan(createStatus(), ['bun'])
+    expect(plan.map((item) => item.id)).toEqual(['bun'])
   })
 
   it('retries from the first tool that is not completed', () => {

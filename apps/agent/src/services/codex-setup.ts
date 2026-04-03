@@ -10,7 +10,7 @@ import type {
   CodexSetupStatus,
 } from '@pocketdev/shared/types'
 
-const CODEX_INSTALL_COMMAND = 'npm i -g @openai/codex'
+const CODEX_INSTALL_COMMAND = 'sudo npm i -g @openai/codex'
 const AUTH_URL_PATTERN = /https:\/\/[^\s\])>"']+/g
 const VERIFICATION_CODE_PATTERNS = [
   /code[:\s]+([A-Z0-9]{4}(?:-[A-Z0-9]{4})+)/i,

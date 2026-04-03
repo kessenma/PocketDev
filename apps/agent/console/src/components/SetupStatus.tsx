@@ -28,6 +28,37 @@ function statusLabel(tool: ToolCheck): string {
   return tool.version ? `v${tool.version}` : 'Installed'
 }
 
+function toolIntentDetail(tool: ToolCheck): string | null {
+  const serverWideIds = new Set(['node', 'npm', 'pnpm', 'bun', 'claude_cli', 'codex_cli'])
+
+  if (tool.path && serverWideIds.has(tool.id)) {
+    if (tool.path.startsWith('/usr/') || tool.path.startsWith('/opt/')) {
+      return `Server-wide path: ${tool.path}`
+    }
+    return `Detected path: ${tool.path}`
+  }
+
+  if (tool.id === 'node' || tool.id === 'npm') {
+    return tool.status === 'missing'
+      ? 'Required for the server toolchain.'
+      : 'Backs the server-wide JavaScript toolchain.'
+  }
+
+  if (tool.id === 'pnpm' || tool.id === 'bun') {
+    return tool.status === 'missing'
+      ? 'Optional server-wide package tool.'
+      : 'Available across the server for package workflows.'
+  }
+
+  if (tool.id === 'claude_cli' || tool.id === 'codex_cli') {
+    return tool.status === 'missing'
+      ? 'Installs as a server-wide AI CLI.'
+      : 'Available across the server for agent task launches.'
+  }
+
+  return null
+}
+
 function GitDetails({ tool }: { tool: ToolCheck }) {
   const sshExists = tool.details.ssh_key_exists === 'true'
   const githubConnected = tool.details.github_connected === 'true'
@@ -83,6 +114,9 @@ function ToolListRow({ tool }: { tool: ToolCheck }) {
           ) : null}
         </div>
         <p className={cn('mt-1 text-sm font-medium', statusColor(tool))}>{statusLabel(tool)}</p>
+        {toolIntentDetail(tool) ? (
+          <p className="mt-1 text-xs text-[#f4f0e8]/52">{toolIntentDetail(tool)}</p>
+        ) : null}
         {tool.id === 'git' && tool.status !== 'missing' ? (
           <GitDetails tool={tool} />
         ) : null}
@@ -115,6 +149,9 @@ function ToolGridTile({ tool, className }: { tool: ToolCheck, className?: string
         </div>
         <div className="space-y-2">
           <p className={cn('text-sm font-medium', statusColor(tool))}>{statusLabel(tool)}</p>
+          {toolIntentDetail(tool) ? (
+            <p className="text-xs text-[#f4f0e8]/52">{toolIntentDetail(tool)}</p>
+          ) : null}
           {tool.id === 'git' && tool.status !== 'missing' ? (
             <GitDetails tool={tool} />
           ) : null}
@@ -155,7 +192,7 @@ export function SetupStatus() {
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-black/50">Readiness Grid</p>
             <CardTitle className="flex items-center gap-2 text-black">
               <Wrench className="h-5 w-5" />
-              Server Setup
+              Server Toolchain
             </CardTitle>
           </div>
           <Button variant="outline" size="sm" className="border-black/15 bg-white/60 text-black hover:bg-white" onClick={load} disabled={loading}>
@@ -173,7 +210,7 @@ export function SetupStatus() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={report.ready ? 'default' : 'secondary'} className={report.ready ? 'bg-black text-[#f4f0e8]' : 'bg-[#f0c419] text-black'}>
-                  {report.ready ? 'Ready' : 'Setup Incomplete'}
+                  {report.ready ? 'Ready' : 'Toolchain Incomplete'}
                 </Badge>
                 <Badge variant="outline" className="border-black/15 bg-white/50 text-black">
                   {report.os}
@@ -235,7 +272,7 @@ export function SetupStatus() {
             ) : null}
 
             <p className="text-xs uppercase tracking-[0.22em] text-black/55">
-              Switch between list, grid, and Bauhaus layout depending on whether you want density or rhythm.
+              This board reflects the server-wide developer toolchain that PocketDev checks and installs.
             </p>
           </div>
         )}

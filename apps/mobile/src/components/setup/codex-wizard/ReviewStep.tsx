@@ -46,7 +46,7 @@ export default function ReviewStep({ codexStatus, npmReady, dispatch }: Props) {
             icon={npmReady ? <Check color="#22c55e" size={18} strokeWidth={2.25} /> : <CircleAlert color={colors.error} size={18} strokeWidth={2.25} />}
             label="npm prerequisite"
             value={npmReady ? 'Ready' : 'Missing'}
-            detail={npmReady ? 'Codex can be installed from npm on this server.' : 'Package managers must be installed before Codex setup can continue.'}
+            detail={npmReady ? 'Codex can be installed from the server-wide npm toolchain.' : 'Package managers must be installed before Codex setup can continue.'}
             colors={colors}
           />
           <StatusRow

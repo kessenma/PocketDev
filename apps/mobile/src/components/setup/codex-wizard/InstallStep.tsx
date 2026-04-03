@@ -8,7 +8,7 @@ import { Assets } from '../../../../assets'
 import { ArrowRight, CheckCircle, RefreshCw, TerminalSquare } from 'lucide-react-native'
 import type { CodexSetupStatus } from '@pocketdev/shared/types'
 
-const INSTALL_COMMAND = 'npm i -g @openai/codex'
+const INSTALL_COMMAND = 'sudo npm i -g @openai/codex'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'install'; codexStatus?: CodexSetupStatus | null }
@@ -67,7 +67,7 @@ export default function InstallStep({ dispatch }: Props) {
           />
           <Text style={[styles.title, { color: colors.text }]}>Install Codex CLI</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            PocketDev will install Codex globally and store the detected binary path for future task launches.
+            PocketDev will install Codex system-wide and store the detected binary path for future task launches.
           </Text>
         </View>
 
@@ -82,7 +82,7 @@ export default function InstallStep({ dispatch }: Props) {
             </Text>
           </View>
           <Text style={[styles.commandHint, { color: colors.textTertiary }]}>
-            This uses npm on the server, then refreshes the stored Codex tool record.
+            This uses the server's system npm, then refreshes the stored Codex tool record.
           </Text>
         </View>
 

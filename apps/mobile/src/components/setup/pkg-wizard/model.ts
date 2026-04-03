@@ -17,28 +17,22 @@ export interface ToolInstallState {
 function getToolEntries(status: PkgManagerStatus) {
   return [
     {
-      id: 'nvm' as const,
-      name: 'nvm',
-      installed: status.nvm.installed,
-      description: 'Installs Node Version Manager to ~/.nvm',
-    },
-    {
       id: 'npm' as const,
       name: 'Node.js + npm',
       installed: status.npm.installed,
-      description: 'Installs the latest LTS Node.js through nvm, including npm',
+      description: 'Installs the latest LTS Node.js system-wide, including npm',
     },
     {
       id: 'pnpm' as const,
       name: 'pnpm',
       installed: status.pnpm.installed,
-      description: 'Installs pnpm to ~/.local/share/pnpm',
+      description: 'Installs pnpm globally so it is available across the server',
     },
     {
       id: 'bun' as const,
       name: 'Bun',
       installed: status.bun.installed,
-      description: 'Installs Bun to ~/.bun/bin',
+      description: 'Installs Bun globally so it is available across the server',
     },
   ]
 }

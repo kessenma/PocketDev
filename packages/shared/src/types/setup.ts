@@ -187,7 +187,7 @@ export interface PkgManagerStatus {
   bun: PkgToolInfo
 }
 
-export type PkgInstallTool = 'nvm' | 'npm' | 'pnpm' | 'bun'
+export type PkgInstallTool = 'npm' | 'pnpm' | 'bun'
 
 export interface PkgInstallResult {
   tool: PkgInstallTool

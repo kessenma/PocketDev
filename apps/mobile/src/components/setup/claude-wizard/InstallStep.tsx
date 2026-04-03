@@ -19,7 +19,7 @@ const MARKER_PATTERN = /^___CLAUDE_INSTALL_(OK|FAIL)___$/m
 // Strip ANSI escape codes before marker detection
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g
 
-const INSTALL_COMMAND = 'curl -fsSL --max-time 120 https://claude.ai/install.sh | bash'
+const INSTALL_COMMAND = 'sudo npm install -g @anthropic-ai/claude-code'
 
 // Timeout (ms) — if no marker detected, fall back to API check
 const FALLBACK_TIMEOUT_MS = 90_000

@@ -23,15 +23,13 @@ export default function ReviewStep({ pkgStatus, selectedTools, dispatch }: Props
   const tools = buildInstallPlan(pkgStatus).map((tool) => ({
     ...tool,
     version:
-      tool.id === 'nvm' ? pkgStatus.nvm.version
-        : tool.id === 'npm' ? pkgStatus.npm.version
-          : tool.id === 'pnpm' ? pkgStatus.pnpm.version
-            : pkgStatus.bun.version,
+      tool.id === 'npm' ? pkgStatus.npm.version
+        : tool.id === 'pnpm' ? pkgStatus.pnpm.version
+          : pkgStatus.bun.version,
     logo:
-      tool.id === 'nvm' ? (isDark ? Assets.nvmWhite : Assets.nvmBlack)
-        : tool.id === 'npm' ? (isDark ? Assets.npmWhite : Assets.npmBlack)
-          : tool.id === 'pnpm' ? (isDark ? Assets.pnpmWhite : Assets.pnpmBlack)
-            : (isDark ? Assets.bunWhite : Assets.bunBlack),
+      tool.id === 'npm' ? (isDark ? Assets.npmWhite : Assets.npmBlack)
+        : tool.id === 'pnpm' ? (isDark ? Assets.pnpmWhite : Assets.pnpmBlack)
+          : (isDark ? Assets.bunWhite : Assets.bunBlack),
   }))
   const selectedPlan = buildSelectedInstallPlan(pkgStatus, selectedTools)
 

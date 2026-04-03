@@ -62,9 +62,9 @@ describe('pkg-setup', () => {
 
   test('returns updated status and output on successful tool install', async () => {
     const exec = createExecMock({
-      'curl -fsSL https://get.pnpm.io/install.sh | sh -': { stdout: 'pnpm installed', stderr: '', exitCode: 0 },
+      'sudo npm install -g pnpm': { stdout: 'pnpm installed', stderr: '', exitCode: 0 },
       'command -v npm': { stdout: '', stderr: '', exitCode: 1 },
-      'command -v pnpm': { stdout: join(tempHome, '.local/share/pnpm/pnpm'), stderr: '', exitCode: 0 },
+      'command -v pnpm': { stdout: '/usr/local/bin/pnpm', stderr: '', exitCode: 0 },
       'pnpm --version': { stdout: '9.15.0', stderr: '', exitCode: 0 },
       'command -v bun': { stdout: '', stderr: '', exitCode: 1 },
     })
@@ -76,13 +76,13 @@ describe('pkg-setup', () => {
     expect(result.status.pnpm).toEqual({
       installed: true,
       version: '9.15.0',
-      path: join(tempHome, '.local/share/pnpm/pnpm'),
+      path: '/usr/local/bin/pnpm',
     })
   })
 
   test('returns error details when installation fails', async () => {
     const exec = createExecMock({
-      'curl -fsSL https://bun.sh/install | bash': { stdout: '', stderr: 'network failed', exitCode: 1 },
+      'sudo npm install -g bun': { stdout: '', stderr: 'network failed', exitCode: 1 },
       'command -v npm': { stdout: '', stderr: '', exitCode: 1 },
       'command -v pnpm': { stdout: '', stderr: '', exitCode: 1 },
       'command -v bun': { stdout: '', stderr: '', exitCode: 1 },
