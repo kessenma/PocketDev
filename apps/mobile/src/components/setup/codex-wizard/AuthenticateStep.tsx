@@ -11,7 +11,7 @@ import {
 } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { ExternalLink, RefreshCw, Send, ShieldCheck, Smartphone, Globe, Circle, CircleDot } from 'lucide-react-native'
-import type { CodexAuthMode, CodexAuthSessionStatus } from '@pocketdev/shared/types'
+import type { CodexAuthSessionStatus } from '@pocketdev/shared/types'
 import CopyButton from '../../shared/CopyButton'
 
 type WizardAction =
@@ -137,10 +137,12 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     : session?.authenticated
       ? 'Codex sign-in completed. Continue to verify the CLI and sync the cached provider state.'
       : session?.state === 'awaiting_code'
-        ? 'Finish the browser step, then enter a one-time code only if Codex asks for it.'
+        ? selectedMethod === 'device_code'
+          ? 'Open the verification page, then enter the one-time code shown by Codex if the CLI asks for it.'
+          : 'Complete sign-in in your browser or ChatGPT app, then finish the localhost callback handoff in PocketDev.'
         : session?.state === 'awaiting_browser'
           ? selectedMethod === 'device_code'
-            ? 'Open the verification page in your browser and complete sign-in with the code below.'
+            ? 'Open the verification page in your browser or ChatGPT app and complete sign-in with the code below.'
             : 'Open the sign-in page in your system browser, then paste the returned localhost callback URL back into PocketDev.'
           : session?.state === 'pending'
             ? 'Waiting for Codex CLI to finish the authentication flow.'
@@ -189,7 +191,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             <Text style={[styles.cardTitle, { color: colors.text }]}>Login and authenticate with</Text>
             <MethodOption
               label="web app"
-              description="Start `codex login` and finish sign-in in your system browser, then paste the localhost callback URL back into PocketDev."
+              description="Start `codex login`, finish sign-in in your system browser, then paste the localhost callback URL back into PocketDev."
               selected={selectedMethod === 'browser'}
               onPress={() => setSelectedMethod('browser')}
               colors={colors}
@@ -197,7 +199,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             />
             <MethodOption
               label="ChatGPT app"
-              description="Start `codex login --device-auth`, open the verification page, and complete the flow with a one-time code."
+              description="Start `codex login --device-auth`, then use the verification page and one-time code in the ChatGPT app or another browser on your phone."
               selected={selectedMethod === 'device_code'}
               onPress={() => setSelectedMethod('device_code')}
               colors={colors}
@@ -222,7 +224,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             </Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
               {selectedMethod === 'device_code'
-                ? 'Open the OpenAI verification page in your browser, then complete sign-in with the one-time code shown below.'
+                ? 'Open the OpenAI verification page in the ChatGPT app or your mobile browser, then complete sign-in with the one-time code shown below.'
                 : 'Open the OpenAI page in your system browser. After sign-in, copy the final `localhost:1455/auth/callback?...` URL and paste it back into PocketDev so the server can finish Codex authentication.'}
             </Text>
             <TouchableOpacity
@@ -243,7 +245,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Verification code</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              Enter this one-time code in the browser after opening the verification page.
+              Enter this one-time code after opening the verification page in the ChatGPT app or your browser.
             </Text>
             <View style={[styles.codeBox, { backgroundColor: colors.background }]}>
               <Text style={[styles.codeText, { color: colors.text }]} selectable>

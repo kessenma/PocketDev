@@ -156,7 +156,6 @@ export interface CodexInstallResult {
 
 export type CodexAuthSessionState =
   | 'starting'
-  | 'awaiting_choice'
   | 'awaiting_browser'
   | 'awaiting_code'
   | 'pending'
