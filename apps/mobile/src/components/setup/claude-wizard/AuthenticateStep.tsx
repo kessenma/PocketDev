@@ -8,8 +8,8 @@ import { fetchClaudeSetupStatus } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { ExternalLink, CheckCircle, RefreshCw, Send, LogIn, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react-native'
 
-// Try `claude auth login` first — if that doesn't work, the user can retry or do it manually
-const AUTH_COMMAND = 'claude auth login'
+// Running `claude` triggers the login flow on first use
+const AUTH_COMMAND = 'claude'
 const URL_PATTERN = /https:\/\/[^\s\]\)>"']+/g
 const ERROR_PATTERNS = [/^error:/im, /^fatal:/im, /permission denied/im, /command not found/im]
 const AUTH_SUCCESS_PATTERNS = [/successfully/i, /logged in/i, /authenticated/i, /welcome/i]

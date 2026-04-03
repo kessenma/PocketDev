@@ -23,32 +23,10 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
   return { stdout: stdout.trim(), stderr: stderr.trim(), exitCode: proc.exitCode ?? 1 }
 }
 
-// Common paths where claude might be installed but not yet in PATH
-const CLAUDE_PATHS = [
-  '/usr/bin/claude',
-  '~/.claude/local/bin/claude',
-  '~/.claude/bin/claude',
-  '~/.local/bin/claude',
-  '/usr/local/bin/claude',
-  '~/.nvm/versions/node/*/bin/claude',
-]
-
 export async function checkClaudeStatus(): Promise<ClaudeSetupStatus> {
-  // Check if claude binary exists via PATH
-  let { stdout: path, exitCode: whichExit } = await exec('which claude')
-
-  // If not in PATH, check common install locations
-  if (whichExit !== 0 || !path) {
-    const home = process.env.HOME ?? '/root'
-    const expandedPaths = CLAUDE_PATHS.map((p) => p.replace('~', home))
-    const { stdout: foundPath } = await exec(
-      `for p in ${expandedPaths.join(' ')}; do [ -x "$p" ] && echo "$p" && break; done`,
-    )
-    if (foundPath) {
-      path = foundPath
-      whichExit = 0
-    }
-  }
+  // Only report installed if `which claude` succeeds — meaning it's on the standard PATH
+  // and usable from a normal terminal session (including the WS terminal).
+  const { stdout: path, exitCode: whichExit } = await exec('which claude')
 
   if (whichExit !== 0 || !path) {
     return {
@@ -62,7 +40,7 @@ export async function checkClaudeStatus(): Promise<ClaudeSetupStatus> {
 
   const claudeBin = path.split('\n')[0]
 
-  // Get version (use full path in case it's not in PATH)
+  // Get version
   const { stdout: versionOut } = await exec(`"${claudeBin}" --version`)
   const versionMatch = versionOut.match(/(\d+\.\d+[\.\d]*)/)
   const version = versionMatch ? versionMatch[1] : null
