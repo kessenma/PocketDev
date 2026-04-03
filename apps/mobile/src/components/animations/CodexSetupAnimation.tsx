@@ -6,6 +6,8 @@ import { palette } from '@pocketdev/shared/theme'
 import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
+  interpolate,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -22,7 +24,10 @@ const CODEX_BG = palette.brand.codex
 const ICON_FADE_IN = 300
 const SLAB_STAGGER = 100
 const SLAB_DURATION = 450
-const HOLD_DURATION = 800
+const HOLD_DURATION = 1000
+const UNIFY_DURATION = 520
+const BLOCK_FADE_DURATION = 240
+const UNIFIED_BLOCK_SIZE = SCREEN_WIDTH * 0.32
 
 // Horizontal slabs that slide in from alternating sides and stack around the icon
 const SLABS = [
@@ -112,6 +117,8 @@ export default function CodexSetupAnimation({ onComplete }: Props) {
   const { triggerExit } = useExitFade(overlayOpacity, onComplete)
   const iconOpacity = useSharedValue(0)
   const iconScale = useSharedValue(0.6)
+  const unifyProgress = useSharedValue(0)
+  const blockFadeProgress = useSharedValue(0)
 
   useEffect(() => {
     overlayOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) })
@@ -126,21 +133,34 @@ export default function CodexSetupAnimation({ onComplete }: Props) {
     )
 
     const lastSlabArrives = ICON_FADE_IN + SLABS.length * SLAB_STAGGER + SLAB_DURATION
-    const totalDuration = lastSlabArrives + HOLD_DURATION
+    unifyProgress.value = withDelay(
+      lastSlabArrives + HOLD_DURATION,
+      withTiming(1, { duration: UNIFY_DURATION, easing: Easing.inOut(Easing.cubic) }),
+    )
+    blockFadeProgress.value = withDelay(
+      lastSlabArrives + HOLD_DURATION + UNIFY_DURATION,
+      withTiming(1, { duration: BLOCK_FADE_DURATION, easing: Easing.in(Easing.cubic) }),
+    )
+
+    const totalDuration = lastSlabArrives + HOLD_DURATION + UNIFY_DURATION + BLOCK_FADE_DURATION
     const timeout = setTimeout(() => {
       triggerExit()
-    }, totalDuration)
+    }, totalDuration + 40)
 
     return () => clearTimeout(timeout)
-  }, [overlayOpacity, iconOpacity, iconScale, triggerExit])
+  }, [overlayOpacity, iconOpacity, iconScale, unifyProgress, blockFadeProgress, triggerExit])
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,
   }))
 
   const iconStyle = useAnimatedStyle(() => ({
-    opacity: iconOpacity.value,
-    transform: [{ scale: iconScale.value }],
+    opacity: iconOpacity.value * (1 - blockFadeProgress.value),
+    transform: [
+      {
+        scale: interpolate(unifyProgress.value, [0, 1], [iconScale.value, 0.9]),
+      },
+    ],
   }))
 
   const bgColor = isDark ? 'rgba(10, 10, 10, 0.96)' : CODEX_BG
@@ -149,7 +169,12 @@ export default function CodexSetupAnimation({ onComplete }: Props) {
     <Animated.View style={[styles.overlay, { backgroundColor: bgColor }, overlayStyle]}>
       {/* Stacking slabs */}
       {SLABS.map((slab) => (
-        <StackingSlab key={slab.id} config={slab} />
+        <StackingSlab
+          key={slab.id}
+          config={slab}
+          unifyProgress={unifyProgress}
+          blockFadeProgress={blockFadeProgress}
+        />
       ))}
 
       {/* Codex icon — center */}
@@ -162,28 +187,47 @@ export default function CodexSetupAnimation({ onComplete }: Props) {
 
 type SlabConfig = (typeof SLABS)[number]
 
-function StackingSlab({ config }: { config: SlabConfig }) {
+function StackingSlab({
+  config,
+  unifyProgress,
+  blockFadeProgress,
+}: {
+  config: SlabConfig
+  unifyProgress: SharedValue<number>
+  blockFadeProgress: SharedValue<number>
+}) {
   const translateX = useSharedValue(
-    config.fromSide === 'left' ? -SCREEN_WIDTH : SCREEN_WIDTH,
+    config.fromSide === 'left' ? -SCREEN_WIDTH * 0.7 : SCREEN_WIDTH * 0.7,
   )
   const opacity = useSharedValue(0)
+  const scale = useSharedValue(0.9)
 
   useEffect(() => {
     const delay = ICON_FADE_IN + config.delay * SLAB_STAGGER
 
     opacity.value = withDelay(
       delay,
-      withTiming(0.7, { duration: 150, easing: Easing.out(Easing.cubic) }),
+      withTiming(0.82, { duration: 180, easing: Easing.out(Easing.cubic) }),
     )
     translateX.value = withDelay(
       delay,
       withSpring(0, { damping: 18, stiffness: 100 }),
     )
-  }, [config, translateX, opacity])
+    scale.value = withDelay(
+      delay,
+      withSpring(1, { damping: 16, stiffness: 110 }),
+    )
+  }, [config, translateX, opacity, scale])
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateX: translateX.value }, { translateY: config.toY }],
+    opacity: opacity.value * (1 - blockFadeProgress.value),
+    borderRadius: interpolate(unifyProgress.value, [0, 1], [0, 18]),
+    transform: [
+      { translateX: translateX.value * (1 - unifyProgress.value) },
+      { translateY: interpolate(unifyProgress.value, [0, 1], [config.toY, 0]) },
+      { scaleX: interpolate(unifyProgress.value, [0, 1], [scale.value, UNIFIED_BLOCK_SIZE / config.width]) },
+      { scaleY: interpolate(unifyProgress.value, [0, 1], [scale.value, UNIFIED_BLOCK_SIZE / config.height]) },
+    ],
   }))
 
   return (

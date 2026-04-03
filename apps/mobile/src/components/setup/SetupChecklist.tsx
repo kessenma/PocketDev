@@ -1,11 +1,12 @@
 import React, { useEffect, useCallback } from 'react'
-import { View, Text, FlatList, RefreshControl, StyleSheet } from 'react-native'
+import { View, Text, RefreshControl, StyleSheet, Animated, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../../stores/setup'
 import SetupCheckItem from './SetupCheckItem'
 import DatabaseSetup from './DatabaseSetup'
 import type { ToolCheck } from '@pocketdev/shared/types'
+import { getCodexBlockedReason } from './setup-tool-utils'
 
 interface Props {
   onInstall: (tool: ToolCheck) => void
@@ -13,13 +14,26 @@ interface Props {
   onGitWizard: (tool: ToolCheck) => void
   onClaudeWizard: (tool: ToolCheck) => void
   onCodexWizard: (tool: ToolCheck) => void
+  onBlockedCodexWizard: (tool: ToolCheck) => void
   onPkgWizard: (tool: ToolCheck) => void
   onPythonWizard: (tool: ToolCheck) => void
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
 }
 
-export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard, onClaudeWizard, onCodexWizard, onPkgWizard, onPythonWizard }: Props) {
+export default function SetupChecklist({
+  onInstall,
+  onAuthenticate,
+  onGitWizard,
+  onClaudeWizard,
+  onCodexWizard,
+  onBlockedCodexWizard,
+  onPkgWizard,
+  onPythonWizard,
+  onScroll,
+}: Props) {
   const { colors } = useTheme()
   const { report, loading, error, fetchPrerequisites } = useSetupStore()
+  const bauhaus = palette.bauhaus
 
   useEffect(() => {
     fetchPrerequisites()
@@ -41,11 +55,14 @@ export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard,
   const optional = report?.tools.filter((t) => !t.required) ?? []
   const dockerTool = report?.tools.find((t) => t.id === 'docker')
   const dockerInstalled = dockerTool?.status === 'installed'
+  const codexBlockedReason = getCodexBlockedReason(report)
 
   return (
-    <FlatList
+    <Animated.FlatList
       data={[]}
       renderItem={() => null}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.text} />
       }
@@ -53,10 +70,15 @@ export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard,
       ListHeaderComponent={
         <>
           {report && (
-            <View style={styles.serverInfo}>
-              <Text style={[styles.osText, { color: colors.textSecondary }]}>
-                {report.os} ({report.arch})
-              </Text>
+            <View style={styles.serverInfoRow}>
+              <View style={[styles.serverInfoCard, { backgroundColor: bauhaus.black }]}>
+                <Text style={[styles.serverInfoLabel, { color: 'rgba(255,255,255,0.55)' }]}>System</Text>
+                <Text style={[styles.serverInfoValue, { color: '#ffffff' }]}>{report.os}</Text>
+              </View>
+              <View style={[styles.serverInfoCard, { backgroundColor: bauhaus.yellow }]}>
+                <Text style={[styles.serverInfoLabel, { color: 'rgba(26,26,26,0.6)' }]}>Arch</Text>
+                <Text style={[styles.serverInfoValue, { color: bauhaus.black }]}>{report.arch}</Text>
+              </View>
             </View>
           )}
 
@@ -71,8 +93,10 @@ export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard,
                 onGitWizard={onGitWizard}
                 onClaudeWizard={onClaudeWizard}
                 onCodexWizard={onCodexWizard}
+                onBlockedCodexWizard={onBlockedCodexWizard}
                 onPkgWizard={onPkgWizard}
                 onPythonWizard={onPythonWizard}
+                disabledReason={tool.id === 'codex_cli' ? codexBlockedReason : null}
               />
             ))}
           </View>
@@ -88,8 +112,10 @@ export default function SetupChecklist({ onInstall, onAuthenticate, onGitWizard,
                 onGitWizard={onGitWizard}
                 onClaudeWizard={onClaudeWizard}
                 onCodexWizard={onCodexWizard}
+                onBlockedCodexWizard={onBlockedCodexWizard}
                 onPkgWizard={onPkgWizard}
                 onPythonWizard={onPythonWizard}
+                disabledReason={tool.id === 'codex_cli' ? codexBlockedReason : null}
               />
             ))}
           </View>
@@ -109,6 +135,7 @@ const styles = StyleSheet.create({
   list: {
     padding: spacing[4],
     gap: spacing[3],
+    paddingBottom: spacing[8],
   },
   center: {
     flex: 1,
@@ -120,17 +147,33 @@ const styles = StyleSheet.create({
     ...typographyScale.sm,
     textAlign: 'center',
   },
-  serverInfo: {
-    alignItems: 'center',
+  serverInfoRow: {
+    flexDirection: 'row',
+    gap: spacing[3],
     marginBottom: spacing[2],
   },
-  osText: {
-    ...typographyScale.sm,
+  serverInfoCard: {
+    flex: 1,
+    borderRadius: 18,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+  },
+  serverInfoLabel: {
+    ...typographyScale.xs,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  serverInfoValue: {
+    ...typographyScale.base,
+    fontWeight: '700',
   },
   sectionTitle: {
     ...typographyScale.xs,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 1.2,
     marginTop: spacing[2],
   },
   section: {

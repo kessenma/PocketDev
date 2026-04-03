@@ -2,6 +2,13 @@ import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { upsertToolPath } from '../db/index.ts'
 import type { ToolCheck, PrerequisitesReport, ToolStatus, AuthStatus, DatabaseInfo } from '@pocketdev/shared/types'
+import {
+  checkBun as checkPkgBun,
+  checkNode as checkPkgNode,
+  checkNpm as checkPkgNpm,
+  checkNvm as checkPkgNvm,
+  checkPnpm as checkPkgPnpm,
+} from './pkg-setup.ts'
 
 /** Run a command in a login shell so nvm/homebrew PATH entries are visible */
 async function exec(cmd: string): Promise<{ stdout: string; exitCode: number }> {
@@ -83,8 +90,8 @@ async function checkGit(): Promise<ToolCheck> {
 }
 
 async function checkNode(): Promise<ToolCheck> {
-  const path = await which('node')
-  if (!path) {
+  const node = await checkPkgNode()
+  if (!node.installed || !node.path) {
     return {
       id: 'node', name: 'Node.js', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: true,
@@ -93,19 +100,18 @@ async function checkNode(): Promise<ToolCheck> {
     }
   }
 
-  const version = await getVersion('node --version')
-  upsertToolPath('node', path, version)
+  upsertToolPath('node', node.path, node.version)
 
   return {
     id: 'node', name: 'Node.js', status: 'installed', auth_status: 'not_applicable',
-    version, path, required: true,
+    version: node.version, path: node.path, required: true,
     install_command: null, auth_command: null, details: {},
   }
 }
 
 async function checkNpm(): Promise<ToolCheck> {
-  const path = await which('npm')
-  if (!path) {
+  const npm = await checkPkgNpm()
+  if (!npm.installed || !npm.path) {
     return {
       id: 'npm', name: 'npm', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: true,
@@ -114,35 +120,32 @@ async function checkNpm(): Promise<ToolCheck> {
     }
   }
 
-  const version = await getVersion('npm --version')
-  upsertToolPath('npm', path, version)
+  upsertToolPath('npm', npm.path, npm.version)
 
   return {
     id: 'npm', name: 'npm', status: 'installed', auth_status: 'not_applicable',
-    version, path, required: true,
+    version: npm.version, path: npm.path, required: true,
     install_command: null, auth_command: null, details: {},
   }
 }
 
 async function checkNvm(): Promise<ToolCheck> {
-  // nvm is a shell function, not a binary — check for the directory
-  const { exitCode: dirCheck } = await exec('test -d "$HOME/.nvm"')
-  if (dirCheck !== 0) {
+  const nvm = await checkPkgNvm()
+  if (!nvm.installed) {
     return {
       id: 'nvm', name: 'nvm', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash',
+      install_command: 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash',
       auth_command: null, details: {},
     }
   }
 
-  const version = await getVersion('bash -lc "nvm --version"')
   const nvmDir = `${process.env.HOME}/.nvm`
-  upsertToolPath('nvm', nvmDir, version)
+  upsertToolPath('nvm', nvmDir, nvm.version)
 
   return {
     id: 'nvm', name: 'nvm', status: 'installed', auth_status: 'not_applicable',
-    version, path: nvmDir, required: false,
+    version: nvm.version, path: nvmDir, required: false,
     install_command: null, auth_command: null, details: {},
   }
 }
@@ -206,8 +209,8 @@ async function checkCodexCli(): Promise<ToolCheck> {
 }
 
 async function checkBun(): Promise<ToolCheck> {
-  const path = await which('bun')
-  if (!path) {
+  const bun = await checkPkgBun()
+  if (!bun.installed || !bun.path) {
     return {
       id: 'bun', name: 'Bun', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
@@ -216,19 +219,18 @@ async function checkBun(): Promise<ToolCheck> {
     }
   }
 
-  const version = await getVersion('bun --version')
-  upsertToolPath('bun', path, version)
+  upsertToolPath('bun', bun.path, bun.version)
 
   return {
     id: 'bun', name: 'Bun', status: 'installed', auth_status: 'not_applicable',
-    version, path, required: false,
+    version: bun.version, path: bun.path, required: false,
     install_command: null, auth_command: null, details: {},
   }
 }
 
 async function checkPnpm(): Promise<ToolCheck> {
-  const path = await which('pnpm')
-  if (!path) {
+  const pnpm = await checkPkgPnpm()
+  if (!pnpm.installed || !pnpm.path) {
     return {
       id: 'pnpm', name: 'pnpm', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
@@ -237,12 +239,11 @@ async function checkPnpm(): Promise<ToolCheck> {
     }
   }
 
-  const version = await getVersion('pnpm --version')
-  upsertToolPath('pnpm', path, version)
+  upsertToolPath('pnpm', pnpm.path, pnpm.version)
 
   return {
     id: 'pnpm', name: 'pnpm', status: 'installed', auth_status: 'not_applicable',
-    version, path, required: false,
+    version: pnpm.version, path: pnpm.path, required: false,
     install_command: null, auth_command: null, details: {},
   }
 }

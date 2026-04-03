@@ -24,6 +24,11 @@ export default Repack.defineRspackConfig({
       path.resolve(__dirname, '../../node_modules'),
       'node_modules',
     ],
+    extensionAlias: {
+      '.js': ['.js', '.ts'],
+      '.mjs': ['.mjs', '.mts'],
+      '.cjs': ['.cjs', '.cts'],
+    },
     symlinks: true,
     alias: {
       '@pocketdev/shared/types': path.resolve(__dirname, '../../packages/shared/src/types/index.ts'),

@@ -266,6 +266,10 @@ export function getAllToolPaths(): Record<string, string> {
   return result
 }
 
+export function deleteToolRecord(toolId: string) {
+  getDb().delete(schema.toolPaths).where(eq(schema.toolPaths.toolId, toolId)).run()
+}
+
 export function setToolAuthenticated(toolId: string, authenticated: boolean) {
   getDb()
     .update(schema.toolPaths)

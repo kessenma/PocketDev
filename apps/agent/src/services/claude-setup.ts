@@ -20,9 +20,31 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
   return { stdout: stdout.trim(), stderr: stderr.trim(), exitCode: proc.exitCode ?? 1 }
 }
 
+// Common paths where claude might be installed but not yet in PATH
+const CLAUDE_PATHS = [
+  '~/.local/bin/claude',
+  '~/.claude/bin/claude',
+  '/usr/local/bin/claude',
+  '~/.nvm/versions/node/*/bin/claude',
+]
+
 export async function checkClaudeStatus(): Promise<ClaudeSetupStatus> {
-  // Check if claude binary exists
-  const { stdout: path, exitCode: whichExit } = await exec('which claude')
+  // Check if claude binary exists via PATH
+  let { stdout: path, exitCode: whichExit } = await exec('which claude')
+
+  // If not in PATH, check common install locations
+  if (whichExit !== 0 || !path) {
+    const home = process.env.HOME ?? '/root'
+    const expandedPaths = CLAUDE_PATHS.map((p) => p.replace('~', home))
+    const { stdout: foundPath } = await exec(
+      `for p in ${expandedPaths.join(' ')}; do [ -x "$p" ] && echo "$p" && break; done`,
+    )
+    if (foundPath) {
+      path = foundPath
+      whichExit = 0
+    }
+  }
+
   if (whichExit !== 0 || !path) {
     return {
       installed: false,
@@ -33,19 +55,21 @@ export async function checkClaudeStatus(): Promise<ClaudeSetupStatus> {
     }
   }
 
-  // Get version
-  const { stdout: versionOut } = await exec('claude --version')
+  const claudeBin = path.split('\n')[0]
+
+  // Get version (use full path in case it's not in PATH)
+  const { stdout: versionOut } = await exec(`"${claudeBin}" --version`)
   const versionMatch = versionOut.match(/(\d+\.\d+[\.\d]*)/)
   const version = versionMatch ? versionMatch[1] : null
 
   // Check auth status
-  const { stdout: authOut, exitCode: authExit } = await exec('claude auth status 2>&1')
+  const { stdout: authOut, exitCode: authExit } = await exec(`"${claudeBin}" auth status 2>&1`)
   const authenticated = authExit === 0 && !authOut.toLowerCase().includes('not logged in')
 
   return {
     installed: true,
     version,
-    path: path.split('\n')[0],
+    path: claudeBin,
     authenticated,
     auth_output: authOut || null,
   }

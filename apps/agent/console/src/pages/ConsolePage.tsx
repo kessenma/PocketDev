@@ -6,10 +6,10 @@ import { ConnectionWizard } from '#/components/ConnectionWizard'
 import { DeviceList } from '#/components/DeviceList'
 import { SetupStatus } from '#/components/SetupStatus'
 import { ServerTerminal } from '#/components/ServerTerminal'
-import { AuthDebugPanel } from '#/components/AuthDebugPanel'
+import { DiagnosticsPanel } from '#/components/DiagnosticsPanel'
 import { Modal } from '#/components/ui/modal'
 import { checkHealth, fetchStatus, logout, type ConsoleStatus } from '#/lib/api'
-import { Server, LogOut, Monitor, Maximize2 } from 'lucide-react'
+import { Server, LogOut, Maximize2 } from 'lucide-react'
 
 export function ConsolePage() {
   const navigate = useNavigate()
@@ -132,30 +132,8 @@ export function ConsolePage() {
               />
             </div>
 
-            <div className="lg:col-span-7">
-              <section className="h-full overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#111111_0%,#171717_100%)] text-[#f4f0e8] shadow-[0_14px_40px_rgba(0,0,0,0.18)]">
-                <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
-                  <div className="space-y-1">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-[#f4f0e8]/45">Focus Tool</p>
-                    <div className="flex items-center gap-2">
-                      <Monitor className="h-5 w-5 text-[#f0c419]" />
-                      <h2 className="text-lg font-semibold">Server Terminal</h2>
-                    </div>
-                    <p className="text-sm text-[#f4f0e8]/58">Keep the dashboard compact, then open the terminal full-screen when you need full attention.</p>
-                  </div>
-                  <Button variant="outline" className="border-white/15 bg-white/8 text-[#f4f0e8] hover:bg-white/14" onClick={() => setTerminalOpen(true)}>
-                    <Maximize2 className="mr-2 h-4 w-4" />
-                    Open Full Screen
-                  </Button>
-                </div>
-                <div className="px-3 pb-3 sm:px-4 sm:pb-4">
-                  <ServerTerminal className="rounded-[1.5rem] border border-white/8 bg-black/30" heightClassName="h-[240px]" />
-                </div>
-              </section>
-            </div>
-
-            <div className="lg:col-span-5">
-              <AuthDebugPanel />
+            <div className="lg:col-span-12">
+              <DiagnosticsPanel onOpenTerminal={() => setTerminalOpen(true)} />
             </div>
           </main>
         </div>

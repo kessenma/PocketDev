@@ -7,8 +7,8 @@ import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
 import WizardStepper from './codex-wizard/WizardStepper'
 import DetectStep from './codex-wizard/DetectStep'
+import ReviewStep from './codex-wizard/ReviewStep'
 import InstallStep from './codex-wizard/InstallStep'
-import AuthenticateStep from './codex-wizard/AuthenticateStep'
 import VerifyStep from './codex-wizard/VerifyStep'
 import type { CodexSetupStatus, CodexWizardStep, CodexWizardStepStatus } from '@pocketdev/shared/types'
 
@@ -18,20 +18,19 @@ interface Props {
   onComplete: () => void
 }
 
-// ─── State machine ──────────────────────────────────────
-
-const ALL_STEPS: CodexWizardStep[] = ['detect', 'install', 'authenticate', 'verify']
+const ALL_STEPS: CodexWizardStep[] = ['detect', 'review', 'install', 'authenticate', 'verify']
 
 interface WizardState {
   currentStep: CodexWizardStep
   stepStatuses: Record<CodexWizardStep, CodexWizardStepStatus>
   codexStatus: CodexSetupStatus | null
+  npmReady: boolean
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; codexStatus: CodexSetupStatus }
+  | { type: 'DETECTION_COMPLETE'; codexStatus: CodexSetupStatus; npmReady: boolean }
   | { type: 'STEP_COMPLETE'; step: CodexWizardStep }
   | { type: 'STEP_FAILED'; step: CodexWizardStep; error: string }
   | { type: 'GO_BACK' }
@@ -46,6 +45,7 @@ function getInitialState(): WizardState {
     currentStep: 'detect',
     stepStatuses,
     codexStatus: null,
+    npmReady: false,
     error: null,
     allConfigured: false,
   }
@@ -59,9 +59,9 @@ function findNextActiveStep(statuses: Record<CodexWizardStep, CodexWizardStepSta
 }
 
 function findPrevActiveStep(statuses: Record<CodexWizardStep, CodexWizardStepStatus>, beforeIndex: number): CodexWizardStep | null {
-  for (let i = beforeIndex - 1; i >= 1; i--) { // skip detect (index 0)
-    const s = statuses[ALL_STEPS[i]]
-    if (s === 'completed' || s === 'active') return ALL_STEPS[i]
+  for (let i = beforeIndex - 1; i >= 1; i--) {
+    const status = statuses[ALL_STEPS[i]]
+    if (status === 'completed' || status === 'active') return ALL_STEPS[i]
   }
   return null
 }
@@ -69,38 +69,39 @@ function findPrevActiveStep(statuses: Record<CodexWizardStep, CodexWizardStepSta
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const cs = action.codexStatus
+      const codexStatus = action.codexStatus
       const newStatuses = { ...state.stepStatuses }
-      newStatuses['detect'] = 'completed'
+      newStatuses.detect = 'completed'
 
-      // Skip logic
-      if (cs.installed) newStatuses['install'] = 'skipped'
-      if (cs.authenticated) {
-        newStatuses['authenticate'] = 'skipped'
-        newStatuses['verify'] = 'skipped'
+      if (codexStatus.authenticated) {
+        newStatuses.install = codexStatus.installed ? 'skipped' : 'pending'
+        newStatuses.authenticate = 'skipped'
+        newStatuses.verify = 'skipped'
+      } else if (codexStatus.installed) {
+        newStatuses.install = 'skipped'
       }
 
-      // Check if everything is already configured
-      const allSkipped = ALL_STEPS.slice(1).every((s) => newStatuses[s] === 'skipped')
+      const allSkipped = ALL_STEPS.slice(1).every((step) => newStatuses[step] === 'skipped')
       if (allSkipped) {
         return {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          codexStatus: cs,
+          codexStatus,
+          npmReady: action.npmReady,
           allConfigured: true,
         }
       }
 
-      // Find first pending step
-      const firstPending = ALL_STEPS.find((s) => newStatuses[s] === 'pending')
+      const firstPending = ALL_STEPS.find((step) => newStatuses[step] === 'pending')
       if (firstPending) newStatuses[firstPending] = 'active'
 
       return {
         ...state,
         currentStep: firstPending ?? 'detect',
         stepStatuses: newStatuses,
-        codexStatus: cs,
+        codexStatus,
+        npmReady: action.npmReady,
       }
     }
 
@@ -132,14 +133,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
     case 'GO_BACK': {
       const currentIndex = ALL_STEPS.indexOf(state.currentStep)
-      const prev = findPrevActiveStep(state.stepStatuses, currentIndex)
-      if (!prev) return state
+      const previous = findPrevActiveStep(state.stepStatuses, currentIndex)
+      if (!previous) return state
 
       const newStatuses = { ...state.stepStatuses }
       newStatuses[state.currentStep] = 'pending'
-      newStatuses[prev] = 'active'
+      newStatuses[previous] = 'active'
 
-      return { ...state, currentStep: prev, stepStatuses: newStatuses, error: null }
+      return { ...state, currentStep: previous, stepStatuses: newStatuses, error: null }
     }
 
     case 'RETRY': {
@@ -153,11 +154,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-// ─── Component ──────────────────────────────────────────
-
 export default function CodexWizardSheet({ visible, onClose, onComplete }: Props) {
   const { colors, isDark } = useTheme()
-  const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
+  const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
 
   const handleClose = useCallback(() => {
@@ -188,11 +187,11 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
             Your server is authenticated and ready to run Codex.
           </Text>
-          {state.codexStatus?.version && (
+          {state.codexStatus?.version ? (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
               v{state.codexStatus.version}
             </Text>
-          )}
+          ) : null}
         </View>
       )
     }
@@ -200,10 +199,10 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
+      case 'review':
+        return <ReviewStep codexStatus={state.codexStatus} npmReady={state.npmReady} dispatch={dispatch} />
       case 'install':
         return <InstallStep dispatch={dispatch} />
-      case 'authenticate':
-        return <AuthenticateStep dispatch={dispatch} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
@@ -214,7 +213,6 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
         <View style={styles.header}>
           {canGoBack ? (
             <TouchableOpacity onPress={() => dispatch({ type: 'GO_BACK' })} style={styles.headerButton}>
@@ -229,16 +227,13 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
           </TouchableOpacity>
         </View>
 
-        {/* Stepper (hidden during detect and completion) */}
-        {state.currentStep !== 'detect' && !state.allConfigured && (
+        {state.currentStep !== 'detect' && !state.allConfigured ? (
           <WizardStepper currentStep={state.currentStep} stepStatuses={state.stepStatuses} />
-        )}
+        ) : null}
 
-        {/* Step content */}
         <View style={styles.content}>{renderStep()}</View>
 
-        {/* Footer */}
-        {state.allConfigured && (
+        {state.allConfigured ? (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}
@@ -248,7 +243,7 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
               <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
       </SafeAreaView>
     </Modal>
   )

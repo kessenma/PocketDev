@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated } from 'react-native'
 import { useTheme } from '../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius, typographyScale, palette } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../stores/setup'
 import SetupChecklist from '../components/setup/SetupChecklist'
 import InstallSheet from '../components/setup/InstallSheet'
@@ -19,6 +19,7 @@ import AnimatedGradientBackground from '../components/background/AnimatedGradien
 import ConnectedAnimation from '../components/animations/ConnectedAnimation'
 import GitHubSetupAnimation from '../components/animations/GitHubSetupAnimation'
 import { ArrowRight, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
+import { getCodexBlockedReason } from '../components/setup/setup-tool-utils'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ServerSetup'>
@@ -27,6 +28,9 @@ type Props = {
 export default function ServerSetupScreen({ navigation }: Props) {
   const { colors, isDark } = useTheme()
   const report = useSetupStore((s) => s.report)
+  const bauhaus = palette.bauhaus
+  const codexBlockedReason = getCodexBlockedReason(report)
+  const scrollY = React.useRef(new Animated.Value(0)).current
 
   const [installTool, setInstallTool] = useState<ToolCheck | null>(null)
   const [installCommand, setInstallCommand] = useState<string | null>(null)
@@ -72,9 +76,20 @@ export default function ServerSetupScreen({ navigation }: Props) {
   }, [])
 
   const handleCodexWizard = useCallback(() => {
+    if (codexBlockedReason) {
+      Alert.alert(
+        'Install package managers first',
+        codexBlockedReason,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Package Managers', onPress: () => setShowPkgWizard(true) },
+        ],
+      )
+      return
+    }
     console.log('[ServerSetup] Opening Codex wizard')
     setShowCodexWizard(true)
-  }, [])
+  }, [codexBlockedReason])
 
   const handleCodexWizardComplete = useCallback(() => {
     console.log('[ServerSetup] Codex wizard complete')
@@ -85,6 +100,17 @@ export default function ServerSetupScreen({ navigation }: Props) {
     console.log('[ServerSetup] Opening Pkg wizard')
     setShowPkgWizard(true)
   }, [])
+
+  const handleBlockedCodexWizard = useCallback(() => {
+    Alert.alert(
+      'Install package managers first',
+      codexBlockedReason ?? 'Install package managers first to make npm available for Codex.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Package Managers', onPress: () => setShowPkgWizard(true) },
+      ],
+    )
+  }, [codexBlockedReason])
 
   const handlePkgWizardComplete = useCallback(() => {
     console.log('[ServerSetup] Pkg wizard complete')
@@ -133,41 +159,108 @@ export default function ServerSetupScreen({ navigation }: Props) {
   }, [])
 
   const headerCardStyle = {
-    backgroundColor: isDark ? 'rgba(23, 23, 23, 0.56)' : 'rgba(255, 255, 255, 0.52)',
-    borderColor: isDark ? 'rgba(115, 115, 115, 0.3)' : 'rgba(212, 212, 212, 0.64)',
+    backgroundColor: isDark ? 'rgba(14, 14, 14, 0.9)' : 'rgba(250, 248, 242, 0.96)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(26, 26, 26, 0.08)',
+    shadowColor: '#000000',
   }
+
+  const introHeight = scrollY.interpolate({
+    inputRange: [0, 120],
+    outputRange: [168, 72],
+    extrapolate: 'clamp',
+  })
+
+  const introOpacity = scrollY.interpolate({
+    inputRange: [0, 70, 120],
+    outputRange: [1, 0.8, 0.2],
+    extrapolate: 'clamp',
+  })
+
+  const subtitleOpacity = scrollY.interpolate({
+    inputRange: [0, 40, 90],
+    outputRange: [1, 0.45, 0],
+    extrapolate: 'clamp',
+  })
+
+  const titleScale = scrollY.interpolate({
+    inputRange: [0, 120],
+    outputRange: [1, 0.92],
+    extrapolate: 'clamp',
+  })
+
+  const metaTranslateY = scrollY.interpolate({
+    inputRange: [0, 120],
+    outputRange: [0, -12],
+    extrapolate: 'clamp',
+  })
 
   return (
     <AnimatedGradientBackground colors={colors} isDark={isDark} variant="setup">
       <View style={styles.container}>
         <View style={[styles.header, styles.headerCard, headerCardStyle]}>
-          <TouchableOpacity
-            style={[styles.backButton, { borderColor: colors.borderStrong }]}
-            onPress={() => navigation.replace('Connect')}
-            activeOpacity={0.7}
-          >
-            <ChevronLeft color={colors.text} size={22} strokeWidth={2.25} />
-          </TouchableOpacity>
-          <View style={styles.eyebrowRow}>
-            <ShieldCheck color={colors.textTertiary} size={14} strokeWidth={2.25} />
-            <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Server readiness</Text>
-          </View>
-          <View style={styles.titleRow}>
-            <Wrench color={colors.primary} size={24} strokeWidth={2.2} />
-            <Text style={[styles.title, { color: colors.text }]}>Server Setup</Text>
-          </View>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Ensure your server has the required developer tools
-          </Text>
+          <View pointerEvents="none" style={[styles.headerAccent, { backgroundColor: bauhaus.red }]} />
+          <Animated.View style={[styles.headerIntro, { height: introHeight, opacity: introOpacity }]}>
+            <TouchableOpacity
+              style={[styles.backButton, { borderColor: colors.borderStrong }]}
+              onPress={() => navigation.replace('Connect')}
+              activeOpacity={0.7}
+            >
+              <ChevronLeft color={colors.text} size={22} strokeWidth={2.25} />
+            </TouchableOpacity>
+            <View style={styles.eyebrowRow}>
+              <ShieldCheck color={colors.textTertiary} size={14} strokeWidth={2.25} />
+              <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Server readiness</Text>
+            </View>
+            <Animated.View style={[styles.titleRow, { transform: [{ scale: titleScale }] }]}>
+              <Wrench color={colors.primary} size={24} strokeWidth={2.2} />
+              <Text style={[styles.title, { color: colors.text }]}>Server Setup</Text>
+            </Animated.View>
+            <Animated.Text style={[styles.subtitle, { color: colors.textSecondary, opacity: subtitleOpacity }]}>
+              Ensure your server has the required developer tools
+            </Animated.Text>
+          </Animated.View>
+          <Animated.View style={[styles.headerMetaRow, { transform: [{ translateY: metaTranslateY }] }]}>
+            <View
+              style={[
+                styles.statusBlock,
+                {
+                  backgroundColor: report?.ready ? bauhaus.yellow : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(26,26,26,0.05)'),
+                  borderColor: report?.ready ? bauhaus.yellow : colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.statusBlockLabel, { color: report?.ready ? bauhaus.black : colors.textTertiary }]}>Readiness</Text>
+              <Text style={[styles.statusBlockValue, { color: report?.ready ? bauhaus.black : colors.text }]}>
+                {report?.ready ? 'Ready' : 'In Progress'}
+              </Text>
+            </View>
+            <View style={[styles.statusBlock, { backgroundColor: bauhaus.blue, borderColor: bauhaus.blue }]}>
+              <Text style={[styles.statusBlockLabel, { color: 'rgba(255,255,255,0.72)' }]}>Mode</Text>
+              <Text style={[styles.statusBlockValue, { color: '#ffffff' }]}>Setup Board</Text>
+            </View>
+          </Animated.View>
         </View>
 
-        <SetupChecklist onInstall={handleInstall} onAuthenticate={handleAuthenticate} onGitWizard={handleGitWizard} onClaudeWizard={handleClaudeWizard} onCodexWizard={handleCodexWizard} onPkgWizard={handlePkgWizard} onPythonWizard={handlePythonWizard} />
+        <SetupChecklist
+          onInstall={handleInstall}
+          onAuthenticate={handleAuthenticate}
+          onGitWizard={handleGitWizard}
+          onClaudeWizard={handleClaudeWizard}
+          onCodexWizard={handleCodexWizard}
+          onBlockedCodexWizard={handleBlockedCodexWizard}
+          onPkgWizard={handlePkgWizard}
+          onPythonWizard={handlePythonWizard}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false },
+          )}
+        />
 
         <View style={styles.footer}>
           <TouchableOpacity
             style={[
               styles.continueButton,
-              { backgroundColor: report?.ready ? colors.primary : colors.border },
+              { backgroundColor: report?.ready ? bauhaus.red : colors.border },
             ]}
             onPress={() => setShowConnected(true)}
             disabled={!report?.ready}
@@ -248,24 +341,33 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing[6],
     paddingTop: spacing[12],
-    paddingBottom: spacing[2],
-    gap: spacing[1],
+    paddingBottom: spacing[5],
+    gap: spacing[2],
     marginHorizontal: spacing[4],
     marginTop: spacing[4],
     borderWidth: 1,
-    borderRadius: borderRadius.xl,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
   },
   headerCard: {
-    paddingBottom: spacing[4],
+    paddingBottom: spacing[5],
+  },
+  headerIntro: {
+    overflow: 'hidden',
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing[2],
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   eyebrow: {
     ...typographyScale.xs,
@@ -286,9 +388,42 @@ const styles = StyleSheet.create({
   title: {
     ...typographyScale['2xl'],
     fontWeight: '700',
+    letterSpacing: -0.8,
   },
   subtitle: {
     ...typographyScale.sm,
+    maxWidth: '88%',
+  },
+  headerAccent: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 92,
+    height: 92,
+    borderBottomLeftRadius: 32,
+  },
+  headerMetaRow: {
+    flexDirection: 'row',
+    gap: spacing[3],
+    marginTop: spacing[2],
+  },
+  statusBlock: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+  },
+  statusBlockLabel: {
+    ...typographyScale.xs,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  statusBlockValue: {
+    ...typographyScale.base,
+    fontWeight: '700',
   },
   footer: {
     paddingHorizontal: spacing[6],
@@ -298,9 +433,14 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     width: '100%',
-    borderRadius: borderRadius.lg,
+    borderRadius: 18,
     paddingVertical: spacing[4],
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
   continueContent: {
     flexDirection: 'row',

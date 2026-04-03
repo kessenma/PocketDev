@@ -31,6 +31,7 @@ export default function InstallGitStep({ dispatch }: Props) {
   const [showSudoPrompt, setShowSudoPrompt] = useState(false)
   const [done, setDone] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
   const terminalRef = useRef<TerminalViewRef>(null)
 
   useEffect(() => {
@@ -44,17 +45,25 @@ export default function InstallGitStep({ dispatch }: Props) {
       if (cancelled) { termWs.close(); return }
 
       wsRef.current = termWs
+      sessionIdRef.current = null
       setOutput('')
       setHasError(false)
 
       termWs.onopen = () => {
-        termWs.send(JSON.stringify({ type: 'terminal.input', data: INSTALL_COMMAND + '\n' }))
+        // Wait for terminal.ready before sending input.
       }
 
       termWs.onmessage = (event) => {
         let text: string
         try {
           const msg = JSON.parse(event.data as string)
+          if (msg.type === 'terminal.ready') {
+            sessionIdRef.current = typeof msg.sessionId === 'string' ? msg.sessionId : null
+            if (sessionIdRef.current) {
+              termWs.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: INSTALL_COMMAND + '\n' }))
+            }
+            return
+          }
           if (msg.type === 'terminal.output') text = msg.data
           else if (msg.type === 'terminal.exited') text = `\n[Process exited: ${msg.exitCode}]\n`
           else return
@@ -74,6 +83,7 @@ export default function InstallGitStep({ dispatch }: Props) {
 
       termWs.onclose = () => {
         wsRef.current = null
+        sessionIdRef.current = null
         setDone(true)
       }
     })()
@@ -82,14 +92,15 @@ export default function InstallGitStep({ dispatch }: Props) {
       cancelled = true
       wsRef.current?.close()
       wsRef.current = null
+      sessionIdRef.current = null
     }
   }, [server])
 
   const handleSudoNeeded = useCallback(async () => {
     if (!server) return
     const stored = await getSudoPassword(server.ip)
-    if (stored && wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: stored + '\n' }))
+    if (stored && wsRef.current && sessionIdRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: stored + '\n' }))
       return
     }
     setShowSudoPrompt(true)
@@ -97,7 +108,9 @@ export default function InstallGitStep({ dispatch }: Props) {
 
   function handleSudoSubmit(password: string, remember: boolean) {
     setShowSudoPrompt(false)
-    wsRef.current?.send(JSON.stringify({ type: 'terminal.input', data: password + '\n' }))
+    if (wsRef.current && sessionIdRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: password + '\n' }))
+    }
     if (remember && server) saveSudoPassword(server.ip, password)
   }
 
@@ -109,8 +122,8 @@ export default function InstallGitStep({ dispatch }: Props) {
     setHasError(false)
     setDone(false)
     setOutput('')
-    if (wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: INSTALL_COMMAND + '\n' }))
+    if (wsRef.current && sessionIdRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: INSTALL_COMMAND + '\n' }))
     }
   }
 

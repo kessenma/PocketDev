@@ -6,9 +6,10 @@ import { useConnectionStore } from '../../../stores/connection'
 import { postVerifyCodexAuth } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { Check, RefreshCw, ChevronLeft } from 'lucide-react-native'
+import type { CodexSetupStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
-  | { type: 'STEP_COMPLETE'; step: 'verify' }
+  | { type: 'STEP_COMPLETE'; step: 'verify'; codexStatus?: CodexSetupStatus | null }
   | { type: 'STEP_FAILED'; step: 'verify'; error: string }
   | { type: 'GO_BACK' }
 
@@ -37,7 +38,7 @@ export default function VerifyStep({ dispatch }: Props) {
         setState('success')
         // Short delay so user sees the success state
         setTimeout(() => {
-          dispatch({ type: 'STEP_COMPLETE', step: 'verify' })
+          dispatch({ type: 'STEP_COMPLETE', step: 'verify', codexStatus: result })
         }, 800)
       } else {
         setState('failed')

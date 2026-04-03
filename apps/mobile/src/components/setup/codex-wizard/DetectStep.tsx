@@ -3,13 +3,14 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
-import { fetchCodexSetupStatus } from '../../../services/api'
+import { fetchCodexSetupStatus, fetchPrerequisites } from '../../../services/api'
 import CodexSetupAnimation from '../../animations/CodexSetupAnimation'
 import { RefreshCw } from 'lucide-react-native'
 import type { CodexSetupStatus } from '@pocketdev/shared/types'
+import { getCodexBlockedReason } from '../setup-tool-utils'
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; codexStatus: CodexSetupStatus }
+  | { type: 'DETECTION_COMPLETE'; codexStatus: CodexSetupStatus; npmReady: boolean }
   | { type: 'STEP_FAILED'; step: 'detect'; error: string }
 
 interface Props {
@@ -23,6 +24,7 @@ export default function DetectStep({ dispatch }: Props) {
   const [loading, setLoading] = useState(true)
   const [animationDone, setAnimationDone] = useState(false)
   const [statusResult, setStatusResult] = useState<CodexSetupStatus | null>(null)
+  const [npmReady, setNpmReady] = useState(false)
 
   useEffect(() => {
     detect()
@@ -31,17 +33,21 @@ export default function DetectStep({ dispatch }: Props) {
   // Once both animation and API call are done, dispatch
   useEffect(() => {
     if (animationDone && statusResult) {
-      dispatch({ type: 'DETECTION_COMPLETE', codexStatus: statusResult })
+      dispatch({ type: 'DETECTION_COMPLETE', codexStatus: statusResult, npmReady })
     }
-  }, [animationDone, statusResult])
+  }, [animationDone, statusResult, npmReady])
 
   async function detect() {
     if (!server) return
     setLoading(true)
     setError(null)
     try {
-      const status = await fetchCodexSetupStatus(server.ip, server.port)
+      const [status, prerequisites] = await Promise.all([
+        fetchCodexSetupStatus(server.ip, server.port),
+        fetchPrerequisites(server.ip, server.port),
+      ])
       setStatusResult(status)
+      setNpmReady(!getCodexBlockedReason(prerequisites))
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to check Codex CLI status'
       setError(message)

@@ -13,8 +13,6 @@ export const consoleTerminalWsRoutes = new Elysia()
     },
     open(ws) {
       const sessionId = crypto.randomUUID()
-      ;(ws as any)._sessionId = sessionId
-
       const session = createTerminalSession(
         sessionId,
         (data) => {
@@ -26,19 +24,24 @@ export const consoleTerminalWsRoutes = new Elysia()
         },
       )
 
-      ;(ws as any)._session = session
+      ;(ws.data as { sessionId?: string; session?: TerminalSession }).sessionId = sessionId
+      ;(ws.data as { sessionId?: string; session?: TerminalSession }).session = session
+      ws.send(JSON.stringify({ type: 'terminal.ready', sessionId }))
       console.log(`[console-terminal] Session started: ${sessionId}`)
     },
     message(ws, raw) {
       try {
         const msg = typeof raw === 'string' ? JSON.parse(raw) : raw as {
           type: string
+          sessionId?: string
           data?: string
           cols?: number
           rows?: number
         }
-        const session = (ws as any)._session as TerminalSession | undefined
+        const wsData = ws.data as { sessionId?: string; session?: TerminalSession }
+        const session = wsData.session
         if (!session) return
+        if (msg.type !== 'ping' && msg.sessionId !== wsData.sessionId) return
 
         switch (msg.type) {
           case 'terminal.input':
@@ -56,7 +59,7 @@ export const consoleTerminalWsRoutes = new Elysia()
       }
     },
     close(ws) {
-      const session = (ws as any)._session as TerminalSession | undefined
+      const session = (ws.data as { session?: TerminalSession }).session
       if (session) {
         session.kill()
         console.log(`[console-terminal] Session ended: ${session.id}`)

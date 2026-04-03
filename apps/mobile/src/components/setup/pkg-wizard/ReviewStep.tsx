@@ -5,13 +5,7 @@ import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { Assets } from '../../../../assets'
 import { Check, X, Info } from 'lucide-react-native'
 import type { PkgManagerStatus } from '@pocketdev/shared/types'
-
-export interface InstallPlanItem {
-  id: string
-  name: string
-  commands: string[]
-  description: string
-}
+import { buildInstallPlan } from './model'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'review' }
@@ -20,40 +14,6 @@ interface Props {
   pkgStatus: PkgManagerStatus
   dispatch: (action: WizardAction) => void
 }
-
-function buildInstallPlan(status: PkgManagerStatus): InstallPlanItem[] {
-  const plan: InstallPlanItem[] = []
-
-  if (!status.nvm.installed) {
-    plan.push({
-      id: 'nvm',
-      name: 'nvm',
-      commands: ['curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash'],
-      description: 'Installs Node Version Manager to ~/.nvm',
-    })
-  }
-
-  if (!status.npm.installed) {
-    plan.push({
-      id: 'npm',
-      name: 'Node.js + npm',
-      commands: ['nvm install --lts'],
-      description: 'Installs the latest LTS version of Node.js (includes npm)',
-    })
-  }
-
-  if (!status.pnpm.installed) {
-    plan.push({
-      id: 'pnpm',
-      name: 'pnpm',
-      commands: ['curl -fsSL https://get.pnpm.io/install.sh | sh -'],
-      description: 'Installs pnpm to ~/.local/share/pnpm',
-    })
-  }
-
-  return plan
-}
-
 export { buildInstallPlan }
 
 export default function ReviewStep({ pkgStatus, dispatch }: Props) {
@@ -102,16 +62,14 @@ export default function ReviewStep({ pkgStatus, dispatch }: Props) {
                   )}
                 </View>
 
-                {/* Command preview for missing tools */}
+                {/* Planned action for missing tools */}
                 {planItem && (
                   <View style={styles.commandSection}>
-                    {planItem.commands.map((cmd, i) => (
-                      <View key={i} style={[styles.commandBlock, { backgroundColor: colors.background }]}>
-                        <Text style={[styles.commandText, { color: colors.text }]} selectable>
-                          $ {cmd}
-                        </Text>
-                      </View>
-                    ))}
+                    <View style={[styles.commandBlock, { backgroundColor: colors.background }]}>
+                      <Text style={[styles.commandText, { color: colors.text }]}>
+                        PocketDev will install {planItem.name} on the server.
+                      </Text>
+                    </View>
                     <Text style={[styles.commandDesc, { color: colors.textTertiary }]}>
                       {planItem.description}
                     </Text>

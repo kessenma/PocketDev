@@ -13,18 +13,25 @@ type ConnectionState = 'disconnected' | 'connecting' | 'connected'
 interface ServerTerminalProps {
   className?: string
   heightClassName?: string
+  defaultOpen?: boolean
+  hideHeader?: boolean
 }
 
-export function ServerTerminal({ className, heightClassName }: ServerTerminalProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export function ServerTerminal({ className, heightClassName, defaultOpen = false, hideHeader = false }: ServerTerminalProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
   const [connState, setConnState] = useState<ConnectionState>('disconnected')
 
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const observerRef = useRef<ResizeObserver | null>(null)
+
+  const focusTerminal = useCallback(() => {
+    termRef.current?.focus()
+  }, [])
 
   const cleanup = useCallback(() => {
     if (pingRef.current) {
@@ -36,6 +43,7 @@ export function ServerTerminal({ className, heightClassName }: ServerTerminalPro
       wsRef.current.close()
       wsRef.current = null
     }
+    sessionIdRef.current = null
     if (observerRef.current) {
       observerRef.current.disconnect()
       observerRef.current = null
@@ -79,6 +87,7 @@ export function ServerTerminal({ className, heightClassName }: ServerTerminalPro
     // Fit after a frame so the container has layout
     requestAnimationFrame(() => {
       fitAddon.fit()
+      term.focus()
     })
 
     // WebSocket
@@ -91,14 +100,19 @@ export function ServerTerminal({ className, heightClassName }: ServerTerminalPro
 
     ws.onopen = () => {
       setConnState('connected')
-      // Send initial size
-      ws.send(JSON.stringify({ type: 'terminal.resize', cols: term.cols, rows: term.rows }))
+      term.focus()
     }
 
     ws.onmessage = (event) => {
       try {
-        const msg = JSON.parse(event.data) as { type: string; data?: string; exitCode?: number }
+        const msg = JSON.parse(event.data) as { type: string; data?: string; exitCode?: number; sessionId?: string }
         switch (msg.type) {
+          case 'terminal.ready':
+            sessionIdRef.current = msg.sessionId ?? null
+            if (sessionIdRef.current) {
+              ws.send(JSON.stringify({ type: 'terminal.resize', sessionId: sessionIdRef.current, cols: term.cols, rows: term.rows }))
+            }
+            break
           case 'terminal.output':
             if (msg.data) term.write(msg.data)
             break
@@ -126,8 +140,8 @@ export function ServerTerminal({ className, heightClassName }: ServerTerminalPro
 
     // User input -> server
     term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'terminal.input', data }))
+      if (ws.readyState === WebSocket.OPEN && sessionIdRef.current) {
+        ws.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data }))
       }
     })
 
@@ -138,6 +152,7 @@ export function ServerTerminal({ className, heightClassName }: ServerTerminalPro
         if (wsRef.current?.readyState === WebSocket.OPEN && termRef.current) {
           wsRef.current.send(JSON.stringify({
             type: 'terminal.resize',
+            sessionId: sessionIdRef.current,
             cols: termRef.current.cols,
             rows: termRef.current.rows,
           }))
@@ -151,8 +166,8 @@ export function ServerTerminal({ className, heightClassName }: ServerTerminalPro
 
     // Keepalive ping
     pingRef.current = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping' }))
+      if (ws.readyState === WebSocket.OPEN && sessionIdRef.current) {
+        ws.send(JSON.stringify({ type: 'ping', sessionId: sessionIdRef.current }))
       }
     }, 30_000)
   }, [cleanup])
@@ -171,47 +186,63 @@ export function ServerTerminal({ className, heightClassName }: ServerTerminalPro
     }
   }, [isOpen, connect, cleanup])
 
+  useEffect(() => {
+    if (!isOpen || !containerRef.current) return
+
+    const container = containerRef.current
+    const handlePointerDown = () => {
+      requestAnimationFrame(() => {
+        focusTerminal()
+      })
+    }
+
+    container.addEventListener('pointerdown', handlePointerDown)
+    return () => container.removeEventListener('pointerdown', handlePointerDown)
+  }, [isOpen, focusTerminal])
+
   return (
     <Card className={className}>
-      <CardHeader
-        className="cursor-pointer select-none"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <TerminalIcon className="h-5 w-5" />
-            Server Terminal
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            {isOpen && connState === 'disconnected' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  connect()
-                }}
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            )}
-            {isOpen && connState === 'connecting' && (
-              <span className="text-xs text-muted-foreground">Connecting...</span>
-            )}
-            {isOpen && connState === 'connected' && (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="h-2 w-2 rounded-full bg-green-500" />
-                Connected
-              </span>
-            )}
-            {isOpen ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
+      {hideHeader ? null : (
+        <CardHeader
+          className="cursor-pointer select-none"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <TerminalIcon className="h-5 w-5" />
+              Server Terminal
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {isOpen && connState === 'disconnected' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    connect()
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              )}
+              {isOpen && connState === 'connecting' && (
+                <span className="text-xs text-muted-foreground">Connecting...</span>
+              )}
+              {isOpen && connState === 'connected' && (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                  Connected
+                </span>
+              )}
+              {isOpen ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
+      )}
       {isOpen && (
         <CardContent>
           <div
@@ -221,6 +252,7 @@ export function ServerTerminal({ className, heightClassName }: ServerTerminalPro
               heightClassName ?? 'h-[400px]',
             )}
             style={{ backgroundColor: '#0a0a0a' }}
+            onClick={focusTerminal}
           />
         </CardContent>
       )}

@@ -1,27 +1,23 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
-import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
-import SudoPrompt from '../SudoPrompt'
+import { useConnectionStore } from '../../../stores/connection'
+import { postInstallPkgTool } from '../../../services/api'
 import { Assets } from '../../../../assets'
-import { Check, Clock, RefreshCw, AlertCircle } from 'lucide-react-native'
-import type { PkgManagerStatus } from '@pocketdev/shared/types'
-import { buildInstallPlan } from './ReviewStep'
-
-// Marker pattern: sent as a separate echo after each install command.
-// We scan the full accumulated output so split chunks don't matter.
-const DONE_PATTERN = /__PKGDONE_(\w+)_(\d+)__/g
-
-type ToolInstallStatus = 'queued' | 'installing' | 'done' | 'failed'
+import { Check, Clock, RefreshCw, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react-native'
+import type { PkgInstallTool, PkgManagerStatus } from '@pocketdev/shared/types'
+import { buildInstallPlan, getNextInstallIndex, type ToolInstallStatus } from './model'
 
 interface ToolProgress {
-  id: string
+  id: PkgInstallTool
   name: string
   description: string
-  command: string
   status: ToolInstallStatus
   logo: any
+  output: string
+  error: string | null
+  expanded: boolean
 }
 
 type WizardAction =
@@ -34,180 +30,158 @@ interface Props {
 }
 
 function buildToolQueue(pkgStatus: PkgManagerStatus, isDark: boolean): ToolProgress[] {
-  const plan = buildInstallPlan(pkgStatus)
-  const queue: ToolProgress[] = []
-
-  const nvmItem = plan.find((p) => p.id === 'nvm')
-  const npmItem = plan.find((p) => p.id === 'npm')
-  const pnpmItem = plan.find((p) => p.id === 'pnpm')
-
-  if (nvmItem) {
-    queue.push({
-      id: 'nvm',
-      name: 'nvm',
-      description: 'Installing Node Version Manager to ~/.nvm',
-      command: nvmItem.commands[0],
-      status: 'queued',
-      logo: isDark ? Assets.nvmWhite : Assets.nvmBlack,
-    })
-  }
-
-  if (npmItem) {
-    // Source nvm so `nvm install` works in the same session
-    const sourceNvm = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
-    queue.push({
-      id: 'npm',
-      name: 'Node.js + npm',
-      description: 'Installing latest LTS Node.js via nvm',
-      command: `${sourceNvm} && ${npmItem.commands[0]}`,
-      status: 'queued',
-      logo: isDark ? Assets.npmWhite : Assets.npmBlack,
-    })
-  }
-
-  if (pnpmItem) {
-    queue.push({
-      id: 'pnpm',
-      name: 'pnpm',
-      description: 'Installing pnpm to ~/.local/share/pnpm',
-      command: pnpmItem.commands[0],
-      status: 'queued',
-      logo: isDark ? Assets.pnpmWhite : Assets.pnpmBlack,
-    })
-  }
-
-  return queue
+  return buildInstallPlan(pkgStatus).map((item) => ({
+    ...item,
+    status: 'queued' as const,
+    logo:
+      item.id === 'nvm' ? (isDark ? Assets.nvmWhite : Assets.nvmBlack)
+        : item.id === 'npm' ? (isDark ? Assets.npmWhite : Assets.npmBlack)
+          : item.id === 'pnpm' ? (isDark ? Assets.pnpmWhite : Assets.pnpmBlack)
+            : (isDark ? Assets.bunWhite : Assets.bunBlack),
+    output: '',
+    error: null,
+    expanded: false,
+  }))
 }
 
 export default function InstallStep({ pkgStatus, dispatch }: Props) {
   const { colors, isDark } = useTheme()
+  const server = useConnectionStore((s) => s.server)
   const [toolQueue, setToolQueue] = useState<ToolProgress[]>(() => buildToolQueue(pkgStatus, isDark))
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [currentOutput, setCurrentOutput] = useState('')
+  const [failedIndex, setFailedIndex] = useState<number | null>(null)
+  const [isRunning, setIsRunning] = useState(false)
   const [allDone, setAllDone] = useState(false)
-  const currentIndexRef = useRef(0)
-  const toolQueueRef = useRef(toolQueue)
-  const processedMarkersRef = useRef<Set<string>>(new Set())
-  const scrollRef = useRef<ScrollView>(null)
-  const sendNextRef = useRef<(index: number) => void>(() => {})
 
-  useEffect(() => { toolQueueRef.current = toolQueue }, [toolQueue])
-  useEffect(() => { currentIndexRef.current = currentIndex }, [currentIndex])
+  const queueRef = useRef(toolQueue)
+  const runningRef = useRef(false)
+  const cancelledRef = useRef(false)
 
-  // Track whether the shell is actually responsive
-  const shellReadyRef = useRef(false)
+  useEffect(() => {
+    queueRef.current = toolQueue
+  }, [toolQueue])
 
-  const {
-    hasError, showSudoPrompt,
-    sendCommand, submitSudoPassword, cancelSudoPrompt,
-  } = useTerminalCommand({
-    // Send a simple echo on connect to verify the shell works
-    initialCommand: 'echo __SHELL_READY__',
-    persistent: true,
-    onOutput: (chunk, fullOutput) => {
-      // Wait for shell readiness confirmation before doing anything
-      if (!shellReadyRef.current) {
-        console.log('[pkg-install] Waiting for shell ready, chunk:', JSON.stringify(chunk.slice(0, 100)))
-        if (fullOutput.includes('__SHELL_READY__')) {
-          console.log('[pkg-install] Shell ready! Starting installs...')
-          shellReadyRef.current = true
-          // Shell is alive — start the first install
-          setTimeout(() => sendNextRef.current(0), 200)
+  useEffect(() => {
+    cancelledRef.current = false
+    return () => {
+      cancelledRef.current = true
+    }
+  }, [])
+
+  const updateTool = useCallback((index: number, updates: Partial<ToolProgress>) => {
+    setToolQueue((prev) => prev.map((tool, i) => (i === index ? { ...tool, ...updates } : tool)))
+  }, [])
+
+  const runInstallSequence = useCallback(async (startIndex: number) => {
+    if (!server || runningRef.current) return
+
+    runningRef.current = true
+    setIsRunning(true)
+    setFailedIndex(null)
+
+    for (let index = startIndex; index < queueRef.current.length; index++) {
+      if (cancelledRef.current) break
+
+      const tool = queueRef.current[index]
+      setCurrentIndex(index)
+      updateTool(index, { status: 'installing', error: null, expanded: false })
+
+      try {
+        const result = await postInstallPkgTool(server.ip, server.port, tool.id)
+        if (cancelledRef.current) break
+
+        if (!result.success) {
+          updateTool(index, {
+            status: 'failed',
+            error: result.error,
+            output: result.output,
+            expanded: true,
+          })
+          setFailedIndex(index)
+          dispatch({ type: 'STEP_FAILED', step: 'install', error: result.error ?? `${tool.name} installation failed` })
+          runningRef.current = false
+          setIsRunning(false)
+          return
         }
+
+        updateTool(index, {
+          status: 'done',
+          error: null,
+          output: result.output,
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : `${tool.name} installation failed`
+        updateTool(index, {
+          status: 'failed',
+          error: message,
+          output: message,
+          expanded: true,
+        })
+        setFailedIndex(index)
+        dispatch({ type: 'STEP_FAILED', step: 'install', error: message })
+        runningRef.current = false
+        setIsRunning(false)
         return
       }
-
-      // Track per-tool output for the expanded card
-      setCurrentOutput((prev) => prev + chunk)
-
-      // Scan full output for completion markers
-      DONE_PATTERN.lastIndex = 0
-      let match: RegExpExecArray | null
-      while ((match = DONE_PATTERN.exec(fullOutput)) !== null) {
-        const toolId = match[1]
-        const exitCode = match[2]
-        const markerKey = `${toolId}_${exitCode}`
-
-        if (processedMarkersRef.current.has(markerKey)) continue
-        processedMarkersRef.current.add(markerKey)
-
-        const idx = currentIndexRef.current
-        if (exitCode === '0') {
-          setToolQueue((prev) => prev.map((t) => t.id === toolId ? { ...t, status: 'done' as const } : t))
-          setTimeout(() => sendNextRef.current(idx + 1), 600)
-        } else {
-          setToolQueue((prev) => prev.map((t) => t.id === toolId ? { ...t, status: 'failed' as const } : t))
-        }
-      }
-
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
-    },
-  })
-
-  const doSendNext = useCallback((index: number) => {
-    const queue = toolQueueRef.current
-    if (index >= queue.length) {
-      sendCommand('exit')
-      setAllDone(true)
-      return
     }
 
-    const tool = queue[index]
-    setCurrentIndex(index)
-    setCurrentOutput('')
-    setToolQueue((prev) => prev.map((t, i) => i === index ? { ...t, status: 'installing' as const } : t))
+    runningRef.current = false
+    setIsRunning(false)
+    setAllDone(true)
+  }, [dispatch, server, updateTool])
 
-    // Send install command on its own, then the marker as a separate command.
-    console.log(`[pkg-install] Sending command for ${tool.id}:`, tool.command.slice(0, 80))
-    sendCommand(tool.command)
-    setTimeout(() => {
-      console.log(`[pkg-install] Sending done marker for ${tool.id}`)
-      sendCommand(`echo __PKGDONE_${tool.id}_$?__`)
-    }, 100)
-  }, [sendCommand])
+  useEffect(() => {
+    if (toolQueue.length > 0 && !allDone && !isRunning && failedIndex === null) {
+      runInstallSequence(0)
+    }
+  }, [allDone, failedIndex, isRunning, runInstallSequence, toolQueue.length])
 
-  // Keep ref in sync so onOutput callback can call it
-  useEffect(() => { sendNextRef.current = doSendNext }, [doSendNext])
+  const handleRetry = useCallback(() => {
+    const retryIndex = getNextInstallIndex(queueRef.current)
+    if (retryIndex === null) return
+    updateTool(retryIndex, { status: 'queued', error: null })
+    runInstallSequence(retryIndex)
+  }, [runInstallSequence, updateTool])
 
   function handleContinue() {
     dispatch({ type: 'STEP_COMPLETE', step: 'install' })
   }
 
-  function handleRetry() {
-    doSendNext(currentIndex)
-  }
-
-  const completedCount = toolQueue.filter((t) => t.status === 'done').length
+  const completedCount = toolQueue.filter((tool) => tool.status === 'done').length
   const totalCount = toolQueue.length
 
   return (
     <View style={styles.container}>
-      {/* Progress header */}
       <View style={styles.progressHeader}>
         <Text style={[styles.title, { color: colors.text }]}>
           {allDone ? 'Installation complete' : `Installing (${completedCount}/${totalCount})`}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {allDone
-            ? 'All package managers have been installed.'
-            : 'Setting up your development tools...'}
+            ? 'All package managers are ready on your server.'
+            : 'PocketDev is installing each missing package manager for you.'}
         </Text>
       </View>
 
-      {/* Tool progress cards */}
       <ScrollView style={styles.cardList} contentContainerStyle={styles.cardListContent} showsVerticalScrollIndicator={false}>
-        {toolQueue.map((tool) => {
+        {toolQueue.map((tool, index) => {
           const isActive = tool.status === 'installing'
           const isFailed = tool.status === 'failed'
-          const isExpanded = isActive || isFailed
+          const canExpand = !!tool.output || !!tool.error
+          const isExpanded = tool.expanded || isActive || isFailed
 
           return (
-            <View key={tool.id} style={[
-              styles.toolCard,
-              { backgroundColor: colors.surface, borderColor: isActive ? colors.primary : isFailed ? colors.error : colors.border },
-              isActive && styles.toolCardActive,
-            ]}>
-              {/* Card header row */}
+            <View
+              key={tool.id}
+              style={[
+                styles.toolCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isActive ? colors.primary : isFailed ? colors.error : colors.border,
+                },
+                isActive && styles.toolCardActive,
+              ]}
+            >
               <View style={styles.toolHeader}>
                 <Image source={tool.logo} style={styles.toolLogo} resizeMode="contain" />
                 <View style={styles.toolInfo}>
@@ -218,10 +192,10 @@ export default function InstallStep({ pkgStatus, dispatch }: Props) {
                       : tool.status === 'installing' ? colors.primary
                       : colors.textTertiary,
                   }]}>
-                    {tool.status === 'queued' && 'Waiting...'}
+                    {tool.status === 'queued' && (index < currentIndex ? 'Installed' : 'Waiting...')}
                     {tool.status === 'installing' && tool.description}
                     {tool.status === 'done' && 'Installed'}
-                    {tool.status === 'failed' && 'Failed — see output below'}
+                    {tool.status === 'failed' && 'Installation failed'}
                   </Text>
                 </View>
                 <View style={styles.toolStatusIcon}>
@@ -240,26 +214,35 @@ export default function InstallStep({ pkgStatus, dispatch }: Props) {
                 </View>
               </View>
 
-              {/* Expanded: command + live output */}
+              {canExpand && (
+                <TouchableOpacity
+                  testID={`pkg-install-toggle-${tool.id}`}
+                  style={styles.detailsToggle}
+                  onPress={() => updateTool(index, { expanded: !tool.expanded })}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.detailsToggleText, { color: colors.textTertiary }]}>
+                    {tool.expanded ? 'Hide details' : 'Show details'}
+                  </Text>
+                  {tool.expanded
+                    ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
+                    : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
+                </TouchableOpacity>
+              )}
+
               {isExpanded && (
                 <View style={styles.expandedSection}>
-                  {/* Command being run */}
                   <View style={[styles.commandBlock, { backgroundColor: colors.background }]}>
-                    <Text style={[styles.commandPrefix, { color: colors.textTertiary }]}>$</Text>
-                    <Text style={[styles.commandText, { color: colors.text }]} numberOfLines={2}>
-                      {tool.command}
-                    </Text>
+                    <Text style={[styles.commandText, { color: colors.text }]}>{tool.description}</Text>
                   </View>
 
-                  {/* Live output */}
                   <ScrollView
-                    ref={isActive ? scrollRef : undefined}
                     style={[styles.outputBox, { backgroundColor: colors.background }]}
                     nestedScrollEnabled
                     showsVerticalScrollIndicator
                   >
-                    <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                      {currentOutput || 'Waiting for output...'}
+                    <Text style={[styles.outputText, { color: isFailed ? colors.error : colors.textSecondary }]} selectable>
+                      {tool.output || tool.error || 'Waiting for output...'}
                     </Text>
                   </ScrollView>
                 </View>
@@ -269,34 +252,28 @@ export default function InstallStep({ pkgStatus, dispatch }: Props) {
         })}
       </ScrollView>
 
-      {/* Actions */}
-      {allDone && !hasError && (
+      {failedIndex !== null && (
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: colors.primary }]}
-          onPress={handleContinue}
-          activeOpacity={0.7}
-        >
-          <Check color={colors.primaryText} size={18} strokeWidth={2.5} />
-          <Text style={[styles.buttonText, { color: colors.primaryText }]}>Continue</Text>
-        </TouchableOpacity>
-      )}
-
-      {hasError && (
-        <TouchableOpacity
+          testID="pkg-install-retry"
           style={[styles.actionButton, { backgroundColor: colors.error }]}
           onPress={handleRetry}
           activeOpacity={0.7}
         >
           <RefreshCw color="#fff" size={16} strokeWidth={2.25} />
-          <Text style={[styles.buttonText, { color: '#fff' }]}>Retry</Text>
+          <Text style={[styles.actionButtonText, { color: '#fff' }]}>Retry failed install</Text>
         </TouchableOpacity>
       )}
 
-      <SudoPrompt
-        visible={showSudoPrompt}
-        onSubmit={submitSudoPassword}
-        onCancel={cancelSudoPrompt}
-      />
+      {allDone && (
+        <TouchableOpacity
+          testID="pkg-install-continue"
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+          onPress={handleContinue}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.actionButtonText, { color: colors.primaryText }]}>Continue</Text>
+        </TouchableOpacity>
+      )}
     </View>
   )
 }
@@ -320,8 +297,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardListContent: {
-    gap: spacing[2],
-    paddingBottom: spacing[2],
+    gap: spacing[3],
+    paddingBottom: spacing[4],
   },
   toolCard: {
     borderWidth: 1,
@@ -330,7 +307,11 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   toolCardActive: {
-    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   toolHeader: {
     flexDirection: 'row',
@@ -338,8 +319,8 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   toolLogo: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
   },
   toolInfo: {
     flex: 1,
@@ -351,41 +332,37 @@ const styles = StyleSheet.create({
   },
   toolStatus: {
     ...typographyScale.xs,
-    fontWeight: '500',
   },
   toolStatusIcon: {
-    width: 24,
-    height: 24,
+    minWidth: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   doneCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  detailsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  detailsToggleText: {
+    ...typographyScale.xs,
+    fontWeight: '600',
   },
   expandedSection: {
     gap: spacing[2],
   },
   commandBlock: {
-    flexDirection: 'row',
-    gap: spacing[2],
     borderRadius: borderRadius.md,
-    padding: spacing[2],
-    paddingHorizontal: spacing[3],
-  },
-  commandPrefix: {
-    fontFamily: 'monospace',
-    fontSize: 11,
-    lineHeight: 16,
+    padding: spacing[3],
   },
   commandText: {
-    fontFamily: 'monospace',
-    fontSize: 11,
-    lineHeight: 16,
-    flex: 1,
+    ...typographyScale.sm,
   },
   outputBox: {
     maxHeight: 180,
@@ -393,8 +370,8 @@ const styles = StyleSheet.create({
     padding: spacing[3],
   },
   outputText: {
+    ...typographyScale.xs,
     fontFamily: 'monospace',
-    fontSize: 11,
     lineHeight: 16,
   },
   actionButton: {
@@ -405,7 +382,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[4],
     borderRadius: borderRadius.lg,
   },
-  buttonText: {
+  actionButtonText: {
     ...typographyScale.base,
     fontWeight: '600',
   },

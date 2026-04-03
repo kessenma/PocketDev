@@ -1,132 +1,121 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { View, Text, Image, TouchableOpacity, TextInput, Linking, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native'
+import React, { useState, useEffect, useCallback } from 'react'
+import { View, Text, Image, TouchableOpacity, TextInput, Linking, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native'
+import Clipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
-import { buildTerminalWsUrl } from '../../../services/api'
-import { buildPocketDevAuthorizationHeader } from '../../../services/auth'
-import { createReactNativeWebSocket } from '../../../services/websocket'
+import { fetchCodexAuthStatus, postStartCodexAuth, postSubmitCodexAuth } from '../../../services/api'
 import { Assets } from '../../../../assets'
-import TerminalView, { type TerminalViewRef } from '../../shared/TerminalView'
-import { ExternalLink, CheckCircle, RefreshCw, Send } from 'lucide-react-native'
-
-const AUTH_COMMAND = 'codex login'
-const URL_PATTERN = /https:\/\/[^\s\]\)>]+/g
-const ERROR_PATTERNS = [/^error:/im, /^fatal:/im, /permission denied/im, /not found/im]
+import { Copy, ExternalLink, RefreshCw, Send, ShieldCheck } from 'lucide-react-native'
+import type { CodexAuthSessionStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
-  | { type: 'STEP_COMPLETE'; step: 'authenticate' }
+  | { type: 'STEP_COMPLETE'; step: 'authenticate'; authSession?: CodexAuthSessionStatus | null }
   | { type: 'STEP_FAILED'; step: 'authenticate'; error: string }
+  | { type: 'SET_AUTH_SESSION'; authSession: CodexAuthSessionStatus | null }
 
 interface Props {
   dispatch: (action: WizardAction) => void
+  authSession: CodexAuthSessionStatus | null
 }
 
-export default function AuthenticateStep({ dispatch }: Props) {
+export default function AuthenticateStep({ dispatch, authSession }: Props) {
   const { colors, isDark } = useTheme()
   const server = useConnectionStore((s) => s.server)
-  const [output, setOutput] = useState('')
-  const [oauthUrl, setOauthUrl] = useState<string | null>(null)
-  const [opened, setOpened] = useState(false)
-  const [connectionString, setConnectionString] = useState('')
-  const [hasError, setHasError] = useState(false)
-  const [done, setDone] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
-  const terminalRef = useRef<TerminalViewRef>(null)
+  const [session, setSession] = useState<CodexAuthSessionStatus | null>(authSession)
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [openedBrowser, setOpenedBrowser] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!server) return
-    let cancelled = false
-
-    ;(async () => {
-      const url = buildTerminalWsUrl(server.ip, server.port)
-      const authHeader = await buildPocketDevAuthorizationHeader()
-      const termWs = createReactNativeWebSocket(url, { Authorization: authHeader })
-      if (cancelled) { termWs.close(); return }
-
-      wsRef.current = termWs
-      setOutput('')
-      setHasError(false)
-      setOauthUrl(null)
-      setOpened(false)
-      setConnectionString('')
-
-      termWs.onopen = () => {
-        termWs.send(JSON.stringify({ type: 'terminal.input', data: AUTH_COMMAND + '\n' }))
-      }
-
-      termWs.onmessage = (event) => {
-        let text: string
-        try {
-          const msg = JSON.parse(event.data as string)
-          if (msg.type === 'terminal.output') text = msg.data
-          else if (msg.type === 'terminal.exited') text = `\n[Process exited: ${msg.exitCode}]\n`
-          else return
-        } catch { text = event.data as string }
-
-        setOutput((prev) => {
-          const updated = prev + text
-
-          // Detect OAuth URL in cumulative output
-          const urls = updated.match(URL_PATTERN)
-          if (urls) {
-            const authUrl = urls.find((u) =>
-              u.includes('openai.com') || u.includes('platform.openai.com') || u.includes('oauth') || u.includes('auth'),
-            ) ?? urls[urls.length - 1]
-            setOauthUrl(authUrl)
-          }
-
-          for (const p of ERROR_PATTERNS) {
-            if (p.test(text)) { setHasError(true); break }
-          }
-
-          return updated
-        })
-
-        setTimeout(() => terminalRef.current?.scrollToEnd(), 50)
-      }
-
-      termWs.onclose = () => {
-        wsRef.current = null
-        setDone(true)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      wsRef.current?.close()
-      wsRef.current = null
-    }
-  }, [server])
-
-  const handleOpenBrowser = useCallback(() => {
-    if (oauthUrl) {
-      Linking.openURL(oauthUrl)
-      setOpened(true)
-    }
-  }, [oauthUrl])
-
-  const handleSubmitCode = useCallback(() => {
-    if (!connectionString.trim() || !wsRef.current) return
-    wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: connectionString.trim() + '\n' }))
-    setConnectionString('')
-  }, [connectionString])
-
-  const handleContinue = useCallback(() => {
-    dispatch({ type: 'STEP_COMPLETE', step: 'authenticate' })
+  const syncSession = useCallback((next: CodexAuthSessionStatus) => {
+    setSession(next)
+    dispatch({ type: 'SET_AUTH_SESSION', authSession: next })
   }, [dispatch])
 
-  function handleRetry() {
-    setHasError(false)
-    setDone(false)
-    setOutput('')
-    setOauthUrl(null)
-    setOpened(false)
-    setConnectionString('')
-    if (wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: AUTH_COMMAND + '\n' }))
+  const startSession = useCallback(async () => {
+    if (!server) return
+    setLoading(true)
+    setError(null)
+    try {
+      const next = await postStartCodexAuth(server.ip, server.port)
+      syncSession(next)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to start Codex authentication.'
+      setError(message)
+      dispatch({ type: 'STEP_FAILED', step: 'authenticate', error: message })
+    } finally {
+      setLoading(false)
     }
+  }, [dispatch, server, syncSession])
+
+  useEffect(() => {
+    if (!session && !loading) {
+      void startSession()
+    }
+  }, [loading, session, startSession])
+
+  useEffect(() => {
+    if (!server || !session?.session_id || session.completed) return
+    const timer = setInterval(() => {
+      void (async () => {
+        try {
+          const next = await fetchCodexAuthStatus(server.ip, server.port, session.session_id)
+          syncSession(next)
+          if (next.authenticated) {
+            dispatch({ type: 'STEP_COMPLETE', step: 'authenticate', authSession: next })
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to refresh Codex auth status.'
+          setError(message)
+        }
+      })()
+    }, 1500)
+
+    return () => clearInterval(timer)
+  }, [dispatch, server, session, syncSession])
+
+  const handleOpenBrowser = useCallback(() => {
+    if (!session?.auth_url) return
+    Linking.openURL(session.auth_url)
+    setOpenedBrowser(true)
+  }, [session])
+
+  const handleSubmit = useCallback(async () => {
+    if (!server || !session?.session_id || !input.trim()) return
+    setLoading(true)
+    setError(null)
+    try {
+      const next = await postSubmitCodexAuth(server.ip, server.port, session.session_id, input.trim())
+      setInput('')
+      syncSession(next)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit the authentication code.')
+    } finally {
+      setLoading(false)
+    }
+  }, [input, server, session, syncSession])
+
+  function handleCopyCode() {
+    if (!session?.verification_code) return
+    Clipboard.setString(session.verification_code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
   }
+
+  const phaseDescription =
+    session?.authenticated
+      ? 'Codex sign-in completed. Continue to verify the CLI and sync the cached provider state.'
+      : session?.state === 'awaiting_code'
+        ? 'Finish the browser flow, then paste any one-time code here if Codex asks for it.'
+        : session?.state === 'awaiting_browser'
+          ? 'Open the OpenAI sign-in page in your browser to continue.'
+          : session?.state === 'pending'
+            ? 'Waiting for Codex CLI to finish the authentication flow.'
+            : session?.state === 'failed'
+              ? (session.error ?? 'Codex authentication failed.')
+              : 'Starting the authentication flow on your server.'
 
   return (
     <KeyboardAvoidingView
@@ -134,90 +123,129 @@ export default function AuthenticateStep({ dispatch }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={120}
     >
-      <View style={styles.headerRow}>
-        <Image
-          source={isDark ? Assets.codexWhite : Assets.codexBlack}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerText}>
-          <Text style={[styles.title, { color: colors.text }]}>Sign In to OpenAI</Text>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          <Image
+            source={isDark ? Assets.codexWhite : Assets.codexBlack}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.title, { color: colors.text }]}>Authenticate Codex</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Authenticate Codex CLI with your OpenAI account
+            PocketDev keeps the sign-in flow guided and then updates the stored Codex auth state after verification.
           </Text>
         </View>
-      </View>
 
-      <View style={styles.terminalWrapper}>
-        <TerminalView ref={terminalRef} output={output} placeholder="Starting authentication..." />
-      </View>
-
-      {/* OAuth URL detected — show Open in Browser card */}
-      {oauthUrl && !done && (
-        <View style={[styles.urlCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {!opened ? (
-            <>
-              <Text style={[styles.urlHint, { color: colors.textSecondary }]}>
-                Open this link to sign in:
-              </Text>
-              <TouchableOpacity
-                style={[styles.openButton, { backgroundColor: colors.primary }]}
-                onPress={handleOpenBrowser}
-                activeOpacity={0.7}
-              >
-                <ExternalLink color={colors.primaryText} size={16} strokeWidth={2.25} />
-                <Text style={[styles.buttonText, { color: colors.primaryText }]}>Open in Browser</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text style={[styles.urlHint, { color: colors.textSecondary }]}>
-                Complete sign-in in your browser, then paste the code here:
-              </Text>
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-                  value={connectionString}
-                  onChangeText={setConnectionString}
-                  placeholder="Paste code here..."
-                  placeholderTextColor={colors.textTertiary}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <TouchableOpacity
-                  style={[styles.sendButton, { backgroundColor: connectionString.trim() ? colors.primary : colors.border }]}
-                  onPress={handleSubmitCode}
-                  disabled={!connectionString.trim()}
-                  activeOpacity={0.7}
-                >
-                  <Send color={colors.primaryText} size={16} strokeWidth={2.25} />
-                </TouchableOpacity>
-              </View>
-            </>
+        <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.statusHeader}>
+            <ShieldCheck color={session?.authenticated ? '#22c55e' : colors.primary} size={18} strokeWidth={2.25} />
+            <Text style={[styles.statusTitle, { color: colors.text }]}>
+              {session?.authenticated ? 'Signed in' : 'OpenAI sign-in'}
+            </Text>
+          </View>
+          <Text style={[styles.statusCopy, { color: session?.state === 'failed' ? colors.error : colors.textSecondary }]}>
+            {error ?? phaseDescription}
+          </Text>
+          {session?.prompt && (
+            <Text style={[styles.promptText, { color: colors.textTertiary }]}>
+              Latest prompt: {session.prompt}
+            </Text>
           )}
         </View>
-      )}
 
-      {/* Process exited successfully */}
-      {done && !hasError && (
+        {session?.auth_url && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Browser step</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              Open the OpenAI page on this device or another browser, then return here once the flow continues.
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              onPress={handleOpenBrowser}
+              activeOpacity={0.7}
+            >
+              <ExternalLink color={colors.primaryText} size={18} strokeWidth={2.25} />
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>
+                {openedBrowser ? 'Re-open browser' : 'Open sign-in page'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {session?.verification_code && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Verification code</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              If OpenAI shows a device-code prompt, use this code.
+            </Text>
+            <View style={[styles.codeBox, { backgroundColor: colors.background }]}>
+              <Text style={[styles.codeText, { color: colors.text }]} selectable>
+                {session.verification_code}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: copied ? '#22c55e' : colors.border }]}
+              onPress={handleCopyCode}
+              activeOpacity={0.7}
+            >
+              <Copy color={copied ? '#22c55e' : colors.text} size={16} strokeWidth={2.25} />
+              <Text style={[styles.secondaryButtonText, { color: copied ? '#22c55e' : colors.text }]}>
+                {copied ? 'Copied' : 'Copy code'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {(session?.can_submit_code || openedBrowser) && !session?.authenticated && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Manual code entry</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              Only use this if Codex CLI asks you to paste a code back into the session.
+            </Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                value={input}
+                onChangeText={setInput}
+                placeholder="Paste code here"
+                placeholderTextColor={colors.textTertiary}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: input.trim() ? colors.primary : colors.border }]}
+                onPress={handleSubmit}
+                disabled={!input.trim() || loading}
+                activeOpacity={0.7}
+              >
+                <Send color={colors.primaryText} size={16} strokeWidth={2.25} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {session?.output_excerpt && (
+          <View style={[styles.outputCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Recent Codex output</Text>
+            <View style={[styles.outputBox, { backgroundColor: colors.background }]}>
+              <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
+                {session.output_excerpt}
+              </Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+
+      {!session?.authenticated && (
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: colors.primary }]}
-          onPress={handleContinue}
+          style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+          onPress={() => void startSession()}
           activeOpacity={0.7}
         >
-          <CheckCircle color={colors.primaryText} size={18} strokeWidth={2.25} />
-          <Text style={[styles.buttonText, { color: colors.primaryText }]}>Continue</Text>
-        </TouchableOpacity>
-      )}
-
-      {hasError && (
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: colors.error }]}
-          onPress={handleRetry}
-          activeOpacity={0.7}
-        >
-          <RefreshCw color="#fff" size={16} strokeWidth={2.25} />
-          <Text style={[styles.buttonText, { color: '#fff' }]}>Retry</Text>
+          <RefreshCw color={colors.primaryText} size={18} strokeWidth={2.25} />
+          <Text style={[styles.buttonText, { color: colors.primaryText }]}>
+            {session?.state === 'failed' ? 'Restart sign-in' : 'Restart auth session'}
+          </Text>
         </TouchableOpacity>
       )}
     </KeyboardAvoidingView>
@@ -229,46 +257,83 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing[3],
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
     gap: spacing[3],
+    paddingBottom: spacing[4],
+  },
+  hero: {
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingTop: spacing[4],
   },
   logo: {
-    width: 36,
-    height: 36,
-  },
-  headerText: {
-    flex: 1,
-    gap: 2,
+    width: 42,
+    height: 42,
   },
   title: {
     ...typographyScale.xl,
     fontWeight: '700',
+    textAlign: 'center',
   },
   subtitle: {
     ...typographyScale.sm,
+    textAlign: 'center',
   },
-  terminalWrapper: {
-    flex: 1,
-    minHeight: 120,
+  statusCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[2],
   },
-  urlCard: {
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  statusTitle: {
+    ...typographyScale.base,
+    fontWeight: '700',
+  },
+  statusCopy: {
+    ...typographyScale.sm,
+    lineHeight: 20,
+  },
+  promptText: {
+    ...typographyScale.xs,
+    lineHeight: 18,
+  },
+  actionCard: {
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     padding: spacing[4],
     gap: spacing[3],
   },
-  urlHint: {
-    ...typographyScale.sm,
-  },
-  openButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  outputCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
     gap: spacing[2],
-    paddingVertical: spacing[3],
+  },
+  cardTitle: {
+    ...typographyScale.base,
+    fontWeight: '700',
+  },
+  cardCopy: {
+    ...typographyScale.sm,
+    lineHeight: 20,
+  },
+  codeBox: {
     borderRadius: borderRadius.md,
+    padding: spacing[3],
+  },
+  codeText: {
+    ...typographyScale.lg,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textAlign: 'center',
   },
   inputRow: {
     flexDirection: 'row',
@@ -279,18 +344,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
+    paddingVertical: spacing[3],
     ...typographyScale.sm,
     fontFamily: 'monospace',
   },
   sendButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionButton: {
+  outputBox: {
+    borderRadius: borderRadius.md,
+    padding: spacing[3],
+  },
+  outputText: {
+    ...typographyScale.xs,
+    fontFamily: 'monospace',
+  },
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -298,8 +371,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[4],
     borderRadius: borderRadius.lg,
   },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[2],
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing[3],
+  },
   buttonText: {
     ...typographyScale.base,
+    fontWeight: '600',
+  },
+  secondaryButtonText: {
+    ...typographyScale.sm,
     fontWeight: '600',
   },
 })

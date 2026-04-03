@@ -3,6 +3,8 @@ import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, Sty
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
+import { useConnectionStore } from '../../../stores/connection'
+import { fetchClaudeSetupStatus } from '../../../services/api'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
 import { Check, Clock, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Download } from 'lucide-react-native'
@@ -11,8 +13,13 @@ import { Check, Clock, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Download 
 const MARKER_OK = '___CLAUDE_INSTALL_OK___'
 const MARKER_FAIL = '___CLAUDE_INSTALL_FAIL___'
 const MARKER_PATTERN = /___CLAUDE_INSTALL_(OK|FAIL)___/
+// Strip ANSI escape codes before marker detection
+const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g
 
-const INSTALL_COMMAND = 'curl -fsSL https://claude.ai/install.sh | bash'
+const INSTALL_COMMAND = 'curl -fsSL --max-time 120 https://claude.ai/install.sh | bash'
+
+// Timeout (ms) — if no marker detected, fall back to API check
+const FALLBACK_TIMEOUT_MS = 90_000
 
 type ToolInstallStatus = 'queued' | 'installing' | 'done' | 'failed'
 
@@ -25,23 +32,31 @@ interface Props {
 }
 
 function wrapWithMarker(command: string): string {
-  return `( ${command} ) && echo "${MARKER_OK}" || echo "${MARKER_FAIL}"`
+  // Source shell profiles after install so `claude` is on PATH, then emit marker
+  return `( ${command} ) && { source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; echo "${MARKER_OK}"; } || echo "${MARKER_FAIL}"`
 }
 
 export default function InstallStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
+  const server = useConnectionStore((s) => s.server)
   const [status, setStatus] = useState<ToolInstallStatus>('queued')
-  const [showOutput, setShowOutput] = useState(false)
+  const [showOutput, setShowOutput] = useState(true)
   const scrollRef = useRef<ScrollView>(null)
+  const statusRef = useRef<ToolInstallStatus>('queued')
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Keep ref in sync so callbacks can read latest status
+  statusRef.current = status
 
   const {
-    output, hasError, showSudoPrompt, connected,
+    output, hasError, done, showSudoPrompt, connected,
     sendCommand, submitSudoPassword, cancelSudoPrompt,
   } = useTerminalCommand({
-    persistent: true,
     onOutput: (chunk) => {
       console.log('[claude-install] output chunk:', JSON.stringify(chunk.slice(0, 120)))
-      const match = chunk.match(MARKER_PATTERN)
+      // Strip ANSI codes before checking for markers
+      const clean = chunk.replace(ANSI_RE, '')
+      const match = clean.match(MARKER_PATTERN)
       if (match) {
         console.log('[claude-install] Marker detected:', match[1])
         if (match[1] === 'OK') {
@@ -53,6 +68,46 @@ export default function InstallStep({ dispatch }: Props) {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
     },
   })
+
+  // Fallback: if terminal exits without marker, check via API
+  useEffect(() => {
+    if (done && status === 'installing') {
+      console.log('[claude-install] Terminal exited without marker, checking via API...')
+      checkViaApi()
+    }
+  }, [done]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Timeout fallback: if stuck for too long, check via API
+  useEffect(() => {
+    if (status === 'installing') {
+      fallbackTimerRef.current = setTimeout(() => {
+        if (statusRef.current === 'installing') {
+          console.log('[claude-install] Timeout reached, checking via API...')
+          checkViaApi()
+        }
+      }, FALLBACK_TIMEOUT_MS)
+    }
+    return () => {
+      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current)
+    }
+  }, [status]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function checkViaApi() {
+    if (!server) return
+    try {
+      const result = await fetchClaudeSetupStatus(server.ip, server.port)
+      if (result.installed) {
+        console.log('[claude-install] API confirms installed, version:', result.version)
+        setStatus('done')
+      } else {
+        console.log('[claude-install] API says not installed')
+        setStatus('failed')
+      }
+    } catch (err) {
+      console.warn('[claude-install] API check failed:', err)
+      setStatus('failed')
+    }
+  }
 
   // Start install when connected
   useEffect(() => {
@@ -74,8 +129,14 @@ export default function InstallStep({ dispatch }: Props) {
   }
 
   function handleRetry() {
-    setStatus('installing')
-    sendCommand(wrapWithMarker(INSTALL_COMMAND))
+    if (connected) {
+      setStatus('installing')
+      sendCommand(wrapWithMarker(INSTALL_COMMAND))
+    } else {
+      // WS disconnected, just verify via API
+      setStatus('installing')
+      checkViaApi()
+    }
   }
 
   const isDone = status === 'done'

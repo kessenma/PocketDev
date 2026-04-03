@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Dimensions, StyleSheet, View } from 'react-native'
 import Animated, {
   Easing,
@@ -11,12 +11,22 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated'
+import Svg, { Rect } from 'react-native-svg'
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 import { palette } from '@pocketdev/shared/theme'
 
 const BAUHAUS = palette.bauhaus
+
+function hexToRgba(hex: string, alpha: number) {
+  const normalized = hex.replace('#', '')
+  const bigint = Number.parseInt(normalized, 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
 
 type ShapeConfig = {
   id: string
@@ -131,6 +141,48 @@ function AnimatedShape({ config }: { config: ShapeConfig }) {
   )
 }
 
+function NoiseOverlay({ isDark, variant }: { isDark: boolean, variant: 'connect' | 'setup' }) {
+  const noiseRects = useMemo(() => {
+    const count = variant === 'setup' ? 120 : 64
+    const seedBase = variant === 'setup' ? 17 : 11
+
+    return Array.from({ length: count }, (_, index) => {
+      const x = ((index * 73 + seedBase * 19) % 1000) / 1000
+      const y = ((index * 91 + seedBase * 13) % 1600) / 1600
+      const size = index % 7 === 0 ? 2 : 1
+      const opacity = variant === 'setup'
+        ? (isDark ? (index % 5 === 0 ? 0.055 : 0.03) : (index % 5 === 0 ? 0.04 : 0.022))
+        : (isDark ? 0.03 : 0.018)
+
+      return {
+        key: `${variant}-${index}`,
+        x: Math.round(x * SCREEN_WIDTH),
+        y: Math.round(y * SCREEN_HEIGHT),
+        size,
+        opacity,
+      }
+    })
+  }, [isDark, variant])
+
+  return (
+    <View pointerEvents="none" style={styles.noiseLayer}>
+      <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
+        {noiseRects.map((rect) => (
+          <Rect
+            key={rect.key}
+            x={rect.x}
+            y={rect.y}
+            width={rect.size}
+            height={rect.size}
+            fill={isDark ? '#ffffff' : BAUHAUS.black}
+            opacity={rect.opacity}
+          />
+        ))}
+      </Svg>
+    </View>
+  )
+}
+
 export default function AnimatedGradientBackground({
   colors,
   isDark,
@@ -138,7 +190,10 @@ export default function AnimatedGradientBackground({
   children,
 }: Props) {
   const overlayStyle = {
-    backgroundColor: isDark ? 'rgba(10,10,10,0.72)' : 'rgba(250,250,250,0.82)',
+    backgroundColor:
+      variant === 'setup'
+        ? (isDark ? 'rgba(10,10,10,0.88)' : 'rgba(250,248,242,0.92)')
+        : (isDark ? 'rgba(10,10,10,0.72)' : 'rgba(250,250,250,0.82)'),
   }
   const [animDone, setAnimDone] = useState(false)
   const contentOpacity = useSharedValue(0)
@@ -156,87 +211,62 @@ export default function AnimatedGradientBackground({
     transform: [{ scale: contentScale.value }],
   }))
 
+  const setupAccentColors = useMemo(() => {
+    const pools = [
+      [BAUHAUS.blue, BAUHAUS.red, BAUHAUS.yellow],
+      [BAUHAUS.red, BAUHAUS.yellow, BAUHAUS.blue],
+      [BAUHAUS.yellow, BAUHAUS.blue, BAUHAUS.red],
+    ] as const
+
+    return pools[Math.floor(Math.random() * pools.length)]
+  }, [])
+
   const shapeConfigs: ShapeConfig[] =
     variant === 'setup'
       ? [
-          // Large blue circle — dominant, top-left, breathes like web arch-graphic
           {
-            id: 'blue-circle',
+            id: 'setup-wash-a',
             shape: 'circle',
-            color: BAUHAUS.blue,
+            color: hexToRgba(setupAccentColors[0], isDark ? 0.08 : 0.07),
+            width: SCREEN_WIDTH * 0.92,
+            height: SCREEN_WIDTH * 0.92,
+            initialX: SCREEN_WIDTH * 0.22,
+            initialY: SCREEN_HEIGHT * 0.2,
+            rangeX: 10,
+            rangeY: 8,
+            breathe: true,
+            duration: 14000,
+            delay: 0,
+            opacity: 1,
+          },
+          {
+            id: 'setup-wash-b',
+            shape: 'circle',
+            color: hexToRgba(setupAccentColors[1], isDark ? 0.06 : 0.05),
+            width: SCREEN_WIDTH * 0.8,
+            height: SCREEN_WIDTH * 0.8,
+            initialX: SCREEN_WIDTH * 0.84,
+            initialY: SCREEN_HEIGHT * 0.38,
+            rangeX: 8,
+            rangeY: 10,
+            breathe: true,
+            duration: 16000,
+            delay: 600,
+            opacity: 1,
+          },
+          {
+            id: 'setup-wash-c',
+            shape: 'circle',
+            color: hexToRgba(setupAccentColors[2], isDark ? 0.05 : 0.045),
             width: SCREEN_WIDTH * 0.7,
             height: SCREEN_WIDTH * 0.7,
-            initialX: SCREEN_WIDTH * 0.15,
-            initialY: SCREEN_HEIGHT * 0.12,
-            rangeX: 18,
-            rangeY: 14,
-            breathe: true,
-            duration: 6200,
-            delay: 0,
-            opacity: isDark ? 0.2 : 0.14,
-          },
-          // Red square — top-right accent
-          {
-            id: 'red-square',
-            shape: 'rect',
-            color: BAUHAUS.red,
-            width: SCREEN_WIDTH * 0.28,
-            height: SCREEN_WIDTH * 0.28,
-            initialX: SCREEN_WIDTH * 0.82,
-            initialY: SCREEN_HEIGHT * 0.08,
-            rangeX: 12,
-            rangeY: 16,
-            rotation: 12,
-            duration: 7000,
+            initialX: SCREEN_WIDTH * 0.48,
+            initialY: SCREEN_HEIGHT * 0.88,
+            rangeX: 7,
+            rangeY: 12,
+            duration: 18000,
             delay: 300,
-            opacity: isDark ? 0.18 : 0.12,
-          },
-          // Yellow horizontal bar — mid-screen
-          {
-            id: 'yellow-bar',
-            shape: 'rect',
-            color: BAUHAUS.yellow,
-            width: SCREEN_WIDTH * 0.55,
-            height: SCREEN_WIDTH * 0.14,
-            initialX: SCREEN_WIDTH * 0.6,
-            initialY: SCREEN_HEIGHT * 0.42,
-            rangeX: 20,
-            rangeY: 10,
-            rotation: -6,
-            duration: 7600,
-            delay: 180,
-            opacity: isDark ? 0.2 : 0.14,
-          },
-          // Small black circle — lower-left
-          {
-            id: 'black-circle',
-            shape: 'circle',
-            color: BAUHAUS.black,
-            width: SCREEN_WIDTH * 0.22,
-            height: SCREEN_WIDTH * 0.22,
-            initialX: SCREEN_WIDTH * 0.2,
-            initialY: SCREEN_HEIGHT * 0.72,
-            rangeX: 14,
-            rangeY: 18,
-            duration: 6800,
-            delay: 540,
-            opacity: isDark ? 0.16 : 0.1,
-          },
-          // Blue vertical bar — bottom-right
-          {
-            id: 'blue-bar',
-            shape: 'rect',
-            color: BAUHAUS.blue,
-            width: SCREEN_WIDTH * 0.12,
-            height: SCREEN_WIDTH * 0.5,
-            initialX: SCREEN_WIDTH * 0.85,
-            initialY: SCREEN_HEIGHT * 0.7,
-            rangeX: 10,
-            rangeY: 22,
-            rotation: 4,
-            duration: 8200,
-            delay: 760,
-            opacity: isDark ? 0.14 : 0.1,
+            opacity: 1,
           },
         ]
       : [
@@ -344,6 +374,7 @@ export default function AnimatedGradientBackground({
         pointerEvents="none"
         style={[styles.softOverlay, overlayStyle]}
       />
+      <NoiseOverlay isDark={isDark} variant={variant} />
       <View pointerEvents="none" style={styles.blobLayer}>
         {shapeConfigs.map((config) => (
           <AnimatedShape key={config.id} config={config} />
@@ -367,6 +398,10 @@ const styles = StyleSheet.create({
   },
   softOverlay: {
     ...StyleSheet.absoluteFillObject,
+  },
+  noiseLayer: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.55,
   },
   blobLayer: {
     ...StyleSheet.absoluteFillObject,

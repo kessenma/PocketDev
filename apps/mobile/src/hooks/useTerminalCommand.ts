@@ -50,14 +50,16 @@ export function useTerminalCommand(
 
   const wsRef = useRef<WebSocket | null>(null)
   const outputRef = useRef('')
+  const sessionIdRef = useRef<string | null>(null)
+  const readyRef = useRef(false)
 
   // ── Sudo handling ─────────────────────────────────────────────
 
   const handleSudoNeeded = useCallback(async () => {
     if (!server) return
     const stored = await getSudoPassword(server.ip)
-    if (stored && wsRef.current) {
-      wsRef.current.send(JSON.stringify({ type: 'terminal.input', data: stored + '\n' }))
+    if (stored && wsRef.current && readyRef.current && sessionIdRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: stored + '\n' }))
       return
     }
     setShowSudoPrompt(true)
@@ -66,7 +68,9 @@ export function useTerminalCommand(
   const submitSudoPassword = useCallback(
     (password: string, remember: boolean) => {
       setShowSudoPrompt(false)
-      wsRef.current?.send(JSON.stringify({ type: 'terminal.input', data: password + '\n' }))
+      if (wsRef.current && readyRef.current && sessionIdRef.current) {
+        wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: password + '\n' }))
+      }
       if (remember && server) saveSudoPassword(server.ip, password)
     },
     [server],
@@ -78,16 +82,18 @@ export function useTerminalCommand(
 
   const sendCommand = useCallback((cmd: string) => {
     const ws = wsRef.current
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn('[useTerminalCommand] sendCommand called but WS not open. readyState:', ws?.readyState, 'cmd:', cmd.slice(0, 60))
+    if (!ws || ws.readyState !== WebSocket.OPEN || !readyRef.current || !sessionIdRef.current) {
+      console.warn('[useTerminalCommand] sendCommand called before terminal ready. readyState:', ws?.readyState, 'cmd:', cmd.slice(0, 60))
       return
     }
     console.log('[useTerminalCommand] sendCommand:', cmd.slice(0, 80))
-    ws.send(JSON.stringify({ type: 'terminal.input', data: cmd + '\n' }))
+    ws.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: cmd + '\n' }))
   }, [])
 
   const sendInput = useCallback((data: string) => {
-    wsRef.current?.send(JSON.stringify({ type: 'terminal.input', data }))
+    if (wsRef.current && readyRef.current && sessionIdRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data }))
+    }
   }, [])
 
   // ── Reset / disconnect ────────────────────────────────────────
@@ -102,6 +108,8 @@ export function useTerminalCommand(
   const disconnect = useCallback(() => {
     wsRef.current?.close()
     wsRef.current = null
+    sessionIdRef.current = null
+    readyRef.current = false
   }, [])
 
   // ── WebSocket lifecycle ───────────────────────────────────────
@@ -118,6 +126,8 @@ export function useTerminalCommand(
 
       wsRef.current = termWs
       outputRef.current = ''
+      sessionIdRef.current = null
+      readyRef.current = false
       setOutput('')
       setHasError(false)
       setDone(false)
@@ -126,17 +136,22 @@ export function useTerminalCommand(
 
       termWs.onopen = () => {
         console.log('[useTerminalCommand] WS opened')
-        setConnected(true)
-        if (initialCommand) {
-          console.log('[useTerminalCommand] Sending initialCommand:', initialCommand.slice(0, 80))
-          termWs.send(JSON.stringify({ type: 'terminal.input', data: initialCommand + '\n' }))
-        }
       }
 
       termWs.onmessage = (event) => {
         let text: string
         try {
           const msg = JSON.parse(event.data as string)
+          if (msg.type === 'terminal.ready') {
+            sessionIdRef.current = typeof msg.sessionId === 'string' ? msg.sessionId : null
+            readyRef.current = !!sessionIdRef.current
+            setConnected(readyRef.current)
+            if (readyRef.current && initialCommand) {
+              console.log('[useTerminalCommand] Sending initialCommand:', initialCommand.slice(0, 80))
+              termWs.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: initialCommand + '\n' }))
+            }
+            return
+          }
           if (msg.type === 'terminal.output') text = msg.data
           else if (msg.type === 'terminal.exited') {
             console.log('[useTerminalCommand] terminal.exited, code:', msg.exitCode)
@@ -168,6 +183,8 @@ export function useTerminalCommand(
       termWs.onclose = (ev) => {
         console.log('[useTerminalCommand] WS closed, code:', ev?.code, 'reason:', ev?.reason)
         wsRef.current = null
+        sessionIdRef.current = null
+        readyRef.current = false
         setConnected(false)
         if (!persistent) setDone(true)
       }
@@ -177,6 +194,8 @@ export function useTerminalCommand(
       cancelled = true
       wsRef.current?.close()
       wsRef.current = null
+      sessionIdRef.current = null
+      readyRef.current = false
     }
   }, [server]) // eslint-disable-line react-hooks/exhaustive-deps
 

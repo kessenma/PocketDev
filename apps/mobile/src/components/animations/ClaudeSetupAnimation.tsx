@@ -6,15 +6,18 @@ import { palette } from '@pocketdev/shared/theme'
 import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
+  interpolate,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withRepeat,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated'
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 const BAUHAUS = palette.bauhaus
 const CLAUDE_BG = palette.brand.claude
@@ -23,11 +26,16 @@ const CLAUDE_BG = palette.brand.claude
 const ICON_FADE_IN = 350
 const RING_STAGGER = 200
 const RING_EXPAND_DURATION = 800
-const HOLD_DURATION = 900
+const ACCENT_STAGGER = 220
+const HOLD_DURATION = 1100
+const SUCK_IN_DURATION = 650
+const RING_MERGE_DURATION = 420
+const FINAL_FADE_DURATION = 220
 
 // Concentric rings that expand outward from center
 const RING_COUNT = 4
 const RING_SIZES = [0.3, 0.5, 0.72, 0.96] // as fraction of screen width
+const UNIFIED_RING_SIZE = SCREEN_WIDTH * 0.62
 
 // Orbiting accent shapes — rotate slowly around the icon
 const ACCENTS = [
@@ -85,6 +93,8 @@ export default function ClaudeSetupAnimation({ onComplete }: Props) {
   const { triggerExit } = useExitFade(overlayOpacity, onComplete)
   const iconOpacity = useSharedValue(0)
   const iconScale = useSharedValue(0.5)
+  const collapseProgress = useSharedValue(0)
+  const ringFadeProgress = useSharedValue(0)
 
   useEffect(() => {
     overlayOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) })
@@ -98,14 +108,30 @@ export default function ClaudeSetupAnimation({ onComplete }: Props) {
       withSpring(1, { damping: 12, stiffness: 100 }),
     )
 
+    const lastAccentArrives = ICON_FADE_IN + ACCENTS.length * ACCENT_STAGGER + 300
     const lastRingDone = ICON_FADE_IN + RING_COUNT * RING_STAGGER + RING_EXPAND_DURATION
-    const totalDuration = lastRingDone + HOLD_DURATION
+    const entranceDone = Math.max(lastRingDone, lastAccentArrives)
+
+    collapseProgress.value = withDelay(
+      entranceDone + HOLD_DURATION,
+      withTiming(1, { duration: SUCK_IN_DURATION, easing: Easing.inOut(Easing.cubic) }),
+    )
+    ringFadeProgress.value = withDelay(
+      entranceDone + HOLD_DURATION + SUCK_IN_DURATION,
+      withSequence(
+        withTiming(1, { duration: RING_MERGE_DURATION, easing: Easing.out(Easing.cubic) }),
+        withTiming(2, { duration: FINAL_FADE_DURATION, easing: Easing.in(Easing.cubic) }),
+      ),
+    )
+
+    const totalDuration =
+      entranceDone + HOLD_DURATION + SUCK_IN_DURATION + RING_MERGE_DURATION + FINAL_FADE_DURATION
     const timeout = setTimeout(() => {
       triggerExit()
-    }, totalDuration)
+    }, totalDuration + 40)
 
     return () => clearTimeout(timeout)
-  }, [overlayOpacity, iconOpacity, iconScale, triggerExit])
+  }, [overlayOpacity, iconOpacity, iconScale, collapseProgress, ringFadeProgress, triggerExit])
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayOpacity.value,
@@ -122,12 +148,23 @@ export default function ClaudeSetupAnimation({ onComplete }: Props) {
     <Animated.View style={[styles.overlay, { backgroundColor: bgColor }, overlayStyle]}>
       {/* Expanding rings */}
       {RING_SIZES.map((sizeFrac, i) => (
-        <ExpandingRing key={i} index={i} sizeFraction={sizeFrac} isDark={isDark} />
+        <ExpandingRing
+          key={i}
+          index={i}
+          sizeFraction={sizeFrac}
+          isDark={isDark}
+          collapseProgress={collapseProgress}
+          ringFadeProgress={ringFadeProgress}
+        />
       ))}
 
       {/* Orbiting accent shapes */}
       {ACCENTS.map((accent) => (
-        <OrbitingAccent key={accent.id} config={accent} />
+        <OrbitingAccent
+          key={accent.id}
+          config={accent}
+          collapseProgress={collapseProgress}
+        />
       ))}
 
       {/* Claude icon — center */}
@@ -146,10 +183,14 @@ function ExpandingRing({
   index,
   sizeFraction,
   isDark,
+  collapseProgress,
+  ringFadeProgress,
 }: {
   index: number
   sizeFraction: number
   isDark: boolean
+  collapseProgress: SharedValue<number>
+  ringFadeProgress: SharedValue<number>
 }) {
   const scale = useSharedValue(0)
   const opacity = useSharedValue(0)
@@ -170,8 +211,14 @@ function ExpandingRing({
   }, [index, isDark, scale, opacity])
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
+    opacity: opacity.value * interpolate(ringFadeProgress.value, [0, 1, 2], [1, 1, 0]),
+    transform: [{
+      scale: interpolate(
+        collapseProgress.value,
+        [0, 1],
+        [scale.value, UNIFIED_RING_SIZE / ringSize],
+      ),
+    }],
   }))
 
   const borderColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(26,26,26,0.18)'
@@ -197,16 +244,27 @@ function ExpandingRing({
 
 type AccentConfig = (typeof ACCENTS)[number]
 
-function OrbitingAccent({ config }: { config: AccentConfig }) {
+function OrbitingAccent({
+  config,
+  collapseProgress,
+}: {
+  config: AccentConfig
+  collapseProgress: SharedValue<number>
+}) {
   const opacity = useSharedValue(0)
   const rotation = useSharedValue<number>(config.startAngle)
+  const orbitScale = useSharedValue(0.35)
 
   useEffect(() => {
-    const delay = ICON_FADE_IN + config.delay * RING_STAGGER
+    const delay = ICON_FADE_IN + 120 + config.delay * ACCENT_STAGGER
 
     opacity.value = withDelay(
       delay,
       withTiming(0.7, { duration: 300, easing: Easing.out(Easing.cubic) }),
+    )
+    orbitScale.value = withDelay(
+      delay,
+      withSpring(1, { damping: 14, stiffness: 90 }),
     )
 
     // Slow continuous rotation around the orbit
@@ -218,15 +276,19 @@ function OrbitingAccent({ config }: { config: AccentConfig }) {
         false,
       ),
     )
-  }, [config, opacity, rotation])
+  }, [config, opacity, orbitScale, rotation])
 
   const animatedStyle = useAnimatedStyle(() => {
     const r = (rotation.value * Math.PI) / 180
+    const collapse = collapseProgress.value
+    const orbitRadius = interpolate(collapse, [0, 1], [config.orbitRadius * 1.45, 0])
+    const entranceRadius = orbitRadius * orbitScale.value
     return {
-      opacity: opacity.value,
+      opacity: opacity.value * (1 - collapse),
       transform: [
-        { translateX: Math.cos(r) * config.orbitRadius },
-        { translateY: Math.sin(r) * config.orbitRadius },
+        { translateX: Math.cos(r) * entranceRadius },
+        { translateY: Math.sin(r) * entranceRadius },
+        { scale: interpolate(collapse, [0, 1], [orbitScale.value, 0.18]) },
         { rotate: `${'rotation' in config ? config.rotation : 0}deg` },
       ],
     }

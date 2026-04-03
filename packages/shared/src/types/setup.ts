@@ -115,7 +115,45 @@ export interface CodexSetupStatus {
   auth_output: string | null
 }
 
-export type CodexWizardStep = 'detect' | 'install' | 'authenticate' | 'verify'
+export interface CodexInstallResult {
+  success: boolean
+  installed: boolean
+  version: string | null
+  path: string | null
+  output: string | null
+  error: string | null
+}
+
+export type CodexAuthSessionState =
+  | 'starting'
+  | 'awaiting_browser'
+  | 'awaiting_code'
+  | 'pending'
+  | 'authenticated'
+  | 'failed'
+
+export interface CodexAuthSessionStatus {
+  session_id: string
+  state: CodexAuthSessionState
+  auth_url: string | null
+  verification_code: string | null
+  prompt: string | null
+  output_excerpt: string | null
+  can_submit_code: boolean
+  authenticated: boolean
+  completed: boolean
+  error: string | null
+}
+
+export interface CodexAuthStartResult extends CodexAuthSessionStatus {}
+
+export interface CodexAuthSubmitRequest {
+  code: string
+}
+
+export interface CodexAuthSubmitResult extends CodexAuthSessionStatus {}
+
+export type CodexWizardStep = 'detect' | 'review' | 'install' | 'authenticate' | 'verify'
 export type CodexWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
 // ─── Python wizard types ──────────────────────────────────────────
@@ -147,6 +185,16 @@ export interface PkgManagerStatus {
   npm: PkgToolInfo
   pnpm: PkgToolInfo
   bun: PkgToolInfo
+}
+
+export type PkgInstallTool = 'nvm' | 'npm' | 'pnpm' | 'bun'
+
+export interface PkgInstallResult {
+  tool: PkgInstallTool
+  success: boolean
+  error: string | null
+  output: string
+  status: PkgManagerStatus
 }
 
 export type PkgWizardStep = 'detect' | 'review' | 'install' | 'verify'

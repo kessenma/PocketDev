@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image, type ImageSourcePropType } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius, typographyScale, palette } from '@pocketdev/shared/theme'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import { Assets } from '../../../assets'
 
@@ -31,8 +31,10 @@ interface Props {
   onGitWizard?: (tool: ToolCheck) => void
   onClaudeWizard?: (tool: ToolCheck) => void
   onCodexWizard?: (tool: ToolCheck) => void
+  onBlockedCodexWizard?: (tool: ToolCheck) => void
   onPkgWizard?: (tool: ToolCheck) => void
   onPythonWizard?: (tool: ToolCheck) => void
+  disabledReason?: string | null
 }
 
 function StatusIcon({ tool }: { tool: ToolCheck }) {
@@ -67,8 +69,20 @@ function statusColor(tool: ToolCheck): string {
   return '#22c55e'
 }
 
-export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitWizard, onClaudeWizard, onCodexWizard, onPkgWizard, onPythonWizard }: Props) {
+export default function SetupCheckItem({
+  tool,
+  onInstall,
+  onAuthenticate,
+  onGitWizard,
+  onClaudeWizard,
+  onCodexWizard,
+  onBlockedCodexWizard,
+  onPkgWizard,
+  onPythonWizard,
+  disabledReason,
+}: Props) {
   const { colors, isDark } = useTheme()
+  const bauhaus = palette.bauhaus
   const asset = toolAssetMap[tool.id]
   const logoSource = asset ? (isDark ? asset.dark : asset.light) : null
 
@@ -83,6 +97,7 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
   // Codex CLI gets a dedicated wizard
   const isCodex = tool.id === 'codex_cli'
   const codexNeedsAction = isCodex && (tool.status === 'missing' || tool.auth_status === 'unauthenticated')
+  const codexBlocked = codexNeedsAction && !!disabledReason
 
   // Package managers get a bulk wizard
   const isPkgManager = tool.id === 'node' || tool.id === 'npm' || tool.id === 'nvm' || tool.id === 'pnpm' || tool.id === 'bun'
@@ -100,8 +115,18 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
     tool.auth_command
   const showConfigure = !hasWizard && tool.status === 'misconfigured' && tool.auth_command
 
+  const panelBackground = isDark ? '#101010' : '#faf7f0'
+  const panelBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(26,26,26,0.08)'
+  const accentColor =
+    tool.status === 'missing'
+      ? bauhaus.red
+      : tool.status === 'misconfigured' || tool.auth_status === 'unauthenticated'
+        ? bauhaus.yellow
+        : bauhaus.blue
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: panelBackground, borderColor: panelBorder }]}>
+      <View style={[styles.accentBlock, { backgroundColor: accentColor }]} />
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           {logoSource ? (
@@ -109,7 +134,7 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
           ) : (
             <View style={[styles.logoFallback, { backgroundColor: colors.surface }]} />
           )}
-          <View style={[styles.statusDot, { backgroundColor: statusColor(tool) }]} />
+          <View style={[styles.statusDot, { backgroundColor: statusColor(tool), borderColor: panelBackground }]} />
         </View>
         <View style={styles.info}>
           <View style={styles.nameRow}>
@@ -118,7 +143,7 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
               <Text style={[styles.required, { color: colors.textTertiary }]}>Required</Text>
             )}
           </View>
-          <Text style={[styles.status, { color: colors.textSecondary }]}>
+          <Text style={[styles.status, { color: statusColor(tool) }]}>
             {statusLabel(tool)}
           </Text>
           {tool.path && (
@@ -161,12 +186,38 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
       {codexNeedsAction && onCodexWizard && (
         <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onCodexWizard(tool)}
+            style={[
+              styles.actionButton,
+              { backgroundColor: colors.primary },
+              codexBlocked && styles.actionButtonDisabled,
+            ]}
+            onPress={() => {
+              if (codexBlocked) {
+                onBlockedCodexWizard?.(tool)
+                return
+              }
+              onCodexWizard(tool)
+            }}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>Set up Codex</Text>
           </TouchableOpacity>
+          {codexBlocked && (
+            <>
+              <Text style={[styles.inlineHint, { color: colors.textSecondary }]}>
+                {disabledReason}
+              </Text>
+              {onPkgWizard && (
+                <TouchableOpacity
+                  style={[styles.secondaryActionButton, { borderColor: colors.border }]}
+                  onPress={() => onPkgWizard(tool)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.secondaryActionText, { color: colors.text }]}>Open Package Managers</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
         </View>
       )}
 
@@ -225,9 +276,23 @@ export default function SetupCheckItem({ tool, onInstall, onAuthenticate, onGitW
 const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    padding: spacing[3],
+    borderRadius: 24,
+    padding: spacing[4],
     gap: spacing[2],
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  accentBlock: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 76,
+    height: 76,
+    borderBottomLeftRadius: 28,
   },
   header: {
     flexDirection: 'row',
@@ -235,34 +300,36 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   logoContainer: {
-    width: 32,
-    height: 32,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   logo: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
   },
   logoFallback: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: 6,
   },
   statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    bottom: -1,
+    right: -1,
+    borderWidth: 2.5,
   },
   info: {
     flex: 1,
     gap: 2,
+    paddingRight: 44,
   },
   nameRow: {
     flexDirection: 'row',
@@ -271,14 +338,18 @@ const styles = StyleSheet.create({
   },
   name: {
     ...typographyScale.base,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   required: {
     ...typographyScale.xs,
-    fontWeight: '500',
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
   status: {
     ...typographyScale.sm,
+    fontWeight: '700',
   },
   path: {
     ...typographyScale.xs,
@@ -293,13 +364,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing[2],
     marginTop: spacing[1],
+    flexWrap: 'wrap',
   },
   actionButton: {
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[2],
-    borderRadius: borderRadius.md,
+    borderRadius: 14,
   },
   actionText: {
+    ...typographyScale.sm,
+    fontWeight: '600',
+  },
+  actionButtonDisabled: {
+    opacity: 0.55,
+  },
+  inlineHint: {
+    ...typographyScale.xs,
+    width: '100%',
+    lineHeight: 18,
+  },
+  secondaryActionButton: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  secondaryActionText: {
     ...typographyScale.sm,
     fontWeight: '600',
   },

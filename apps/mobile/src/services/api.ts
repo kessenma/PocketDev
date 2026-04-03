@@ -29,8 +29,14 @@ import type {
   GitTestConnectionResult,
   ClaudeSetupStatus,
   CodexSetupStatus,
+  CodexInstallResult,
+  CodexAuthStartResult,
+  CodexAuthSessionStatus,
+  CodexAuthSubmitResult,
   PythonSetupStatus,
   PkgManagerStatus,
+  PkgInstallTool,
+  PkgInstallResult,
 } from '@pocketdev/shared/types'
 
 function apiUrl(ip: string, port: number, path: string): string {
@@ -445,6 +451,54 @@ export async function fetchCodexSetupStatus(ip: string, port: number): Promise<C
   return response.json() as Promise<CodexSetupStatus>
 }
 
+export async function postInstallCodex(ip: string, port: number): Promise<CodexInstallResult> {
+  const response = await fetch(apiUrl(ip, port, '/codex-setup/install'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to install Codex CLI (${response.status})`)
+  return response.json() as Promise<CodexInstallResult>
+}
+
+export async function postStartCodexAuth(ip: string, port: number): Promise<CodexAuthStartResult> {
+  const response = await fetch(apiUrl(ip, port, '/codex-setup/auth/start'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to start Codex auth (${response.status})`)
+  return response.json() as Promise<CodexAuthStartResult>
+}
+
+export async function fetchCodexAuthStatus(
+  ip: string,
+  port: number,
+  sessionId: string,
+): Promise<CodexAuthSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, `/codex-setup/auth/status/${encodeURIComponent(sessionId)}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Codex auth status (${response.status})`)
+  return response.json() as Promise<CodexAuthSessionStatus>
+}
+
+export async function postSubmitCodexAuth(
+  ip: string,
+  port: number,
+  sessionId: string,
+  code: string,
+): Promise<CodexAuthSubmitResult> {
+  const response = await fetch(apiUrl(ip, port, `/codex-setup/auth/submit/${encodeURIComponent(sessionId)}`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ code }),
+  })
+  if (!response.ok) throw new Error(`Failed to submit Codex auth code (${response.status})`)
+  return response.json() as Promise<CodexAuthSubmitResult>
+}
+
 export async function postVerifyCodexAuth(ip: string, port: number): Promise<CodexSetupStatus> {
   const response = await fetch(apiUrl(ip, port, '/codex-setup/verify'), {
     method: 'POST',
@@ -490,4 +544,21 @@ export async function postVerifyPkgSetup(ip: string, port: number): Promise<PkgM
   })
   if (!response.ok) throw new Error(`Failed to verify package managers (${response.status})`)
   return response.json() as Promise<PkgManagerStatus>
+}
+
+export async function postInstallPkgTool(
+  ip: string,
+  port: number,
+  tool: PkgInstallTool,
+): Promise<PkgInstallResult> {
+  const response = await fetch(apiUrl(ip, port, '/pkg-setup/install'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ tool }),
+  })
+  if (!response.ok) throw new Error(`Failed to install ${tool} (${response.status})`)
+  return response.json() as Promise<PkgInstallResult>
 }
