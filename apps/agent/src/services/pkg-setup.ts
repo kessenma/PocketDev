@@ -41,7 +41,7 @@ ${cmd}
 `.trim()
 }
 
-async function execShell(cmd: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ShellExecResult> {
+export async function execShell(cmd: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<ShellExecResult> {
   const proc = Bun.spawn(['bash', '-lc', buildShellCommand(cmd)], {
     stdout: 'pipe',
     stderr: 'pipe',

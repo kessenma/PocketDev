@@ -20,10 +20,12 @@ export function createTerminalSession(
 ): TerminalSession {
   // Use `script` to allocate a real PTY — works on Linux/macOS, zero native deps.
   // -q: quiet, /dev/null: discard typescript file
+  const shell = process.env.SHELL ?? '/bin/bash'
+  const shellCommand = `${shell} -il`
   const isLinux = process.platform === 'linux'
   const cmd = isLinux
-    ? ['script', '-q', '-c', 'bash', '/dev/null']
-    : ['script', '-q', '/dev/null', 'bash']
+    ? ['script', '-q', '-c', shellCommand, '/dev/null']
+    : ['script', '-q', '/dev/null', shellCommand]
 
   const proc = Bun.spawn(cmd, {
     cwd: cwd ?? process.env.HOME ?? '/',
@@ -32,6 +34,7 @@ export function createTerminalSession(
     stderr: 'pipe',
     env: {
       ...process.env,
+      SHELL: shell,
       TERM: 'xterm-256color',
       COLUMNS: '80',
       LINES: '24',

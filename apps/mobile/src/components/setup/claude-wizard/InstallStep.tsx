@@ -12,7 +12,10 @@ import { Check, Clock, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Download 
 // Marker pattern to detect success/failure
 const MARKER_OK = '___CLAUDE_INSTALL_OK___'
 const MARKER_FAIL = '___CLAUDE_INSTALL_FAIL___'
-const MARKER_PATTERN = /___CLAUDE_INSTALL_(OK|FAIL)___/
+// Only match marker on its own line — NOT inside the echoed command text.
+// The terminal echoes back the full command (which contains the marker strings),
+// so we must only match when the marker appears as standalone output.
+const MARKER_PATTERN = /^___CLAUDE_INSTALL_(OK|FAIL)___$/m
 // Strip ANSI escape codes before marker detection
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g
 

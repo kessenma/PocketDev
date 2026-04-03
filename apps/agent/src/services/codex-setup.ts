@@ -1,5 +1,6 @@
 import { createTerminalSession, type TerminalSession } from './terminal.ts'
 import { deleteToolRecord, getToolRecord, setToolAuthenticated, upsertToolPath } from '../db/index.ts'
+import { checkNpm, execShell } from './pkg-setup.ts'
 import type {
   CodexAuthSessionState,
   CodexAuthSessionStatus,
@@ -18,12 +19,6 @@ const VERIFICATION_CODE_PATTERNS = [
 const MAX_OUTPUT_LENGTH = 16_000
 const OUTPUT_EXCERPT_LENGTH = 1_500
 
-interface ExecResult {
-  stdout: string
-  stderr: string
-  exitCode: number
-}
-
 interface InternalAuthSession {
   id: string
   terminal: TerminalSession
@@ -41,28 +36,7 @@ interface InternalAuthSession {
 
 const authSessions = new Map<string, InternalAuthSession>()
 
-async function exec(cmd: string, timeoutMs = 15_000): Promise<ExecResult> {
-  const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
-  const proc = Bun.spawn(['bash', '-lc', cmd], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: { ...process.env, HOME: home },
-  })
-
-  const timer = setTimeout(() => proc.kill(), timeoutMs)
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ])
-  await proc.exited
-  clearTimeout(timer)
-
-  return {
-    stdout: stdout.trim(),
-    stderr: stderr.trim(),
-    exitCode: proc.exitCode ?? 1,
-  }
-}
+const exec = execShell
 
 async function which(binary: string): Promise<string | null> {
   const { stdout, exitCode } = await exec(`which ${binary}`)
@@ -286,8 +260,8 @@ export async function checkCodexStatus(): Promise<CodexSetupStatus> {
 }
 
 export async function installCodex(): Promise<CodexInstallResult> {
-  const npmPath = await which('npm')
-  if (!npmPath) {
+  const npm = await checkNpm()
+  if (!npm.installed || !npm.path) {
     setToolAuthenticated('codex_cli', false)
     return {
       success: false,
