@@ -12,6 +12,14 @@ COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/db/package.json ./packages/db/package.json
 RUN pnpm install --frozen-lockfile
 
+# Build workspace packages that are consumed through package exports.
+FROM base AS shared-build
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY package.json pnpm-workspace.yaml ./
+COPY packages/shared/ ./packages/shared/
+RUN cd packages/shared && npx tsc -p tsconfig.build.json
+
 # Build the web app
 FROM base AS build
 ARG VITE_APP_URL
@@ -26,6 +34,7 @@ COPY apps/web/package.json ./apps/web/package.json
 COPY apps/web/tsconfig.json ./apps/web/tsconfig.json
 COPY apps/web/vite.config.ts ./apps/web/vite.config.ts
 COPY packages/shared/ ./packages/shared/
+COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
 COPY packages/db/ ./packages/db/
 COPY package.json ./
 RUN cd apps/web && npx vite build
@@ -35,6 +44,8 @@ FROM base AS console-build
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/agent/console/node_modules ./apps/agent/console/node_modules
 COPY apps/agent/console/ ./apps/agent/console/
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
 COPY package.json ./
 RUN cd apps/agent/console && npx vite build
 
@@ -46,6 +57,7 @@ COPY --from=deps /app/apps/agent/node_modules ./apps/agent/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY apps/agent/ ./apps/agent/
 COPY packages/shared/ ./packages/shared/
+COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
 COPY package.json ./
 RUN cd apps/agent && bun build src/index.ts --outdir dist --target bun
 # Stage the tarball contents
