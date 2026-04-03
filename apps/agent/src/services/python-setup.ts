@@ -19,9 +19,19 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
 }
 
 export async function checkPythonStatus(): Promise<PythonSetupStatus> {
-  // Check if python3 binary exists
-  const { stdout: path, exitCode: whichExit } = await exec('which python3')
-  if (whichExit !== 0 || !path) {
+  // Check for python3.13 first, fall back to python3
+  const { stdout: path13, exitCode: which13 } = await exec('which python3.13')
+  const { stdout: path3, exitCode: which3 } = await exec('which python3')
+
+  const hasPython13 = which13 === 0 && !!path13
+  const hasPython3 = which3 === 0 && !!path3
+
+  const pythonBin = hasPython13 ? 'python3.13' : hasPython3 ? 'python3' : null
+  const pythonPath = hasPython13 ? path13.split('\n')[0] : hasPython3 ? path3.split('\n')[0] : null
+
+  if (!pythonBin) {
+    // Check if deadsnakes PPA is already added
+    const { exitCode: ppaCheck } = await exec('grep -r "deadsnakes" /etc/apt/sources.list.d/ 2>/dev/null')
     return {
       installed: false,
       version: null,
@@ -30,46 +40,51 @@ export async function checkPythonStatus(): Promise<PythonSetupStatus> {
       pip_version: null,
       pip_path: null,
       venv_available: false,
+      ppa_added: ppaCheck === 0,
     }
   }
 
   // Get version
-  const { stdout: versionOut } = await exec('python3 --version')
+  const { stdout: versionOut } = await exec(`${pythonBin} --version`)
   const versionMatch = versionOut.match(/(\d+\.\d+[\.\d]*)/)
   const version = versionMatch ? versionMatch[1] : null
 
-  // Check pip (try pip3 first, fall back to pip)
-  const { stdout: pipPath, exitCode: pip3Exit } = await exec('which pip3')
-  let finalPipPath: string | null = null
+  // Check pip — try python3.13 -m pip first, then pip3, then pip
+  let pipPath: string | null = null
   let pipVersion: string | null = null
 
-  if (pip3Exit === 0 && pipPath) {
-    finalPipPath = pipPath.split('\n')[0]
-    const { stdout: pipVerOut } = await exec('pip3 --version')
-    const pipMatch = pipVerOut.match(/(\d+\.\d+[\.\d]*)/)
+  const { stdout: pipModOut, exitCode: pipModExit } = await exec(`${pythonBin} -m pip --version 2>&1`)
+  if (pipModExit === 0 && pipModOut) {
+    pipPath = pythonPath // pip accessible via the python binary
+    const pipMatch = pipModOut.match(/pip (\d+\.\d+[\.\d]*)/)
     pipVersion = pipMatch ? pipMatch[1] : null
   } else {
-    const { stdout: fallbackPath, exitCode: pipExit } = await exec('which pip')
-    if (pipExit === 0 && fallbackPath) {
-      finalPipPath = fallbackPath.split('\n')[0]
-      const { stdout: pipVerOut } = await exec('pip --version')
-      const pipMatch = pipVerOut.match(/(\d+\.\d+[\.\d]*)/)
+    const { stdout: pip3Path, exitCode: pip3Exit } = await exec('which pip3')
+    if (pip3Exit === 0 && pip3Path) {
+      pipPath = pip3Path.split('\n')[0]
+      const { stdout: pipVerOut } = await exec('pip3 --version')
+      const pipMatch = pipVerOut.match(/pip (\d+\.\d+[\.\d]*)/)
       pipVersion = pipMatch ? pipMatch[1] : null
     }
   }
 
   // Check venv availability
-  const { exitCode: venvExit } = await exec('python3 -m venv --help 2>&1')
+  const venvBin = hasPython13 ? 'python3.13' : 'python3'
+  const { exitCode: venvExit } = await exec(`${venvBin} -m venv --help 2>&1`)
   const venvAvailable = venvExit === 0
+
+  // Check if deadsnakes PPA is added
+  const { exitCode: ppaCheck } = await exec('grep -r "deadsnakes" /etc/apt/sources.list.d/ 2>/dev/null')
 
   return {
     installed: true,
     version,
-    path: path.split('\n')[0],
-    pip_installed: !!finalPipPath,
+    path: pythonPath,
+    pip_installed: !!pipPath,
     pip_version: pipVersion,
-    pip_path: finalPipPath,
+    pip_path: pipPath,
     venv_available: venvAvailable,
+    ppa_added: ppaCheck === 0,
   }
 }
 

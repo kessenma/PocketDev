@@ -128,9 +128,10 @@ export interface PythonSetupStatus {
   pip_version: string | null
   pip_path: string | null
   venv_available: boolean
+  ppa_added: boolean
 }
 
-export type PythonWizardStep = 'detect' | 'install' | 'verify'
+export type PythonWizardStep = 'detect' | 'add-ppa' | 'install' | 'install-venv' | 'install-pip' | 'verify'
 export type PythonWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
 // ─── Package Manager wizard types ──────────────────────────────────

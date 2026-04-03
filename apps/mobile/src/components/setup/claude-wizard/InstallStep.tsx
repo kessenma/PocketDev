@@ -40,8 +40,10 @@ export default function InstallStep({ dispatch }: Props) {
   } = useTerminalCommand({
     persistent: true,
     onOutput: (chunk) => {
+      console.log('[claude-install] output chunk:', JSON.stringify(chunk.slice(0, 120)))
       const match = chunk.match(MARKER_PATTERN)
       if (match) {
+        console.log('[claude-install] Marker detected:', match[1])
         if (match[1] === 'OK') {
           setStatus('done')
         } else {
@@ -55,8 +57,15 @@ export default function InstallStep({ dispatch }: Props) {
   // Start install when connected
   useEffect(() => {
     if (connected && status === 'queued') {
+      console.log('[claude-install] WS connected, starting install...')
       setStatus('installing')
-      setTimeout(() => sendCommand(wrapWithMarker(INSTALL_COMMAND)), 300)
+      setTimeout(() => {
+        const cmd = wrapWithMarker(INSTALL_COMMAND)
+        console.log('[claude-install] Sending:', cmd.slice(0, 80))
+        sendCommand(cmd)
+      }, 300)
+    } else if (!connected) {
+      console.log('[claude-install] Waiting for WS connection...')
     }
   }, [connected]) // eslint-disable-line react-hooks/exhaustive-deps
 

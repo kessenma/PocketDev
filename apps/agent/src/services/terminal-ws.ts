@@ -3,6 +3,20 @@ import { verify } from '@pocketdev/shared/crypto'
 import { getDevice, updateDeviceLastSeen } from '../db/index.ts'
 import { createTerminalSession, type TerminalSession } from './terminal.ts'
 
+// ─── Debug log ring buffer ──────────────────────────────
+const MAX_DEBUG_ENTRIES = 100
+const debugLog: Array<{ ts: string; msg: string }> = []
+
+function dbg(msg: string) {
+  debugLog.push({ ts: new Date().toISOString(), msg })
+  if (debugLog.length > MAX_DEBUG_ENTRIES) debugLog.shift()
+  console.log(msg)
+}
+
+export function getTerminalDebugLog() {
+  return [...debugLog]
+}
+
 /** Hex string to Uint8Array */
 function fromHex(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2)
@@ -15,7 +29,10 @@ function fromHex(hex: string): Uint8Array {
 /** Authenticate from auth header */
 async function authenticate(authHeader: string | null): Promise<string | null> {
   if (process.env.POCKETDEV_DEV_MODE === '1') return 'dev-device'
-  if (!authHeader) return null
+  if (!authHeader) {
+    dbg('[terminal-ws] No auth header')
+    return null
+  }
 
   try {
     const token = authHeader.replace(/^PocketDev\s+/i, '')
@@ -23,21 +40,33 @@ async function authenticate(authHeader: string | null): Promise<string | null> {
       Buffer.from(token, 'base64').toString(),
     ) as { deviceId: string; timestamp: number; signature: string }
 
-    if (Math.abs(Date.now() - timestamp) > 30_000) return null
+    const timeDiff = Math.abs(Date.now() - timestamp)
+    if (timeDiff > 30_000) {
+      dbg(`[terminal-ws] Timestamp rejected: diff=${timeDiff}ms, deviceId=${deviceId}`)
+      return null
+    }
 
     const device = getDevice(deviceId)
-    if (!device) return null
+    if (!device) {
+      dbg(`[terminal-ws] Device not found: ${deviceId}`)
+      return null
+    }
 
     const message = new TextEncoder().encode(String(timestamp))
     const sigBytes = fromHex(signature)
     const pubKeyBytes = fromHex(device.publicKey)
 
     const valid = await verify(sigBytes, message, pubKeyBytes)
-    if (!valid) return null
+    if (!valid) {
+      dbg(`[terminal-ws] Signature verification failed for device ${deviceId}`)
+      return null
+    }
 
     updateDeviceLastSeen(deviceId)
+    dbg(`[terminal-ws] Authenticated device: ${deviceId}`)
     return deviceId
-  } catch {
+  } catch (err) {
+    dbg(`[terminal-ws] Auth error: ${err}`)
     return null
   }
 }
@@ -68,7 +97,7 @@ export const terminalWsRoutes = new Elysia()
       )
 
       ;(ws as any)._session = session
-      console.log(`Terminal session started: ${sessionId}`)
+      dbg(`[terminal-ws] Session started: ${sessionId}`)
     },
     message(ws, raw) {
       try {
@@ -79,11 +108,17 @@ export const terminalWsRoutes = new Elysia()
           rows?: number
         }
         const session = (ws as any)._session as TerminalSession | undefined
-        if (!session) return
+        if (!session) {
+          dbg('[terminal-ws] Message received but no session')
+          return
+        }
 
         switch (msg.type) {
           case 'terminal.input':
-            if (msg.data) session.send(msg.data)
+            if (msg.data) {
+              dbg('[terminal-ws] input: ' + msg.data.slice(0, 80).replace(/\n/g, '\\n'))
+              session.send(msg.data)
+            }
             break
 
           case 'terminal.resize':
@@ -97,14 +132,14 @@ export const terminalWsRoutes = new Elysia()
             break
         }
       } catch (err) {
-        console.error('Terminal WS message error:', err)
+        dbg(`[terminal-ws] Message error: ${err}`)
       }
     },
     close(ws) {
       const session = (ws as any)._session as TerminalSession | undefined
       if (session) {
         session.kill()
-        console.log(`Terminal session ended: ${session.id}`)
+        dbg(`[terminal-ws] Session ended: ${session.id}`)
       }
     },
   })

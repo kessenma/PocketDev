@@ -15,6 +15,7 @@ import {
 import { hasDevices } from '../services/setup.ts'
 import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
+import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
 
@@ -173,6 +174,70 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
     deleteDevice(params.id)
     return { ok: true }
+  })
+
+  // ─── Auth debug (requires session) ────────────────────
+  .get('/debug/auth', ({ request, set }) => {
+    if (!validateSession(request.headers.get('cookie'))) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    const devices = getDevices().map((d) => ({
+      id: d.id,
+      name: d.name,
+      platform: d.platform,
+      publicKeyPrefix: d.publicKey?.slice(0, 16) + '...',
+      lastSeenAt: d.lastSeenAt,
+    }))
+
+    return {
+      serverTime: Date.now(),
+      serverTimeISO: new Date().toISOString(),
+      deviceCount: devices.length,
+      devices,
+    }
+  })
+
+  // ─── Test auth header (requires session, simulates mobile auth check) ──
+  .post('/debug/test-auth', async ({ request, body, set }) => {
+    if (!validateSession(request.headers.get('cookie'))) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    const { authenticateRequest } = await import('../services/auth.ts')
+    const authHeader = body.authHeader as string
+    const result = await authenticateRequest(authHeader)
+
+    // Also decode to show what we got
+    let decoded = null
+    try {
+      const token = authHeader.replace(/^PocketDev\s+/i, '')
+      decoded = JSON.parse(Buffer.from(token, 'base64').toString())
+    } catch { /* ignore */ }
+
+    return {
+      authenticated: !!result,
+      deviceId: result,
+      decoded,
+      serverTime: Date.now(),
+      timeDiff: decoded?.timestamp ? Math.abs(Date.now() - decoded.timestamp) : null,
+    }
+  }, {
+    body: t.Object({
+      authHeader: t.String(),
+    }),
+  })
+
+  // ─── Terminal debug log (requires session) ────────────
+  .get('/debug/terminal', ({ request, set }) => {
+    if (!validateSession(request.headers.get('cookie'))) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    return { entries: getTerminalDebugLog() }
   })
 
   // ─── Prerequisites (requires session) ─────────────────

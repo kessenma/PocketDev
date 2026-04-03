@@ -107,7 +107,9 @@ export default function InstallStep({ pkgStatus, dispatch }: Props) {
     onOutput: (chunk, fullOutput) => {
       // Wait for shell readiness confirmation before doing anything
       if (!shellReadyRef.current) {
+        console.log('[pkg-install] Waiting for shell ready, chunk:', JSON.stringify(chunk.slice(0, 100)))
         if (fullOutput.includes('__SHELL_READY__')) {
+          console.log('[pkg-install] Shell ready! Starting installs...')
           shellReadyRef.current = true
           // Shell is alive — start the first install
           setTimeout(() => sendNextRef.current(0), 200)
@@ -156,10 +158,10 @@ export default function InstallStep({ pkgStatus, dispatch }: Props) {
     setToolQueue((prev) => prev.map((t, i) => i === index ? { ...t, status: 'installing' as const } : t))
 
     // Send install command on its own, then the marker as a separate command.
-    // Using sendCommand twice instead of embedding \n ensures both lines
-    // are properly delivered as separate inputs to the PTY.
+    console.log(`[pkg-install] Sending command for ${tool.id}:`, tool.command.slice(0, 80))
     sendCommand(tool.command)
     setTimeout(() => {
+      console.log(`[pkg-install] Sending done marker for ${tool.id}`)
       sendCommand(`echo __PKGDONE_${tool.id}_$?__`)
     }, 100)
   }, [sendCommand])

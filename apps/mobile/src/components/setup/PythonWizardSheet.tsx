@@ -7,7 +7,10 @@ import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
 import WizardStepper from './python-wizard/WizardStepper'
 import DetectStep from './python-wizard/DetectStep'
-import InstallStep from './python-wizard/InstallStep'
+import AddPpaStep from './python-wizard/AddPpaStep'
+import InstallPythonStep from './python-wizard/InstallPythonStep'
+import InstallVenvStep from './python-wizard/InstallVenvStep'
+import InstallPipStep from './python-wizard/InstallPipStep'
 import VerifyStep from './python-wizard/VerifyStep'
 import type { PythonSetupStatus, PythonWizardStep, PythonWizardStepStatus } from '@pocketdev/shared/types'
 
@@ -19,7 +22,9 @@ interface Props {
 
 // ─── State machine ──────────────────────────────────────
 
-const ALL_STEPS: PythonWizardStep[] = ['detect', 'install', 'verify']
+const ALL_STEPS: PythonWizardStep[] = [
+  'detect', 'add-ppa', 'install', 'install-venv', 'install-pip', 'verify',
+]
 
 interface WizardState {
   currentStep: PythonWizardStep
@@ -72,13 +77,17 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
 
-      // Skip logic
-      if (ps.installed && ps.pip_installed) {
+      // Skip logic based on what's already installed
+      if (ps.ppa_added) newStatuses['add-ppa'] = 'skipped'
+      if (ps.installed) {
+        // Python is already installed — skip PPA and install
+        newStatuses['add-ppa'] = 'skipped'
         newStatuses['install'] = 'skipped'
-        newStatuses['verify'] = 'skipped'
       }
+      if (ps.venv_available) newStatuses['install-venv'] = 'skipped'
+      if (ps.pip_installed) newStatuses['install-pip'] = 'skipped'
 
-      // Check if everything is already configured
+      // If everything is configured, go to all-done
       const allSkipped = ALL_STEPS.slice(1).every((s) => newStatuses[s] === 'skipped')
       if (allSkipped) {
         return {
@@ -182,13 +191,18 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
             style={styles.completedLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Python 3 is ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Python is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your server has Python 3 and pip installed.
+            Python 3.13 with pip and venv are installed on your server.
           </Text>
           {state.pythonStatus?.version && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
               v{state.pythonStatus.version}
+            </Text>
+          )}
+          {state.pythonStatus?.path && (
+            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
+              {state.pythonStatus.path}
             </Text>
           )}
         </View>
@@ -198,8 +212,14 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
+      case 'add-ppa':
+        return <AddPpaStep dispatch={dispatch} />
       case 'install':
-        return <InstallStep dispatch={dispatch} />
+        return <InstallPythonStep dispatch={dispatch} />
+      case 'install-venv':
+        return <InstallVenvStep dispatch={dispatch} />
+      case 'install-pip':
+        return <InstallPipStep dispatch={dispatch} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:

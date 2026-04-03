@@ -27,6 +27,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
   loadFromStorage: () => {
     const server = getServer()
+    console.log('[connection] loadFromStorage:', server ? { ip: server.ip, port: server.port, deviceId: server.deviceId } : 'no server stored')
     if (server) {
       set({ server })
       get().connect()
@@ -35,14 +36,21 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
   connect: () => {
     const { server, ws: existingWs } = get()
-    if (!server) return
+    if (!server) {
+      console.warn('[connection] connect() called but no server in store')
+      return
+    }
 
+    console.log('[connection] Connecting to:', { ip: server.ip, port: server.port, deviceId: server.deviceId })
     existingWs?.disconnect()
 
     const url = buildWsUrl(server.ip, server.port)
     const ws = new PocketDevWebSocket(
       url,
-      (status) => set({ status }),
+      (status) => {
+        console.log('[connection] WebSocket status:', status)
+        set({ status })
+      },
       (message: WsMessage) => handleWsMessage(message),
     )
 

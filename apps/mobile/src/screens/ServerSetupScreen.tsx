@@ -62,26 +62,32 @@ export default function ServerSetupScreen({ navigation }: Props) {
   }, [])
 
   const handleClaudeWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening Claude wizard')
     setShowClaudeWizard(true)
   }, [])
 
   const handleClaudeWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] Claude wizard complete')
     setShowClaudeWizard(false)
   }, [])
 
   const handleCodexWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening Codex wizard')
     setShowCodexWizard(true)
   }, [])
 
   const handleCodexWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] Codex wizard complete')
     setShowCodexWizard(false)
   }, [])
 
   const handlePkgWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening Pkg wizard')
     setShowPkgWizard(true)
   }, [])
 
   const handlePkgWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] Pkg wizard complete')
     setShowPkgWizard(false)
     setShowPkgAnimation(true)
   }, [])
@@ -91,10 +97,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
   }, [])
 
   const handlePythonWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening Python wizard')
     setShowPythonWizard(true)
   }, [])
 
   const handlePythonWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] Python wizard complete')
     setShowPythonWizard(false)
   }, [])
 

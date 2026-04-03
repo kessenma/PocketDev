@@ -6,7 +6,10 @@ import { Check, Minus, X } from 'lucide-react-native'
 import type { PythonWizardStep, PythonWizardStepStatus } from '@pocketdev/shared/types'
 
 const VISIBLE_STEPS: { key: PythonWizardStep; label: string }[] = [
+  { key: 'add-ppa', label: 'PPA' },
   { key: 'install', label: 'Install' },
+  { key: 'install-venv', label: 'venv' },
+  { key: 'install-pip', label: 'pip' },
   { key: 'verify', label: 'Verify' },
 ]
 

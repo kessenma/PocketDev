@@ -87,12 +87,19 @@ export function buildTerminalWsUrl(ip: string, port: number): string {
 }
 
 export async function fetchPrerequisites(ip: string, port: number) {
+  const authHeader = await buildPocketDevAuthorizationHeader()
+  console.log('[api] fetchPrerequisites:', { ip, port, authHeaderPrefix: authHeader.slice(0, 30) })
+
   const response = await fetch(apiUrl(ip, port, '/prerequisites'), {
     headers: {
-      Authorization: await buildPocketDevAuthorizationHeader(),
+      Authorization: authHeader,
     },
   })
-  if (!response.ok) throw new Error(`Failed to fetch prerequisites (${response.status})`)
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    console.warn('[api] fetchPrerequisites failed:', { status: response.status, body })
+    throw new Error(`Failed to fetch prerequisites (${response.status})`)
+  }
   return response.json()
 }
 

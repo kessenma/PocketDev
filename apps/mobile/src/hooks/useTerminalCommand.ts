@@ -77,7 +77,13 @@ export function useTerminalCommand(
   // ── Send helpers ──────────────────────────────────────────────
 
   const sendCommand = useCallback((cmd: string) => {
-    wsRef.current?.send(JSON.stringify({ type: 'terminal.input', data: cmd + '\n' }))
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.warn('[useTerminalCommand] sendCommand called but WS not open. readyState:', ws?.readyState, 'cmd:', cmd.slice(0, 60))
+      return
+    }
+    console.log('[useTerminalCommand] sendCommand:', cmd.slice(0, 80))
+    ws.send(JSON.stringify({ type: 'terminal.input', data: cmd + '\n' }))
   }, [])
 
   const sendInput = useCallback((data: string) => {
@@ -116,9 +122,13 @@ export function useTerminalCommand(
       setHasError(false)
       setDone(false)
 
+      console.log('[useTerminalCommand] Creating WS to:', url)
+
       termWs.onopen = () => {
+        console.log('[useTerminalCommand] WS opened')
         setConnected(true)
         if (initialCommand) {
+          console.log('[useTerminalCommand] Sending initialCommand:', initialCommand.slice(0, 80))
           termWs.send(JSON.stringify({ type: 'terminal.input', data: initialCommand + '\n' }))
         }
       }
@@ -128,7 +138,10 @@ export function useTerminalCommand(
         try {
           const msg = JSON.parse(event.data as string)
           if (msg.type === 'terminal.output') text = msg.data
-          else if (msg.type === 'terminal.exited') text = `\n[exited: ${msg.exitCode}]\n`
+          else if (msg.type === 'terminal.exited') {
+            console.log('[useTerminalCommand] terminal.exited, code:', msg.exitCode)
+            text = `\n[exited: ${msg.exitCode}]\n`
+          }
           else return
         } catch { text = event.data as string }
 
@@ -148,7 +161,12 @@ export function useTerminalCommand(
         onOutput?.(text, outputRef.current)
       }
 
-      termWs.onclose = () => {
+      termWs.onerror = (err) => {
+        console.warn('[useTerminalCommand] WS error:', err)
+      }
+
+      termWs.onclose = (ev) => {
+        console.log('[useTerminalCommand] WS closed, code:', ev?.code, 'reason:', ev?.reason)
         wsRef.current = null
         setConnected(false)
         if (!persistent) setDone(true)

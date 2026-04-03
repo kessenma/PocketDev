@@ -101,6 +101,7 @@ export default function ConnectScreen({ navigation }: Props) {
             <TouchableOpacity
               style={styles.existingConnectionInfo}
               onPress={() => {
+                console.log('[ConnectScreen] Reconnecting to existing server:', existingServer)
                 connect()
                 navigation.replace('ServerSetup')
               }}

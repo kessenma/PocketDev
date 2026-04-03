@@ -127,3 +127,36 @@ export async function removeDevice(id: string) {
   if (!res.ok) throw new Error('Failed to remove device')
   return res.json()
 }
+
+// ─── Debug ──────────────────────────────────────────────
+
+export interface AuthDebugInfo {
+  serverTime: number
+  serverTimeISO: string
+  deviceCount: number
+  devices: Array<{
+    id: string
+    name: string | null
+    platform: string | null
+    publicKeyPrefix: string
+    lastSeenAt: string | null
+  }>
+}
+
+export async function fetchAuthDebug(): Promise<AuthDebugInfo> {
+  const res = await get('/debug/auth')
+  if (!res.ok) throw new Error('Failed to fetch auth debug')
+  return res.json()
+}
+
+export interface TerminalDebugEntry {
+  ts: string
+  msg: string
+}
+
+export async function fetchTerminalDebug(): Promise<TerminalDebugEntry[]> {
+  const res = await get('/debug/terminal')
+  if (!res.ok) throw new Error('Failed to fetch terminal debug')
+  const data = await res.json() as { entries: TerminalDebugEntry[] }
+  return data.entries
+}

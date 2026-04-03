@@ -31,7 +31,17 @@ export function normalizePairResponse(data: unknown): PairResponse {
 
 export async function buildPocketDevAuthorizationHeader(timestamp = Date.now()): Promise<string> {
   const server = getServer()
-  if (!server) throw new Error('No paired device found')
+  if (!server) {
+    console.warn('[auth] No paired device found in storage')
+    throw new Error('No paired device found')
+  }
+
+  console.log('[auth] Building auth header:', {
+    deviceId: server.deviceId,
+    timestamp,
+    serverIp: server.ip,
+    serverPort: server.port,
+  })
 
   const signature = await signMessage(String(timestamp))
   const token = Buffer.from(

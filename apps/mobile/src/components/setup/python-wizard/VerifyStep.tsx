@@ -5,7 +5,7 @@ import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
 import { postVerifyPython } from '../../../services/api'
 import { Assets } from '../../../../assets'
-import { Check, RefreshCw } from 'lucide-react-native'
+import { Check, RefreshCw, CheckCircle, XCircle } from 'lucide-react-native'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'verify' }
@@ -22,6 +22,9 @@ export default function VerifyStep({ dispatch }: Props) {
   const server = useConnectionStore((s) => s.server)
   const [state, setState] = useState<VerifyState>('idle')
   const [version, setVersion] = useState<string | null>(null)
+  const [path, setPath] = useState<string | null>(null)
+  const [pipVersion, setPipVersion] = useState<string | null>(null)
+  const [venvOk, setVenvOk] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleVerify() {
@@ -31,15 +34,23 @@ export default function VerifyStep({ dispatch }: Props) {
 
     try {
       const result = await postVerifyPython(server.ip, server.port)
+      setVersion(result.version)
+      setPath(result.path)
+      setPipVersion(result.pip_version)
+      setVenvOk(result.venv_available)
+
       if (result.installed && result.pip_installed) {
-        setVersion(result.version)
         setState('success')
         setTimeout(() => {
           dispatch({ type: 'STEP_COMPLETE', step: 'verify' })
         }, 800)
       } else {
         setState('failed')
-        setError('Python or pip installation could not be verified. Please try installing again.')
+        const missing: string[] = []
+        if (!result.installed) missing.push('Python')
+        if (!result.pip_installed) missing.push('pip')
+        if (!result.venv_available) missing.push('venv')
+        setError(`Not detected: ${missing.join(', ')}. Try going back and re-running the install steps.`)
       }
     } catch (err) {
       setState('failed')
@@ -51,43 +62,52 @@ export default function VerifyStep({ dispatch }: Props) {
     <View style={styles.container}>
       <View style={styles.center}>
         {/* Icon */}
-        <View style={[
-          styles.iconCircle,
-          {
-            backgroundColor: state === 'success' ? colors.primary
-              : state === 'failed' ? colors.error
-              : colors.surface,
-            borderColor: state === 'idle' ? colors.border : 'transparent',
-            borderWidth: state === 'idle' ? 1 : 0,
-          },
-        ]}>
-          {state === 'success' ? (
-            <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
-          ) : state === 'loading' ? (
-            <ActivityIndicator color={colors.primary} size="small" />
-          ) : (
-            <Image
-              source={isDark ? Assets.pythonWhite : Assets.pythonBlack}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          )}
-        </View>
+        {state === 'idle' && (
+          <Image
+            source={isDark ? Assets.pythonWhite : Assets.pythonBlack}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        )}
+        {state === 'loading' && (
+          <ActivityIndicator size="large" color={colors.primary} />
+        )}
+        {state === 'success' && (
+          <View style={[styles.resultIcon, { backgroundColor: '#22c55e20' }]}>
+            <CheckCircle color="#22c55e" size={40} strokeWidth={1.5} />
+          </View>
+        )}
+        {state === 'failed' && (
+          <View style={[styles.resultIcon, { backgroundColor: colors.error + '20' }]}>
+            <XCircle color={colors.error} size={40} strokeWidth={1.5} />
+          </View>
+        )}
 
         {/* Title */}
         <Text style={[styles.title, { color: colors.text }]}>
           {state === 'success' ? 'Python is ready!' :
             state === 'loading' ? 'Verifying...' :
+            state === 'failed' ? 'Verification Failed' :
             'Verify Installation'}
         </Text>
 
         {/* Subtitle */}
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {state === 'success' ? `Python ${version ?? 'unknown'} with pip` :
-            state === 'loading' ? 'Checking your Python installation...' :
-            state === 'failed' ? 'Installation could not be verified' :
-            'Confirm that Python 3 and pip are installed'}
+          {state === 'success' ? 'All Python components are installed and working.' :
+            state === 'loading' ? 'Checking Python, pip, and venv...' :
+            state === 'failed' ? 'Some components could not be verified.' :
+            'Confirm that Python 3.13, pip, and venv are properly installed.'}
         </Text>
+
+        {/* Success details */}
+        {state === 'success' && (
+          <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <DetailRow label="Python" value={version ? `v${version}` : 'installed'} ok colors={colors} />
+            <DetailRow label="Path" value={path ?? 'unknown'} ok colors={colors} />
+            <DetailRow label="pip" value={pipVersion ? `v${pipVersion}` : 'installed'} ok colors={colors} />
+            <DetailRow label="venv" value={venvOk ? 'available' : 'missing'} ok={venvOk} colors={colors} />
+          </View>
+        )}
 
         {/* Error message */}
         {state === 'failed' && error && (
@@ -120,6 +140,47 @@ export default function VerifyStep({ dispatch }: Props) {
   )
 }
 
+function DetailRow({ label, value, ok, colors }: {
+  label: string; value: string; ok: boolean;
+  colors: ReturnType<typeof useTheme>['colors']
+}) {
+  return (
+    <View style={detailStyles.row}>
+      <View style={detailStyles.labelRow}>
+        {ok ? (
+          <Check color="#22c55e" size={14} strokeWidth={2.5} />
+        ) : (
+          <XCircle color={colors.error} size={14} strokeWidth={2} />
+        )}
+        <Text style={[detailStyles.label, { color: colors.textSecondary }]}>{label}</Text>
+      </View>
+      <Text style={[detailStyles.value, { color: colors.textTertiary }]}>{value}</Text>
+    </View>
+  )
+}
+
+const detailStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing[1],
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  label: {
+    ...typographyScale.sm,
+    fontWeight: '500',
+  },
+  value: {
+    ...typographyScale.xs,
+    fontFamily: 'monospace',
+  },
+})
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -130,27 +191,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing[3],
-    paddingHorizontal: spacing[6],
+    paddingHorizontal: spacing[4],
   },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  logo: {
+    width: 48,
+    height: 48,
+    marginBottom: spacing[2],
+  },
+  resultIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing[2],
   },
-  logo: {
-    width: 36,
-    height: 36,
-  },
   title: {
-    ...typographyScale['2xl'],
+    ...typographyScale.xl,
     fontWeight: '700',
   },
   subtitle: {
-    ...typographyScale.base,
+    ...typographyScale.sm,
     textAlign: 'center',
+  },
+  detailsCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[1],
+    marginTop: spacing[2],
   },
   errorText: {
     ...typographyScale.sm,

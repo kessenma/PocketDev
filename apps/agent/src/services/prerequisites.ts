@@ -315,39 +315,40 @@ async function checkDocker(): Promise<ToolCheck> {
 }
 
 async function checkPython(): Promise<ToolCheck> {
-  const path = await which('python3')
+  // Prefer python3.13, fall back to python3
+  const path = (await which('python3.13')) ?? (await which('python3'))
   if (!path) {
     return {
       id: 'python', name: 'Python', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo apt-get install -y python3 python3-pip python3-venv',
+      install_command: 'sudo apt install python3.13',
       auth_command: null, details: {},
     }
   }
 
-  const version = await getVersion('python3 --version')
+  const bin = path.includes('python3.13') ? 'python3.13' : 'python3'
+  const version = await getVersion(`${bin} --version`)
 
-  // Check pip
-  const pipPath = (await which('pip3')) ?? (await which('pip'))
-  const pipVersion = pipPath ? await getVersion(`"${pipPath}" --version`) : null
+  // Check pip via module
+  const { stdout: pipOut, exitCode: pipExit } = await exec(`${bin} -m pip --version 2>&1`)
+  const pipInstalled = pipExit === 0
+  const pipVersion = pipInstalled ? (pipOut.match(/pip (\d+\.\d+[\.\d]*)/))?.[1] ?? null : null
+
+  // Check venv
+  const { exitCode: venvExit } = await exec(`${bin} -m venv --help 2>&1`)
+  const venvAvailable = venvExit === 0
 
   upsertToolPath('python', path, version)
 
-  if (!pipPath) {
-    return {
-      id: 'python', name: 'Python', status: 'misconfigured', auth_status: 'not_applicable',
-      version, path, required: false,
-      install_command: 'sudo apt-get install -y python3-pip python3-venv',
-      auth_command: null,
-      details: { pip_version: null, pip_path: null },
-    }
-  }
+  const fullyConfigured = pipInstalled && venvAvailable
+  const status: ToolStatus = fullyConfigured ? 'installed' : 'misconfigured'
 
   return {
-    id: 'python', name: 'Python', status: 'installed', auth_status: 'not_applicable',
+    id: 'python', name: 'Python', status, auth_status: 'not_applicable',
     version, path, required: false,
-    install_command: null, auth_command: null,
-    details: { pip_version: pipVersion, pip_path: pipPath },
+    install_command: fullyConfigured ? null : `sudo apt install ${bin.replace('python', 'python')}-venv`,
+    auth_command: null,
+    details: { pip_version: pipVersion, venv_available: venvAvailable ? 'true' : 'false' },
   }
 }
 

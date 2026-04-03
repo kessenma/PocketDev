@@ -6,6 +6,7 @@ import { Badge } from '#/components/ui/badge'
 import { ConnectionWizard } from '#/components/ConnectionWizard'
 import { DeviceList } from '#/components/DeviceList'
 import { SetupStatus } from '#/components/SetupStatus'
+import { AuthDebugPanel } from '#/components/AuthDebugPanel'
 import { checkHealth, fetchStatus, logout, type ConsoleStatus } from '#/lib/api'
 import { Server, LogOut, Activity } from 'lucide-react'
 
@@ -108,6 +109,9 @@ export function ConsolePage() {
           port={status.port}
           onPasscodeChanged={handlePasscodeChanged}
         />
+
+        {/* Auth Debug */}
+        <AuthDebugPanel />
 
         {/* Paired Devices */}
         <DeviceList
