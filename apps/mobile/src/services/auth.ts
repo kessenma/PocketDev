@@ -36,12 +36,12 @@ export async function buildPocketDevAuthorizationHeader(timestamp = Date.now()):
     throw new Error('No paired device found')
   }
 
-  console.log('[auth] Building auth header:', {
-    deviceId: server.deviceId,
-    timestamp,
-    serverIp: server.ip,
-    serverPort: server.port,
-  })
+  // console.log('[auth] Building auth header:', {
+  //   deviceId: server.deviceId,
+  //   timestamp,
+  //   serverIp: server.ip,
+  //   serverPort: server.port,
+  // })
 
   const signature = await signMessage(String(timestamp))
   const token = Buffer.from(

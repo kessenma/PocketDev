@@ -227,6 +227,22 @@ function validateCodexCallbackUrl(callbackUrl: string): URL {
   return url
 }
 
+function buildLoopbackCallbackCandidates(parsed: URL): string[] {
+  const hosts = [
+    parsed.hostname,
+    'localhost',
+    '127.0.0.1',
+    '[::1]',
+  ]
+
+  const uniqueHosts = Array.from(new Set(hosts.filter(Boolean)))
+  return uniqueHosts.map((hostname) => {
+    const candidate = new URL(parsed.toString())
+    candidate.hostname = hostname
+    return candidate.toString()
+  })
+}
+
 function disposeExistingSessions() {
   for (const session of authSessions.values()) {
     session.terminal.kill()
@@ -401,31 +417,37 @@ export async function replayCodexAuthCallback(
     }
   }
 
-  const localCallbackUrl = new URL(parsed.toString())
-  localCallbackUrl.hostname = '127.0.0.1'
+  const candidates = buildLoopbackCallbackCandidates(parsed)
+  const failures: string[] = []
 
-  try {
-    const response = await fetch(localCallbackUrl, {
-      method: 'GET',
-      redirect: 'manual',
-    })
-    session.updatedAt = Date.now()
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, {
+        method: 'GET',
+        redirect: 'manual',
+      })
+      session.updatedAt = Date.now()
 
-    return {
-      success: response.status >= 200 && response.status < 400,
-      callback_url: callbackUrl,
-      status_code: response.status,
-      error: response.status >= 200 && response.status < 400
-        ? null
-        : `Codex callback returned ${response.status}`,
+      if (response.status >= 200 && response.status < 400) {
+        return {
+          success: true,
+          callback_url: candidate,
+          status_code: response.status,
+          error: null,
+        }
+      }
+
+      failures.push(`${candidate} -> HTTP ${response.status}`)
+    } catch (error) {
+      failures.push(`${candidate} -> ${error instanceof Error ? error.message : 'request failed'}`)
     }
-  } catch (error) {
-    return {
-      success: false,
-      callback_url: callbackUrl,
-      status_code: null,
-      error: error instanceof Error ? error.message : 'Failed to replay callback',
-    }
+  }
+
+  return {
+    success: false,
+    callback_url: callbackUrl,
+    status_code: null,
+    error: `Failed to replay callback against local Codex server. ${failures.join(' | ')}`,
   }
 }
 

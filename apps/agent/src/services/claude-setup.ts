@@ -171,19 +171,21 @@ function refreshSessionState(session: InternalAuthSession) {
   session.cleanOutput = stripAnsi(session.output)
   const derived = parseAuthState(session)
 
-  // Auto-answer theme selector
+  // Auto-answer theme selector — Claude Code uses a TUI menu where the cursor (❯)
+  // is already on option 1 (Dark mode). Just press Enter to confirm.
   if (derived.state === 'awaiting_theme' && !session.themeHandled) {
     session.themeHandled = true
-    session.terminal.send('1\n')
+    session.terminal.send('\n')
     session.state = 'pending'
     session.updatedAt = Date.now()
     return
   }
 
-  // Auto-answer login method (1 = Claude subscription)
+  // Auto-answer login method — cursor defaults to option 1 (Claude subscription).
+  // Just press Enter to confirm.
   if (derived.state === 'awaiting_method' && !session.methodHandled) {
     session.methodHandled = true
-    session.terminal.send('1\n')
+    session.terminal.send('\n')
     session.state = 'pending'
     session.updatedAt = Date.now()
     return
