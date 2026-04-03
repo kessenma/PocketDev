@@ -178,6 +178,12 @@ export interface CodexAuthSessionStatus {
 
 export interface CodexAuthStartResult extends CodexAuthSessionStatus {}
 
+export type CodexAuthMode = 'browser' | 'device_code'
+
+export interface CodexAuthStartRequest {
+  mode: CodexAuthMode
+}
+
 export interface CodexAuthSubmitRequest {
   code: string
 }

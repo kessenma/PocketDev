@@ -35,6 +35,7 @@ import type {
   CodexAuthSessionStatus,
   CodexAuthSubmitResult,
   CodexAuthCallbackReplayResult,
+  CodexAuthMode,
   BrowserSessionCreateResult,
   PythonSetupStatus,
   PkgManagerStatus,
@@ -497,10 +498,18 @@ export async function postInstallCodex(ip: string, port: number): Promise<CodexI
   return response.json() as Promise<CodexInstallResult>
 }
 
-export async function postStartCodexAuth(ip: string, port: number): Promise<CodexAuthStartResult> {
+export async function postStartCodexAuth(
+  ip: string,
+  port: number,
+  mode: CodexAuthMode,
+): Promise<CodexAuthStartResult> {
   const response = await fetch(apiUrl(ip, port, '/codex-setup/auth/start'), {
     method: 'POST',
-    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ mode }),
   })
   if (!response.ok) throw new Error(`Failed to start Codex auth (${response.status})`)
   return response.json() as Promise<CodexAuthStartResult>

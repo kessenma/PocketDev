@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, Image, TouchableOpacity, TextInput, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native'
-import Clipboard from '@react-native-clipboard/clipboard'
+import { View, Text, Image, TouchableOpacity, TextInput, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Linking } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
@@ -11,9 +10,9 @@ import {
   postSubmitCodexAuth,
 } from '../../../services/api'
 import { Assets } from '../../../../assets'
-import { Copy, ExternalLink, RefreshCw, Send, ShieldCheck, Smartphone, Globe } from 'lucide-react-native'
-import type { CodexAuthSessionStatus } from '@pocketdev/shared/types'
-import ServerWebBrowserSheet from '../../browser/ServerWebBrowserSheet'
+import { ExternalLink, RefreshCw, Send, ShieldCheck, Smartphone, Globe, Circle, CircleDot } from 'lucide-react-native'
+import type { CodexAuthMode, CodexAuthSessionStatus } from '@pocketdev/shared/types'
+import CopyButton from '../../shared/CopyButton'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'authenticate'; authSession?: CodexAuthSessionStatus | null }
@@ -25,17 +24,18 @@ interface Props {
   authSession: CodexAuthSessionStatus | null
 }
 
+type Method = 'browser' | 'device_code'
+
 export default function AuthenticateStep({ dispatch, authSession }: Props) {
   const { colors, isDark } = useTheme()
   const server = useConnectionStore((s) => s.server)
   const [session, setSession] = useState<CodexAuthSessionStatus | null>(authSession)
+  const [selectedMethod, setSelectedMethod] = useState<Method>('device_code')
   const [input, setInput] = useState('')
+  const [callbackUrl, setCallbackUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [started, setStarted] = useState(false)
   const [openedBrowser, setOpenedBrowser] = useState(false)
-  const [browserVisible, setBrowserVisible] = useState(false)
-  const [browserStartUrl, setBrowserStartUrl] = useState<string | null>(null)
-  const [selectedMethod, setSelectedMethod] = useState<'chatgpt' | 'device-code' | null>(null)
-  const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const syncSession = useCallback((next: CodexAuthSessionStatus) => {
@@ -43,13 +43,27 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     dispatch({ type: 'SET_AUTH_SESSION', authSession: next })
   }, [dispatch])
 
-  const startSession = useCallback(async () => {
+  const resetFlow = useCallback(() => {
+    setSession(null)
+    setStarted(false)
+    setOpenedBrowser(false)
+    setInput('')
+    setCallbackUrl('')
+    setError(null)
+    dispatch({ type: 'SET_AUTH_SESSION', authSession: null })
+  }, [dispatch])
+
+  const startSession = useCallback(async (mode: Method) => {
     if (!server) return
     setLoading(true)
     setError(null)
+    setInput('')
+    setCallbackUrl('')
+    setOpenedBrowser(false)
     try {
-      const next = await postStartCodexAuth(server.ip, server.port)
+      const next = await postStartCodexAuth(server.ip, server.port, mode)
       syncSession(next)
+      setStarted(true)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start Codex authentication.'
       setError(message)
@@ -60,13 +74,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
   }, [dispatch, server, syncSession])
 
   useEffect(() => {
-    if (!session && !loading) {
-      void startSession()
-    }
-  }, [loading, session, startSession])
-
-  useEffect(() => {
-    if (!server || !session?.session_id || session.completed) return
+    if (!server || !started || !session?.session_id || session.completed) return
     const timer = setInterval(() => {
       void (async () => {
         try {
@@ -83,20 +91,15 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     }, 1500)
 
     return () => clearInterval(timer)
-  }, [dispatch, server, session, syncSession])
-
-  const openEmbeddedBrowser = useCallback((url: string) => {
-    setBrowserStartUrl(url)
-    setBrowserVisible(true)
-    setOpenedBrowser(true)
-  }, [])
+  }, [dispatch, server, session, started, syncSession])
 
   const handleOpenBrowser = useCallback(() => {
     if (!session?.auth_url) return
-    openEmbeddedBrowser(session.auth_url)
-  }, [openEmbeddedBrowser, session])
+    Linking.openURL(session.auth_url)
+    setOpenedBrowser(true)
+  }, [session])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmitCode = useCallback(async () => {
     if (!server || !session?.session_id || !input.trim()) return
     setLoading(true)
     setError(null)
@@ -111,61 +114,34 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     }
   }, [input, server, session, syncSession])
 
-  const handleChooseMethod = useCallback(async (choice: '1' | '2') => {
-    if (!server || !session?.session_id) return
-    setLoading(true)
-    setError(null)
-    setSelectedMethod(choice === '1' ? 'chatgpt' : 'device-code')
-    try {
-      const next = await postSubmitCodexAuth(server.ip, server.port, session.session_id, choice)
-      syncSession(next)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to choose a Codex sign-in method.')
-    } finally {
-      setLoading(false)
-    }
-  }, [server, session, syncSession])
-
-  useEffect(() => {
-    if (selectedMethod === 'chatgpt' && session?.auth_url && !browserVisible && !session.authenticated) {
-      openEmbeddedBrowser(session.auth_url)
-    }
-  }, [browserVisible, openEmbeddedBrowser, selectedMethod, session])
-
-  const handleBrowserMatchedUrl = useCallback(async (url: string) => {
-    if (!server || !session?.session_id) return
+  const handleReplayCallback = useCallback(async () => {
+    if (!server || !session?.session_id || !callbackUrl.trim()) return
     setLoading(true)
     setError(null)
     try {
-      const replay = await postReplayCodexAuthCallback(server.ip, server.port, session.session_id, url)
+      const replay = await postReplayCodexAuthCallback(server.ip, server.port, session.session_id, callbackUrl.trim())
       if (!replay.success) {
         setError(replay.error ?? 'Failed to complete Codex auth callback.')
         return
       }
-      setBrowserVisible(false)
+      setCallbackUrl('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to complete Codex auth callback.')
     } finally {
       setLoading(false)
     }
-  }, [server, session])
+  }, [callbackUrl, server, session])
 
-  function handleCopyCode() {
-    if (!session?.verification_code) return
-    Clipboard.setString(session.verification_code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
-
-  const phaseDescription =
-    session?.authenticated
+  const helperText = !started
+    ? 'Choose how you want to authenticate before PocketDev starts the Codex login flow on your server.'
+    : session?.authenticated
       ? 'Codex sign-in completed. Continue to verify the CLI and sync the cached provider state.'
-      : session?.state === 'awaiting_choice'
-        ? 'Choose how you want to sign in. Device Code is recommended from mobile because ChatGPT sign-in redirects to localhost on the same machine running Codex CLI.'
       : session?.state === 'awaiting_code'
-        ? 'Finish the browser flow, then paste any one-time code here if Codex asks for it.'
+        ? 'Finish the browser step, then enter a one-time code only if Codex asks for it.'
         : session?.state === 'awaiting_browser'
-          ? 'Open the OpenAI sign-in page in your browser to continue.'
+          ? selectedMethod === 'device_code'
+            ? 'Open the verification page in your browser and complete sign-in with the code below.'
+            : 'Open the sign-in page in your system browser, then paste the returned localhost callback URL back into PocketDev.'
           : session?.state === 'pending'
             ? 'Waiting for Codex CLI to finish the authentication flow.'
             : session?.state === 'failed'
@@ -187,7 +163,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           />
           <Text style={[styles.title, { color: colors.text }]}>Authenticate Codex</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            PocketDev keeps the sign-in flow guided and then updates the stored Codex auth state after verification.
+            Choose a mobile-friendly sign-in path, then PocketDev will verify and sync the stored Codex auth state.
           </Text>
         </View>
 
@@ -198,8 +174,8 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
               {session?.authenticated ? 'Signed in' : 'OpenAI sign-in'}
             </Text>
           </View>
-          <Text style={[styles.statusCopy, { color: session?.state === 'failed' ? colors.error : colors.textSecondary }]}>
-            {error ?? phaseDescription}
+          <Text style={[styles.statusCopy, { color: error || session?.state === 'failed' ? colors.error : colors.textSecondary }]}>
+            {error ?? helperText}
           </Text>
           {session?.prompt && (
             <Text style={[styles.promptText, { color: colors.textTertiary }]}>
@@ -208,36 +184,46 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           )}
         </View>
 
-        {session?.state === 'awaiting_choice' && (
+        {!started && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Choose sign-in method</Text>
-            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              API key setup is intentionally omitted here. Use Device Code when signing in from your phone. The ChatGPT browser flow only works if the browser is running on the same machine as the Codex CLI session because it redirects to `localhost:1455`.
-            </Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Login and authenticate with</Text>
+            <MethodOption
+              label="web app"
+              description="Start `codex login` and finish sign-in in your system browser, then paste the localhost callback URL back into PocketDev."
+              selected={selectedMethod === 'browser'}
+              onPress={() => setSelectedMethod('browser')}
+              colors={colors}
+              icon={<Globe color={selectedMethod === 'browser' ? colors.primary : colors.textTertiary} size={18} strokeWidth={2.25} />}
+            />
+            <MethodOption
+              label="ChatGPT app"
+              description="Start `codex login --device-auth`, open the verification page, and complete the flow with a one-time code."
+              selected={selectedMethod === 'device_code'}
+              onPress={() => setSelectedMethod('device_code')}
+              colors={colors}
+              icon={<Smartphone color={selectedMethod === 'device_code' ? colors.primary : colors.textTertiary} size={18} strokeWidth={2.25} />}
+            />
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-              onPress={() => void handleChooseMethod('2')}
+              onPress={() => void startSession(selectedMethod)}
               activeOpacity={0.7}
             >
-              <Smartphone color={colors.primaryText} size={18} strokeWidth={2.25} />
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Use Device Code</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: colors.border }]}
-              onPress={() => void handleChooseMethod('1')}
-              activeOpacity={0.7}
-            >
-              <Globe color={colors.text} size={18} strokeWidth={2.25} />
-              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Sign in with ChatGPT</Text>
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>
+                Continue with {selectedMethod === 'browser' ? 'web app' : 'ChatGPT app'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {session?.auth_url && (
+        {started && session?.auth_url && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Browser step</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              {selectedMethod === 'device_code' ? 'Verification page' : 'System browser step'}
+            </Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              Open the OpenAI page inside PocketDev. If the flow redirects to `localhost:1455/auth/callback`, PocketDev will capture that URL and relay it back to the server machine running Codex CLI.
+              {selectedMethod === 'device_code'
+                ? 'Open the OpenAI verification page in your browser, then complete sign-in with the one-time code shown below.'
+                : 'Open the OpenAI page in your system browser. After sign-in, copy the final `localhost:1455/auth/callback?...` URL and paste it back into PocketDev so the server can finish Codex authentication.'}
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
@@ -246,41 +232,61 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             >
               <ExternalLink color={colors.primaryText} size={18} strokeWidth={2.25} />
               <Text style={[styles.buttonText, { color: colors.primaryText }]}>
-                {openedBrowser ? 'Re-open browser' : 'Open sign-in page'}
+                {openedBrowser ? 'Re-open browser' : selectedMethod === 'device_code' ? 'Open verification page' : 'Open sign-in in browser'}
               </Text>
             </TouchableOpacity>
+            <CopyButton value={session.auth_url} label="Copy URL" />
           </View>
         )}
 
-        {session?.verification_code && (
+        {started && selectedMethod === 'device_code' && session?.verification_code && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Verification code</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              If OpenAI shows a device-code prompt, use this code.
+              Enter this one-time code in the browser after opening the verification page.
             </Text>
             <View style={[styles.codeBox, { backgroundColor: colors.background }]}>
               <Text style={[styles.codeText, { color: colors.text }]} selectable>
                 {session.verification_code}
               </Text>
             </View>
+            <CopyButton value={session.verification_code} label="Copy code" />
+          </View>
+        )}
+
+        {started && selectedMethod === 'browser' && openedBrowser && !session?.authenticated && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Paste callback URL</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              After the browser finishes signing you in, copy the URL that starts with `http://localhost:1455/auth/callback?` and paste it here.
+            </Text>
+            <TextInput
+              style={[styles.multilineInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+              value={callbackUrl}
+              onChangeText={setCallbackUrl}
+              placeholder="http://localhost:1455/auth/callback?..."
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              multiline
+            />
             <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: copied ? '#22c55e' : colors.border }]}
-              onPress={handleCopyCode}
+              style={[styles.primaryButton, { backgroundColor: callbackUrl.trim() ? colors.primary : colors.border }]}
+              onPress={() => void handleReplayCallback()}
+              disabled={!callbackUrl.trim() || loading}
               activeOpacity={0.7}
             >
-              <Copy color={copied ? '#22c55e' : colors.text} size={16} strokeWidth={2.25} />
-              <Text style={[styles.secondaryButtonText, { color: copied ? '#22c55e' : colors.text }]}>
-                {copied ? 'Copied' : 'Copy code'}
-              </Text>
+              <Send color={colors.primaryText} size={18} strokeWidth={2.25} />
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Finish sign-in</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {(session?.can_submit_code || openedBrowser) && !session?.authenticated && session?.state !== 'awaiting_choice' && (
+        {started && selectedMethod === 'device_code' && session?.can_submit_code && !session?.authenticated && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Manual code entry</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              Only use this if Codex CLI asks you to paste a code back into the session.
+              Only use this if Codex CLI asks you to paste a one-time code back into the session.
             </Text>
             <View style={styles.inputRow}>
               <TextInput
@@ -294,7 +300,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
               />
               <TouchableOpacity
                 style={[styles.sendButton, { backgroundColor: input.trim() ? colors.primary : colors.border }]}
-                onPress={handleSubmit}
+                onPress={() => void handleSubmitCode()}
                 disabled={!input.trim() || loading}
                 activeOpacity={0.7}
               >
@@ -304,7 +310,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           </View>
         )}
 
-        {session?.output_excerpt && (
+        {started && session?.output_excerpt && (
           <View style={[styles.outputCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Recent Codex output</Text>
             <View style={[styles.outputBox, { backgroundColor: colors.background }]}>
@@ -316,30 +322,71 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
         )}
       </ScrollView>
 
-      {!session?.authenticated && (
-        <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-          onPress={() => void startSession()}
-          activeOpacity={0.7}
-        >
-          <RefreshCw color={colors.primaryText} size={18} strokeWidth={2.25} />
-          <Text style={[styles.buttonText, { color: colors.primaryText }]}>
-            {session?.state === 'failed' ? 'Restart sign-in' : 'Restart auth session'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {browserStartUrl && (
-        <ServerWebBrowserSheet
-          visible={browserVisible}
-          title="Codex Sign-In"
-          initialUrl={browserStartUrl}
-          onClose={() => setBrowserVisible(false)}
-          matchUrl={(url) => /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|::1):1455\/auth\/callback\?/.test(url)}
-          onMatchedUrl={handleBrowserMatchedUrl}
-        />
-      )}
+      <View style={styles.footerActions}>
+        {!session?.authenticated && started && (
+          <TouchableOpacity
+            style={[styles.secondaryFooterButton, { borderColor: colors.border }]}
+            onPress={resetFlow}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Change method</Text>
+          </TouchableOpacity>
+        )}
+        {!session?.authenticated && (
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+            onPress={() => void startSession(selectedMethod)}
+            activeOpacity={0.7}
+          >
+            <RefreshCw color={colors.primaryText} size={18} strokeWidth={2.25} />
+            <Text style={[styles.buttonText, { color: colors.primaryText }]}>
+              {started ? 'Restart auth session' : 'Start sign-in'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </KeyboardAvoidingView>
+  )
+}
+
+function MethodOption({
+  label,
+  description,
+  selected,
+  onPress,
+  colors,
+  icon,
+}: {
+  label: string
+  description: string
+  selected: boolean
+  onPress: () => void
+  colors: ReturnType<typeof useTheme>['colors']
+  icon: React.ReactNode
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.methodOption,
+        {
+          backgroundColor: selected ? colors.primary + '12' : colors.background,
+          borderColor: selected ? colors.primary : colors.border,
+        },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.methodTopRow}>
+        <View style={styles.methodTitleRow}>
+          {selected
+            ? <CircleDot color={colors.primary} size={18} strokeWidth={2.25} />
+            : <Circle color={colors.textTertiary} size={18} strokeWidth={2.25} />}
+          {icon}
+          <Text style={[styles.methodLabel, { color: colors.text }]}>{label}</Text>
+        </View>
+      </View>
+      <Text style={[styles.methodDescription, { color: colors.textSecondary }]}>{description}</Text>
+    </TouchableOpacity>
   )
 }
 
@@ -416,6 +463,31 @@ const styles = StyleSheet.create({
     ...typographyScale.sm,
     lineHeight: 20,
   },
+  methodOption: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[3],
+    gap: spacing[2],
+  },
+  methodTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  methodTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  methodLabel: {
+    ...typographyScale.base,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  methodDescription: {
+    ...typographyScale.sm,
+    lineHeight: 20,
+  },
   codeBox: {
     borderRadius: borderRadius.md,
     padding: spacing[3],
@@ -439,6 +511,16 @@ const styles = StyleSheet.create({
     ...typographyScale.sm,
     fontFamily: 'monospace',
   },
+  multilineInput: {
+    minHeight: 110,
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    ...typographyScale.sm,
+    fontFamily: 'monospace',
+    textAlignVertical: 'top',
+  },
   sendButton: {
     width: 48,
     height: 48,
@@ -453,6 +535,9 @@ const styles = StyleSheet.create({
   outputText: {
     ...typographyScale.xs,
     fontFamily: 'monospace',
+  },
+  footerActions: {
+    gap: spacing[2],
   },
   primaryButton: {
     flexDirection: 'row',
@@ -469,6 +554,13 @@ const styles = StyleSheet.create({
     gap: spacing[2],
     borderWidth: 1,
     borderRadius: borderRadius.md,
+    paddingVertical: spacing[3],
+  },
+  secondaryFooterButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
     paddingVertical: spacing[3],
   },
   buttonText: {

@@ -25,11 +25,19 @@ export const codexSetupRoutes = new Elysia({ prefix: '/codex-setup' })
     return installCodex()
   })
 
-  .post('/auth/start', async ({ request, set }) => {
+  .post('/auth/start', async ({ request, body, set }) => {
     const deviceId = await authenticateRequest(request.headers.get('authorization'))
     if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
 
-    return startCodexAuth()
+    const mode = typeof body === 'object' && body && 'mode' in body
+      ? String((body as Record<string, unknown>).mode ?? '')
+      : ''
+    if (mode !== 'browser' && mode !== 'device_code') {
+      set.status = 400
+      return { error: 'Valid auth mode is required' }
+    }
+
+    return startCodexAuth(mode)
   })
 
   .get('/auth/status/:sessionId', async ({ request, params, set }) => {

@@ -37,6 +37,8 @@ export type {
   CodexInstallResult,
   CodexAuthSessionState,
   CodexAuthSessionStatus,
+  CodexAuthMode,
+  CodexAuthStartRequest,
   CodexAuthStartResult,
   CodexAuthSubmitRequest,
   CodexAuthSubmitResult,

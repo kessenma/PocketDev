@@ -10,6 +10,7 @@ import {
 } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { ExternalLink, CheckCircle, RefreshCw, Send, ShieldCheck, ChevronDown } from 'lucide-react-native'
+import CopyButton from '../../shared/CopyButton'
 import type { ClaudeAuthSessionStatus } from '@pocketdev/shared/types'
 import ServerWebBrowserSheet from '../../browser/ServerWebBrowserSheet'
 
@@ -226,15 +227,14 @@ export default function AuthenticateStep({ dispatch }: Props) {
               <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
                 Terminal output
               </Text>
-              {showOutput
-                ? <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />
-                : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
+              <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />
             </TouchableOpacity>
             {showOutput && (
               <View style={[styles.outputBox, { backgroundColor: colors.background }]}>
                 <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
                   {session.output_excerpt}
                 </Text>
+                <CopyButton value={session.output_excerpt} label="Copy output" style={{ marginTop: spacing[2] }} />
               </View>
             )}
           </>

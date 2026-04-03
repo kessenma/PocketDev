@@ -33,12 +33,13 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
 // ─── Constants & patterns ───────────────────────────────────────────
 
 const AUTH_URL_PATTERN = /https:\/\/[^\s\])>"']+/g
-const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g
-const THEME_PATTERN = /choose the text style/i
-const LOGIN_METHOD_PATTERN = /select login method/i
-const BROWSER_DIDNT_OPEN_PATTERN = /browser didn't open|use the url below/i
-const CODE_PROMPT_PATTERN = /paste code here/i
-const AUTH_SUCCESS_PATTERNS = [/successfully authenticated/i, /logged in as/i, /you are logged in/i]
+const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b[=>][\x20-\x2F]*[\x30-\x7E]?/g
+// PTY output often strips spaces after ANSI removal, so patterns use \s* between words
+const THEME_PATTERN = /choose\s*the\s*text\s*style|Dark\s*mode|Light\s*mode/i
+const LOGIN_METHOD_PATTERN = /select\s*login\s*method/i
+const BROWSER_DIDNT_OPEN_PATTERN = /browser\s*didn.t\s*open|use\s*the\s*url\s*below/i
+const CODE_PROMPT_PATTERN = /paste\s*code\s*here/i
+const AUTH_SUCCESS_PATTERNS = [/successfully\s*authenticated/i, /logged\s*in\s*as/i, /you\s*are\s*logged\s*in/i]
 
 const MAX_OUTPUT_LENGTH = 16_000
 const OUTPUT_EXCERPT_LENGTH = 1_500
@@ -96,11 +97,14 @@ function parseAuthState(session: InternalAuthSession): {
   const clean = session.cleanOutput
   const prompt = derivePrompt(session.output)
 
-  // Extract OAuth URL
-  const urls = clean.match(AUTH_URL_PATTERN)
-  const authUrl = urls?.find((u) =>
+  // Extract OAuth URL — check both cleaned and raw output since ANSI stripping
+  // can mangle URLs. The raw output preserves the URL but may have escape codes around it.
+  const rawUrls = session.output.match(AUTH_URL_PATTERN)
+  const cleanUrls = clean.match(AUTH_URL_PATTERN)
+  const allUrls = [...(cleanUrls ?? []), ...(rawUrls ?? [])]
+  const authUrl = allUrls.find((u) =>
     u.includes('claude.com') || u.includes('anthropic.com') || u.includes('oauth'),
-  ) ?? urls?.[urls.length - 1] ?? null
+  ) ?? allUrls[allUrls.length - 1] ?? null
 
   // Check for success
   for (const p of AUTH_SUCCESS_PATTERNS) {
