@@ -18,9 +18,14 @@ function getHomeDir() {
   return process.env.HOME ?? process.env.USERPROFILE ?? '/root'
 }
 
+function getShell() {
+  return process.env.SHELL ?? '/bin/bash'
+}
+
 function buildShellCommand(cmd: string): string {
   return `
 export HOME="${getHomeDir()}"
+export SHELL="${getShell()}"
 export NVM_DIR="$HOME/.nvm"
 export PNPM_HOME="$HOME/.local/share/pnpm"
 export BUN_INSTALL="$HOME/.bun"
@@ -40,7 +45,7 @@ async function execShell(cmd: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<S
   const proc = Bun.spawn(['bash', '-lc', buildShellCommand(cmd)], {
     stdout: 'pipe',
     stderr: 'pipe',
-    env: { ...process.env, HOME: getHomeDir() },
+    env: { ...process.env, HOME: getHomeDir(), SHELL: getShell() },
   })
 
   const timer = setTimeout(() => proc.kill(), timeoutMs)

@@ -1,9 +1,12 @@
 import type { ClaudeSetupStatus } from '@pocketdev/shared/types'
 
-/** Run a command in a login shell with HOME explicitly set */
+/** Run a command in a login shell with HOME explicitly set.
+ *  Sources ~/.bashrc explicitly because `bash -l` only reads ~/.profile on Linux,
+ *  but many installers (including Claude Code native) write PATH entries to ~/.bashrc. */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
-  const proc = Bun.spawn(['bash', '-lc', cmd], {
+  const wrappedCmd = `source ~/.bashrc 2>/dev/null; ${cmd}`
+  const proc = Bun.spawn(['bash', '-lc', wrappedCmd], {
     stdout: 'pipe',
     stderr: 'pipe',
     env: { ...process.env, HOME: home },
@@ -22,8 +25,9 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
 
 // Common paths where claude might be installed but not yet in PATH
 const CLAUDE_PATHS = [
-  '~/.local/bin/claude',
+  '~/.claude/local/bin/claude',
   '~/.claude/bin/claude',
+  '~/.local/bin/claude',
   '/usr/local/bin/claude',
   '~/.nvm/versions/node/*/bin/claude',
 ]

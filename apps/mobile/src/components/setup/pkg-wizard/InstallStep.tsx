@@ -7,7 +7,8 @@ import { postInstallPkgTool } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { Check, Clock, RefreshCw, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react-native'
 import type { PkgInstallTool, PkgManagerStatus } from '@pocketdev/shared/types'
-import { buildInstallPlan, getNextInstallIndex, type ToolInstallStatus } from './model'
+import CopyButton from '../../shared/CopyButton'
+import { buildSelectedInstallPlan, getNextInstallIndex, type ToolInstallStatus } from './model'
 
 interface ToolProgress {
   id: PkgInstallTool
@@ -26,11 +27,12 @@ type WizardAction =
 
 interface Props {
   pkgStatus: PkgManagerStatus
+  selectedTools: PkgInstallTool[]
   dispatch: (action: WizardAction) => void
 }
 
-function buildToolQueue(pkgStatus: PkgManagerStatus, isDark: boolean): ToolProgress[] {
-  return buildInstallPlan(pkgStatus).map((item) => ({
+function buildToolQueue(pkgStatus: PkgManagerStatus, selectedTools: PkgInstallTool[], isDark: boolean): ToolProgress[] {
+  return buildSelectedInstallPlan(pkgStatus, selectedTools).map((item) => ({
     ...item,
     status: 'queued' as const,
     logo:
@@ -44,10 +46,10 @@ function buildToolQueue(pkgStatus: PkgManagerStatus, isDark: boolean): ToolProgr
   }))
 }
 
-export default function InstallStep({ pkgStatus, dispatch }: Props) {
+export default function InstallStep({ pkgStatus, selectedTools, dispatch }: Props) {
   const { colors, isDark } = useTheme()
   const server = useConnectionStore((s) => s.server)
-  const [toolQueue, setToolQueue] = useState<ToolProgress[]>(() => buildToolQueue(pkgStatus, isDark))
+  const [toolQueue, setToolQueue] = useState<ToolProgress[]>(() => buildToolQueue(pkgStatus, selectedTools, isDark))
   const [currentIndex, setCurrentIndex] = useState(0)
   const [failedIndex, setFailedIndex] = useState<number | null>(null)
   const [isRunning, setIsRunning] = useState(false)
@@ -235,6 +237,13 @@ export default function InstallStep({ pkgStatus, dispatch }: Props) {
                   <View style={[styles.commandBlock, { backgroundColor: colors.background }]}>
                     <Text style={[styles.commandText, { color: colors.text }]}>{tool.description}</Text>
                   </View>
+
+                  {(tool.output || tool.error) && (
+                    <CopyButton
+                      value={tool.output || tool.error || ''}
+                      label="Copy summary"
+                    />
+                  )}
 
                   <ScrollView
                     style={[styles.outputBox, { backgroundColor: colors.background }]}

@@ -4,43 +4,51 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { Assets } from '../../../../assets'
 import { Check, X, Info } from 'lucide-react-native'
-import type { PkgManagerStatus } from '@pocketdev/shared/types'
-import { buildInstallPlan } from './model'
+import type { PkgInstallTool, PkgManagerStatus } from '@pocketdev/shared/types'
+import { buildInstallPlan, buildSelectedInstallPlan } from './model'
 
 type WizardAction =
+  | { type: 'TOGGLE_TOOL'; tool: PkgInstallTool }
   | { type: 'STEP_COMPLETE'; step: 'review' }
 
 interface Props {
   pkgStatus: PkgManagerStatus
+  selectedTools: PkgInstallTool[]
   dispatch: (action: WizardAction) => void
 }
 export { buildInstallPlan }
 
-export default function ReviewStep({ pkgStatus, dispatch }: Props) {
+export default function ReviewStep({ pkgStatus, selectedTools, dispatch }: Props) {
   const { colors, isDark } = useTheme()
-  const installPlan = buildInstallPlan(pkgStatus)
-
-  const tools = [
-    { id: 'nvm', name: 'nvm', installed: pkgStatus.nvm.installed, version: pkgStatus.nvm.version, logo: isDark ? Assets.nvmWhite : Assets.nvmBlack },
-    { id: 'npm', name: 'Node.js + npm', installed: pkgStatus.npm.installed, version: pkgStatus.npm.version, logo: isDark ? Assets.npmWhite : Assets.npmBlack },
-    { id: 'pnpm', name: 'pnpm', installed: pkgStatus.pnpm.installed, version: pkgStatus.pnpm.version, logo: isDark ? Assets.pnpmWhite : Assets.pnpmBlack },
-    { id: 'bun', name: 'Bun', installed: pkgStatus.bun.installed, version: pkgStatus.bun.version, logo: isDark ? Assets.bunWhite : Assets.bunBlack },
-  ]
+  const tools = buildInstallPlan(pkgStatus).map((tool) => ({
+    ...tool,
+    version:
+      tool.id === 'nvm' ? pkgStatus.nvm.version
+        : tool.id === 'npm' ? pkgStatus.npm.version
+          : tool.id === 'pnpm' ? pkgStatus.pnpm.version
+            : pkgStatus.bun.version,
+    logo:
+      tool.id === 'nvm' ? (isDark ? Assets.nvmWhite : Assets.nvmBlack)
+        : tool.id === 'npm' ? (isDark ? Assets.npmWhite : Assets.npmBlack)
+          : tool.id === 'pnpm' ? (isDark ? Assets.pnpmWhite : Assets.pnpmBlack)
+            : (isDark ? Assets.bunWhite : Assets.bunBlack),
+  }))
+  const selectedPlan = buildSelectedInstallPlan(pkgStatus, selectedTools)
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, { color: colors.text }]}>Installation Plan</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {installPlan.length > 0
-            ? `${installPlan.length} tool${installPlan.length > 1 ? 's' : ''} will be installed on your server.`
-            : 'All package managers are installed.'}
+          {selectedPlan.length > 0
+            ? `${selectedPlan.length} tool${selectedPlan.length > 1 ? 's' : ''} selected for install or reinstall.`
+            : 'All package managers are installed. Select any tool below if you want to reinstall it.'}
         </Text>
 
         {/* Tool status list */}
         <View style={styles.toolList}>
           {tools.map((tool) => {
-            const planItem = installPlan.find((p) => p.id === tool.id)
+            const isSelected = selectedTools.includes(tool.id)
             return (
               <View key={tool.id} style={[styles.toolCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.toolHeader}>
@@ -62,47 +70,74 @@ export default function ReviewStep({ pkgStatus, dispatch }: Props) {
                   )}
                 </View>
 
-                {/* Planned action for missing tools */}
-                {planItem && (
-                  <View style={styles.commandSection}>
-                    <View style={[styles.commandBlock, { backgroundColor: colors.background }]}>
-                      <Text style={[styles.commandText, { color: colors.text }]}>
-                        PocketDev will install {planItem.name} on the server.
-                      </Text>
-                    </View>
-                    <Text style={[styles.commandDesc, { color: colors.textTertiary }]}>
-                      {planItem.description}
+                <View style={styles.commandSection}>
+                  <View style={[styles.commandBlock, { backgroundColor: colors.background }]}>
+                    <Text style={[styles.commandText, { color: colors.text }]}>
+                      {tool.installed
+                        ? isSelected ? `PocketDev will reinstall ${tool.name}.` : `${tool.name} is already installed.`
+                        : `PocketDev will install ${tool.name} on the server.`}
                     </Text>
                   </View>
-                )}
+                  <Text style={[styles.commandDesc, { color: colors.textTertiary }]}>
+                    {tool.description}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.selectionButton,
+                    {
+                      backgroundColor: isSelected ? colors.primary : colors.background,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => dispatch({ type: 'TOGGLE_TOOL', tool: tool.id })}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.selectionButtonText,
+                    { color: isSelected ? colors.primaryText : colors.text },
+                  ]}>
+                    {tool.installed
+                      ? isSelected ? 'Reinstall selected' : 'Reinstall'
+                      : isSelected ? 'Will install' : 'Skip install'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             )
           })}
         </View>
 
-        {/* Info note */}
-        {installPlan.length > 0 && (
+        {selectedPlan.length > 0 && (
           <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Info color={colors.textTertiary} size={16} strokeWidth={2} />
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              All tools install to your home directory — no sudo required.
+              Missing tools are preselected. Installed tools stay untouched unless you explicitly choose reinstall.
+            </Text>
+          </View>
+        )}
+
+        {selectedPlan.length === 0 && (
+          <View style={[styles.infoBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Info color={colors.textTertiary} size={16} strokeWidth={2} />
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+              No actions selected. Continue to keep your current package setup as-is.
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Install button */}
-      {installPlan.length > 0 && (
-        <TouchableOpacity
-          style={[styles.installButton, { backgroundColor: colors.primary }]}
-          onPress={() => dispatch({ type: 'STEP_COMPLETE', step: 'review' })}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.installButtonText, { color: colors.primaryText }]}>
-            Install {installPlan.length} tool{installPlan.length > 1 ? 's' : ''}
-          </Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={[styles.installButton, { backgroundColor: colors.primary }]}
+        onPress={() => dispatch({ type: 'STEP_COMPLETE', step: 'review' })}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.installButtonText, { color: colors.primaryText }]}>
+          {selectedPlan.length > 0
+            ? `${selectedPlan.length === 1 ? 'Run 1 action' : `Run ${selectedPlan.length} actions`}`
+            : 'Done'}
+        </Text>
+      </TouchableOpacity>
     </View>
   )
 }
@@ -171,6 +206,17 @@ const styles = StyleSheet.create({
   commandDesc: {
     ...typographyScale.xs,
     paddingLeft: spacing[1],
+  },
+  selectionButton: {
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing[3],
+  },
+  selectionButtonText: {
+    ...typographyScale.sm,
+    fontWeight: '600',
   },
   infoBox: {
     flexDirection: 'row',

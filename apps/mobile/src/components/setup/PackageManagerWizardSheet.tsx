@@ -10,7 +10,8 @@ import DetectStep from './pkg-wizard/DetectStep'
 import ReviewStep from './pkg-wizard/ReviewStep'
 import InstallStep from './pkg-wizard/InstallStep'
 import VerifyStep from './pkg-wizard/VerifyStep'
-import type { PkgManagerStatus, PkgWizardStep, PkgWizardStepStatus } from '@pocketdev/shared/types'
+import type { PkgInstallTool, PkgManagerStatus, PkgWizardStep, PkgWizardStepStatus } from '@pocketdev/shared/types'
+import { getDefaultSelectedTools } from './pkg-wizard/model'
 
 interface Props {
   visible: boolean
@@ -26,6 +27,7 @@ interface WizardState {
   currentStep: PkgWizardStep
   stepStatuses: Record<PkgWizardStep, PkgWizardStepStatus>
   pkgStatus: PkgManagerStatus | null
+  selectedTools: PkgInstallTool[]
   error: string | null
   allConfigured: boolean
 }
@@ -34,6 +36,7 @@ type WizardAction =
   | { type: 'DETECTION_COMPLETE'; pkgStatus: PkgManagerStatus }
   | { type: 'STEP_COMPLETE'; step: PkgWizardStep }
   | { type: 'STEP_FAILED'; step: PkgWizardStep; error: string }
+  | { type: 'TOGGLE_TOOL'; tool: PkgInstallTool }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
 
@@ -46,6 +49,7 @@ function getInitialState(): WizardState {
     currentStep: 'detect',
     stepStatuses,
     pkgStatus: null,
+    selectedTools: [],
     error: null,
     allConfigured: false,
   }
@@ -72,23 +76,6 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       const ps = action.pkgStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
-
-      // If all 4 tools are installed, skip everything
-      const allInstalled = ps.nvm.installed && ps.npm.installed && ps.pnpm.installed && ps.bun.installed
-      if (allInstalled) {
-        newStatuses['review'] = 'skipped'
-        newStatuses['install'] = 'skipped'
-        newStatuses['verify'] = 'skipped'
-        return {
-          ...state,
-          currentStep: 'detect',
-          stepStatuses: newStatuses,
-          pkgStatus: ps,
-          allConfigured: true,
-        }
-      }
-
-      // Otherwise advance to review
       newStatuses['review'] = 'active'
 
       return {
@@ -96,12 +83,26 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         currentStep: 'review',
         stepStatuses: newStatuses,
         pkgStatus: ps,
+        selectedTools: getDefaultSelectedTools(ps),
+        allConfigured: false,
       }
     }
 
     case 'STEP_COMPLETE': {
       const newStatuses = { ...state.stepStatuses }
       newStatuses[action.step] = 'completed'
+
+      if (action.step === 'review' && state.selectedTools.length === 0) {
+        newStatuses['install'] = 'skipped'
+        newStatuses['verify'] = 'skipped'
+        return {
+          ...state,
+          currentStep: 'review',
+          stepStatuses: newStatuses,
+          error: null,
+          allConfigured: true,
+        }
+      }
 
       const currentIndex = ALL_STEPS.indexOf(action.step)
       const next = findNextActiveStep(newStatuses, currentIndex)
@@ -125,6 +126,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, stepStatuses: newStatuses, error: action.error }
     }
 
+    case 'TOGGLE_TOOL': {
+      const selectedTools = state.selectedTools.includes(action.tool)
+        ? state.selectedTools.filter((tool) => tool !== action.tool)
+        : [...state.selectedTools, action.tool]
+
+      return { ...state, selectedTools, allConfigured: false }
+    }
+
     case 'GO_BACK': {
       const currentIndex = ALL_STEPS.indexOf(state.currentStep)
       const prev = findPrevActiveStep(state.stepStatuses, currentIndex)
@@ -134,7 +143,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       newStatuses[state.currentStep] = 'pending'
       newStatuses[prev] = 'active'
 
-      return { ...state, currentStep: prev, stepStatuses: newStatuses, error: null }
+      return { ...state, currentStep: prev, stepStatuses: newStatuses, error: null, allConfigured: false }
     }
 
     case 'RETRY': {
@@ -208,9 +217,9 @@ export default function PackageManagerWizardSheet({ visible, onClose, onComplete
       case 'detect':
         return <DetectStep dispatch={dispatch} />
       case 'review':
-        return <ReviewStep pkgStatus={state.pkgStatus!} dispatch={dispatch} />
+        return <ReviewStep pkgStatus={state.pkgStatus!} selectedTools={state.selectedTools} dispatch={dispatch} />
       case 'install':
-        return <InstallStep pkgStatus={state.pkgStatus!} dispatch={dispatch} />
+        return <InstallStep pkgStatus={state.pkgStatus!} selectedTools={state.selectedTools} dispatch={dispatch} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
