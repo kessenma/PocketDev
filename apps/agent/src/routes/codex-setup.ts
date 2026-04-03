@@ -4,6 +4,7 @@ import {
   checkCodexStatus,
   getCodexAuthStatus,
   installCodex,
+  replayCodexAuthCallback,
   startCodexAuth,
   submitCodexAuthInput,
   verifyCodexAuth,
@@ -57,6 +58,30 @@ export const codexSetupRoutes = new Elysia({ prefix: '/codex-setup' })
 
     try {
       return submitCodexAuthInput(params.sessionId, code)
+    } catch (error) {
+      set.status = 404
+      return { error: error instanceof Error ? error.message : 'Codex auth session not found' }
+    }
+  })
+
+  .post('/auth/callback/:sessionId', async ({ request, params, body, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    const callbackUrl = typeof body === 'object' && body && 'callback_url' in body
+      ? String((body as Record<string, unknown>).callback_url ?? '')
+      : ''
+    if (!callbackUrl.trim()) {
+      set.status = 400
+      return { error: 'Callback URL is required' }
+    }
+
+    try {
+      const result = await replayCodexAuthCallback(params.sessionId, callbackUrl)
+      if (!result.success) {
+        set.status = result.status_code ? 400 : 502
+      }
+      return result
     } catch (error) {
       set.status = 404
       return { error: error instanceof Error ? error.message : 'Codex auth session not found' }

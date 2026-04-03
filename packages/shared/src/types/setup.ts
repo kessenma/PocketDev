@@ -105,6 +105,36 @@ export interface ClaudeSetupStatus {
 export type ClaudeWizardStep = 'detect' | 'install' | 'authenticate' | 'verify'
 export type ClaudeWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
+export type ClaudeAuthSessionState =
+  | 'starting'
+  | 'awaiting_theme'
+  | 'awaiting_method'
+  | 'awaiting_browser'
+  | 'awaiting_code'
+  | 'pending'
+  | 'authenticated'
+  | 'failed'
+
+export interface ClaudeAuthSessionStatus {
+  session_id: string
+  state: ClaudeAuthSessionState
+  auth_url: string | null
+  prompt: string | null
+  output_excerpt: string | null
+  can_submit_code: boolean
+  authenticated: boolean
+  completed: boolean
+  error: string | null
+}
+
+export interface ClaudeAuthStartResult extends ClaudeAuthSessionStatus {}
+
+export interface ClaudeAuthSubmitRequest {
+  code: string
+}
+
+export interface ClaudeAuthSubmitResult extends ClaudeAuthSessionStatus {}
+
 // ─── Codex CLI wizard types ────────────────────────────────────────
 
 export interface CodexSetupStatus {
@@ -154,8 +184,29 @@ export interface CodexAuthSubmitRequest {
 
 export interface CodexAuthSubmitResult extends CodexAuthSessionStatus {}
 
+export interface CodexAuthCallbackReplayRequest {
+  callback_url: string
+}
+
+export interface CodexAuthCallbackReplayResult {
+  success: boolean
+  callback_url: string
+  status_code: number | null
+  error: string | null
+}
+
 export type CodexWizardStep = 'detect' | 'review' | 'install' | 'authenticate' | 'verify'
 export type CodexWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
+export interface BrowserSessionCreateRequest {
+  target_url: string
+}
+
+export interface BrowserSessionCreateResult {
+  session_id: string
+  target_url: string
+  proxied_url: string
+}
 
 // ─── Python wizard types ──────────────────────────────────────────
 

@@ -1,29 +1,17 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { View, Text, Image, TouchableOpacity, TextInput, Linking, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native'
+import React, { useState, useEffect, useCallback } from 'react'
+import { View, Text, Image, TouchableOpacity, TextInput, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
-import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import { useConnectionStore } from '../../../stores/connection'
-import { fetchClaudeSetupStatus } from '../../../services/api'
+import {
+  fetchClaudeAuthStatus,
+  postStartClaudeAuth,
+  postSubmitClaudeAuth,
+} from '../../../services/api'
 import { Assets } from '../../../../assets'
-import { ExternalLink, CheckCircle, RefreshCw, Send, LogIn, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react-native'
-
-// Running `claude` triggers the login flow on first use
-const AUTH_COMMAND = 'claude'
-const URL_PATTERN = /https:\/\/[^\s\]\)>"']+/g
-const ERROR_PATTERNS = [/^error:/im, /^fatal:/im, /permission denied/im, /command not found/im]
-// NOTE: Do NOT include /welcome/i — "Welcome to Claude Code" appears on first run before login
-const AUTH_SUCCESS_PATTERNS = [/successfully authenticated/i, /logged in as/i, /you are logged in/i]
-// Interactive prompt patterns to auto-answer
-const THEME_SELECTOR_PATTERN = /choose the text style/i
-const LOGIN_METHOD_PATTERN = /select login method/i
-// Detect the OAuth URL prompt
-const URL_PROMPT_PATTERN = /browser didn't open|use the url below/i
-const CODE_PROMPT_PATTERN = /paste code here/i
-// Strip ANSI codes for cleaner pattern matching
-const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b\][\d;]*[^\x07]*\x07/g
-
-type AuthPhase = 'checking' | 'not-installed' | 'running' | 'url-detected' | 'opened' | 'done' | 'failed'
+import { ExternalLink, CheckCircle, RefreshCw, Send, ShieldCheck, ChevronDown } from 'lucide-react-native'
+import type { ClaudeAuthSessionStatus } from '@pocketdev/shared/types'
+import ServerWebBrowserSheet from '../../browser/ServerWebBrowserSheet'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'authenticate' }
@@ -37,151 +25,107 @@ interface Props {
 export default function AuthenticateStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
   const server = useConnectionStore((s) => s.server)
-  const [phase, setPhase] = useState<AuthPhase>('checking')
-  const [oauthUrl, setOauthUrl] = useState<string | null>(null)
-  const [connectionString, setConnectionString] = useState('')
+  const [session, setSession] = useState<ClaudeAuthSessionStatus | null>(null)
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [browserVisible, setBrowserVisible] = useState(false)
+  const [browserStartUrl, setBrowserStartUrl] = useState<string | null>(null)
+  const [openedBrowser, setOpenedBrowser] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
-  const scrollRef = useRef<ScrollView>(null)
-  const phaseRef = useRef<AuthPhase>('checking')
-  phaseRef.current = phase
+  const [error, setError] = useState<string | null>(null)
 
-  // Pre-check: verify claude is installed before attempting auth
-  useEffect(() => {
+  // ─── Start auth session on mount ──────────────────────────────────
+
+  const startSession = useCallback(async () => {
     if (!server) return
-    ;(async () => {
-      try {
-        const status = await fetchClaudeSetupStatus(server.ip, server.port)
-        if (status.installed) {
-          setPhase('running')
-        } else {
-          setPhase('not-installed')
-        }
-      } catch {
-        // If check fails, try auth anyway
-        setPhase('running')
-      }
-    })()
-  }, [server])
+    setLoading(true)
+    setError(null)
+    try {
+      const next = await postStartClaudeAuth(server.ip, server.port)
+      setSession(next)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to start Claude authentication.'
+      setError(message)
+      dispatch({ type: 'STEP_FAILED', step: 'authenticate', error: message })
+    } finally {
+      setLoading(false)
+    }
+  }, [dispatch, server])
 
-  const themeHandledRef = useRef(false)
-  const loginMethodHandledRef = useRef(false)
-
-  const {
-    output, hasError, done, connected,
-    sendCommand, sendInput, reset,
-  } = useTerminalCommand({
-    errorPatterns: ERROR_PATTERNS,
-    onOutput: (chunk, fullOutput) => {
-      const cleanChunk = chunk.replace(ANSI_RE, '')
-      const cleanFull = fullOutput.replace(ANSI_RE, '')
-
-      // Auto-select theme on first run — send "1" to pick Dark mode
-      if (!themeHandledRef.current && THEME_SELECTOR_PATTERN.test(cleanChunk)) {
-        themeHandledRef.current = true
-        console.log('[claude-auth] Theme selector detected, auto-selecting Dark mode')
-        setTimeout(() => sendInput('1\n'), 500)
-        return
-      }
-
-      // Auto-select login method — send "1" for Claude subscription
-      if (!loginMethodHandledRef.current && LOGIN_METHOD_PATTERN.test(cleanChunk)) {
-        loginMethodHandledRef.current = true
-        console.log('[claude-auth] Login method selector detected, auto-selecting Claude subscription')
-        setTimeout(() => sendInput('1\n'), 500)
-        return
-      }
-
-      // Detect auth success in output
-      for (const p of AUTH_SUCCESS_PATTERNS) {
-        if (p.test(cleanChunk) && phaseRef.current !== 'done') {
-          setPhase('done')
-          return
-        }
-      }
-
-      // Detect OAuth URL — the URL appears after "Browser didn't open"
-      // Check full output since the URL may span multiple chunks
-      if (URL_PROMPT_PATTERN.test(cleanFull) || CODE_PROMPT_PATTERN.test(cleanChunk)) {
-        const urls = cleanFull.match(URL_PATTERN)
-        if (urls && !oauthUrl) {
-          // Find the OAuth URL — it will contain claude.com or anthropic.com
-          const authUrl = urls.find((u) =>
-            u.includes('claude.com') || u.includes('anthropic.com') || u.includes('oauth'),
-          ) ?? urls[urls.length - 1]
-          if (authUrl) {
-            console.log('[claude-auth] OAuth URL detected:', authUrl.slice(0, 60))
-            setOauthUrl(authUrl)
-            setPhase('url-detected')
-          }
-        }
-      }
-
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
-    },
-  })
-
-  // Send auth command when both WS is connected and pre-check passed
-  const authSentRef = useRef(false)
   useEffect(() => {
-    if (connected && phase === 'running' && !authSentRef.current) {
-      authSentRef.current = true
-      console.log('[claude-auth] WS connected + pre-check passed, sending auth command')
-      setTimeout(() => sendCommand(AUTH_COMMAND), 300)
+    if (!session && !loading) {
+      void startSession()
     }
-  }, [connected, phase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, session, startSession])
 
-  // Track terminal exit
-  if (done && phase !== 'done' && phase !== 'failed' && phase !== 'checking' && phase !== 'not-installed') {
-    if (hasError) {
-      setPhase('failed')
-    } else {
-      setPhase('done')
+  // ─── Poll for status ──────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!server || !session?.session_id || session.completed) return
+    const timer = setInterval(() => {
+      void (async () => {
+        try {
+          const next = await fetchClaudeAuthStatus(server.ip, server.port, session.session_id)
+          setSession(next)
+          if (next.authenticated) {
+            dispatch({ type: 'STEP_COMPLETE', step: 'authenticate' })
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to check auth status.')
+        }
+      })()
+    }, 1500)
+    return () => clearInterval(timer)
+  }, [dispatch, server, session])
+
+  // ─── Auto-open browser when URL appears ───────────────────────────
+
+  useEffect(() => {
+    if (session?.auth_url && !browserVisible && !openedBrowser && !session.authenticated) {
+      setBrowserStartUrl(session.auth_url)
+      setBrowserVisible(true)
+      setOpenedBrowser(true)
     }
-  }
+  }, [browserVisible, openedBrowser, session])
+
+  // ─── Handlers ─────────────────────────────────────────────────────
 
   const handleOpenBrowser = useCallback(() => {
-    if (oauthUrl) {
-      Linking.openURL(oauthUrl)
-      setPhase('opened')
-    }
-  }, [oauthUrl])
+    if (!session?.auth_url) return
+    setBrowserStartUrl(session.auth_url)
+    setBrowserVisible(true)
+    setOpenedBrowser(true)
+  }, [session])
 
-  const handleSubmitCode = useCallback(() => {
-    if (!connectionString.trim()) return
-    sendInput(connectionString.trim() + '\n')
-    setConnectionString('')
-  }, [connectionString, sendInput])
+  const handleSubmitCode = useCallback(async () => {
+    if (!server || !session?.session_id || !input.trim()) return
+    setLoading(true)
+    setError(null)
+    try {
+      const next = await postSubmitClaudeAuth(server.ip, server.port, session.session_id, input.trim())
+      setInput('')
+      setSession(next)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit code.')
+    } finally {
+      setLoading(false)
+    }
+  }, [input, server, session])
 
   const handleContinue = useCallback(() => {
     dispatch({ type: 'STEP_COMPLETE', step: 'authenticate' })
   }, [dispatch])
 
-  // Manual "I've signed in" — verify via API then continue
-  const handleManualComplete = useCallback(async () => {
-    if (!server) return
-    try {
-      const status = await fetchClaudeSetupStatus(server.ip, server.port)
-      if (status.authenticated) {
-        setPhase('done')
-      } else {
-        // Not authenticated yet — keep waiting
-        setPhase('opened')
-      }
-    } catch {
-      // API failed, just try continuing to verify step
-      dispatch({ type: 'STEP_COMPLETE', step: 'authenticate' })
-    }
-  }, [server, dispatch])
+  // ─── Derived state ────────────────────────────────────────────────
 
-  function handleRetry() {
-    reset()
-    authSentRef.current = false
-    themeHandledRef.current = false
-    setPhase('running')
-    setOauthUrl(null)
-    setConnectionString('')
-    sendCommand(AUTH_COMMAND)
-  }
+  const phaseDescription =
+    session?.authenticated
+      ? 'Claude Code is signed in. Continue to verify.'
+      : session?.state === 'awaiting_browser' || session?.state === 'awaiting_code'
+        ? 'Complete the sign-in in the browser, then paste any code if prompted.'
+        : session?.state === 'failed'
+          ? (session.error ?? 'Claude authentication failed.')
+          : 'Starting the sign-in flow on your server...'
 
   return (
     <KeyboardAvoidingView
@@ -189,117 +133,80 @@ export default function AuthenticateStep({ dispatch }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={120}
     >
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <Image
-          source={isDark ? Assets.claudeWhite : Assets.claudeBlack}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <View style={styles.headerText}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Hero */}
+        <View style={styles.hero}>
+          <Image
+            source={isDark ? Assets.claudeWhite : Assets.claudeBlack}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={[styles.title, { color: colors.text }]}>Sign In to Anthropic</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Authenticate Claude CLI with your Anthropic account
           </Text>
         </View>
-      </View>
 
-      {/* Pre-check: not installed */}
-      {phase === 'checking' && (
-        <View style={[styles.flowCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.flowRow}>
-            <ActivityIndicator color={colors.primary} size="small" />
-            <View style={styles.flowInfo}>
-              <Text style={[styles.flowTitle, { color: colors.text }]}>Checking Claude CLI...</Text>
-              <Text style={[styles.flowHint, { color: colors.textTertiary }]}>
-                Verifying installation before authentication
-              </Text>
-            </View>
+        {/* Status card */}
+        <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: session?.authenticated ? '#22c55e' : colors.border }]}>
+          <View style={styles.statusHeader}>
+            {session?.authenticated ? (
+              <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
+            ) : loading && !session ? (
+              <ActivityIndicator color={colors.primary} size="small" />
+            ) : (
+              <ShieldCheck color={colors.primary} size={18} strokeWidth={2.25} />
+            )}
+            <Text style={[styles.statusTitle, { color: colors.text }]}>
+              {session?.authenticated ? 'Signed in' : loading && !session ? 'Starting...' : 'Anthropic sign-in'}
+            </Text>
           </View>
+          <Text style={[styles.statusCopy, { color: session?.state === 'failed' ? colors.error : colors.textSecondary }]}>
+            {error ?? phaseDescription}
+          </Text>
         </View>
-      )}
 
-      {phase === 'not-installed' && (
-        <View style={[styles.flowCard, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-          <View style={styles.flowRow}>
-            <AlertTriangle color={colors.error} size={20} strokeWidth={2} />
-            <View style={styles.flowInfo}>
-              <Text style={[styles.flowTitle, { color: colors.text }]}>Claude CLI not found</Text>
-              <Text style={[styles.flowHint, { color: colors.error }]}>
-                Go back to the install step and ensure Claude is installed first.
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* Auth flow card */}
-      {phase !== 'checking' && phase !== 'not-installed' && (
-      <View style={[
-        styles.flowCard,
-        {
-          backgroundColor: colors.surface,
-          borderColor: phase === 'done' ? '#22c55e'
-            : phase === 'failed' ? colors.error
-            : phase === 'opened' ? colors.primary
-            : colors.border,
-        },
-      ]}>
-        {phase === 'running' && (
-          <View style={styles.flowRow}>
-            <ActivityIndicator color={colors.primary} size="small" />
-            <View style={styles.flowInfo}>
-              <Text style={[styles.flowTitle, { color: colors.text }]}>Starting authentication...</Text>
-              <Text style={[styles.flowHint, { color: colors.textTertiary }]}>
-                Waiting for sign-in URL from Claude CLI
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {phase === 'url-detected' && (
-          <View style={styles.flowContent}>
-            <View style={styles.flowRow}>
-              <LogIn color={colors.primary} size={20} strokeWidth={2} />
-              <Text style={[styles.flowTitle, { color: colors.text }]}>Sign-in URL ready</Text>
-            </View>
-            <Text style={[styles.flowHint, { color: colors.textSecondary }]}>
-              Open this link in your browser to authenticate:
+        {/* Browser step */}
+        {session?.auth_url && !session.authenticated && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Browser step</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              Sign in with your Anthropic account in the browser. The sign-in page should open automatically.
             </Text>
             <TouchableOpacity
-              style={[styles.openButton, { backgroundColor: colors.primary }]}
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
               onPress={handleOpenBrowser}
               activeOpacity={0.7}
             >
-              <ExternalLink color={colors.primaryText} size={16} strokeWidth={2.25} />
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Open in Browser</Text>
+              <ExternalLink color={colors.primaryText} size={18} strokeWidth={2.25} />
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>
+                {openedBrowser ? 'Re-open browser' : 'Open sign-in page'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {phase === 'opened' && (
-          <View style={styles.flowContent}>
-            <View style={styles.flowRow}>
-              <LogIn color={colors.primary} size={20} strokeWidth={2} />
-              <Text style={[styles.flowTitle, { color: colors.text }]}>Complete sign-in</Text>
-            </View>
-            <Text style={[styles.flowHint, { color: colors.textSecondary }]}>
-              Finish signing in in your browser. If prompted, paste the code below:
+        {/* Code entry — shown when Claude CLI asks for a code paste */}
+        {session?.can_submit_code && !session.authenticated && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Paste code</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              If prompted after signing in, paste the code here.
             </Text>
             <View style={styles.inputRow}>
               <TextInput
                 style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-                value={connectionString}
-                onChangeText={setConnectionString}
-                placeholder="Paste code here..."
+                value={input}
+                onChangeText={setInput}
+                placeholder="Paste code here"
                 placeholderTextColor={colors.textTertiary}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
               <TouchableOpacity
-                style={[styles.sendButton, { backgroundColor: connectionString.trim() ? colors.primary : colors.border }]}
+                style={[styles.sendButton, { backgroundColor: input.trim() ? colors.primary : colors.border }]}
                 onPress={handleSubmitCode}
-                disabled={!connectionString.trim()}
+                disabled={!input.trim() || loading}
                 activeOpacity={0.7}
               >
                 <Send color={colors.primaryText} size={16} strokeWidth={2.25} />
@@ -308,84 +215,36 @@ export default function AuthenticateStep({ dispatch }: Props) {
           </View>
         )}
 
-        {phase === 'done' && (
-          <View style={styles.flowRow}>
-            <View style={[styles.doneCircle, { backgroundColor: '#22c55e' }]}>
-              <CheckCircle color="#fff" size={14} strokeWidth={2.5} />
-            </View>
-            <View style={styles.flowInfo}>
-              <Text style={[styles.flowTitle, { color: colors.text }]}>Signed in</Text>
-              <Text style={[styles.flowHint, { color: '#22c55e' }]}>Authentication successful</Text>
-            </View>
-          </View>
+        {/* Output excerpt */}
+        {session?.output_excerpt && (
+          <>
+            <TouchableOpacity
+              style={[styles.outputToggle, { borderColor: colors.border }]}
+              onPress={() => setShowOutput(!showOutput)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
+                Terminal output
+              </Text>
+              {showOutput
+                ? <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />
+                : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
+            </TouchableOpacity>
+            {showOutput && (
+              <View style={[styles.outputBox, { backgroundColor: colors.background }]}>
+                <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
+                  {session.output_excerpt}
+                </Text>
+              </View>
+            )}
+          </>
         )}
+      </ScrollView>
 
-        {phase === 'failed' && (
-          <View style={styles.flowRow}>
-            <View style={[styles.doneCircle, { backgroundColor: colors.error }]}>
-              <RefreshCw color="#fff" size={14} strokeWidth={2.5} />
-            </View>
-            <View style={styles.flowInfo}>
-              <Text style={[styles.flowTitle, { color: colors.text }]}>Authentication failed</Text>
-              <Text style={[styles.flowHint, { color: colors.error }]}>See terminal output for details</Text>
-            </View>
-          </View>
-        )}
-      </View>
-      )}
-
-      {/* "I've signed in" manual button — shown after URL is opened */}
-      {phase === 'opened' && (
+      {/* Bottom actions */}
+      {session?.authenticated && (
         <TouchableOpacity
-          style={[styles.manualCompleteButton, { borderColor: colors.border }]}
-          onPress={handleManualComplete}
-          activeOpacity={0.7}
-        >
-          <CheckCircle color={colors.primary} size={16} strokeWidth={2.25} />
-          <Text style={[styles.manualCompleteText, { color: colors.text }]}>I've completed sign-in</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Collapsible terminal output */}
-      <TouchableOpacity
-        style={[styles.outputToggle, { borderColor: colors.border }]}
-        onPress={() => setShowOutput(!showOutput)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-          Terminal output
-        </Text>
-        {showOutput
-          ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
-          : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
-      </TouchableOpacity>
-
-      {showOutput && (
-        <ScrollView
-          ref={scrollRef}
-          style={[styles.outputBox, { backgroundColor: colors.background }]}
-          nestedScrollEnabled
-        >
-          <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-            {output || 'Waiting for output...'}
-          </Text>
-        </ScrollView>
-      )}
-
-      {/* Actions */}
-      {phase === 'not-installed' && (
-        <TouchableOpacity
-          style={[styles.actionButton, { borderColor: colors.border, borderWidth: 1 }]}
-          onPress={() => dispatch({ type: 'GO_BACK' })}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.buttonText, { color: colors.text }]}>Go Back</Text>
-        </TouchableOpacity>
-      )}
-
-      {phase === 'done' && (
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+          style={[styles.primaryButton, { backgroundColor: colors.primary }]}
           onPress={handleContinue}
           activeOpacity={0.7}
         >
@@ -394,15 +253,25 @@ export default function AuthenticateStep({ dispatch }: Props) {
         </TouchableOpacity>
       )}
 
-      {phase === 'failed' && (
+      {session?.state === 'failed' && (
         <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: colors.error }]}
-          onPress={handleRetry}
+          style={[styles.primaryButton, { backgroundColor: colors.error }]}
+          onPress={() => { setSession(null); setError(null); setOpenedBrowser(false) }}
           activeOpacity={0.7}
         >
           <RefreshCw color="#fff" size={16} strokeWidth={2.25} />
-          <Text style={[styles.buttonText, { color: '#fff' }]}>Retry</Text>
+          <Text style={[styles.buttonText, { color: '#fff' }]}>Restart sign-in</Text>
         </TouchableOpacity>
+      )}
+
+      {/* In-app browser for OAuth */}
+      {browserStartUrl && (
+        <ServerWebBrowserSheet
+          visible={browserVisible}
+          title="Claude Sign-In"
+          initialUrl={browserStartUrl}
+          onClose={() => setBrowserVisible(false)}
+        />
       )}
     </KeyboardAvoidingView>
   )
@@ -413,65 +282,63 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing[3],
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
     gap: spacing[3],
+    paddingBottom: spacing[4],
+  },
+  hero: {
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingTop: spacing[4],
   },
   logo: {
-    width: 36,
-    height: 36,
-  },
-  headerText: {
-    flex: 1,
-    gap: 2,
+    width: 42,
+    height: 42,
   },
   title: {
     ...typographyScale.xl,
     fontWeight: '700',
+    textAlign: 'center',
   },
   subtitle: {
     ...typographyScale.sm,
+    textAlign: 'center',
   },
-  flowCard: {
+  statusCard: {
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     padding: spacing[4],
-  },
-  flowContent: {
-    gap: spacing[3],
-  },
-  flowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[3],
-  },
-  flowInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  flowTitle: {
-    ...typographyScale.base,
-    fontWeight: '600',
-  },
-  flowHint: {
-    ...typographyScale.xs,
-    fontWeight: '500',
-  },
-  doneCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  openButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: spacing[2],
-    paddingVertical: spacing[3],
-    borderRadius: borderRadius.md,
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  statusTitle: {
+    ...typographyScale.base,
+    fontWeight: '700',
+  },
+  statusCopy: {
+    ...typographyScale.sm,
+    lineHeight: 20,
+  },
+  actionCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  cardTitle: {
+    ...typographyScale.base,
+    fontWeight: '700',
+  },
+  cardCopy: {
+    ...typographyScale.sm,
+    lineHeight: 20,
   },
   inputRow: {
     flexDirection: 'row',
@@ -482,13 +349,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
+    paddingVertical: spacing[3],
     ...typographyScale.sm,
     fontFamily: 'monospace',
   },
   sendButton: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -507,7 +374,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   outputBox: {
-    flex: 1,
     borderRadius: borderRadius.md,
     padding: spacing[3],
   },
@@ -516,20 +382,7 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     lineHeight: 16,
   },
-  manualCompleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing[2],
-    paddingVertical: spacing[3],
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-  },
-  manualCompleteText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
-  },
-  actionButton: {
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

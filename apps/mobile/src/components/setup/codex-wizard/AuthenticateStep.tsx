@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { View, Text, Image, TouchableOpacity, TextInput, Linking, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, Image, TouchableOpacity, TextInput, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
-import { fetchCodexAuthStatus, postStartCodexAuth, postSubmitCodexAuth } from '../../../services/api'
+import {
+  fetchCodexAuthStatus,
+  postReplayCodexAuthCallback,
+  postStartCodexAuth,
+  postSubmitCodexAuth,
+} from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { Copy, ExternalLink, RefreshCw, Send, ShieldCheck, Smartphone, Globe } from 'lucide-react-native'
 import type { CodexAuthSessionStatus } from '@pocketdev/shared/types'
+import ServerWebBrowserSheet from '../../browser/ServerWebBrowserSheet'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'authenticate'; authSession?: CodexAuthSessionStatus | null }
@@ -26,6 +32,9 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [openedBrowser, setOpenedBrowser] = useState(false)
+  const [browserVisible, setBrowserVisible] = useState(false)
+  const [browserStartUrl, setBrowserStartUrl] = useState<string | null>(null)
+  const [selectedMethod, setSelectedMethod] = useState<'chatgpt' | 'device-code' | null>(null)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -76,11 +85,16 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     return () => clearInterval(timer)
   }, [dispatch, server, session, syncSession])
 
+  const openEmbeddedBrowser = useCallback((url: string) => {
+    setBrowserStartUrl(url)
+    setBrowserVisible(true)
+    setOpenedBrowser(true)
+  }, [])
+
   const handleOpenBrowser = useCallback(() => {
     if (!session?.auth_url) return
-    Linking.openURL(session.auth_url)
-    setOpenedBrowser(true)
-  }, [session])
+    openEmbeddedBrowser(session.auth_url)
+  }, [openEmbeddedBrowser, session])
 
   const handleSubmit = useCallback(async () => {
     if (!server || !session?.session_id || !input.trim()) return
@@ -101,6 +115,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     if (!server || !session?.session_id) return
     setLoading(true)
     setError(null)
+    setSelectedMethod(choice === '1' ? 'chatgpt' : 'device-code')
     try {
       const next = await postSubmitCodexAuth(server.ip, server.port, session.session_id, choice)
       syncSession(next)
@@ -110,6 +125,30 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
       setLoading(false)
     }
   }, [server, session, syncSession])
+
+  useEffect(() => {
+    if (selectedMethod === 'chatgpt' && session?.auth_url && !browserVisible && !session.authenticated) {
+      openEmbeddedBrowser(session.auth_url)
+    }
+  }, [browserVisible, openEmbeddedBrowser, selectedMethod, session])
+
+  const handleBrowserMatchedUrl = useCallback(async (url: string) => {
+    if (!server || !session?.session_id) return
+    setLoading(true)
+    setError(null)
+    try {
+      const replay = await postReplayCodexAuthCallback(server.ip, server.port, session.session_id, url)
+      if (!replay.success) {
+        setError(replay.error ?? 'Failed to complete Codex auth callback.')
+        return
+      }
+      setBrowserVisible(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete Codex auth callback.')
+    } finally {
+      setLoading(false)
+    }
+  }, [server, session])
 
   function handleCopyCode() {
     if (!session?.verification_code) return
@@ -198,7 +237,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Browser step</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              Open the OpenAI page in a browser that matches the selected flow. If you chose ChatGPT sign-in, that browser must be on the same machine running Codex CLI. If you chose Device Code, you can continue on this device or any other browser.
+              Open the OpenAI page inside PocketDev. If the flow redirects to `localhost:1455/auth/callback`, PocketDev will capture that URL and relay it back to the server machine running Codex CLI.
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
@@ -288,6 +327,17 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             {session?.state === 'failed' ? 'Restart sign-in' : 'Restart auth session'}
           </Text>
         </TouchableOpacity>
+      )}
+
+      {browserStartUrl && (
+        <ServerWebBrowserSheet
+          visible={browserVisible}
+          title="Codex Sign-In"
+          initialUrl={browserStartUrl}
+          onClose={() => setBrowserVisible(false)}
+          matchUrl={(url) => /^http:\/\/(?:localhost|127\.0\.0\.1|\[::1\]|::1):1455\/auth\/callback\?/.test(url)}
+          onMatchedUrl={handleBrowserMatchedUrl}
+        />
       )}
     </KeyboardAvoidingView>
   )

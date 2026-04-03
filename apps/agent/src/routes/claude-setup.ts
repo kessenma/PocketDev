@@ -1,6 +1,12 @@
 import { Elysia } from 'elysia'
 import { authenticateRequest } from '../services/auth.ts'
-import { checkClaudeStatus, verifyClaudeAuth } from '../services/claude-setup.ts'
+import {
+  checkClaudeStatus,
+  verifyClaudeAuth,
+  startClaudeAuth,
+  getClaudeAuthStatus,
+  submitClaudeAuthInput,
+} from '../services/claude-setup.ts'
 
 export const claudeSetupRoutes = new Elysia({ prefix: '/claude-setup' })
   .get('/status', async ({ request, set }) => {
@@ -15,4 +21,38 @@ export const claudeSetupRoutes = new Elysia({ prefix: '/claude-setup' })
     if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
 
     return verifyClaudeAuth()
+  })
+
+  .post('/auth/start', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    return startClaudeAuth()
+  })
+
+  .get('/auth/status/:sessionId', async ({ request, set, params }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      return getClaudeAuthStatus(params.sessionId)
+    } catch {
+      set.status = 404
+      return { error: 'Session not found' }
+    }
+  })
+
+  .post('/auth/submit/:sessionId', async ({ request, set, params, body }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    const { code } = body as { code: string }
+    if (!code) { set.status = 400; return { error: 'Missing code' } }
+
+    try {
+      return submitClaudeAuthInput(params.sessionId, code)
+    } catch {
+      set.status = 404
+      return { error: 'Session not found' }
+    }
   })

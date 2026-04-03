@@ -28,11 +28,14 @@ import type {
   GitConfigureResult,
   GitTestConnectionResult,
   ClaudeSetupStatus,
+  ClaudeAuthSessionStatus,
   CodexSetupStatus,
   CodexInstallResult,
   CodexAuthStartResult,
   CodexAuthSessionStatus,
   CodexAuthSubmitResult,
+  CodexAuthCallbackReplayResult,
+  BrowserSessionCreateResult,
   PythonSetupStatus,
   PkgManagerStatus,
   PkgInstallTool,
@@ -90,6 +93,10 @@ export function buildWsUrl(ip: string, port: number): string {
 
 export function buildTerminalWsUrl(ip: string, port: number): string {
   return `ws://${ip}:${port}/PocketDev/ws/terminal`
+}
+
+export function browserSessionUrl(ip: string, port: number, proxiedPath: string): string {
+  return `http://${ip}:${port}${proxiedPath}`
 }
 
 export async function fetchPrerequisites(ip: string, port: number) {
@@ -441,6 +448,36 @@ export async function postVerifyClaudeAuth(ip: string, port: number): Promise<Cl
   return response.json() as Promise<ClaudeSetupStatus>
 }
 
+export async function postStartClaudeAuth(ip: string, port: number): Promise<ClaudeAuthSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, '/claude-setup/auth/start'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to start Claude auth (${response.status})`)
+  return response.json() as Promise<ClaudeAuthSessionStatus>
+}
+
+export async function fetchClaudeAuthStatus(ip: string, port: number, sessionId: string): Promise<ClaudeAuthSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, `/claude-setup/auth/status/${sessionId}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Claude auth status (${response.status})`)
+  return response.json() as Promise<ClaudeAuthSessionStatus>
+}
+
+export async function postSubmitClaudeAuth(ip: string, port: number, sessionId: string, code: string): Promise<ClaudeAuthSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, `/claude-setup/auth/submit/${sessionId}`), {
+    method: 'POST',
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ code }),
+  })
+  if (!response.ok) throw new Error(`Failed to submit Claude auth code (${response.status})`)
+  return response.json() as Promise<ClaudeAuthSessionStatus>
+}
+
 // ─── Codex CLI Setup ──────────────────────────────────────────────
 
 export async function fetchCodexSetupStatus(ip: string, port: number): Promise<CodexSetupStatus> {
@@ -497,6 +534,41 @@ export async function postSubmitCodexAuth(
   })
   if (!response.ok) throw new Error(`Failed to submit Codex auth code (${response.status})`)
   return response.json() as Promise<CodexAuthSubmitResult>
+}
+
+export async function postReplayCodexAuthCallback(
+  ip: string,
+  port: number,
+  sessionId: string,
+  callbackUrl: string,
+): Promise<CodexAuthCallbackReplayResult> {
+  const response = await fetch(apiUrl(ip, port, `/codex-setup/auth/callback/${encodeURIComponent(sessionId)}`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ callback_url: callbackUrl }),
+  })
+  if (!response.ok) throw new Error(`Failed to replay Codex auth callback (${response.status})`)
+  return response.json() as Promise<CodexAuthCallbackReplayResult>
+}
+
+export async function postCreateBrowserSession(
+  ip: string,
+  port: number,
+  targetUrl: string,
+): Promise<BrowserSessionCreateResult> {
+  const response = await fetch(apiUrl(ip, port, '/browser/sessions'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ target_url: targetUrl }),
+  })
+  if (!response.ok) throw new Error(`Failed to create browser session (${response.status})`)
+  return response.json() as Promise<BrowserSessionCreateResult>
 }
 
 export async function postVerifyCodexAuth(ip: string, port: number): Promise<CodexSetupStatus> {

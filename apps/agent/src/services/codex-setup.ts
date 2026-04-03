@@ -2,6 +2,7 @@ import { createTerminalSession, type TerminalSession } from './terminal.ts'
 import { deleteToolRecord, getToolRecord, setToolAuthenticated, upsertToolPath } from '../db/index.ts'
 import { checkNpm, execShell } from './pkg-setup.ts'
 import type {
+  CodexAuthCallbackReplayResult,
   CodexAuthSessionState,
   CodexAuthSessionStatus,
   CodexAuthStartResult,
@@ -223,6 +224,23 @@ function getSessionOrThrow(sessionId: string): InternalAuthSession {
   return session
 }
 
+function validateCodexCallbackUrl(callbackUrl: string): URL {
+  const url = new URL(callbackUrl)
+  if (url.protocol !== 'http:') {
+    throw new Error('Codex callback must use http')
+  }
+  if (!['localhost', '127.0.0.1', '[::1]', '::1'].includes(url.hostname)) {
+    throw new Error('Codex callback must target localhost')
+  }
+  if ((url.port || '80') !== '1455') {
+    throw new Error('Codex callback must target port 1455')
+  }
+  if (url.pathname !== '/auth/callback') {
+    throw new Error('Codex callback path is invalid')
+  }
+  return url
+}
+
 function disposeExistingSessions() {
   for (const session of authSessions.values()) {
     session.terminal.kill()
@@ -366,6 +384,60 @@ export function submitCodexAuthInput(sessionId: string, code: string): CodexAuth
   session.state = 'pending'
   session.updatedAt = Date.now()
   return toAuthStatus(session)
+}
+
+export async function replayCodexAuthCallback(
+  sessionId: string,
+  callbackUrl: string,
+): Promise<CodexAuthCallbackReplayResult> {
+  const session = getSessionOrThrow(sessionId)
+  if (session.completed) {
+    return {
+      success: false,
+      callback_url: callbackUrl,
+      status_code: null,
+      error: 'Codex auth session is already completed.',
+    }
+  }
+
+  let parsed: URL
+  try {
+    parsed = validateCodexCallbackUrl(callbackUrl)
+  } catch (error) {
+    return {
+      success: false,
+      callback_url: callbackUrl,
+      status_code: null,
+      error: error instanceof Error ? error.message : 'Invalid callback URL',
+    }
+  }
+
+  const localCallbackUrl = new URL(parsed.toString())
+  localCallbackUrl.hostname = '127.0.0.1'
+
+  try {
+    const response = await fetch(localCallbackUrl, {
+      method: 'GET',
+      redirect: 'manual',
+    })
+    session.updatedAt = Date.now()
+
+    return {
+      success: response.status >= 200 && response.status < 400,
+      callback_url: callbackUrl,
+      status_code: response.status,
+      error: response.status >= 200 && response.status < 400
+        ? null
+        : `Codex callback returned ${response.status}`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      callback_url: callbackUrl,
+      status_code: null,
+      error: error instanceof Error ? error.message : 'Failed to replay callback',
+    }
+  }
 }
 
 export async function verifyCodexAuth(): Promise<CodexSetupStatus> {
