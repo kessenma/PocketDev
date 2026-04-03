@@ -6,7 +6,7 @@ import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchCodexAuthStatus, postStartCodexAuth, postSubmitCodexAuth } from '../../../services/api'
 import { Assets } from '../../../../assets'
-import { Copy, ExternalLink, RefreshCw, Send, ShieldCheck } from 'lucide-react-native'
+import { Copy, ExternalLink, RefreshCw, Send, ShieldCheck, Smartphone, Globe } from 'lucide-react-native'
 import type { CodexAuthSessionStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
@@ -97,6 +97,20 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     }
   }, [input, server, session, syncSession])
 
+  const handleChooseMethod = useCallback(async (choice: '1' | '2') => {
+    if (!server || !session?.session_id) return
+    setLoading(true)
+    setError(null)
+    try {
+      const next = await postSubmitCodexAuth(server.ip, server.port, session.session_id, choice)
+      syncSession(next)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to choose a Codex sign-in method.')
+    } finally {
+      setLoading(false)
+    }
+  }, [server, session, syncSession])
+
   function handleCopyCode() {
     if (!session?.verification_code) return
     Clipboard.setString(session.verification_code)
@@ -107,6 +121,8 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
   const phaseDescription =
     session?.authenticated
       ? 'Codex sign-in completed. Continue to verify the CLI and sync the cached provider state.'
+      : session?.state === 'awaiting_choice'
+        ? 'Choose how you want to sign in. ChatGPT opens a browser flow; Device Code lets you continue from another device.'
       : session?.state === 'awaiting_code'
         ? 'Finish the browser flow, then paste any one-time code here if Codex asks for it.'
         : session?.state === 'awaiting_browser'
@@ -153,6 +169,31 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           )}
         </View>
 
+        {session?.state === 'awaiting_choice' && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Choose sign-in method</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              API key setup is intentionally omitted here. Pick one of the supported interactive login methods.
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              onPress={() => void handleChooseMethod('1')}
+              activeOpacity={0.7}
+            >
+              <Globe color={colors.primaryText} size={18} strokeWidth={2.25} />
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Sign in with ChatGPT</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: colors.border }]}
+              onPress={() => void handleChooseMethod('2')}
+              activeOpacity={0.7}
+            >
+              <Smartphone color={colors.text} size={18} strokeWidth={2.25} />
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Use Device Code</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {session?.auth_url && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Browser step</Text>
@@ -196,7 +237,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           </View>
         )}
 
-        {(session?.can_submit_code || openedBrowser) && !session?.authenticated && (
+        {(session?.can_submit_code || openedBrowser) && !session?.authenticated && session?.state !== 'awaiting_choice' && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Manual code entry</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>

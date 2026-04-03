@@ -9,8 +9,14 @@ import WizardStepper from './codex-wizard/WizardStepper'
 import DetectStep from './codex-wizard/DetectStep'
 import ReviewStep from './codex-wizard/ReviewStep'
 import InstallStep from './codex-wizard/InstallStep'
+import AuthenticateStep from './codex-wizard/AuthenticateStep'
 import VerifyStep from './codex-wizard/VerifyStep'
-import type { CodexSetupStatus, CodexWizardStep, CodexWizardStepStatus } from '@pocketdev/shared/types'
+import type {
+  CodexAuthSessionStatus,
+  CodexSetupStatus,
+  CodexWizardStep,
+  CodexWizardStepStatus,
+} from '@pocketdev/shared/types'
 
 interface Props {
   visible: boolean
@@ -25,15 +31,17 @@ interface WizardState {
   stepStatuses: Record<CodexWizardStep, CodexWizardStepStatus>
   codexStatus: CodexSetupStatus | null
   npmReady: boolean
+  authSession: CodexAuthSessionStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
   | { type: 'DETECTION_COMPLETE'; codexStatus: CodexSetupStatus; npmReady: boolean }
-  | { type: 'STEP_COMPLETE'; step: CodexWizardStep }
+  | { type: 'STEP_COMPLETE'; step: CodexWizardStep; codexStatus?: CodexSetupStatus | null; authSession?: CodexAuthSessionStatus | null }
   | { type: 'STEP_FAILED'; step: CodexWizardStep; error: string }
   | { type: 'GO_BACK' }
+  | { type: 'SET_AUTH_SESSION'; authSession: CodexAuthSessionStatus | null }
   | { type: 'RETRY' }
 
 function getInitialState(): WizardState {
@@ -46,6 +54,7 @@ function getInitialState(): WizardState {
     stepStatuses,
     codexStatus: null,
     npmReady: false,
+    authSession: null,
     error: null,
     allConfigured: false,
   }
@@ -89,6 +98,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           stepStatuses: newStatuses,
           codexStatus,
           npmReady: action.npmReady,
+          authSession: null,
           allConfigured: true,
         }
       }
@@ -102,6 +112,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         stepStatuses: newStatuses,
         codexStatus,
         npmReady: action.npmReady,
+        authSession: null,
       }
     }
 
@@ -120,6 +131,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: next ?? action.step,
         stepStatuses: newStatuses,
+        codexStatus: action.codexStatus ?? state.codexStatus,
+        authSession: action.authSession ?? state.authSession,
         error: null,
         allConfigured: !next,
       }
@@ -142,6 +155,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
       return { ...state, currentStep: previous, stepStatuses: newStatuses, error: null }
     }
+
+    case 'SET_AUTH_SESSION':
+      return { ...state, authSession: action.authSession }
 
     case 'RETRY': {
       const newStatuses = { ...state.stepStatuses }
@@ -203,6 +219,8 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
         return <ReviewStep codexStatus={state.codexStatus} npmReady={state.npmReady} dispatch={dispatch} />
       case 'install':
         return <InstallStep dispatch={dispatch} />
+      case 'authenticate':
+        return <AuthenticateStep dispatch={dispatch} authSession={state.authSession} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:

@@ -12,9 +12,12 @@ import { ExternalLink, CheckCircle, RefreshCw, Send, LogIn, ChevronDown, Chevron
 const AUTH_COMMAND = 'claude'
 const URL_PATTERN = /https:\/\/[^\s\]\)>"']+/g
 const ERROR_PATTERNS = [/^error:/im, /^fatal:/im, /permission denied/im, /command not found/im]
-const AUTH_SUCCESS_PATTERNS = [/successfully/i, /logged in/i, /authenticated/i, /welcome/i]
+// NOTE: Do NOT include /welcome/i — "Welcome to Claude Code" appears on first run before login
+const AUTH_SUCCESS_PATTERNS = [/successfully authenticated/i, /logged in as/i, /you are logged in/i]
+// Detect the first-run theme selector so we can auto-pick it
+const THEME_SELECTOR_PATTERN = /choose the text style|Dark mode|Light mode/i
 // Strip ANSI codes for cleaner pattern matching
-const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g
+const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07|\x1b\][\d;]*[^\x07]*\x07/g
 
 type AuthPhase = 'checking' | 'not-installed' | 'running' | 'url-detected' | 'opened' | 'done' | 'failed'
 
@@ -56,6 +59,8 @@ export default function AuthenticateStep({ dispatch }: Props) {
     })()
   }, [server])
 
+  const themeHandledRef = useRef(false)
+
   const {
     output, hasError, done, connected,
     sendCommand, sendInput, reset,
@@ -64,6 +69,14 @@ export default function AuthenticateStep({ dispatch }: Props) {
     onOutput: (chunk, fullOutput) => {
       const cleanChunk = chunk.replace(ANSI_RE, '')
       const cleanFull = fullOutput.replace(ANSI_RE, '')
+
+      // Auto-select theme on first run — send "1" to pick Dark mode
+      if (!themeHandledRef.current && THEME_SELECTOR_PATTERN.test(cleanChunk)) {
+        themeHandledRef.current = true
+        console.log('[claude-auth] Theme selector detected, auto-selecting Dark mode')
+        setTimeout(() => sendInput('1\n'), 500)
+        return
+      }
 
       // Detect auth success in output
       for (const p of AUTH_SUCCESS_PATTERNS) {
@@ -143,6 +156,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
   function handleRetry() {
     reset()
     authSentRef.current = false
+    themeHandledRef.current = false
     setPhase('running')
     setOauthUrl(null)
     setConnectionString('')

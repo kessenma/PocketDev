@@ -12,6 +12,7 @@ import type {
 
 const CODEX_INSTALL_COMMAND = 'sudo npm i -g @openai/codex'
 const AUTH_URL_PATTERN = /https:\/\/[^\s\])>"']+/g
+const AUTH_MENU_PATTERN = /1\.\s*sign in with chatgpt[\s\S]*2\.\s*sign in with device code/i
 const VERIFICATION_CODE_PATTERNS = [
   /code[:\s]+([A-Z0-9]{4}(?:-[A-Z0-9]{4})+)/i,
   /\b([A-Z0-9]{4}(?:-[A-Z0-9]{4})+)\b/,
@@ -97,6 +98,10 @@ function parseAuthState(output: string, completed: boolean, authenticated: boole
   const prompt = derivePrompt(output)
   const lower = output.toLowerCase()
   const hasFailure = /error|failed|denied|timed out|timed-out/.test(lower)
+  const awaitingChoice = AUTH_MENU_PATTERN.test(output) || (
+    lower.includes('sign in with chatgpt') &&
+    lower.includes('sign in with device code')
+  )
   const waitingForInput = /enter|paste|code/.test(lower) && !authenticated
 
   if (authenticated) {
@@ -116,6 +121,16 @@ function parseAuthState(output: string, completed: boolean, authenticated: boole
       verificationCode,
       prompt,
       error: prompt ?? 'Codex authentication failed.',
+    }
+  }
+
+  if (awaitingChoice) {
+    return {
+      state: 'awaiting_choice',
+      authUrl,
+      verificationCode,
+      prompt,
+      error: null,
     }
   }
 
@@ -156,7 +171,7 @@ function toAuthStatus(session: InternalAuthSession): CodexAuthSessionStatus {
     verification_code: session.verificationCode,
     prompt: session.prompt,
     output_excerpt: getOutputExcerpt(session.output),
-    can_submit_code: session.state === 'awaiting_code' || !!session.verificationCode,
+    can_submit_code: session.state === 'awaiting_code' || session.state === 'awaiting_choice' || !!session.verificationCode,
     authenticated: session.authenticated,
     completed: session.completed,
     error: session.error,
