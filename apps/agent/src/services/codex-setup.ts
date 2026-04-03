@@ -224,7 +224,11 @@ function getSessionOrThrow(sessionId: string): InternalAuthSession {
 }
 
 function validateCodexCallbackUrl(callbackUrl: string): URL {
-  const url = new URL(callbackUrl)
+  const trimmed = callbackUrl.trim()
+  const normalized = /^localhost:1455\/auth\/callback/i.test(trimmed) || /^127\.0\.0\.1:1455\/auth\/callback/i.test(trimmed) || /^\[::1\]:1455\/auth\/callback/i.test(trimmed) || /^::1:1455\/auth\/callback/i.test(trimmed)
+    ? `http://${trimmed}`
+    : trimmed
+  const url = new URL(normalized)
   if (url.protocol !== 'http:') {
     throw new Error('Codex callback must use http')
   }

@@ -260,13 +260,13 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Paste callback URL</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              After the browser finishes signing you in, copy the URL that starts with `http://localhost:1455/auth/callback?` and paste it here.
+              After the browser finishes signing you in, copy the URL that starts with `localhost:1455/auth/callback?` or `http://localhost:1455/auth/callback?` and paste it here.
             </Text>
             <TextInput
               style={[styles.multilineInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
               value={callbackUrl}
               onChangeText={setCallbackUrl}
-              placeholder="http://localhost:1455/auth/callback?..."
+              placeholder="localhost:1455/auth/callback?..."
               placeholderTextColor={colors.textTertiary}
               autoCapitalize="none"
               autoCorrect={false}
