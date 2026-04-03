@@ -36,7 +36,20 @@ interface InternalAuthSession {
   updatedAt: number
 }
 
+interface CodexReplayDebugSnapshot {
+  sessionId: string | null
+  inputCallbackUrl: string | null
+  attempts: string[]
+  success: boolean
+  statusCode: number | null
+  error: string | null
+  sessionOutputExcerpt: string | null
+  sessionPrompt: string | null
+  recordedAt: string
+}
+
 const authSessions = new Map<string, InternalAuthSession>()
+let lastReplayDebug: CodexReplayDebugSnapshot | null = null
 
 const exec = execShell
 
@@ -397,11 +410,25 @@ export async function replayCodexAuthCallback(
 ): Promise<CodexAuthCallbackReplayResult> {
   const session = getSessionOrThrow(sessionId)
   if (session.completed) {
+    lastReplayDebug = {
+      sessionId,
+      inputCallbackUrl: callbackUrl,
+      attempts: [],
+      success: false,
+      statusCode: null,
+      error: 'Codex auth session is already completed.',
+      sessionOutputExcerpt: getOutputExcerpt(session.output),
+      sessionPrompt: session.prompt,
+      recordedAt: new Date().toISOString(),
+    }
     return {
       success: false,
       callback_url: callbackUrl,
       status_code: null,
       error: 'Codex auth session is already completed.',
+      attempts: [],
+      session_output_excerpt: getOutputExcerpt(session.output),
+      session_prompt: session.prompt,
     }
   }
 
@@ -409,11 +436,25 @@ export async function replayCodexAuthCallback(
   try {
     parsed = validateCodexCallbackUrl(callbackUrl)
   } catch (error) {
+    lastReplayDebug = {
+      sessionId,
+      inputCallbackUrl: callbackUrl,
+      attempts: [],
+      success: false,
+      statusCode: null,
+      error: error instanceof Error ? error.message : 'Invalid callback URL',
+      sessionOutputExcerpt: getOutputExcerpt(session.output),
+      sessionPrompt: session.prompt,
+      recordedAt: new Date().toISOString(),
+    }
     return {
       success: false,
       callback_url: callbackUrl,
       status_code: null,
       error: error instanceof Error ? error.message : 'Invalid callback URL',
+      attempts: [],
+      session_output_excerpt: getOutputExcerpt(session.output),
+      session_prompt: session.prompt,
     }
   }
 
@@ -429,11 +470,26 @@ export async function replayCodexAuthCallback(
       session.updatedAt = Date.now()
 
       if (response.status >= 200 && response.status < 400) {
+        const attempts = failures.length > 0 ? [...failures, `${candidate} -> HTTP ${response.status}`] : [`${candidate} -> HTTP ${response.status}`]
+        lastReplayDebug = {
+          sessionId,
+          inputCallbackUrl: callbackUrl,
+          attempts,
+          success: true,
+          statusCode: response.status,
+          error: null,
+          sessionOutputExcerpt: getOutputExcerpt(session.output),
+          sessionPrompt: session.prompt,
+          recordedAt: new Date().toISOString(),
+        }
         return {
           success: true,
           callback_url: candidate,
           status_code: response.status,
           error: null,
+          attempts,
+          session_output_excerpt: getOutputExcerpt(session.output),
+          session_prompt: session.prompt,
         }
       }
 
@@ -443,11 +499,25 @@ export async function replayCodexAuthCallback(
     }
   }
 
+  lastReplayDebug = {
+    sessionId,
+    inputCallbackUrl: callbackUrl,
+    attempts: failures,
+    success: false,
+    statusCode: null,
+    error: `Failed to replay callback against local Codex server. ${failures.join(' | ')}`,
+    sessionOutputExcerpt: getOutputExcerpt(session.output),
+    sessionPrompt: session.prompt,
+    recordedAt: new Date().toISOString(),
+  }
   return {
     success: false,
     callback_url: callbackUrl,
     status_code: null,
     error: `Failed to replay callback against local Codex server. ${failures.join(' | ')}`,
+    attempts: failures,
+    session_output_excerpt: getOutputExcerpt(session.output),
+    session_prompt: session.prompt,
   }
 }
 
@@ -461,4 +531,29 @@ export async function verifyCodexAuth(): Promise<CodexSetupStatus> {
 
 export function getPersistedCodexState() {
   return getToolRecord('codex_cli')
+}
+
+export function getCodexAuthDebug() {
+  const sessions = Array.from(authSessions.values())
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((session) => ({
+      sessionId: session.id,
+      state: session.state,
+      authenticated: session.authenticated,
+      completed: session.completed,
+      authUrl: session.authUrl,
+      verificationCode: session.verificationCode,
+      prompt: session.prompt,
+      error: session.error,
+      startedAt: new Date(session.startedAt).toISOString(),
+      updatedAt: new Date(session.updatedAt).toISOString(),
+      outputExcerpt: getOutputExcerpt(session.output),
+    }))
+
+  return {
+    activeSessionCount: sessions.length,
+    sessions,
+    lastReplayDebug,
+    persistedState: getToolRecord('codex_cli'),
+  }
 }

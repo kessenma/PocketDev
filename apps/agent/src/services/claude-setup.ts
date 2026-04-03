@@ -1,5 +1,5 @@
 import { createTerminalSession, type TerminalSession } from './terminal.ts'
-import { upsertToolPath, deleteToolRecord, setToolAuthenticated } from '../db/index.ts'
+import { upsertToolPath, deleteToolRecord, setToolAuthenticated, getToolRecord } from '../db/index.ts'
 import type {
   ClaudeAuthSessionState,
   ClaudeAuthSessionStatus,
@@ -171,21 +171,21 @@ function refreshSessionState(session: InternalAuthSession) {
   session.cleanOutput = stripAnsi(session.output)
   const derived = parseAuthState(session)
 
-  // Auto-answer theme selector — Claude Code uses a TUI menu where the cursor (❯)
-  // is already on option 1 (Dark mode). Just press Enter to confirm.
+  // Auto-answer theme selector — Claude Code uses an ink TUI in raw mode.
+  // The cursor (❯) is already on option 1 (Dark mode). Send \r (carriage return)
+  // because raw-mode TUIs expect \r for Enter, not \n.
   if (derived.state === 'awaiting_theme' && !session.themeHandled) {
     session.themeHandled = true
-    session.terminal.send('\n')
+    session.terminal.send('\r')
     session.state = 'pending'
     session.updatedAt = Date.now()
     return
   }
 
   // Auto-answer login method — cursor defaults to option 1 (Claude subscription).
-  // Just press Enter to confirm.
   if (derived.state === 'awaiting_method' && !session.methodHandled) {
     session.methodHandled = true
-    session.terminal.send('\n')
+    session.terminal.send('\r')
     session.state = 'pending'
     session.updatedAt = Date.now()
     return
@@ -351,4 +351,29 @@ export function submitClaudeAuthInput(sessionId: string, code: string): ClaudeAu
   session.state = 'pending'
   session.updatedAt = Date.now()
   return toAuthStatus(session)
+}
+
+export function getClaudeAuthDebug() {
+  const sessions = Array.from(authSessions.values())
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((session) => ({
+      sessionId: session.id,
+      state: session.state,
+      authenticated: session.authenticated,
+      completed: session.completed,
+      authUrl: session.authUrl,
+      prompt: session.prompt,
+      error: session.error,
+      themeHandled: session.themeHandled,
+      methodHandled: session.methodHandled,
+      startedAt: new Date(session.startedAt).toISOString(),
+      updatedAt: new Date(session.updatedAt).toISOString(),
+      outputExcerpt: getOutputExcerpt(session.output),
+    }))
+
+  return {
+    activeSessionCount: sessions.length,
+    sessions,
+    persistedState: getToolRecord('claude_cli'),
+  }
 }

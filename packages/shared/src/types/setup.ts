@@ -198,6 +198,9 @@ export interface CodexAuthCallbackReplayResult {
   callback_url: string
   status_code: number | null
   error: string | null
+  attempts?: string[]
+  session_output_excerpt?: string | null
+  session_prompt?: string | null
 }
 
 export type CodexWizardStep = 'detect' | 'review' | 'install' | 'authenticate' | 'verify'

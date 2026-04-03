@@ -16,6 +16,8 @@ import { hasDevices } from '../services/setup.ts'
 import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
 import { getTerminalDebugLog } from '../services/terminal-ws.ts'
+import { getCodexAuthDebug } from '../services/codex-setup.ts'
+import { getClaudeAuthDebug } from '../services/claude-setup.ts'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
 
@@ -238,6 +240,24 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return { entries: getTerminalDebugLog() }
+  })
+
+  .get('/debug/codex-auth', ({ request, set }) => {
+    if (!validateSession(request.headers.get('cookie'))) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    return getCodexAuthDebug()
+  })
+
+  .get('/debug/claude-auth', ({ request, set }) => {
+    if (!validateSession(request.headers.get('cookie'))) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    return getClaudeAuthDebug()
   })
 
   // ─── Prerequisites (requires session) ─────────────────

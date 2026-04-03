@@ -160,3 +160,81 @@ export async function fetchTerminalDebug(): Promise<TerminalDebugEntry[]> {
   const data = await res.json() as { entries: TerminalDebugEntry[] }
   return data.entries
 }
+
+export interface CodexAuthDebugSession {
+  sessionId: string
+  state: string
+  authenticated: boolean
+  completed: boolean
+  authUrl: string | null
+  verificationCode: string | null
+  prompt: string | null
+  error: string | null
+  startedAt: string
+  updatedAt: string
+  outputExcerpt: string | null
+}
+
+export interface CodexReplayDebugInfo {
+  sessionId: string | null
+  inputCallbackUrl: string | null
+  attempts: string[]
+  success: boolean
+  statusCode: number | null
+  error: string | null
+  sessionOutputExcerpt: string | null
+  sessionPrompt: string | null
+  recordedAt: string
+}
+
+export interface CodexAuthDebugInfo {
+  activeSessionCount: number
+  sessions: CodexAuthDebugSession[]
+  lastReplayDebug: CodexReplayDebugInfo | null
+  persistedState: {
+    toolId: string
+    path: string | null
+    version: string | null
+    authenticated: boolean
+    updatedAt: string | null
+  } | null
+}
+
+export async function fetchCodexAuthDebug(): Promise<CodexAuthDebugInfo> {
+  const res = await get('/debug/codex-auth')
+  if (!res.ok) throw new Error('Failed to fetch Codex auth debug')
+  return res.json()
+}
+
+export interface ClaudeAuthDebugSession {
+  sessionId: string
+  state: string
+  authenticated: boolean
+  completed: boolean
+  authUrl: string | null
+  prompt: string | null
+  error: string | null
+  themeHandled: boolean
+  methodHandled: boolean
+  startedAt: string
+  updatedAt: string
+  outputExcerpt: string | null
+}
+
+export interface ClaudeAuthDebugInfo {
+  activeSessionCount: number
+  sessions: ClaudeAuthDebugSession[]
+  persistedState: {
+    toolId: string
+    path: string | null
+    version: string | null
+    authenticated: boolean
+    updatedAt: string | null
+  } | null
+}
+
+export async function fetchClaudeAuthDebug(): Promise<ClaudeAuthDebugInfo> {
+  const res = await get('/debug/claude-auth')
+  if (!res.ok) throw new Error('Failed to fetch Claude auth debug')
+  return res.json()
+}

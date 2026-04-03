@@ -559,8 +559,17 @@ export async function postReplayCodexAuthCallback(
     },
     body: JSON.stringify({ callback_url: callbackUrl }),
   })
-  if (!response.ok) throw new Error(`Failed to replay Codex auth callback (${response.status})`)
-  return response.json() as Promise<CodexAuthCallbackReplayResult>
+  const payload = await response.json() as CodexAuthCallbackReplayResult | { error?: string; attempts?: string[]; session_output_excerpt?: string | null; session_prompt?: string | null }
+  if (!response.ok) {
+    const message = [
+      typeof payload.error === 'string' ? payload.error : `Failed to replay Codex auth callback (${response.status})`,
+      Array.isArray(payload.attempts) && payload.attempts.length > 0 ? `Attempts: ${payload.attempts.join(' | ')}` : null,
+      payload.session_prompt ? `Prompt: ${payload.session_prompt}` : null,
+      payload.session_output_excerpt ? `Output: ${payload.session_output_excerpt}` : null,
+    ].filter(Boolean).join('\n')
+    throw new Error(message)
+  }
+  return payload as CodexAuthCallbackReplayResult
 }
 
 export async function postCreateBrowserSession(
