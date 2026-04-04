@@ -1,48 +1,129 @@
+jest.mock('../services/api', () => ({
+  listDirectory: jest.fn(),
+  fetchFileContent: jest.fn(),
+  searchFiles: jest.fn(),
+}))
+
+jest.mock('./connection', () => ({
+  useConnectionStore: {
+    getState: () => ({
+      server: { ip: '127.0.0.1', port: 8787 },
+    }),
+  },
+}))
+
+const { listDirectory, fetchFileContent, searchFiles } = require('../services/api')
 const { useFilesStore } = require('./files')
 
 describe('useFilesStore', () => {
   const initialState = useFilesStore.getState()
 
   beforeEach(() => {
+    jest.clearAllMocks()
     useFilesStore.setState({
       ...initialState,
-      expandedDirectoryIds: [...initialState.expandedDirectoryIds],
-      tree: [...initialState.tree],
+      currentPath: '.',
+      currentEntries: [],
+      directoryEntriesByPath: {},
+      selectedFileId: null,
+      selectedFile: null,
+      selectedFileContent: null,
+      selectedContextPaths: [],
+      searchQuery: '',
+      searchResults: [],
+      activePhoneView: 'browser',
     })
   })
 
-  it('selects a file and enters viewer mode', () => {
-    useFilesStore.getState().selectFile('features-agent')
+  it('loads a directory and updates the current path', async () => {
+    listDirectory.mockResolvedValue({
+      base: '/work/repo',
+      path: 'src',
+      entries: [
+        { name: 'components', path: 'src/components', type: 'dir' },
+        { name: 'App.tsx', path: 'src/App.tsx', type: 'file' },
+      ],
+    })
+
+    await useFilesStore.getState().openDirectory('src')
 
     const state = useFilesStore.getState()
-    expect(state.selectedFileId).toBe('features-agent')
+    expect(state.rootPath).toBe('/work/repo')
+    expect(state.currentPath).toBe('src')
+    expect(state.currentEntries.map((entry) => entry.path)).toEqual([
+      'src/components',
+      'src/App.tsx',
+    ])
+  })
+
+  it('selects a file, loads content, and enters viewer mode', async () => {
+    useFilesStore.setState({
+      currentEntries: [
+        { id: 'src/App.tsx', name: 'App.tsx', path: 'src/App.tsx', kind: 'file', language: 'tsx' },
+      ],
+    })
+    fetchFileContent.mockResolvedValue({
+      path: 'src/App.tsx',
+      content: 'export default function App() {}',
+      size: 32,
+    })
+
+    await useFilesStore.getState().selectFile('src/App.tsx')
+
+    const state = useFilesStore.getState()
+    expect(state.selectedFileId).toBe('src/App.tsx')
+    expect(state.selectedFileContent).toContain('App')
     expect(state.activePhoneView).toBe('viewer')
   })
 
-  it('toggles a folder without changing unrelated expansion state', () => {
-    useFilesStore.getState().toggleFolder('src-app')
+  it('runs a search within the current folder', async () => {
+    useFilesStore.setState({ currentPath: 'src', searchQuery: 'Button' })
+    searchFiles.mockResolvedValue({
+      base: '/work/repo',
+      query: 'Button',
+      path: 'src',
+      results: [
+        { path: 'src/components/Button.tsx', line_number: 8, text: 'export function Button() {' },
+      ],
+    })
+
+    await useFilesStore.getState().runSearch()
 
     const state = useFilesStore.getState()
-    expect(state.expandedDirectoryIds).not.toContain('src-app')
-    expect(state.expandedDirectoryIds).toContain('src')
-    expect(state.expandedDirectoryIds).toContain('mobile')
+    expect(searchFiles).toHaveBeenCalledWith('127.0.0.1', 8787, 'Button', 'src')
+    expect(state.searchResults).toHaveLength(1)
+    expect(state.searchResults[0].path).toBe('src/components/Button.tsx')
   })
 
-  it('toggles wrap without losing the selected file', () => {
-    useFilesStore.setState({ selectedFileId: 'app-shell', wrapLines: false })
+  it('toggles pinned AI context paths', () => {
+    useFilesStore.getState().toggleContextPath('src/App.tsx')
+    expect(useFilesStore.getState().selectedContextPaths).toEqual(['src/App.tsx'])
 
-    useFilesStore.getState().toggleWrapLines()
+    useFilesStore.getState().toggleContextPath('src/App.tsx')
+    expect(useFilesStore.getState().selectedContextPaths).toEqual([])
+  })
+
+  it('resets repo-specific state on project switch', () => {
+    useFilesStore.setState({
+      currentPath: 'src',
+      currentEntries: [{ id: 'src/App.tsx', name: 'App.tsx', path: 'src/App.tsx', kind: 'file' }],
+      directoryEntriesByPath: { src: [{ id: 'src/App.tsx', name: 'App.tsx', path: 'src/App.tsx', kind: 'file' }] },
+      selectedFileId: 'src/App.tsx',
+      selectedFile: { id: 'src/App.tsx', name: 'App.tsx', path: 'src/App.tsx', kind: 'file' },
+      selectedContextPaths: ['src/App.tsx'],
+      searchQuery: 'App',
+      searchResults: [{ path: 'src/App.tsx', line_number: 1, text: 'App' }],
+      activePhoneView: 'viewer',
+    })
+
+    useFilesStore.getState().resetForProjectSwitch()
 
     const state = useFilesStore.getState()
-    expect(state.wrapLines).toBe(true)
-    expect(state.selectedFileId).toBe('app-shell')
-  })
-
-  it('returns to the browser view when requested', () => {
-    useFilesStore.setState({ activePhoneView: 'viewer' })
-
-    useFilesStore.getState().goBackToBrowser()
-
-    expect(useFilesStore.getState().activePhoneView).toBe('browser')
+    expect(state.currentPath).toBe('.')
+    expect(state.currentEntries).toEqual([])
+    expect(state.selectedFile).toBeNull()
+    expect(state.selectedContextPaths).toEqual([])
+    expect(state.searchResults).toEqual([])
+    expect(state.activePhoneView).toBe('browser')
   })
 })

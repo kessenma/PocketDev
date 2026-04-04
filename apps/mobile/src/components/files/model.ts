@@ -47,3 +47,8 @@ export function treeEntryToFileNode(entry: {
 
   return node
 }
+
+export function pathToName(path: string): string {
+  const parts = path.split('/').filter(Boolean)
+  return parts[parts.length - 1] ?? path
+}

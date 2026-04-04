@@ -67,7 +67,7 @@ export default function MainTabs() {
         name="Files"
         component={FilesScreen}
         options={{
-          title: 'Files',
+          title: 'Workspace',
           tabBarIcon: ({ color, size }) => renderTabIcon('Files', { color, size }),
         }}
       />

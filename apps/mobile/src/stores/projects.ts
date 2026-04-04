@@ -9,6 +9,7 @@ import {
 import { useConnectionStore } from './connection'
 import { useFilesStore } from './files'
 import { useGitStore } from './git'
+import { usePreviewStore } from './preview'
 
 type ProjectsState = {
   projects: ProjectSummary[]
@@ -32,6 +33,8 @@ function getServer() {
 }
 
 async function refreshRepoAwareStores() {
+  useFilesStore.getState().resetForProjectSwitch()
+  usePreviewStore.getState().resetForProjectChange()
   await Promise.allSettled([
     useFilesStore.getState().refresh(),
     useGitStore.getState().refresh(),

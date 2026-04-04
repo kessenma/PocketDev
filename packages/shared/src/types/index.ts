@@ -110,8 +110,11 @@ export type {
 } from './git.js'
 export type {
   TreeEntry,
+  DirectoryEntriesResponse,
   FileTreeResponse,
   FileReadResponse,
+  FileSearchResult,
+  FileSearchResponse,
 } from './files.js'
 export type {
   ProjectSource,

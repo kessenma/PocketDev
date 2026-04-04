@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Task } from '@pocketdev/shared/types'
 import type { TaskStatus, AgentType } from '@pocketdev/shared/schema'
+import { fetchTaskList } from '../services/api'
 import { useConnectionStore } from './connection'
 
 interface TaskState {
@@ -8,7 +9,8 @@ interface TaskState {
   activeTaskId: string | null
   taskLogs: Map<string, string[]>
   setTasks: (tasks: Task[]) => void
-  startTask: (prompt: string, agentType: AgentType) => void
+  refreshFromServer: () => Promise<void>
+  startTask: (prompt: string, agentType: AgentType, workingDirectory?: string | null) => void
   killTask: (id: string) => void
   appendLog: (taskId: string, line: string) => void
   updateTaskStatus: (taskId: string, status: TaskStatus) => void
@@ -26,18 +28,35 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set({ tasks: map })
   },
 
-  startTask: (prompt: string, agentType: AgentType) => {
+  refreshFromServer: async () => {
+    const server = useConnectionStore.getState().server
+    if (!server) return
+
+    const taskList = await fetchTaskList(server.ip, server.port) as Task[]
+    const activeTaskId = get().activeTaskId
+    const nextActiveTaskId = activeTaskId && taskList.some((task) => task.id === activeTaskId)
+      ? activeTaskId
+      : taskList[0]?.id ?? null
+
+    get().setTasks(taskList)
+    set({ activeTaskId: nextActiveTaskId })
+  },
+
+  startTask: (prompt: string, agentType: AgentType, workingDirectory = null) => {
     const ws = useConnectionStore.getState().ws
     if (!ws) return
 
-    ws.send('task.start', { prompt, agent_type: agentType })
+    ws.send('task.start', { prompt, agentType, workingDirectory })
+    setTimeout(() => {
+      void get().refreshFromServer().catch(() => {})
+    }, 250)
   },
 
   killTask: (id: string) => {
     const ws = useConnectionStore.getState().ws
     if (!ws) return
 
-    ws.send('task.kill', { task_id: id })
+    ws.send('task.kill', { taskId: id })
   },
 
   appendLog: (taskId: string, line: string) => {
@@ -55,8 +74,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       const task = tasks.get(taskId)
       if (task) {
         tasks.set(taskId, { ...task, status })
+        return { tasks }
       }
-      return { tasks }
+
+      setTimeout(() => {
+        void get().refreshFromServer().catch(() => {})
+      }, 0)
+      return state
     })
   },
 

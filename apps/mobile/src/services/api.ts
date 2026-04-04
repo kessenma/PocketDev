@@ -6,8 +6,10 @@ import type {
   ContainerLogsRequest,
   ContainerLogsSnapshot,
   ContainerSummary,
+  DirectoryEntriesResponse,
   FileTreeResponse,
   FileReadResponse,
+  FileSearchResponse,
   ServerCapabilities,
   GitSummary,
   GitFileChange,
@@ -256,6 +258,21 @@ export async function fetchFileTree(
   return response.json() as Promise<FileTreeResponse>
 }
 
+export async function listDirectory(
+  ip: string,
+  port: number,
+  path = '.',
+): Promise<DirectoryEntriesResponse> {
+  const query = new URLSearchParams({ path })
+  const response = await fetch(apiUrl(ip, port, `/files/list?${query.toString()}`), {
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+  })
+  if (!response.ok) throw new Error(`Failed to list directory (${response.status})`)
+  return response.json() as Promise<DirectoryEntriesResponse>
+}
+
 export async function fetchFileContent(
   ip: string,
   port: number,
@@ -269,6 +286,22 @@ export async function fetchFileContent(
   })
   if (!response.ok) throw new Error(`Failed to read file (${response.status})`)
   return response.json() as Promise<FileReadResponse>
+}
+
+export async function searchFiles(
+  ip: string,
+  port: number,
+  query: string,
+  path = '.',
+): Promise<FileSearchResponse> {
+  const params = new URLSearchParams({ q: query, path })
+  const response = await fetch(apiUrl(ip, port, `/files/search?${params.toString()}`), {
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+  })
+  if (!response.ok) throw new Error(`Failed to search files (${response.status})`)
+  return response.json() as Promise<FileSearchResponse>
 }
 
 export async function fetchCapabilities(

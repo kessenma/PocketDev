@@ -14,17 +14,34 @@ type Props = {
   wrapLines: boolean
   onToggleWrap: () => void
   onBack?: () => void
+  isContextSelected?: boolean
+  onToggleContext?: () => void
 }
 
 const SUPPORTED_LANGUAGES = new Set(['typescript', 'tsx', 'javascript', 'jsx'])
 
-export default function CodeViewer({ file, content, isLoading, wrapLines, onToggleWrap, onBack }: Props) {
+export default function CodeViewer({
+  file,
+  content,
+  isLoading,
+  wrapLines,
+  onToggleWrap,
+  onBack,
+  isContextSelected = false,
+  onToggleContext,
+}: Props) {
   const { colors } = useTheme()
 
   return (
     <FileCard style={styles.card}>
       <FileCardHeader>
-        <FileViewerToolbar wrapLines={wrapLines} onToggleWrap={onToggleWrap} onBack={onBack} />
+        <FileViewerToolbar
+          wrapLines={wrapLines}
+          onToggleWrap={onToggleWrap}
+          onBack={onBack}
+          contextSelected={isContextSelected}
+          onToggleContext={file ? onToggleContext : undefined}
+        />
         <View style={styles.headerCopy}>
           <FileCardTitle>Code Viewer</FileCardTitle>
           <FileCardDescription>
@@ -72,13 +89,13 @@ function renderPreview(
 
   if (!isSupported || content == null) {
     return (
-      <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>Preview not available</Text>
-        <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
+          <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>Preview not available</Text>
+            <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
           {file.name} cannot be previewed. The viewer supports TypeScript and JavaScript files.
-        </Text>
-      </View>
-    )
+            </Text>
+          </View>
+        )
   }
 
   const lines = content.split('\n')

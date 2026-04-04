@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { readdir, readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises'
 import { join, resolve, relative } from 'node:path'
-import type { TreeEntry } from '@pocketdev/shared/types'
+import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
 import { authenticateRequest } from '../services/auth.ts'
 import { getActiveProjectPath } from '../services/projects.ts'
 
@@ -13,6 +13,35 @@ function safePath(baseDir: string, requestedPath: string): string | null {
 }
 
 export const fileRoutes = new Elysia({ prefix: '/files' })
+  .get('/list', async ({ request, query, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+    const baseDir = await getActiveProjectPath()
+    const targetPath = safePath(baseDir, query.path ?? '.')
+    if (!targetPath) {
+      set.status = 403
+      return { error: 'Path outside allowed directory' }
+    }
+
+    try {
+      const entries = await listDirectory(baseDir, targetPath)
+      return {
+        base: baseDir,
+        path: relative(baseDir, targetPath) || '.',
+        entries,
+      }
+    } catch {
+      set.status = 404
+      return { error: 'Directory not found' }
+    }
+  }, {
+    query: t.Object({
+      path: t.Optional(t.String()),
+    }),
+  })
   // Directory listing
   .get('/tree', async ({ request, query, set }) => {
     const deviceId = await authenticateRequest(request.headers.get('authorization'))
@@ -193,12 +222,16 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
           { stdout: 'pipe', stderr: 'pipe' },
         )
         const grepOutput = await new Response(fallback.stdout).text()
+        const results: FileSearchResult[] = grepOutput
+          .split('\n')
+          .filter(Boolean)
+          .slice(0, 50)
+          .map((line) => ({ path: query.path ?? '.', line_number: 0, text: line }))
         return {
-          results: grepOutput
-            .split('\n')
-            .filter(Boolean)
-            .slice(0, 50)
-            .map((line) => ({ raw: line })),
+          base: baseDir,
+          query: query.q,
+          path: query.path ?? '.',
+          results,
         }
       }
 
@@ -218,7 +251,12 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
           text: (r.data.lines as { text: string }).text.trim(),
         }))
 
-      return { results }
+      return {
+        base: baseDir,
+        query: query.q,
+        path: query.path ?? '.',
+        results,
+      }
     } catch {
       set.status = 500
       return { error: 'Search failed' }
@@ -265,4 +303,27 @@ async function buildTree(
   } catch {
     return []
   }
+}
+
+async function listDirectory(baseDir: string, dirPath: string): Promise<TreeEntry[]> {
+  const entries = await readdir(dirPath, { withFileTypes: true })
+  const result: TreeEntry[] = []
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+
+    const fullPath = join(dirPath, entry.name)
+    const relativePath = relative(baseDir, fullPath)
+
+    result.push({
+      name: entry.name,
+      path: relativePath,
+      type: entry.isDirectory() ? 'dir' : 'file',
+    })
+  }
+
+  return result.sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'dir' ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
 }

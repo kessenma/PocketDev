@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Modal, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import WebView, { type WebViewNavigation, type WebViewProps } from 'react-native-webview'
 import { X, ChevronLeft, ChevronRight, RotateCw, AlertCircle } from 'lucide-react-native'
@@ -10,8 +10,11 @@ interface Props {
   title: string
   initialUrl: string
   onClose: () => void
+  errorHint?: string | null
   matchUrl?: (url: string) => boolean
   onMatchedUrl?: (url: string) => Promise<void> | void
+  onLoadSuccess?: () => void
+  onLoadFailure?: (message: string) => void
 }
 
 export default function ServerWebBrowserSheet({
@@ -19,8 +22,11 @@ export default function ServerWebBrowserSheet({
   title,
   initialUrl,
   onClose,
+  errorHint,
   matchUrl,
   onMatchedUrl,
+  onLoadSuccess,
+  onLoadFailure,
 }: Props) {
   const { colors } = useTheme()
   const webViewRef = useRef<WebView>(null)
@@ -31,6 +37,12 @@ export default function ServerWebBrowserSheet({
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const source = useMemo<WebViewProps['source']>(() => ({ uri: initialUrl }), [initialUrl])
+
+  useEffect(() => {
+    setCurrentUrl(initialUrl)
+    setLoading(true)
+    setLoadError(null)
+  }, [initialUrl, visible])
 
   function handleNavigationStateChange(navState: WebViewNavigation) {
     setCurrentUrl(navState.url)
@@ -90,10 +102,16 @@ export default function ServerWebBrowserSheet({
               setLoading(true)
               setLoadError(null)
             }}
+            onLoad={() => {
+              setLoading(false)
+              onLoadSuccess?.()
+            }}
             onLoadEnd={() => setLoading(false)}
             onError={(event) => {
               setLoading(false)
-              setLoadError(event.nativeEvent.description || 'Failed to load page.')
+              const message = event.nativeEvent.description || 'Failed to load page.'
+              setLoadError(message)
+              onLoadFailure?.(message)
             }}
             startInLoadingState
             allowsBackForwardNavigationGestures
@@ -115,6 +133,9 @@ export default function ServerWebBrowserSheet({
                 <AlertCircle color={colors.error} size={20} strokeWidth={2.25} />
                 <Text style={[styles.errorTitle, { color: colors.text }]}>Page failed to load</Text>
                 <Text style={[styles.errorText, { color: colors.textSecondary }]}>{loadError}</Text>
+                {errorHint ? (
+                  <Text style={[styles.errorText, { color: colors.textSecondary }]}>{errorHint}</Text>
+                ) : null}
                 <TouchableOpacity
                   style={[styles.retryButton, { backgroundColor: colors.primary }]}
                   onPress={() => {
