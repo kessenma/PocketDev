@@ -563,6 +563,23 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                       )}
                     </div>
                   </div>
+                  <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Recent Project Operations</p>
+                    <div className="mt-2 space-y-2">
+                      {projectsInfo?.recentOperations.length ? (
+                        projectsInfo.recentOperations.map((entry, index) => (
+                          <div key={`${entry.ts}-${index}`} className="rounded-xl border border-white/8 bg-black/20 p-3">
+                            <div className="text-[10px] uppercase tracking-[0.22em] text-[#f4f0e8]/35">
+                              {formatShortTime(entry.ts)} · {entry.kind}
+                            </div>
+                            <div className="mt-1 break-words font-mono text-xs text-[#9df6cd]">{entry.message}</div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-[#f4f0e8]/58">No project operations recorded yet.</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

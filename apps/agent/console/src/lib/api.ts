@@ -293,6 +293,11 @@ export interface ProjectsDebugInfo {
   listedPublicCount: number
   listedUnknownCount: number
   listedPrivateSample: string[]
+  recentOperations: Array<{
+    ts: string
+    kind: 'fetch' | 'clone' | 'select' | 'branch'
+    message: string
+  }>
 }
 
 export async function fetchProjectsDebug(): Promise<ProjectsDebugInfo> {

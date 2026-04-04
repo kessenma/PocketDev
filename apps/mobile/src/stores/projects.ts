@@ -15,6 +15,8 @@ type ProjectsState = {
   githubUsername: string | null
   isLoading: boolean
   isMutating: boolean
+  mutatingProjectId: string | null
+  mutatingAction: 'clone' | 'select' | 'branch' | null
   lastActionMessage: string
   error: string | null
   refresh: () => Promise<void>
@@ -39,6 +41,8 @@ export const useProjectsStore = create<ProjectsState>((set) => ({
   githubUsername: null,
   isLoading: false,
   isMutating: false,
+  mutatingProjectId: null,
+  mutatingAction: null,
   lastActionMessage: 'Load repositories from your paired server.',
   error: null,
 
@@ -71,17 +75,21 @@ export const useProjectsStore = create<ProjectsState>((set) => ({
     const server = getServer()
     if (!server) return
 
-    set({ isMutating: true, error: null, lastActionMessage: 'Switching repository...' })
+    set({ isMutating: true, mutatingProjectId: projectId, mutatingAction: 'select', error: null, lastActionMessage: 'Switching repository...' })
     try {
       await postSelectProject(server.ip, server.port, projectId, pullLatest)
       await Promise.all([useProjectsStore.getState().refresh(), refreshRepoAwareStores()])
       set({
         isMutating: false,
+        mutatingProjectId: null,
+        mutatingAction: null,
         lastActionMessage: pullLatest ? 'Repository switched and updated.' : 'Repository switched.',
       })
     } catch (error) {
       set({
         isMutating: false,
+        mutatingProjectId: null,
+        mutatingAction: null,
         error: error instanceof Error ? error.message : 'Failed to switch repository',
         lastActionMessage: 'Failed to switch repository.',
       })
@@ -92,17 +100,21 @@ export const useProjectsStore = create<ProjectsState>((set) => ({
     const server = getServer()
     if (!server) return
 
-    set({ isMutating: true, error: null, lastActionMessage: 'Cloning repository...' })
+    set({ isMutating: true, mutatingProjectId: projectId, mutatingAction: 'clone', error: null, lastActionMessage: 'Cloning repository...' })
     try {
       await postCloneProject(server.ip, server.port, projectId, branchMode, newBranchName)
       await Promise.all([useProjectsStore.getState().refresh(), refreshRepoAwareStores()])
       set({
         isMutating: false,
+        mutatingProjectId: null,
+        mutatingAction: null,
         lastActionMessage: branchMode === 'new' ? 'Repository cloned and branch created.' : 'Repository cloned.',
       })
     } catch (error) {
       set({
         isMutating: false,
+        mutatingProjectId: null,
+        mutatingAction: null,
         error: error instanceof Error ? error.message : 'Failed to clone repository',
         lastActionMessage: 'Failed to clone repository.',
       })
@@ -113,17 +125,21 @@ export const useProjectsStore = create<ProjectsState>((set) => ({
     const server = getServer()
     if (!server) return
 
-    set({ isMutating: true, error: null, lastActionMessage: 'Creating branch...' })
+    set({ isMutating: true, mutatingProjectId: projectId, mutatingAction: 'branch', error: null, lastActionMessage: 'Creating branch...' })
     try {
       await postCreateProjectBranch(server.ip, server.port, projectId, branchName)
       await Promise.all([useProjectsStore.getState().refresh(), refreshRepoAwareStores()])
       set({
         isMutating: false,
+        mutatingProjectId: null,
+        mutatingAction: null,
         lastActionMessage: `Created ${branchName}.`,
       })
     } catch (error) {
       set({
         isMutating: false,
+        mutatingProjectId: null,
+        mutatingAction: null,
         error: error instanceof Error ? error.message : 'Failed to create branch',
         lastActionMessage: 'Failed to create branch.',
       })

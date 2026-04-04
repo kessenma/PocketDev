@@ -1,5 +1,5 @@
 import React from 'react'
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
@@ -31,6 +31,8 @@ export default function ProjectsScreen() {
   const cloneProject = useProjectsStore((state) => state.cloneProject)
   const isLoading = useProjectsStore((state) => state.isLoading)
   const isMutating = useProjectsStore((state) => state.isMutating)
+  const mutatingProjectId = useProjectsStore((state) => state.mutatingProjectId)
+  const mutatingAction = useProjectsStore((state) => state.mutatingAction)
   const lastActionMessage = useProjectsStore((state) => state.lastActionMessage)
   const [branchDrafts, setBranchDrafts] = React.useState<Record<string, string>>({})
   const [filter, setFilter] = React.useState<ProjectFilter>('all')
@@ -98,6 +100,8 @@ export default function ProjectsScreen() {
 
         {visibleProjects.map((project) => {
           const branchDraft = branchDrafts[project.id] ?? ''
+          const isProjectCloning = mutatingAction === 'clone' && mutatingProjectId === project.id
+          const isProjectSelecting = mutatingAction === 'select' && mutatingProjectId === project.id
           return (
             <View
               key={project.id}
@@ -132,14 +136,24 @@ export default function ProjectsScreen() {
                     onPress={() => selectProject(project.id, false)}
                     disabled={isMutating}
                   >
-                    <Text style={[styles.actionText, { color: colors.primaryText }]}>Open</Text>
+                    <ActionLabel
+                      busy={isProjectSelecting}
+                      color={colors.primaryText}
+                      idleLabel="Open"
+                      busyLabel="Opening..."
+                    />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.secondaryButton, { borderColor: colors.border }]}
                     onPress={() => selectProject(project.id, true)}
                     disabled={isMutating}
                   >
-                    <Text style={[styles.secondaryText, { color: colors.text }]}>Pull + Open</Text>
+                    <ActionLabel
+                      busy={isProjectSelecting}
+                      color={colors.text}
+                      idleLabel="Pull + Open"
+                      busyLabel="Opening..."
+                    />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -150,7 +164,12 @@ export default function ProjectsScreen() {
                       onPress={() => cloneProject(project.id, 'default')}
                       disabled={isMutating}
                     >
-                      <Text style={[styles.actionText, { color: colors.primaryText }]}>Clone Default</Text>
+                      <ActionLabel
+                        busy={isProjectCloning}
+                        color={colors.primaryText}
+                        idleLabel="Clone Default"
+                        busyLabel="Cloning..."
+                      />
                     </TouchableOpacity>
                   </View>
 
@@ -167,7 +186,12 @@ export default function ProjectsScreen() {
                     onPress={() => cloneProject(project.id, 'new', branchDraft)}
                     disabled={isMutating || branchDraft.trim().length === 0}
                   >
-                    <Text style={[styles.secondaryText, { color: colors.text }]}>Clone + New Branch</Text>
+                    <ActionLabel
+                      busy={isProjectCloning}
+                      color={colors.text}
+                      idleLabel="Clone + New Branch"
+                      busyLabel="Cloning..."
+                    />
                   </TouchableOpacity>
                 </View>
               )}
@@ -209,6 +233,25 @@ function Badge({
     <View style={[styles.badge, { borderColor: color, backgroundColor: color + '14' }]}>
       {Icon ? <Icon color={color} size={12} strokeWidth={2.2} /> : null}
       <Text style={[styles.badgeText, { color }]}>{label}</Text>
+    </View>
+  )
+}
+
+function ActionLabel({
+  busy,
+  color,
+  idleLabel,
+  busyLabel,
+}: {
+  busy: boolean
+  color: string
+  idleLabel: string
+  busyLabel: string
+}) {
+  return (
+    <View style={styles.actionContent}>
+      {busy ? <ActivityIndicator size="small" color={color} /> : null}
+      <Text style={[styles.actionText, { color }]}>{busy ? busyLabel : idleLabel}</Text>
     </View>
   )
 }
@@ -319,6 +362,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
+  },
+  actionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[2],
   },
   actionText: {
     ...typographyScale.sm,

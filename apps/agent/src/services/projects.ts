@@ -15,6 +15,22 @@ import { GitServiceError } from './git.ts'
 
 const INITIAL_PROJECT_DIR = resolve(process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/')
 const CLONE_ROOT = resolve(process.env.POCKETDEV_REPOS_DIR ?? join(process.env.HOME ?? '/', 'PocketDev', 'repos'))
+const MAX_PROJECT_DEBUG_ENTRIES = 40
+
+type ProjectDebugEntry = {
+  ts: string
+  kind: 'fetch' | 'clone' | 'select' | 'branch'
+  message: string
+}
+
+const projectDebugLog: ProjectDebugEntry[] = []
+
+function logProjectDebug(kind: ProjectDebugEntry['kind'], message: string) {
+  projectDebugLog.unshift({ ts: new Date().toISOString(), kind, message })
+  if (projectDebugLog.length > MAX_PROJECT_DEBUG_ENTRIES) {
+    projectDebugLog.length = MAX_PROJECT_DEBUG_ENTRIES
+  }
+}
 
 async function exec(cmd: string, cwd?: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
@@ -149,6 +165,7 @@ async function fetchGithubRepos(githubUsername: string | null): Promise<GithubRe
       }
     }
 
+    logProjectDebug('fetch', `gh api user/repos failed: ${reposResult.stderr || reposResult.stdout || 'unknown error'}`)
     return {
       githubUsername: authedUsername,
       repos: [],
@@ -163,6 +180,7 @@ async function fetchGithubRepos(githubUsername: string | null): Promise<GithubRe
 
   const response = await fetch(`https://api.github.com/users/${githubUsername}/repos?per_page=100&sort=updated`)
   if (!response.ok) {
+    logProjectDebug('fetch', `public GitHub API returned ${response.status} for ${githubUsername}`)
     return {
       githubUsername,
       repos: [],
@@ -232,6 +250,10 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
   try {
     const githubData = await fetchGithubRepos(githubUsername)
     githubUsername = githubData.githubUsername
+    logProjectDebug(
+      'fetch',
+      `repo discovery via ${githubData.source}: fetched=${githubData.repos.length} private=${githubData.repos.filter((repo) => repo.private).length} public=${githubData.repos.filter((repo) => !repo.private).length}`,
+    )
 
     for (const repo of githubData.repos) {
       const matchingLocal = localProjects.find((project) => project.remoteUrl === repo.clone_url)
@@ -309,6 +331,7 @@ export async function getProjectsDebug() {
     listedPublicCount: listedPublic.length,
     listedUnknownCount: listed.projects.filter((project) => project.visibility === 'unknown').length,
     listedPrivateSample: listedPrivate.slice(0, 8).map((project) => `${project.owner ?? 'unknown'}/${project.name}`),
+    recentOperations: [...projectDebugLog],
   }
 }
 
@@ -316,15 +339,19 @@ export async function selectProject(projectId: string, pullLatest = false): Prom
   await ensureSeedProject()
   const project = getProject(projectId)
   if (!project) {
+    logProjectDebug('select', `select failed: missing project ${projectId}`)
     throw new GitServiceError('Project not found', 'command_failed', 404)
   }
   if (!existsSync(project.absolutePath)) {
+    logProjectDebug('select', `select failed: missing path ${project.absolutePath}`)
     throw new GitServiceError('Local repository is no longer available', 'command_failed', 400)
   }
 
   if (pullLatest) {
+    logProjectDebug('select', `pull + open started for ${project.name}`)
     const pull = await exec('git pull --ff-only', project.absolutePath)
     if (pull.exitCode !== 0) {
+      logProjectDebug('select', `pull failed for ${project.name}: ${pull.stderr || pull.stdout || 'unknown error'}`)
       throw new GitServiceError(pull.stderr || 'Pull failed', 'command_failed', 400)
     }
   }
@@ -340,6 +367,7 @@ export async function selectProject(projectId: string, pullLatest = false): Prom
     defaultBranch: metadata.defaultBranch ?? project.defaultBranch,
   })
   setActiveProjectId(project.id)
+  logProjectDebug('select', `activated ${project.name}${pullLatest ? ' after pull' : ''}`)
 
   return {
     ok: true,
@@ -356,22 +384,30 @@ export async function cloneProject(
   branchMode: 'default' | 'new' = 'default',
   newBranchName?: string,
 ): Promise<ProjectMutationResult> {
+  logProjectDebug('clone', `clone requested for ${projectId} (${branchMode}${newBranchName ? `:${newBranchName}` : ''})`)
   const listed = await listProjects()
   const project = listed.projects.find((entry) => entry.id === projectId)
   if (!project || !project.remoteUrl) {
+    logProjectDebug('clone', `clone failed: missing project or remote for ${projectId}`)
     throw new GitServiceError('Project not found', 'command_failed', 404)
   }
   if (project.isLocal && project.localPath) {
+    logProjectDebug('clone', `clone skipped: ${project.name} already local, activating instead`)
     return selectProject(project.id, false)
   }
 
   mkdirSync(CLONE_ROOT, { recursive: true })
   const targetDir = resolve(CLONE_ROOT, normalizeProjectName(project.name))
   if (!existsSync(targetDir)) {
+    logProjectDebug('clone', `git clone starting for ${project.remoteUrl} -> ${targetDir}`)
     const clone = await exec(`git clone ${escapeShellArg(project.remoteUrl)} ${escapeShellArg(targetDir)}`)
     if (clone.exitCode !== 0) {
+      logProjectDebug('clone', `git clone failed for ${project.name}: ${clone.stderr || clone.stdout || 'unknown error'}`)
       throw new GitServiceError(clone.stderr || 'Clone failed', 'command_failed', 400)
     }
+    logProjectDebug('clone', `git clone finished for ${project.name}`)
+  } else {
+    logProjectDebug('clone', `target already exists for ${project.name}: ${targetDir}`)
   }
 
   const metadata = await getGitMetadata(targetDir)
@@ -388,14 +424,17 @@ export async function cloneProject(
   })
 
   if (branchMode === 'new' && newBranchName) {
+    logProjectDebug('clone', `creating branch ${newBranchName} in ${project.name}`)
     await createBranchForProject(persistedId, newBranchName)
   }
 
   setActiveProjectId(persistedId)
   const persisted = getProject(persistedId)
   if (!persisted) {
+    logProjectDebug('clone', `clone activation failed for ${project.name}: persisted project missing`)
     throw new GitServiceError('Failed to activate cloned repository', 'command_failed', 500)
   }
+  logProjectDebug('clone', `clone completed and activated ${project.name}`)
 
   return {
     ok: true,
@@ -406,11 +445,14 @@ export async function cloneProject(
 export async function createBranchForProject(projectId: string, branchName: string): Promise<ProjectMutationResult> {
   const project = getProject(projectId)
   if (!project) {
+    logProjectDebug('branch', `branch creation failed: missing project ${projectId}`)
     throw new GitServiceError('Project not found', 'command_failed', 404)
   }
 
+  logProjectDebug('branch', `creating branch ${branchName} in ${project.name}`)
   const checkout = await exec(`git checkout -b ${escapeShellArg(branchName)}`, project.absolutePath)
   if (checkout.exitCode !== 0) {
+    logProjectDebug('branch', `branch creation failed in ${project.name}: ${checkout.stderr || checkout.stdout || 'unknown error'}`)
     throw new GitServiceError(checkout.stderr || 'Branch creation failed', 'command_failed', 400)
   }
 
@@ -425,6 +467,7 @@ export async function createBranchForProject(projectId: string, branchName: stri
     defaultBranch: metadata.defaultBranch ?? project.defaultBranch,
   })
   setActiveProjectId(project.id)
+  logProjectDebug('branch', `branch ${branchName} created in ${project.name}`)
 
   return {
     ok: true,
