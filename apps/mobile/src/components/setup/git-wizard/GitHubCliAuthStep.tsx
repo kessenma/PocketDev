@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Linking, ScrollView, KeyboardAvoidingView, Platform } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Linking, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, AppState } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
@@ -60,6 +60,7 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDebugOutput, setShowDebugOutput] = useState(false)
+  const [waitingForBrowserAuth, setWaitingForBrowserAuth] = useState(false)
 
   const syncSession = useCallback((next: GitHubCliAuthSessionStatus) => {
     setSession(next)
@@ -67,34 +68,52 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
       dispatch({ type: 'SET_GITHUB_USERNAME', username: next.github_username })
     }
     if (next.authenticated && next.private_repo_access) {
+      setWaitingForBrowserAuth(false)
       dispatch({ type: 'STEP_COMPLETE', step: 'github-cli-auth' })
     }
+    if (next.state === 'failed') {
+      setWaitingForBrowserAuth(false)
+    }
   }, [dispatch])
+
+  const refreshSessionStatus = useCallback(async () => {
+    if (!server || !session?.session_id) return
+    try {
+      const next = await fetchGitHubCliAuthStatus(server.ip, server.port, session.session_id)
+      syncSession(next)
+      if (next.state === 'failed' && next.error) {
+        setError(next.error)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh GitHub CLI auth status.')
+    }
+  }, [server, session?.session_id, syncSession])
 
   useEffect(() => {
     if (!server || !session?.session_id || session.completed) return
 
     const timer = setInterval(() => {
-      void (async () => {
-        try {
-          const next = await fetchGitHubCliAuthStatus(server.ip, server.port, session.session_id)
-          syncSession(next)
-          if (next.state === 'failed' && next.error) {
-            setError(next.error)
-          }
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to refresh GitHub CLI auth status.')
-        }
-      })()
+      void refreshSessionStatus()
     }, 1500)
 
     return () => clearInterval(timer)
-  }, [server, session, syncSession])
+  }, [refreshSessionStatus, server, session])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && waitingForBrowserAuth) {
+        void refreshSessionStatus()
+      }
+    })
+
+    return () => subscription.remove()
+  }, [refreshSessionStatus, waitingForBrowserAuth])
 
   async function handleStartBrowserFlow() {
     if (!server) return
     setLoading(true)
     setError(null)
+    setWaitingForBrowserAuth(false)
     try {
       const next = await postStartGitHubCliAuth(server.ip, server.port)
       syncSession(next)
@@ -111,6 +130,7 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
     if (!server || !token.trim()) return
     setLoading(true)
     setError(null)
+    setWaitingForBrowserAuth(false)
     try {
       const result = await postConfigureGitHubCliToken(server.ip, server.port, token.trim())
       if (!result.success) {
@@ -146,6 +166,18 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
     ? extractVerificationCode(session?.output_excerpt)
     : null
   const displayVerificationCode = session?.verification_code ?? fallbackVerificationCode
+
+  async function handleOpenGitHub() {
+    if (!session?.auth_url) return
+    setWaitingForBrowserAuth(true)
+    setError(null)
+    try {
+      await Linking.openURL(session.auth_url)
+    } catch (err) {
+      setWaitingForBrowserAuth(false)
+      setError(err instanceof Error ? err.message : 'Failed to open GitHub.')
+    }
+  }
 
   return (
     <KeyboardAvoidingView
@@ -254,7 +286,7 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-              onPress={() => Linking.openURL(session.auth_url!)}
+              onPress={() => void handleOpenGitHub()}
               activeOpacity={0.7}
             >
               <ExternalLink color={colors.primaryText} size={18} strokeWidth={2.25} />
@@ -263,6 +295,25 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
             <CopyButton value={session.auth_url} label="Copy URL" />
           </View>
         )}
+
+        {selectedMethod === 'browser' && waitingForBrowserAuth && !session?.authenticated ? (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.waitingHeader}>
+              <ActivityIndicator color={colors.primary} size="small" />
+              <Text style={[styles.cardTitle, { color: colors.text }]}>Waiting For GitHub Approval</Text>
+            </View>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              Finish the browser sign-in, then return to PocketDev. This step will advance automatically as soon as the server reports GitHub CLI is authenticated.
+            </Text>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { borderColor: colors.border, backgroundColor: colors.background }]}
+              onPress={() => void refreshSessionStatus()}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Check Again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {selectedMethod === 'browser' && session && !session.authenticated && !session.verification_code && !session.auth_url ? (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -448,8 +499,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing[2],
   },
+  secondaryButton: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing[3],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   buttonText: {
     ...typographyScale.base,
+    fontWeight: '700',
+  },
+  secondaryButtonText: {
+    ...typographyScale.sm,
     fontWeight: '700',
   },
   tokenSection: {
@@ -475,6 +537,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[3],
+  },
+  waitingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
   },
   debugHeaderText: {
     flex: 1,

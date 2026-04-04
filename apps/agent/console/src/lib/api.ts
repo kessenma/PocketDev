@@ -248,6 +248,7 @@ export interface GitHubAuthDebugSession {
   verificationCode: string | null
   githubUsername: string | null
   privateRepoAccess: boolean
+  browserLaunchHandled: boolean
   error: string | null
   startedAt: string
   updatedAt: string

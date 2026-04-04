@@ -408,8 +408,22 @@ export async function startGitHubCliAuth(): Promise<GitHubCliAuthStartResult> {
   return toGhAuthStatus(session)
 }
 
-export function getGitHubCliAuthStatus(sessionId: string): GitHubCliAuthSessionStatus {
+export async function getGitHubCliAuthStatus(sessionId: string): Promise<GitHubCliAuthSessionStatus> {
   const session = getGhSessionOrThrow(sessionId)
+
+  if (!session.authenticated && !session.completed) {
+    const liveStatus = await getGhStatus()
+    session.authenticated = liveStatus.authenticated
+    session.githubUsername = liveStatus.username
+    session.privateRepoAccess = liveStatus.privateRepoAccess
+    if (liveStatus.authenticated) {
+      session.completed = true
+      session.error = null
+      session.terminal.kill()
+    }
+    refreshGhSessionState(session)
+  }
+
   return toGhAuthStatus(session)
 }
 
@@ -425,6 +439,7 @@ export function getGitHubAuthDebug() {
       verificationCode: session.verificationCode,
       githubUsername: session.githubUsername,
       privateRepoAccess: session.privateRepoAccess,
+      browserLaunchHandled: session.browserLaunchHandled,
       error: session.error,
       startedAt: new Date(session.startedAt).toISOString(),
       updatedAt: new Date(session.updatedAt).toISOString(),

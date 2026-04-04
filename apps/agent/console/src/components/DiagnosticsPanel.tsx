@@ -487,6 +487,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                         </div>
                         <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
                           <p>Verification code: {session.verificationCode ?? 'Not parsed yet'}</p>
+                          <p>Browser launch handled: {session.browserLaunchHandled ? 'Yes' : 'No'}</p>
                           <p>GitHub user: {session.githubUsername ?? 'Unknown'}</p>
                           <p>Private repo access: {session.privateRepoAccess ? 'Yes' : 'No'}</p>
                           <p>Error: {session.error ?? 'None'}</p>
@@ -512,6 +513,9 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                   <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
                     <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Parsed Device Code</p>
                     <p className="mt-2 font-mono text-sm text-[#9df6cd]">{githubInfo?.sessions[0]?.verificationCode ?? 'No code parsed yet.'}</p>
+                    <p className="mt-2 text-xs text-[#f4f0e8]/60">
+                      Browser launch handled: {githubInfo?.sessions[0]?.browserLaunchHandled ? 'Yes' : 'No'}
+                    </p>
                   </div>
                   <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
                     <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output Excerpt</p>

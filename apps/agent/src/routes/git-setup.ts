@@ -91,7 +91,7 @@ export const gitSetupRoutes = new Elysia({ prefix: '/git-setup' })
     if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
 
     try {
-      return getGitHubCliAuthStatus(params.sessionId)
+      return await getGitHubCliAuthStatus(params.sessionId)
     } catch (error) {
       set.status = 404
       return { error: error instanceof Error ? error.message : 'GitHub CLI auth session not found' }
