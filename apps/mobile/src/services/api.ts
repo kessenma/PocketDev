@@ -31,6 +31,8 @@ import type {
   GitConfigureResult,
   GitTestConnectionResult,
   GitHubCliAuthResult,
+  GitHubCliAuthStartResult,
+  GitHubCliAuthSessionStatus,
   ClaudeSetupStatus,
   ClaudeAuthSessionStatus,
   CodexSetupStatus,
@@ -514,6 +516,27 @@ export async function postConfigureGitHubCliToken(
   })
   if (!response.ok) throw new Error(`Failed to configure GitHub CLI (${response.status})`)
   return response.json() as Promise<GitHubCliAuthResult>
+}
+
+export async function postStartGitHubCliAuth(ip: string, port: number): Promise<GitHubCliAuthStartResult> {
+  const response = await fetch(apiUrl(ip, port, '/git-setup/github-cli/auth/start'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to start GitHub CLI auth (${response.status})`)
+  return response.json() as Promise<GitHubCliAuthStartResult>
+}
+
+export async function fetchGitHubCliAuthStatus(
+  ip: string,
+  port: number,
+  sessionId: string,
+): Promise<GitHubCliAuthSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, `/git-setup/github-cli/auth/status/${encodeURIComponent(sessionId)}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch GitHub CLI auth status (${response.status})`)
+  return response.json() as Promise<GitHubCliAuthSessionStatus>
 }
 
 // ─── Claude CLI Setup ──────────────────────────────────────────────

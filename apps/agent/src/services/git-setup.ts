@@ -6,10 +6,37 @@ import type {
   GitConfigureResult,
   GitTestConnectionResult,
   GitHubCliAuthResult,
+  GitHubCliAuthSessionStatus,
+  GitHubCliAuthStartResult,
+  GitHubCliAuthSessionState,
 } from '@pocketdev/shared/types'
+import { createTerminalSession, type TerminalSession } from './terminal.ts'
 
 const SSH_DIR = join(process.env.HOME ?? '/root', '.ssh')
 const SSH_CONFIG_PATH = join(SSH_DIR, 'config')
+const GH_AUTH_URL_PATTERN = /https:\/\/[^\s]+/g
+const GH_AUTH_CODE_PATTERNS = [
+  /code[:\s]+([A-Z0-9-]{4,})/i,
+  /enter code[:\s]+([A-Z0-9-]{4,})/i,
+  /\b([A-Z0-9]{4}(?:-[A-Z0-9]{4})+)\b/,
+]
+const GH_OUTPUT_EXCERPT_LENGTH = 1500
+
+interface InternalGhAuthSession {
+  id: string
+  terminal: TerminalSession
+  output: string
+  state: GitHubCliAuthSessionState
+  authUrl: string | null
+  verificationCode: string | null
+  githubUsername: string | null
+  privateRepoAccess: boolean
+  authenticated: boolean
+  completed: boolean
+  error: string | null
+}
+
+const ghAuthSessions = new Map<string, InternalGhAuthSession>()
 
 /** Run a command in a login shell with HOME explicitly set */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
@@ -125,6 +152,82 @@ async function getGhStatus(): Promise<{
   }
 }
 
+function parseGhVerificationCode(output: string): string | null {
+  for (const pattern of GH_AUTH_CODE_PATTERNS) {
+    const match = output.match(pattern)
+    if (match?.[1]) return match[1]
+  }
+  return null
+}
+
+function getGhOutputExcerpt(output: string): string | null {
+  const trimmed = output.trim()
+  if (!trimmed) return null
+  return trimmed.slice(-GH_OUTPUT_EXCERPT_LENGTH)
+}
+
+function refreshGhSessionState(session: InternalGhAuthSession) {
+  const urls = session.output.match(GH_AUTH_URL_PATTERN)
+  session.authUrl = urls?.find((url) => url.includes('github.com')) ?? session.authUrl
+  session.verificationCode = parseGhVerificationCode(session.output) ?? session.verificationCode
+
+  if (session.authenticated) {
+    session.state = 'authenticated'
+    session.error = null
+    return
+  }
+
+  const lower = session.output.toLowerCase()
+  if (session.completed && !session.authenticated) {
+    session.state = 'failed'
+    session.error = session.error ?? (lower.includes('error') ? 'GitHub CLI authentication failed.' : 'GitHub CLI authentication could not be verified.')
+    return
+  }
+
+  if (session.authUrl) {
+    session.state = 'awaiting_browser'
+    return
+  }
+
+  session.state = 'pending'
+}
+
+function toGhAuthStatus(session: InternalGhAuthSession): GitHubCliAuthSessionStatus {
+  return {
+    session_id: session.id,
+    state: session.state,
+    auth_url: session.authUrl,
+    verification_code: session.verificationCode,
+    output_excerpt: getGhOutputExcerpt(session.output),
+    github_username: session.githubUsername,
+    private_repo_access: session.privateRepoAccess,
+    authenticated: session.authenticated,
+    completed: session.completed,
+    error: session.error,
+  }
+}
+
+async function finalizeGhSession(sessionId: string) {
+  const session = ghAuthSessions.get(sessionId)
+  if (!session) return
+
+  const finalStatus = await getGhStatus()
+  session.authenticated = finalStatus.authenticated
+  session.githubUsername = finalStatus.username
+  session.privateRepoAccess = finalStatus.privateRepoAccess
+  session.completed = true
+  session.error = finalStatus.authenticated ? null : (finalStatus.output ?? 'GitHub CLI authentication failed.')
+  refreshGhSessionState(session)
+}
+
+function getGhSessionOrThrow(sessionId: string): InternalGhAuthSession {
+  const session = ghAuthSessions.get(sessionId)
+  if (!session) {
+    throw new Error('GitHub CLI auth session not found')
+  }
+  return session
+}
+
 // ─── Public API ──────────────────────────────────────────────────────
 
 export async function checkSshStatus(): Promise<GitSshStatus> {
@@ -224,6 +327,59 @@ export async function configureGitHubCliToken(token: string): Promise<GitHubCliA
     output: finalStatus.output,
     error: finalStatus.authenticated ? null : 'GitHub CLI is still not authenticated',
   }
+}
+
+export async function startGitHubCliAuth(): Promise<GitHubCliAuthStartResult> {
+  const ghStatus = await getGhStatus()
+  if (!ghStatus.installed) {
+    throw new Error('GitHub CLI is not installed')
+  }
+
+  for (const session of ghAuthSessions.values()) {
+    session.terminal.kill()
+  }
+  ghAuthSessions.clear()
+
+  const sessionId = crypto.randomUUID()
+  const command = 'gh auth login --hostname github.com --git-protocol ssh --skip-ssh-key --web'
+  const terminal = createTerminalSession(
+    sessionId,
+    (data) => {
+      const session = ghAuthSessions.get(sessionId)
+      if (!session) return
+      session.output += data
+      refreshGhSessionState(session)
+    },
+    () => {
+      void finalizeGhSession(sessionId)
+    },
+    process.env.HOME ?? '/root',
+  )
+
+  const session: InternalGhAuthSession = {
+    id: sessionId,
+    terminal,
+    output: '',
+    state: 'starting',
+    authUrl: null,
+    verificationCode: null,
+    githubUsername: null,
+    privateRepoAccess: false,
+    authenticated: false,
+    completed: false,
+    error: null,
+  }
+  ghAuthSessions.set(sessionId, session)
+  terminal.send(`${command}\n`)
+
+  await Bun.sleep(1000)
+  refreshGhSessionState(session)
+  return toGhAuthStatus(session)
+}
+
+export function getGitHubCliAuthStatus(sessionId: string): GitHubCliAuthSessionStatus {
+  const session = getGhSessionOrThrow(sessionId)
+  return toGhAuthStatus(session)
 }
 
 export async function generateSshKey(overwrite: boolean): Promise<GitSshKeyResult> {

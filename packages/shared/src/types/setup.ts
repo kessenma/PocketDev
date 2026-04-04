@@ -102,6 +102,28 @@ export interface GitHubCliAuthResult {
   error: string | null
 }
 
+export type GitHubCliAuthSessionState =
+  | 'starting'
+  | 'awaiting_browser'
+  | 'pending'
+  | 'authenticated'
+  | 'failed'
+
+export interface GitHubCliAuthSessionStatus {
+  session_id: string
+  state: GitHubCliAuthSessionState
+  auth_url: string | null
+  verification_code: string | null
+  output_excerpt: string | null
+  github_username: string | null
+  private_repo_access: boolean
+  authenticated: boolean
+  completed: boolean
+  error: string | null
+}
+
+export interface GitHubCliAuthStartResult extends GitHubCliAuthSessionStatus {}
+
 export type GitWizardStep = 'detect' | 'install' | 'generate-key' | 'add-to-github' | 'test-connection' | 'install-gh' | 'github-cli-auth' | 'configure-identity'
 export type GitWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 

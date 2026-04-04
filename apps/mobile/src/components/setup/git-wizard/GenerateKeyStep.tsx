@@ -101,7 +101,7 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
           <View style={styles.warningHeader}>
             <AlertTriangle color="#facc15" size={18} strokeWidth={2.25} />
             <Text style={[styles.warningTitle, { color: colors.text }]}>
-              SSH key already exists
+              Access key already exists
             </Text>
           </View>
           <Text style={[styles.warningText, { color: colors.textSecondary }]}>
@@ -164,7 +164,7 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
       {loading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Generating key...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Generating access key...</Text>
         </View>
       )}
 
@@ -178,7 +178,7 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
       {publicKey && (
         <>
           <View style={[styles.keyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.keyLabel, { color: colors.textTertiary }]}>Public Key</Text>
+            <Text style={[styles.keyLabel, { color: colors.textTertiary }]}>Workspace Key</Text>
             <Text style={[styles.keyText, { color: colors.text }]} selectable numberOfLines={4}>
               {publicKey}
             </Text>

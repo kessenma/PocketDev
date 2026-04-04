@@ -141,9 +141,9 @@ export default function AuthenticateStep({ dispatch }: Props) {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.title, { color: colors.text }]}>Sign In to Anthropic</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Sign In to Claude</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Authenticate Claude CLI with your Anthropic account
+            Connect Claude for this workspace using your Anthropic account
           </Text>
         </View>
 
@@ -240,7 +240,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
               activeOpacity={0.7}
             >
               <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-                Terminal output
+                Activity details
               </Text>
               <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />
             </TouchableOpacity>

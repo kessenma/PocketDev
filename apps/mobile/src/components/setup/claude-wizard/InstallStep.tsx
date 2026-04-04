@@ -218,14 +218,14 @@ export default function InstallStep({ dispatch }: Props) {
         </View>
       </View>
 
-      {/* Collapsible terminal output */}
+      {/* Collapsible activity details */}
       <TouchableOpacity
         style={[styles.outputToggle, { borderColor: colors.border }]}
         onPress={() => setShowOutput(!showOutput)}
         activeOpacity={0.7}
       >
         <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-          Terminal output
+          Activity details
         </Text>
         {showOutput
           ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
@@ -239,7 +239,7 @@ export default function InstallStep({ dispatch }: Props) {
           nestedScrollEnabled
         >
           <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-            {output || 'Waiting for output...'}
+            {output || 'Waiting for activity...'}
           </Text>
         </ScrollView>
       )}

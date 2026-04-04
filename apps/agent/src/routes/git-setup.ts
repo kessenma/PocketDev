@@ -7,6 +7,8 @@ import {
   configureIdentity,
   testGithubConnection,
   configureGitHubCliToken,
+  startGitHubCliAuth,
+  getGitHubCliAuthStatus,
 } from '../services/git-setup.ts'
 
 export const gitSetupRoutes = new Elysia({ prefix: '/git-setup' })
@@ -75,4 +77,23 @@ export const gitSetupRoutes = new Elysia({ prefix: '/git-setup' })
     body: t.Object({
       token: t.String(),
     }),
+  })
+
+  .post('/github-cli/auth/start', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    return startGitHubCliAuth()
+  })
+
+  .get('/github-cli/auth/status/:sessionId', async ({ request, params, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      return getGitHubCliAuthStatus(params.sessionId)
+    } catch (error) {
+      set.status = 404
+      return { error: error instanceof Error ? error.message : 'GitHub CLI auth session not found' }
+    }
   })

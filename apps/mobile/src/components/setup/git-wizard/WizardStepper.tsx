@@ -7,7 +7,7 @@ import type { GitWizardStep, GitWizardStepStatus } from '@pocketdev/shared/types
 
 const VISIBLE_STEPS: { key: GitWizardStep; label: string }[] = [
   { key: 'install', label: 'Install' },
-  { key: 'generate-key', label: 'SSH Key' },
+  { key: 'generate-key', label: 'Access Key' },
   { key: 'add-to-github', label: 'GitHub' },
   { key: 'test-connection', label: 'Test' },
   { key: 'install-gh', label: 'GH CLI' },

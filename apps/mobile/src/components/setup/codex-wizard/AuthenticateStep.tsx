@@ -148,11 +148,11 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
       : session?.state === 'awaiting_code'
         ? selectedMethod === 'device_code'
           ? 'Open the verification page, then enter the one-time code shown by Codex if the CLI asks for it.'
-          : 'Complete sign-in in your browser or ChatGPT app, then finish the localhost callback handoff in PocketDev.'
+          : 'Complete sign-in in your browser or ChatGPT app, then finish the sign-in return step in PocketDev.'
         : session?.state === 'awaiting_browser'
           ? selectedMethod === 'device_code'
             ? 'Open the verification page in your browser or ChatGPT app and complete sign-in with the code below.'
-            : 'Open the sign-in page in your system browser, then paste the returned localhost callback URL back into PocketDev.'
+            : 'Open the sign-in page in your system browser, then paste the returned sign-in link back into PocketDev.'
           : session?.state === 'pending'
             ? 'Waiting for Codex CLI to finish the authentication flow.'
             : session?.state === 'failed'
@@ -200,7 +200,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             <Text style={[styles.cardTitle, { color: colors.text }]}>Login and authenticate with</Text>
             <MethodOption
               label="web app"
-              description="Start `codex login`, finish sign-in in your system browser, then paste the localhost callback URL back into PocketDev."
+              description="Start `codex login`, finish sign-in in your system browser, then paste the returned sign-in link back into PocketDev."
               selected={selectedMethod === 'browser'}
               onPress={() => setSelectedMethod('browser')}
               colors={colors}
@@ -234,7 +234,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
               {selectedMethod === 'device_code'
                 ? 'Open the OpenAI verification page in the ChatGPT app or your mobile browser, then complete sign-in with the one-time code shown below.'
-                : 'Open the OpenAI page in your system browser. After sign-in, copy the final `localhost:1455/auth/callback?...` URL and paste it back into PocketDev so the server can finish Codex authentication.'}
+                : 'Open the OpenAI page in your system browser. After sign-in, copy the final return link and paste it back into PocketDev so the workspace can finish Codex authentication.'}
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
@@ -267,15 +267,15 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
 
         {started && selectedMethod === 'browser' && openedBrowser && !session?.authenticated && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Paste callback URL</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Paste sign-in return link</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              After the browser finishes signing you in, copy the URL that starts with `localhost:1455/auth/callback?` or `http://localhost:1455/auth/callback?` and paste it here.
+              After the browser finishes signing you in, copy the final return link that starts with `localhost:1455/auth/callback?` or `http://localhost:1455/auth/callback?` and paste it here.
             </Text>
             <TextInput
               style={[styles.multilineInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
               value={callbackUrl}
               onChangeText={setCallbackUrl}
-              placeholder="localhost:1455/auth/callback?..."
+                placeholder="Paste sign-in return link..."
               placeholderTextColor={colors.textTertiary}
               autoCapitalize="none"
               autoCorrect={false}
@@ -323,7 +323,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
 
         {started && session?.output_excerpt && (
           <View style={[styles.outputCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Recent Codex output</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Recent Codex activity</Text>
             <View style={[styles.outputBox, { backgroundColor: colors.background }]}>
               <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
                 {session.output_excerpt}

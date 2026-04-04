@@ -6,7 +6,7 @@ import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { Assets } from '../../../../assets'
 import { Copy, Check, ExternalLink, ArrowRight } from 'lucide-react-native'
 
-const GITHUB_SSH_URL = 'https://github.com/settings/ssh/new'
+const GITHUB_KEY_URL = 'https://github.com/settings/ssh/new'
 
 type WizardAction = { type: 'STEP_COMPLETE'; step: 'add-to-github' }
 
@@ -28,7 +28,7 @@ export default function AddToGitHubStep({ dispatch, publicKey }: Props) {
   }
 
   function handleOpenGitHub() {
-    Linking.openURL(GITHUB_SSH_URL)
+    Linking.openURL(GITHUB_KEY_URL)
   }
 
   function handleConfirm() {
@@ -44,7 +44,7 @@ export default function AddToGitHubStep({ dispatch, publicKey }: Props) {
         <Image source={githubLogo} style={styles.logo} resizeMode="contain" />
       </View>
 
-      <Text style={[styles.title, { color: colors.text }]}>Add Key to GitHub</Text>
+      <Text style={[styles.title, { color: colors.text }]}>Add Workspace Key to GitHub</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Add this workspace key to your GitHub account so it can sync code.
       </Text>
@@ -79,7 +79,7 @@ export default function AddToGitHubStep({ dispatch, publicKey }: Props) {
       <View style={[styles.instructionsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <InstructionStep
           number={1}
-          text="Open GitHub SSH key settings"
+          text="Open GitHub key settings"
           action={
             <TouchableOpacity
               style={[styles.linkButton, { backgroundColor: colors.primary }]}
@@ -99,12 +99,12 @@ export default function AddToGitHubStep({ dispatch, publicKey }: Props) {
         />
         <InstructionStep
           number={3}
-          text="Paste the SSH key you copied above into the Key field"
+          text="Paste the workspace key you copied above into the Key field"
           colors={colors}
         />
         <InstructionStep
           number={4}
-          text='Click "Add SSH Key"'
+          text='Click "Add key"'
           colors={colors}
         />
       </View>
@@ -127,7 +127,7 @@ export default function AddToGitHubStep({ dispatch, publicKey }: Props) {
         onPress={handleConfirm}
         activeOpacity={0.7}
       >
-        <Text style={[styles.confirmText, { color: colors.primaryText }]}>I've Added the Key</Text>
+          <Text style={[styles.confirmText, { color: colors.primaryText }]}>I&apos;ve Added the Key</Text>
         <ArrowRight color={colors.primaryText} size={18} strokeWidth={2.25} />
       </TouchableOpacity>
     </ScrollView>

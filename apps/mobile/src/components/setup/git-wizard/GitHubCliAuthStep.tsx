@@ -1,15 +1,23 @@
-import React, { useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Linking, ScrollView, KeyboardAvoidingView, Platform } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
-import { postConfigureGitHubCliToken } from '../../../services/api'
-import { CheckCircle, KeyRound } from 'lucide-react-native'
+import {
+  fetchGitHubCliAuthStatus,
+  postConfigureGitHubCliToken,
+  postStartGitHubCliAuth,
+} from '../../../services/api'
+import { CheckCircle, ExternalLink, KeyRound, ShieldCheck, Globe, Circle, CircleDot } from 'lucide-react-native'
+import type { GitHubCliAuthSessionStatus } from '@pocketdev/shared/types'
+import CopyButton from '../../shared/CopyButton'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'github-cli-auth' }
   | { type: 'STEP_FAILED'; step: 'github-cli-auth'; error: string }
   | { type: 'SET_GITHUB_USERNAME'; username: string }
+
+type Method = 'browser' | 'token'
 
 interface Props {
   dispatch: (action: WizardAction) => void
@@ -18,127 +26,331 @@ interface Props {
 export default function GitHubCliAuthStep({ dispatch }: Props) {
   const { colors } = useTheme()
   const server = useConnectionStore((s) => s.server)
+  const [selectedMethod, setSelectedMethod] = useState<Method>('browser')
+  const [session, setSession] = useState<GitHubCliAuthSessionStatus | null>(null)
   const [token, setToken] = useState('')
   const [loading, setLoading] = useState(false)
-  const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit() {
+  const syncSession = useCallback((next: GitHubCliAuthSessionStatus) => {
+    setSession(next)
+    if (next.github_username) {
+      dispatch({ type: 'SET_GITHUB_USERNAME', username: next.github_username })
+    }
+    if (next.authenticated && next.private_repo_access) {
+      dispatch({ type: 'STEP_COMPLETE', step: 'github-cli-auth' })
+    }
+  }, [dispatch])
+
+  useEffect(() => {
+    if (!server || !session?.session_id || session.completed) return
+
+    const timer = setInterval(() => {
+      void (async () => {
+        try {
+          const next = await fetchGitHubCliAuthStatus(server.ip, server.port, session.session_id)
+          syncSession(next)
+          if (next.state === 'failed' && next.error) {
+            setError(next.error)
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to refresh GitHub CLI auth status.')
+        }
+      })()
+    }, 1500)
+
+    return () => clearInterval(timer)
+  }, [server, session, syncSession])
+
+  async function handleStartBrowserFlow() {
+    if (!server) return
+    setLoading(true)
+    setError(null)
+    try {
+      const next = await postStartGitHubCliAuth(server.ip, server.port)
+      syncSession(next)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to start GitHub sign-in.'
+      setError(message)
+      dispatch({ type: 'STEP_FAILED', step: 'github-cli-auth', error: message })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSubmitToken() {
     if (!server || !token.trim()) return
     setLoading(true)
-    setSuccessMsg(null)
-    setErrorMsg(null)
-
+    setError(null)
     try {
       const result = await postConfigureGitHubCliToken(server.ip, server.port, token.trim())
       if (!result.success) {
-        setErrorMsg(result.error ?? 'GitHub CLI authentication failed')
+        const message = result.error ?? 'GitHub CLI authentication failed'
+        setError(message)
+        dispatch({ type: 'STEP_FAILED', step: 'github-cli-auth', error: message })
         return
       }
 
       if (result.github_username) {
         dispatch({ type: 'SET_GITHUB_USERNAME', username: result.github_username })
       }
-      setSuccessMsg(
-        result.private_repo_access
-          ? 'Private repository access is enabled.'
-          : 'GitHub CLI is authenticated, but private repository access could not be verified.',
-      )
       dispatch({ type: 'STEP_COMPLETE', step: 'github-cli-auth' })
-    } catch (error) {
-      setErrorMsg(error instanceof Error ? error.message : 'GitHub CLI authentication failed')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'GitHub CLI authentication failed'
+      setError(message)
+      dispatch({ type: 'STEP_FAILED', step: 'github-cli-auth', error: message })
     } finally {
       setLoading(false)
     }
   }
 
+  const helperText = session?.authenticated
+    ? session.private_repo_access
+      ? 'GitHub CLI is authenticated and private repository access is enabled.'
+      : 'GitHub CLI signed in, but private repository access could not be verified yet.'
+    : selectedMethod === 'browser'
+      ? 'Start a GitHub sign-in flow on the paired server, then finish it in your mobile browser.'
+      : 'Use a GitHub token only if you prefer not to use the browser sign-in flow.'
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={[styles.iconWrap, { backgroundColor: colors.backgroundSecondary }]}>
-          <KeyRound color={colors.primary} size={22} strokeWidth={2.25} />
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={120}
+    >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.statusHeader}>
+            <ShieldCheck color={session?.authenticated ? '#22c55e' : colors.primary} size={18} strokeWidth={2.25} />
+            <Text style={[styles.statusTitle, { color: colors.text }]}>Private Repo Access</Text>
+          </View>
+          <Text style={[styles.statusCopy, { color: error ? colors.error : colors.textSecondary }]}>
+            {error ?? helperText}
+          </Text>
         </View>
-        <Text style={[styles.title, { color: colors.text }]}>Enable private repo access</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Paste a GitHub token so GitHub CLI can list your private repositories on this server. A token with repo read access is enough.
-        </Text>
+
+        {!session?.authenticated && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Authenticate GitHub CLI with</Text>
+            <MethodOption
+              label="Browser sign-in"
+              description="Recommended. Start GitHub CLI login on the server, then open the GitHub verification page in your phone browser."
+              selected={selectedMethod === 'browser'}
+              onPress={() => setSelectedMethod('browser')}
+              colors={colors}
+              icon={<Globe color={selectedMethod === 'browser' ? colors.primary : colors.textTertiary} size={18} strokeWidth={2.25} />}
+            />
+            <MethodOption
+              label="Access token"
+              description="Fallback. Paste a GitHub token with repo read access if you prefer not to use browser login."
+              selected={selectedMethod === 'token'}
+              onPress={() => setSelectedMethod('token')}
+              colors={colors}
+              icon={<KeyRound color={selectedMethod === 'token' ? colors.primary : colors.textTertiary} size={18} strokeWidth={2.25} />}
+            />
+
+            {selectedMethod === 'browser' ? (
+              <TouchableOpacity
+                style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                onPress={() => void handleStartBrowserFlow()}
+                activeOpacity={0.7}
+                disabled={loading}
+              >
+                <Text style={[styles.buttonText, { color: colors.primaryText }]}>
+                  {loading ? 'Starting...' : 'Continue with browser'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.tokenSection}>
+                <TextInput
+                  style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                  value={token}
+                  onChangeText={setToken}
+                  placeholder="GitHub token"
+                  placeholderTextColor={colors.textTertiary}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry
+                />
+                <TouchableOpacity
+                  style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                  onPress={() => void handleSubmitToken()}
+                  activeOpacity={0.7}
+                  disabled={loading || token.trim().length === 0}
+                >
+                  <Text style={[styles.buttonText, { color: colors.primaryText }]}>
+                    {loading ? 'Authenticating...' : 'Continue with token'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {selectedMethod === 'browser' && session?.auth_url && !session?.authenticated && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>GitHub verification</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              Open the GitHub verification page in your mobile browser and complete the GitHub CLI sign-in.
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              onPress={() => Linking.openURL(session.auth_url!)}
+              activeOpacity={0.7}
+            >
+              <ExternalLink color={colors.primaryText} size={18} strokeWidth={2.25} />
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Open GitHub</Text>
+            </TouchableOpacity>
+            <CopyButton value={session.auth_url} label="Copy URL" />
+          </View>
+        )}
+
+        {selectedMethod === 'browser' && session?.verification_code && !session?.authenticated && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Verification code</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              GitHub may ask for this one-time code during browser sign-in.
+            </Text>
+            <View style={[styles.codeBox, { backgroundColor: colors.background }]}>
+              <Text style={[styles.codeText, { color: colors.text }]} selectable>
+                {session.verification_code}
+              </Text>
+            </View>
+            <CopyButton value={session.verification_code} label="Copy code" />
+          </View>
+        )}
+
+        {session?.authenticated ? (
+          <View style={[styles.successCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <CheckCircle color="#22c55e" size={20} strokeWidth={2.25} />
+            <Text style={[styles.successTitle, { color: colors.text }]}>GitHub CLI is ready</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              {session.github_username ? `Signed in as @${session.github_username}. ` : ''}
+              {session.private_repo_access
+                ? 'Private repositories are now available in the repo picker.'
+                : 'Sign-in worked, but private repo access was not confirmed.'}
+            </Text>
+          </View>
+        ) : null}
+      </ScrollView>
+    </KeyboardAvoidingView>
+  )
+}
+
+function MethodOption({
+  label,
+  description,
+  selected,
+  onPress,
+  colors,
+  icon,
+}: {
+  label: string
+  description: string
+  selected: boolean
+  onPress: () => void
+  colors: ReturnType<typeof useTheme>['colors']
+  icon: React.ReactNode
+}) {
+  return (
+    <TouchableOpacity
+      style={[
+        styles.optionCard,
+        {
+          borderColor: selected ? colors.primary : colors.border,
+          backgroundColor: selected ? colors.primary + '10' : colors.background,
+        },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.optionHeader}>
+        {icon}
+        <Text style={[styles.optionTitle, { color: colors.text }]}>{label}</Text>
+        {selected
+          ? <CircleDot color={colors.primary} size={18} strokeWidth={2.1} />
+          : <Circle color={colors.textTertiary} size={18} strokeWidth={2.1} />}
       </View>
-
-      <View style={[styles.tipCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
-        <Text style={[styles.tipTitle, { color: colors.text }]}>Recommended token scope</Text>
-        <Text style={[styles.tipBody, { color: colors.textSecondary }]}>
-          Fine-grained token: repository metadata/read access for the repos you want listed. Classic token: `repo`.
-        </Text>
-      </View>
-
-      <TextInput
-        style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.surface }]}
-        value={token}
-        onChangeText={setToken}
-        placeholder="GitHub token"
-        placeholderTextColor={colors.textTertiary}
-        autoCapitalize="none"
-        autoCorrect={false}
-        secureTextEntry
-      />
-
-      {errorMsg ? <Text style={[styles.feedback, { color: colors.error }]}>{errorMsg}</Text> : null}
-      {successMsg ? (
-        <View style={styles.successRow}>
-          <CheckCircle color="#22c55e" size={16} strokeWidth={2.25} />
-          <Text style={[styles.feedback, { color: '#22c55e' }]}>{successMsg}</Text>
-        </View>
-      ) : null}
-
-      <TouchableOpacity
-        style={[styles.submitButton, { backgroundColor: colors.primary }]}
-        onPress={handleSubmit}
-        activeOpacity={0.7}
-        disabled={loading || token.trim().length === 0}
-      >
-        <Text style={[styles.submitText, { color: colors.primaryText }]}>
-          {loading ? 'Authenticating...' : 'Enable Private Repos'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+      <Text style={[styles.optionDescription, { color: colors.textSecondary }]}>{description}</Text>
+    </TouchableOpacity>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
     gap: spacing[3],
+    paddingBottom: spacing[6],
   },
-  header: {
+  statusCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
     gap: spacing[2],
-    alignItems: 'flex-start',
   },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  statusHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing[2],
   },
-  title: {
-    ...typographyScale.xl,
+  statusTitle: {
+    ...typographyScale.base,
     fontWeight: '700',
   },
-  subtitle: {
+  statusCopy: {
     ...typographyScale.sm,
   },
-  tipCard: {
+  actionCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  cardTitle: {
+    ...typographyScale.base,
+    fontWeight: '700',
+  },
+  cardCopy: {
+    ...typographyScale.sm,
+  },
+  optionCard: {
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     padding: spacing[3],
-    gap: spacing[1],
+    gap: spacing[2],
   },
-  tipTitle: {
+  optionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  optionTitle: {
     ...typographyScale.sm,
     fontWeight: '700',
+    flex: 1,
   },
-  tipBody: {
+  optionDescription: {
     ...typographyScale.sm,
+  },
+  primaryButton: {
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing[4],
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing[2],
+  },
+  buttonText: {
+    ...typographyScale.base,
+    fontWeight: '700',
+  },
+  tokenSection: {
+    gap: spacing[3],
   },
   input: {
     borderWidth: 1,
@@ -146,20 +358,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
   },
-  feedback: {
-    ...typographyScale.sm,
+  codeBox: {
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[4],
   },
-  successRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  codeText: {
+    ...typographyScale.xl,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  successCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
     gap: spacing[2],
   },
-  submitButton: {
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing[4],
-    alignItems: 'center',
-  },
-  submitText: {
+  successTitle: {
     ...typographyScale.base,
     fontWeight: '700',
   },

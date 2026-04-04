@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
-import { buildTerminalWsUrl } from '../../../services/api'
+import { buildTerminalWsUrl, fetchGitSshStatus } from '../../../services/api'
 import { buildPocketDevAuthorizationHeader } from '../../../services/auth'
 import { createReactNativeWebSocket } from '../../../services/websocket'
 import { getSudoPassword, saveSudoPassword } from '../../../services/secure-storage'
@@ -14,6 +14,7 @@ import { CheckCircle, RefreshCw } from 'lucide-react-native'
 const INSTALL_COMMAND = 'type gh >/dev/null 2>&1 || (curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y)'
 const SUDO_PROMPT_PATTERN = /\[sudo\] password for/
 const ERROR_PATTERNS = [/^E: /m, /^error:/im, /^fatal:/im, /permission denied/im]
+const SHELL_PROMPT_PATTERN = /(?:^|\n)[^\n]*[@:][^\n]*[#$]\s*$/m
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'install-gh' }
@@ -33,6 +34,8 @@ export default function InstallGitHubCliStep({ dispatch }: Props) {
   const wsRef = useRef<WebSocket | null>(null)
   const sessionIdRef = useRef<string | null>(null)
   const terminalRef = useRef<TerminalViewRef>(null)
+  const commandStartedRef = useRef(false)
+  const verifyingRef = useRef(false)
 
   useEffect(() => {
     if (!server) return
@@ -48,6 +51,9 @@ export default function InstallGitHubCliStep({ dispatch }: Props) {
       sessionIdRef.current = null
       setOutput('')
       setHasError(false)
+      setDone(false)
+      commandStartedRef.current = false
+      verifyingRef.current = false
 
       termWs.onmessage = (event) => {
         let text: string
@@ -56,6 +62,7 @@ export default function InstallGitHubCliStep({ dispatch }: Props) {
           if (msg.type === 'terminal.ready') {
             sessionIdRef.current = typeof msg.sessionId === 'string' ? msg.sessionId : null
             if (sessionIdRef.current) {
+              commandStartedRef.current = true
               termWs.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: INSTALL_COMMAND + '\n' }))
             }
             return
@@ -71,6 +78,14 @@ export default function InstallGitHubCliStep({ dispatch }: Props) {
           for (const p of ERROR_PATTERNS) {
             if (p.test(text)) { setHasError(true); break }
           }
+          if (
+            SHELL_PROMPT_PATTERN.test(updated) &&
+            commandStartedRef.current &&
+            !verifyingRef.current
+          ) {
+            verifyingRef.current = true
+            verifyInstall()
+          }
           return updated
         })
 
@@ -80,7 +95,6 @@ export default function InstallGitHubCliStep({ dispatch }: Props) {
       termWs.onclose = () => {
         wsRef.current = null
         sessionIdRef.current = null
-        setDone(true)
       }
     })()
 
@@ -102,6 +116,25 @@ export default function InstallGitHubCliStep({ dispatch }: Props) {
     setShowSudoPrompt(true)
   }, [server])
 
+  const verifyInstall = useCallback(async () => {
+    if (!server) {
+      verifyingRef.current = false
+      return
+    }
+
+    try {
+      const status = await fetchGitSshStatus(server.ip, server.port)
+      if (status.gh_cli_installed) {
+        setDone(true)
+        setHasError(false)
+      }
+    } catch {
+      // Leave terminal output visible; user can retry if install verification fails.
+    } finally {
+      verifyingRef.current = false
+    }
+  }, [server])
+
   function handleSudoSubmit(password: string, remember: boolean) {
     setShowSudoPrompt(false)
     if (wsRef.current && sessionIdRef.current) {
@@ -119,6 +152,7 @@ export default function InstallGitHubCliStep({ dispatch }: Props) {
     setDone(false)
     setOutput('')
     if (wsRef.current && sessionIdRef.current) {
+      commandStartedRef.current = true
       wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: INSTALL_COMMAND + '\n' }))
     }
   }

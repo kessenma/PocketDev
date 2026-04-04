@@ -65,16 +65,16 @@ export default function InstallStep({ dispatch }: Props) {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.title, { color: colors.text }]}>Install Codex CLI</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Enable Codex CLI</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            PocketDev will install Codex system-wide and store the detected binary path for future task launches.
+            PocketDev will enable Codex for this workspace and refresh the saved tool record for future tasks.
           </Text>
         </View>
 
         <View style={[styles.planCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.commandHeader}>
             <TerminalSquare color={colors.primary} size={18} strokeWidth={2.25} />
-            <Text style={[styles.commandLabel, { color: colors.text }]}>Install command</Text>
+            <Text style={[styles.commandLabel, { color: colors.text }]}>Setup command</Text>
           </View>
           <View style={[styles.commandBlock, { backgroundColor: colors.background }]}>
             <Text style={[styles.commandText, { color: colors.text }]} selectable>
@@ -82,7 +82,7 @@ export default function InstallStep({ dispatch }: Props) {
             </Text>
           </View>
           <Text style={[styles.commandHint, { color: colors.textTertiary }]}>
-            This uses the server's system npm, then refreshes the stored Codex tool record.
+            This uses the workspace npm toolchain, then refreshes the saved Codex tool record.
           </Text>
         </View>
 
@@ -96,12 +96,12 @@ export default function InstallStep({ dispatch }: Props) {
           {status === 'installing' ? (
             <View style={styles.statusRow}>
               <ActivityIndicator color={colors.primary} size="small" />
-              <Text style={[styles.statusTitle, { color: colors.text }]}>Installing Codex CLI...</Text>
+              <Text style={[styles.statusTitle, { color: colors.text }]}>Enabling Codex CLI...</Text>
             </View>
           ) : status === 'success' ? (
             <View style={styles.statusRow}>
               <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
-              <Text style={[styles.statusTitle, { color: colors.text }]}>Codex CLI installed</Text>
+              <Text style={[styles.statusTitle, { color: colors.text }]}>Codex CLI ready</Text>
             </View>
           ) : status === 'failed' ? (
             <View style={styles.statusRow}>
@@ -109,14 +109,14 @@ export default function InstallStep({ dispatch }: Props) {
               <Text style={[styles.statusTitle, { color: colors.text }]}>Install failed</Text>
             </View>
           ) : (
-            <Text style={[styles.statusTitle, { color: colors.text }]}>Ready to install</Text>
+            <Text style={[styles.statusTitle, { color: colors.text }]}>Ready to enable</Text>
           )}
 
           {version && (
             <Text style={[styles.metaText, { color: colors.textSecondary }]}>Detected version: v{version}</Text>
           )}
           {installPath && (
-            <Text style={[styles.metaText, { color: colors.textSecondary }]}>Path: {installPath}</Text>
+            <Text style={[styles.metaText, { color: colors.textSecondary }]}>Detected tool path: {installPath}</Text>
           )}
           {error && (
             <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
@@ -140,11 +140,11 @@ export default function InstallStep({ dispatch }: Props) {
           {status === 'failed' ? (
             <>
               <RefreshCw color={colors.primaryText} size={18} strokeWidth={2.25} />
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Retry install</Text>
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Try enable again</Text>
             </>
           ) : (
             <>
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Install Codex</Text>
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Enable Codex</Text>
               <ArrowRight color={colors.primaryText} size={18} strokeWidth={2.25} />
             </>
           )}
