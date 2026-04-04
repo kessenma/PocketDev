@@ -17,8 +17,10 @@ type ProjectsState = {
   isMutating: boolean
   mutatingProjectId: string | null
   mutatingAction: 'clone' | 'select' | 'branch' | null
+  cloneCelebrationProjectId: string | null
   lastActionMessage: string
   error: string | null
+  clearCloneCelebration: () => void
   refresh: () => Promise<void>
   selectProject: (projectId: string, pullLatest?: boolean) => Promise<void>
   cloneProject: (projectId: string, branchMode: 'default' | 'new', newBranchName?: string) => Promise<void>
@@ -43,8 +45,13 @@ export const useProjectsStore = create<ProjectsState>((set) => ({
   isMutating: false,
   mutatingProjectId: null,
   mutatingAction: null,
+  cloneCelebrationProjectId: null,
   lastActionMessage: 'Load repositories from your paired server.',
   error: null,
+
+  clearCloneCelebration: () => {
+    set({ cloneCelebrationProjectId: null })
+  },
 
   refresh: async () => {
     const server = getServer()
@@ -102,12 +109,13 @@ export const useProjectsStore = create<ProjectsState>((set) => ({
 
     set({ isMutating: true, mutatingProjectId: projectId, mutatingAction: 'clone', error: null, lastActionMessage: 'Cloning repository...' })
     try {
-      await postCloneProject(server.ip, server.port, projectId, branchMode, newBranchName)
+      const result = await postCloneProject(server.ip, server.port, projectId, branchMode, newBranchName)
       await Promise.all([useProjectsStore.getState().refresh(), refreshRepoAwareStores()])
       set({
         isMutating: false,
         mutatingProjectId: null,
         mutatingAction: null,
+        cloneCelebrationProjectId: result.project.id,
         lastActionMessage: branchMode === 'new' ? 'Repository cloned and branch created.' : 'Repository cloned.',
       })
     } catch (error) {

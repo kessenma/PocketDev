@@ -6,6 +6,7 @@ import AdaptiveShell from '../components/layout/AdaptiveShell'
 import { useProjectsStore } from '../stores/projects'
 import ServerSegmentedControl from '../components/server-actions/ServerSegmentedControl'
 import { Globe, Lock, type LucideIcon } from 'lucide-react-native'
+import ProjectCloneCelebration from '../components/projects/ProjectCloneCelebration'
 
 type ProjectFilter = 'all' | 'local' | 'needsClone'
 type VisibilityFilter = 'all' | 'public' | 'private'
@@ -33,6 +34,8 @@ export default function ProjectsScreen() {
   const isMutating = useProjectsStore((state) => state.isMutating)
   const mutatingProjectId = useProjectsStore((state) => state.mutatingProjectId)
   const mutatingAction = useProjectsStore((state) => state.mutatingAction)
+  const cloneCelebrationProjectId = useProjectsStore((state) => state.cloneCelebrationProjectId)
+  const clearCloneCelebration = useProjectsStore((state) => state.clearCloneCelebration)
   const lastActionMessage = useProjectsStore((state) => state.lastActionMessage)
   const [branchDrafts, setBranchDrafts] = React.useState<Record<string, string>>({})
   const [filter, setFilter] = React.useState<ProjectFilter>('all')
@@ -102,11 +105,15 @@ export default function ProjectsScreen() {
           const branchDraft = branchDrafts[project.id] ?? ''
           const isProjectCloning = mutatingAction === 'clone' && mutatingProjectId === project.id
           const isProjectSelecting = mutatingAction === 'select' && mutatingProjectId === project.id
+          const showCloneCelebration = cloneCelebrationProjectId === project.id
           return (
             <View
               key={project.id}
               style={[styles.card, { backgroundColor: colors.surface, borderColor: project.isActive ? colors.primary : colors.border }]}
             >
+              {showCloneCelebration ? (
+                <ProjectCloneCelebration onComplete={clearCloneCelebration} />
+              ) : null}
               <View style={styles.cardHeader}>
                 <View style={styles.titleBlock}>
                   <Text style={[styles.repoName, { color: colors.text }]}>{project.name}</Text>
@@ -316,6 +323,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     padding: spacing[4],
     gap: spacing[3],
+    overflow: 'hidden',
+    position: 'relative',
   },
   cardHeader: {
     gap: spacing[2],
