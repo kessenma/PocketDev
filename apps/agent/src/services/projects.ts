@@ -129,6 +129,7 @@ type GithubRepoWire = {
   name: string
   owner: { login: string }
   clone_url: string
+  ssh_url: string
   updated_at: string
   default_branch: string
   private: boolean
@@ -152,6 +153,7 @@ async function fetchGithubRepos(githubUsername: string | null): Promise<GithubRe
         name: string
         owner: { login: string }
         clone_url: string
+        ssh_url: string
         updated_at: string
         default_branch: string
         private: boolean
@@ -256,7 +258,9 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
     )
 
     for (const repo of githubData.repos) {
-      const matchingLocal = localProjects.find((project) => project.remoteUrl === repo.clone_url)
+      const matchingLocal = localProjects.find((project) =>
+        project.remoteUrl === repo.ssh_url || project.remoteUrl === repo.clone_url,
+      )
       if (matchingLocal) {
         merged.set(matchingLocal.id, {
           ...matchingLocal,
@@ -272,7 +276,7 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
         id,
         name: repo.name,
         owner: repo.owner.login,
-        remoteUrl: repo.clone_url,
+        remoteUrl: repo.ssh_url || repo.clone_url,
         localPath: null,
         isLocal: false,
         isActive: false,
