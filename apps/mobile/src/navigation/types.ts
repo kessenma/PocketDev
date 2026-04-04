@@ -5,6 +5,7 @@ export type RootStackParamList = {
   TaskDetail: { taskId: string }
   Containers: undefined
   Plan: undefined
+  Projects: undefined
 }
 
 export type MainTabParamList = {

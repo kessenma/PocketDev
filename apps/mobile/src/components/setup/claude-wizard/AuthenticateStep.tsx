@@ -28,8 +28,10 @@ export default function AuthenticateStep({ dispatch }: Props) {
   const [session, setSession] = useState<ClaudeAuthSessionStatus | null>(null)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submittingCode, setSubmittingCode] = useState(false)
   const [openedBrowser, setOpenedBrowser] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // ─── Start auth session on mount ──────────────────────────────────
@@ -38,6 +40,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
     if (!server) return
     setLoading(true)
     setError(null)
+    setShowSuccessBanner(false)
     try {
       const next = await postStartClaudeAuth(server.ip, server.port)
       setSession(next)
@@ -65,9 +68,6 @@ export default function AuthenticateStep({ dispatch }: Props) {
         try {
           const next = await fetchClaudeAuthStatus(server.ip, server.port, session.session_id)
           setSession(next)
-          if (next.authenticated) {
-            dispatch({ type: 'STEP_COMPLETE', step: 'authenticate' })
-          }
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Failed to check auth status.')
         }
@@ -88,7 +88,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
 
   const handleSubmitCode = useCallback(async () => {
     if (!server || !session?.session_id || !input.trim()) return
-    setLoading(true)
+    setSubmittingCode(true)
     setError(null)
     try {
       const next = await postSubmitClaudeAuth(server.ip, server.port, session.session_id, input.trim())
@@ -97,7 +97,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit code.')
     } finally {
-      setLoading(false)
+      setSubmittingCode(false)
     }
   }, [input, server, session])
 
@@ -105,16 +105,27 @@ export default function AuthenticateStep({ dispatch }: Props) {
     dispatch({ type: 'STEP_COMPLETE', step: 'authenticate' })
   }, [dispatch])
 
+  useEffect(() => {
+    if (!session?.authenticated || showSuccessBanner) return
+    setShowSuccessBanner(true)
+    const timer = setTimeout(() => {
+      dispatch({ type: 'STEP_COMPLETE', step: 'authenticate' })
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [dispatch, session?.authenticated, showSuccessBanner])
+
   // ─── Derived state ────────────────────────────────────────────────
 
   const phaseDescription =
     session?.authenticated
       ? 'Claude Code is signed in. Continue to verify.'
+      : submittingCode || session?.state === 'pending'
+        ? 'Validating the code with Claude in this workspace...'
       : session?.state === 'awaiting_browser' || session?.state === 'awaiting_code'
         ? 'Complete the sign-in in the browser, then paste any code if prompted.'
         : session?.state === 'failed'
           ? (session.error ?? 'Claude authentication failed.')
-          : 'Starting the sign-in flow on your server...'
+          : 'Starting the sign-in flow for this workspace...'
 
   return (
     <KeyboardAvoidingView
@@ -143,17 +154,28 @@ export default function AuthenticateStep({ dispatch }: Props) {
               <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
             ) : loading && !session ? (
               <ActivityIndicator color={colors.primary} size="small" />
+            ) : submittingCode || session?.state === 'pending' ? (
+              <ActivityIndicator color={colors.primary} size="small" />
             ) : (
               <ShieldCheck color={colors.primary} size={18} strokeWidth={2.25} />
             )}
             <Text style={[styles.statusTitle, { color: colors.text }]}>
-              {session?.authenticated ? 'Signed in' : loading && !session ? 'Starting...' : 'Anthropic sign-in'}
+              {session?.authenticated ? 'Signed in' : loading && !session ? 'Starting...' : submittingCode || session?.state === 'pending' ? 'Validating...' : 'Anthropic sign-in'}
             </Text>
           </View>
           <Text style={[styles.statusCopy, { color: session?.state === 'failed' ? colors.error : colors.textSecondary }]}>
             {error ?? phaseDescription}
           </Text>
         </View>
+
+        {showSuccessBanner && session?.authenticated && (
+          <View style={[styles.successBanner, { backgroundColor: colors.successBackground, borderColor: colors.success }]}>
+            <CheckCircle color={colors.success} size={18} strokeWidth={2.25} />
+            <Text style={[styles.successBannerText, { color: colors.success }]}>
+              Claude authentication succeeded. Moving to verification...
+            </Text>
+          </View>
+        )}
 
         {/* Browser step */}
         {session?.auth_url && !session.authenticated && (
@@ -196,10 +218,14 @@ export default function AuthenticateStep({ dispatch }: Props) {
               <TouchableOpacity
                 style={[styles.sendButton, { backgroundColor: input.trim() ? colors.primary : colors.border }]}
                 onPress={handleSubmitCode}
-                disabled={!input.trim() || loading}
+                disabled={!input.trim() || submittingCode}
                 activeOpacity={0.7}
               >
-                <Send color={colors.primaryText} size={16} strokeWidth={2.25} />
+                {submittingCode ? (
+                  <ActivityIndicator color={colors.primaryText} size="small" />
+                ) : (
+                  <Send color={colors.primaryText} size={16} strokeWidth={2.25} />
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -235,6 +261,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: colors.primary }]}
           onPress={handleContinue}
+          disabled={showSuccessBanner}
           activeOpacity={0.7}
         >
           <CheckCircle color={colors.primaryText} size={18} strokeWidth={2.25} />
@@ -245,7 +272,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
       {session?.state === 'failed' && (
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: colors.error }]}
-          onPress={() => { setSession(null); setError(null); setOpenedBrowser(false) }}
+          onPress={() => { setSession(null); setError(null); setOpenedBrowser(false); setShowSuccessBanner(false) }}
           activeOpacity={0.7}
         >
           <RefreshCw color="#fff" size={16} strokeWidth={2.25} />
@@ -304,6 +331,20 @@ const styles = StyleSheet.create({
   statusCopy: {
     ...typographyScale.sm,
     lineHeight: 20,
+  },
+  successBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+  },
+  successBannerText: {
+    ...typographyScale.sm,
+    fontWeight: '600',
+    flex: 1,
   },
   actionCard: {
     borderWidth: 1,

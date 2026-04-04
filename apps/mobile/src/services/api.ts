@@ -16,6 +16,9 @@ import type {
   GitBranchEntry,
   GitMutationResult,
   GitErrorResponse,
+  ListProjectsResponse,
+  ProjectMutationResult,
+  ProjectSummary,
   ServerActionsSummary,
   ServerPortEntry,
   ServerNetworkEntry,
@@ -125,6 +128,71 @@ export async function fetchTaskList(ip: string, port: number) {
   })
   if (!response.ok) throw new Error(`Failed to fetch tasks (${response.status})`)
   return response.json()
+}
+
+export async function fetchProjects(ip: string, port: number): Promise<ListProjectsResponse> {
+  const response = await fetch(apiUrl(ip, port, '/projects'), {
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch projects (${response.status})`)
+  return response.json() as Promise<ListProjectsResponse>
+}
+
+export async function postSelectProject(
+  ip: string,
+  port: number,
+  projectId: string,
+  pullLatest = false,
+): Promise<ProjectMutationResult> {
+  const response = await fetch(apiUrl(ip, port, '/projects/select'), {
+    method: 'POST',
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ projectId, pullLatest }),
+  })
+  if (!response.ok) throw new Error(`Failed to select project (${response.status})`)
+  return response.json() as Promise<ProjectMutationResult>
+}
+
+export async function postCloneProject(
+  ip: string,
+  port: number,
+  projectId: string,
+  branchMode: 'default' | 'new',
+  newBranchName?: string,
+): Promise<ProjectMutationResult> {
+  const response = await fetch(apiUrl(ip, port, '/projects/clone'), {
+    method: 'POST',
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ projectId, branchMode, newBranchName }),
+  })
+  if (!response.ok) throw new Error(`Failed to clone project (${response.status})`)
+  return response.json() as Promise<ProjectMutationResult>
+}
+
+export async function postCreateProjectBranch(
+  ip: string,
+  port: number,
+  projectId: string,
+  branchName: string,
+): Promise<ProjectMutationResult> {
+  const response = await fetch(apiUrl(ip, port, '/projects/branch'), {
+    method: 'POST',
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ projectId, branchName }),
+  })
+  if (!response.ok) throw new Error(`Failed to create project branch (${response.status})`)
+  return response.json() as Promise<ProjectMutationResult>
 }
 
 export async function fetchContainers(ip: string, port: number): Promise<ContainerSummary[]> {

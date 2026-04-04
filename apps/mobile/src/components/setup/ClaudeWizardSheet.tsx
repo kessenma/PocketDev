@@ -184,9 +184,9 @@ export default function ClaudeWizardSheet({ visible, onClose, onComplete }: Prop
             style={styles.completedLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Claude CLI is ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Claude is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your server is authenticated and ready to run Claude.
+            Your paired workspace is connected and ready to run Claude.
           </Text>
           {state.claudeStatus?.version && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
@@ -223,7 +223,7 @@ export default function ClaudeWizardSheet({ visible, onClose, onComplete }: Prop
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Claude Setup</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Claude</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>

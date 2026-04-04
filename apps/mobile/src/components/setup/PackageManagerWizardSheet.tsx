@@ -188,9 +188,9 @@ export default function PackageManagerWizardSheet({ visible, onClose, onComplete
             <Image source={isDark ? Assets.pnpmWhite : Assets.pnpmBlack} style={styles.completedLogo} resizeMode="contain" />
             <Image source={isDark ? Assets.bunWhite : Assets.bunBlack} style={styles.completedLogo} resizeMode="contain" />
           </View>
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Server package tools are ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Package tools are ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Node.js, npm, pnpm, and Bun are available across the server.
+            Node.js, npm, pnpm, and Bun are available for your paired workspace.
           </Text>
           {state.pkgStatus && (
             <View style={styles.completedVersions}>
@@ -235,7 +235,7 @@ export default function PackageManagerWizardSheet({ visible, onClose, onComplete
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Package Managers</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Package Tools</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>

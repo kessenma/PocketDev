@@ -75,7 +75,7 @@ export default function MainTabs() {
         name="Server"
         component={ServerScreen}
         options={{
-          title: 'Server',
+          title: 'Workspace',
           tabBarIcon: ({ color, size }) => renderTabIcon('Server', { color, size }),
         }}
       />

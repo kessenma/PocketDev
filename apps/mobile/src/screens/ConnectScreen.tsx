@@ -109,7 +109,7 @@ export default function ConnectScreen({ navigation }: Props) {
             >
               <Server color={colors.primary} size={16} strokeWidth={2.25} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.existingConnectionLabel, { color: colors.textSecondary }]}>Tap to reconnect</Text>
+                <Text style={[styles.existingConnectionLabel, { color: colors.textSecondary }]}>Reconnect workspace</Text>
                 <Text style={[styles.existingConnectionHost, { color: colors.text }]}>
                   {existingServer.ip}:{existingServer.port}
                 </Text>
@@ -122,7 +122,7 @@ export default function ConnectScreen({ navigation }: Props) {
               activeOpacity={0.7}
             >
               <Unplug color={colors.error} size={16} strokeWidth={2.25} />
-              <Text style={[styles.unpairButtonText, { color: colors.error }]}>Disconnect</Text>
+              <Text style={[styles.unpairButtonText, { color: colors.error }]}>Unpair</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -135,21 +135,21 @@ export default function ConnectScreen({ navigation }: Props) {
         >
           <ScanLine color={colors.primaryText} size={20} strokeWidth={2.25} />
           <Text style={[styles.scanButtonText, { color: colors.primaryText }]}>
-            Scan QR Code
+            Scan Pairing Code
           </Text>
         </TouchableOpacity>
 
         <View style={styles.dividerRow}>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           <Text style={[styles.dividerText, { color: colors.textTertiary }]}>
-            or paste connection URL
+            or paste pairing link
           </Text>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 
         <View style={styles.labelRow}>
           <Link color={colors.textSecondary} size={14} strokeWidth={2.25} />
-          <Text style={[styles.labelText, { color: colors.textSecondary }]}>Connection URL</Text>
+          <Text style={[styles.labelText, { color: colors.textSecondary }]}>Pairing Link</Text>
         </View>
         <TextInput
           style={[styles.input, inputStyle, { color: colors.text, borderColor: colors.border }]}
@@ -172,11 +172,11 @@ export default function ConnectScreen({ navigation }: Props) {
           </View>
         ) : connectionInput.length > 0 ? (
           <Text style={[styles.helperText, { color: colors.error }]}>
-            Could not parse connection URL. Expected format: pocketdev://host:port/code
+            Could not parse pairing link. Expected format: pocketdev://host:port/code
           </Text>
         ) : (
           <Text style={[styles.helperText, { color: colors.textTertiary }]}>
-            Copy the connection URL from your server's console, then paste it here.
+            Paste the pairing link from your PocketDev workspace, or scan its QR code.
           </Text>
         )}
 
@@ -199,7 +199,7 @@ export default function ConnectScreen({ navigation }: Props) {
             <ActivityIndicator color={colors.primaryText} />
           ) : (
             <View style={styles.buttonContent}>
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Connect</Text>
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Pair Workspace</Text>
               <ArrowRight color={colors.primaryText} size={18} strokeWidth={2.25} />
             </View>
           )}
@@ -228,7 +228,7 @@ export default function ConnectScreen({ navigation }: Props) {
               </View>
               <Text style={[styles.title, { color: colors.text }]}>PocketDev</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Pair with your dev server
+                Pair with your coding workspace
               </Text>
               {form}
             </ScrollView>
@@ -239,11 +239,11 @@ export default function ConnectScreen({ navigation }: Props) {
                   <View style={styles.heroCardContent}>
                     <View style={styles.heroEyebrowRow}>
                       <Sparkles color={colors.textTertiary} size={14} strokeWidth={2.25} />
-                      <Text style={[styles.heroEyebrow, { color: colors.textTertiary }]}>iPad workspace</Text>
+                      <Text style={[styles.heroEyebrow, { color: colors.textTertiary }]}>paired workspace</Text>
                     </View>
-                    <Text style={[styles.heroTitle, { color: colors.text }]}>Build on Linux. Control it from iPad.</Text>
+                    <Text style={[styles.heroTitle, { color: colors.text }]}>Pair once. Keep your coding workspace in sync.</Text>
                     <Text style={[styles.heroBody, { color: colors.textSecondary }]}>
-                      Pair once, then browse tasks, inspect logs, and manage agent work from a larger touch workspace.
+                      Open tasks, review changes, and follow agent progress from a larger touch workspace after pairing.
                     </Text>
                   </View>
                 </LiquidGlassCard>

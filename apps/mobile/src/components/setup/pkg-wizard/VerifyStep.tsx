@@ -79,7 +79,7 @@ export default function VerifyStep({ dispatch }: Props) {
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {state === 'success' ? 'All package managers are installed and ready.' :
-            state === 'loading' ? 'Checking each tool on your server...' :
+            state === 'loading' ? 'Checking each tool in this workspace...' :
             'Confirm that all package managers were installed successfully.'}
         </Text>
 

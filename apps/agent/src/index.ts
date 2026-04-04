@@ -18,6 +18,8 @@ import { pkgSetupRoutes } from './routes/pkg-setup.ts'
 import { pythonSetupRoutes } from './routes/python-setup.ts'
 import { serverActionsRoutes } from './routes/server-actions.ts'
 import { planRoutes } from './routes/plans.ts'
+import { taskRoutes } from './routes/tasks.ts'
+import { projectRoutes } from './routes/projects.ts'
 import { screenshotRoutes } from './services/preview-screenshot.ts'
 import { consoleRoutes, consoleStaticRoutes } from './routes/console.ts'
 import { initSetup, getServerKeypair } from './services/setup.ts'
@@ -66,6 +68,8 @@ new Elysia()
       .use(pythonSetupRoutes)
       .use(serverActionsRoutes)
       .use(planRoutes)
+      .use(taskRoutes)
+      .use(projectRoutes)
       .use(fileRoutes)
     )
     // WebSocket routes

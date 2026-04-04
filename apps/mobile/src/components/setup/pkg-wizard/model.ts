@@ -20,19 +20,19 @@ function getToolEntries(status: PkgManagerStatus) {
       id: 'npm' as const,
       name: 'Node.js + npm',
       installed: status.npm.installed,
-      description: 'Installs the latest LTS Node.js system-wide, including npm',
+      description: 'Adds the latest LTS Node.js toolchain, including npm, for workspace tasks',
     },
     {
       id: 'pnpm' as const,
       name: 'pnpm',
       installed: status.pnpm.installed,
-      description: 'Installs pnpm globally so it is available across the server',
+      description: 'Adds pnpm so it is available for workspace package flows',
     },
     {
       id: 'bun' as const,
       name: 'Bun',
       installed: status.bun.installed,
-      description: 'Installs Bun globally so it is available across the server',
+      description: 'Adds Bun so it is available for workspace package flows',
     },
   ]
 }

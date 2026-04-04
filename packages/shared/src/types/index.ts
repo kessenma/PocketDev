@@ -110,6 +110,15 @@ export type {
   FileReadResponse,
 } from './files.js'
 export type {
+  ProjectSource,
+  ProjectSummary,
+  ListProjectsResponse,
+  SelectProjectRequest,
+  CloneProjectRequest,
+  CreateProjectBranchRequest,
+  ProjectMutationResult,
+} from './projects.js'
+export type {
   ContainerStatus,
   ContainerLogsDirection,
   ContainerLogsFilter,

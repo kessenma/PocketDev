@@ -6,6 +6,8 @@ export const tasks = sqliteTable('tasks', {
   prompt: text('prompt').notNull(),
   agentType: text('agent_type').default('claude'),
   status: text('status').default('pending'),
+  projectId: text('project_id'),
+  projectName: text('project_name'),
   workingDirectory: text('working_directory'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
   startedAt: text('started_at'),

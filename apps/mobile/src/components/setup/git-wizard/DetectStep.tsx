@@ -45,7 +45,7 @@ export default function DetectStep({ dispatch }: Props) {
         <>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.message, { color: colors.textSecondary }]}>
-            Checking your server's git setup...
+            Checking this workspace's Git setup...
           </Text>
         </>
       )}

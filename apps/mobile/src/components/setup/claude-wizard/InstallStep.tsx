@@ -160,8 +160,8 @@ export default function InstallStep({ dispatch }: Props) {
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             {isDone
-              ? 'Claude Code CLI is ready on your server.'
-              : 'Installing via the official install script...'}
+              ? 'Claude Code is ready for this workspace.'
+              : 'Preparing Claude for this workspace...'}
           </Text>
         </View>
       </View>

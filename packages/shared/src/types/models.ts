@@ -14,7 +14,9 @@ export interface Task {
   prompt: string
   agent_type: AgentType
   status: TaskStatus
-  working_directory: string
+  working_directory: string | null
+  project_id: string | null
+  project_name: string | null
   created_at: string
   started_at: string | null
   completed_at: string | null

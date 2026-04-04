@@ -1,5 +1,6 @@
 export * from './devices.ts'
 export * from './server-config.ts'
+export * from './projects.ts'
 export * from './tasks.ts'
 export * from './plans.ts'
 export * from './tool-paths.ts'

@@ -22,9 +22,9 @@ export default function ServerQuickActions({ actions, onRunAction }: Props) {
   return (
     <ServerCard>
       <ServerCardHeader>
-        <ServerCardTitle>Quick actions</ServerCardTitle>
+        <ServerCardTitle>Quick checks</ServerCardTitle>
         <ServerCardDescription>
-          These are UI placeholders for the first commands you said you reach for when debugging the box.
+          Preview common workspace diagnostics and environment checks from one place.
         </ServerCardDescription>
       </ServerCardHeader>
 

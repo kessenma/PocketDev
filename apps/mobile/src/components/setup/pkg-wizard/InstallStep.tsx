@@ -159,8 +159,8 @@ export default function InstallStep({ pkgStatus, selectedTools, dispatch }: Prop
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {allDone
-            ? 'The core package toolchain is now available everywhere on this server.'
-            : 'PocketDev is installing each missing package manager system-wide for you.'}
+            ? 'The core package toolchain is now available for this workspace.'
+            : 'PocketDev is enabling each missing package tool for you.'}
         </Text>
       </View>
 

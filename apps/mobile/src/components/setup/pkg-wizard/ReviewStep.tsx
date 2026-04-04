@@ -39,8 +39,8 @@ export default function ReviewStep({ pkgStatus, selectedTools, dispatch }: Props
         <Text style={[styles.title, { color: colors.text }]}>Installation Plan</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {selectedPlan.length > 0
-            ? `${selectedPlan.length} tool${selectedPlan.length > 1 ? 's' : ''} selected for install or reinstall.`
-            : 'All package managers are installed. Select any tool below if you want to reinstall it.'}
+            ? `${selectedPlan.length} tool${selectedPlan.length > 1 ? 's' : ''} selected to enable or refresh.`
+            : 'All package tools are available. Select any tool below if you want to refresh it.'}
         </Text>
 
         {/* Tool status list */}
@@ -73,7 +73,7 @@ export default function ReviewStep({ pkgStatus, selectedTools, dispatch }: Props
                     <Text style={[styles.commandText, { color: colors.text }]}>
                       {tool.installed
                         ? isSelected ? `PocketDev will reinstall ${tool.name}.` : `${tool.name} is already installed.`
-                        : `PocketDev will install ${tool.name} on the server.`}
+                        : `PocketDev will enable ${tool.name} for this workspace.`}
                     </Text>
                   </View>
                   <Text style={[styles.commandDesc, { color: colors.textTertiary }]}>

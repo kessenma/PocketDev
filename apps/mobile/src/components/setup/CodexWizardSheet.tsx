@@ -199,9 +199,9 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
             style={styles.completedLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Codex CLI is ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Codex is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your server is authenticated and ready to run Codex.
+            Your paired workspace is connected and ready to run Codex.
           </Text>
           {state.codexStatus?.version ? (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
@@ -239,7 +239,7 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Codex Setup</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Codex</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>

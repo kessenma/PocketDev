@@ -70,7 +70,7 @@ export default function TestConnectionStep({ dispatch }: Props) {
             <Image source={githubLogo} style={styles.logo} resizeMode="contain" />
             <Text style={[styles.title, { color: colors.text }]}>Test Connection</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Verify that your server can connect to GitHub via SSH.
+              Verify that this workspace can connect to GitHub.
             </Text>
             <TouchableOpacity
               style={[styles.testButton, { backgroundColor: colors.primary }]}

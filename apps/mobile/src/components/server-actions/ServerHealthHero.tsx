@@ -21,7 +21,7 @@ export default function ServerHealthHero({
   return (
     <View style={[styles.hero, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.copy}>
-        <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Server Actions</Text>
+        <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Workspace Signals</Text>
         <Text style={[styles.title, { color: colors.text }]}>{serverLabel}</Text>
         <Text style={[styles.summary, { color: colors.textSecondary }]}>{summary}</Text>
       </View>
@@ -32,7 +32,7 @@ export default function ServerHealthHero({
           <Text style={[styles.pillValue, { color: colors.text }]}>{uptime}</Text>
         </View>
         <View style={[styles.pill, { backgroundColor: colors.backgroundSecondary }]}>
-          <Text style={[styles.pillLabel, { color: colors.textTertiary }]}>Open Incidents</Text>
+          <Text style={[styles.pillLabel, { color: colors.textTertiary }]}>Attention Items</Text>
           <Text style={[styles.pillValue, { color: colors.text }]}>
             {incidentCount}
           </Text>

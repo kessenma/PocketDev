@@ -46,7 +46,7 @@ export default function AddToGitHubStep({ dispatch, publicKey }: Props) {
 
       <Text style={[styles.title, { color: colors.text }]}>Add Key to GitHub</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Add your server's SSH key to your GitHub account so it can push and pull code.
+        Add this workspace key to your GitHub account so it can sync code.
       </Text>
 
       {/* Key display + copy */}

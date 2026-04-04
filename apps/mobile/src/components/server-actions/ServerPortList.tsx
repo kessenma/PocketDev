@@ -27,9 +27,9 @@ export default function ServerPortList({ ports }: Props) {
   return (
     <ServerCard>
       <ServerCardHeader>
-        <ServerCardTitle>Ports and processes</ServerCardTitle>
+        <ServerCardTitle>Workspace activity</ServerCardTitle>
         <ServerCardDescription>
-          A touch-friendly view for checking listeners before you drop into `lsof`, `ss`, or Docker inspection.
+          A quick view of active services and traffic-facing processes tied to the current workspace.
         </ServerCardDescription>
       </ServerCardHeader>
 

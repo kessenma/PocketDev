@@ -42,7 +42,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
   const connectionSection = (
     <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Connection</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Workspace</Text>
       <View style={styles.row}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
         <View style={styles.statusRow}>
@@ -53,13 +53,13 @@ export default function SettingsScreen({ navigation }: Props) {
       {server ? (
         <>
           <View style={styles.row}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Server</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Paired Host</Text>
             <Text style={[styles.value, { color: colors.text }]}>
               {server.ip}:{server.port}
             </Text>
           </View>
           <View style={styles.row}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Device ID</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Pairing ID</Text>
             <Text style={[styles.value, { color: colors.text }]} numberOfLines={1}>
               {server.deviceId}
             </Text>
@@ -71,15 +71,15 @@ export default function SettingsScreen({ navigation }: Props) {
         onPress={() => navigation.getParent()?.navigate('ServerSetup')}
         activeOpacity={0.7}
       >
-        <Text style={[styles.setupButtonText, { color: colors.primary }]}>Server Setup Wizard</Text>
+        <Text style={[styles.setupButtonText, { color: colors.primary }]}>Workspace Tools</Text>
       </TouchableOpacity>
       <View style={styles.row}>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Containers</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Services</Text>
         <TouchableOpacity
           onPress={() => navigation.getParent()?.navigate('Containers')}
           activeOpacity={0.7}
         >
-          <Text style={[styles.value, { color: colors.primary }]}>Inspect</Text>
+          <Text style={[styles.value, { color: colors.primary }]}>Open</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.row}>
@@ -106,7 +106,7 @@ export default function SettingsScreen({ navigation }: Props) {
         onPress={handleUnpair}
         activeOpacity={0.7}
       >
-        <Text style={[styles.unpairText, { color: colors.error }]}>Unpair Device</Text>
+        <Text style={[styles.unpairText, { color: colors.error }]}>Remove Pairing</Text>
       </TouchableOpacity>
     </View>
   )

@@ -37,7 +37,7 @@ export default function ReviewStep({ codexStatus, npmReady, dispatch }: Props) {
           />
           <Text style={[styles.title, { color: colors.text }]}>Codex setup plan</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            PocketDev will guide installation, sign-in, and verification without dropping you into a raw terminal.
+            PocketDev will guide installation, sign-in, and verification with a phone-friendly workflow.
           </Text>
         </View>
 
@@ -46,14 +46,14 @@ export default function ReviewStep({ codexStatus, npmReady, dispatch }: Props) {
             icon={npmReady ? <Check color="#22c55e" size={18} strokeWidth={2.25} /> : <CircleAlert color={colors.error} size={18} strokeWidth={2.25} />}
             label="npm prerequisite"
             value={npmReady ? 'Ready' : 'Missing'}
-            detail={npmReady ? 'Codex can be installed from the server-wide npm toolchain.' : 'Package managers must be installed before Codex setup can continue.'}
+            detail={npmReady ? 'Codex can be installed from the paired workspace npm toolchain.' : 'Package tools must be enabled before Codex setup can continue.'}
             colors={colors}
           />
           <StatusRow
             icon={<TerminalSquare color={colors.primary} size={18} strokeWidth={2.25} />}
             label="Codex CLI"
             value={codexStatus?.installed ? `Installed${codexStatus.version ? ` · v${codexStatus.version}` : ''}` : 'Not installed'}
-            detail={codexStatus?.path ?? 'PocketDev will install Codex globally so the agent can launch it directly.'}
+            detail={codexStatus?.path ?? 'PocketDev will enable Codex so the workspace agent can launch it directly.'}
             colors={colors}
           />
           <StatusRow

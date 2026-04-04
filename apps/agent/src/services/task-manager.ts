@@ -1,5 +1,6 @@
-import { insertTask, getRecentTasks, getToolPath } from '../db/index.ts'
+import { insertTask, getRecentTasks, getToolPath, getProject } from '../db/index.ts'
 import { ManagedProcess } from './managed-process.ts'
+import { getActiveProjectId } from './projects.ts'
 
 /** Active processes keyed by task ID */
 const processes = new Map<string, ManagedProcess>()
@@ -29,11 +30,13 @@ export function startTask(
   workingDirectory: string | null,
 ): string {
   const taskId = crypto.randomUUID()
-
-  insertTask(taskId, prompt, agentType, workingDirectory)
+  const projectId = getActiveProjectId()
+  const project = projectId ? getProject(projectId) : undefined
+  const cwd = workingDirectory ?? project?.absolutePath ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
+  insertTask(taskId, prompt, agentType, cwd, project?.id ?? null, project?.name ?? null)
 
   const command = buildCommand(agentType, prompt)
-  const proc = new ManagedProcess(taskId, command, workingDirectory)
+  const proc = new ManagedProcess(taskId, command, cwd)
   processes.set(taskId, proc)
 
   proc.start()

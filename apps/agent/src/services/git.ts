@@ -9,8 +9,7 @@ import type {
   GitFileChangeKind,
   GitRemoteStatus,
 } from '@pocketdev/shared/types'
-
-const BASE_DIR = process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
+import { getActiveProjectPath } from './projects.ts'
 
 const MAX_DIFF_BYTES = 50_000
 const DEFAULT_HISTORY_LIMIT = 20
@@ -28,7 +27,7 @@ export class GitServiceError extends Error {
 
 async function exec(cmd: string, cwd?: string): Promise<{ stdout: string; exitCode: number; stderr: string }> {
   const proc = Bun.spawn(['bash', '-lc', cmd], {
-    cwd: cwd ?? BASE_DIR,
+    cwd: cwd ?? await getActiveProjectPath(),
     stdout: 'pipe',
     stderr: 'pipe',
   })
@@ -41,7 +40,8 @@ async function exec(cmd: string, cwd?: string): Promise<{ stdout: string; exitCo
 }
 
 async function ensureRepo(): Promise<string> {
-  const { stdout, exitCode } = await exec('git rev-parse --show-toplevel')
+  const cwd = await getActiveProjectPath()
+  const { stdout, exitCode } = await exec('git rev-parse --show-toplevel', cwd)
   if (exitCode !== 0 || !stdout) {
     throw new GitServiceError('Not a git repository', 'not_a_repo', 400)
   }
@@ -179,7 +179,8 @@ export async function getGitDiff(path: string, staged: boolean): Promise<GitDiff
   if (exitCode !== 0) {
     // For untracked files, show the whole file as additions
     if (!staged) {
-      const { stdout: content } = await exec(`git show :${escapeShellArg(path)} 2>/dev/null || cat ${escapeShellArg(resolve(BASE_DIR, path))} 2>/dev/null || echo ""`)
+      const repoPath = await getActiveProjectPath()
+      const { stdout: content } = await exec(`git show :${escapeShellArg(path)} 2>/dev/null || cat ${escapeShellArg(resolve(repoPath, path))} 2>/dev/null || echo ""`, repoPath)
       const diff = content
         ? content.split('\n').map((l) => `+${l}`).join('\n')
         : ''

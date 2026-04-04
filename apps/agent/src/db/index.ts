@@ -95,6 +95,29 @@ export function getDb() {
     console.log('[db] Running Drizzle migrate...')
     migrate(_db, { migrationsFolder })
     console.log('[db] Migration complete')
+
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL,
+        absolute_path TEXT NOT NULL UNIQUE,
+        remote_url TEXT,
+        owner TEXT,
+        source TEXT NOT NULL DEFAULT 'local',
+        default_branch TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        last_used_at TEXT
+      );
+    `)
+
+    const taskColumns = sqlite.query(`PRAGMA table_info(tasks)`).all() as { name: string }[]
+    if (!taskColumns.some((column) => column.name === 'project_id')) {
+      sqlite.exec(`ALTER TABLE tasks ADD COLUMN project_id TEXT;`)
+    }
+    if (!taskColumns.some((column) => column.name === 'project_name')) {
+      sqlite.exec(`ALTER TABLE tasks ADD COLUMN project_name TEXT;`)
+    }
   }
   return _db
 }
@@ -106,6 +129,7 @@ export { schema }
 
 export type DeviceRow = typeof schema.devices.$inferSelect
 export type TaskRow = typeof schema.tasks.$inferSelect
+export type ProjectRow = typeof schema.projects.$inferSelect
 export type PlanRow = typeof schema.plans.$inferSelect
 export type PlanStepRow = typeof schema.planSteps.$inferSelect
 export type PlanQuestionRow = typeof schema.planQuestions.$inferSelect
@@ -173,8 +197,22 @@ export function setConfig(key: string, value: string) {
 
 // ─── Task operations ────────────────────────────────────
 
-export function insertTask(id: string, prompt: string, agentType: string, workingDirectory: string | null) {
-  getDb().insert(schema.tasks).values({ id, prompt, agentType, workingDirectory }).run()
+export function insertTask(
+  id: string,
+  prompt: string,
+  agentType: string,
+  workingDirectory: string | null,
+  projectId: string | null,
+  projectName: string | null,
+) {
+  getDb().insert(schema.tasks).values({
+    id,
+    prompt,
+    agentType,
+    workingDirectory,
+    projectId,
+    projectName,
+  }).run()
 }
 
 export function updateTaskStatus(id: string, status: string, exitCode?: number) {
@@ -207,6 +245,74 @@ export function getRecentTasks(limit = 20): TaskRow[] {
 
 export function insertTaskLog(taskId: string, stream: string, line: string) {
   getDb().insert(schema.taskLogs).values({ taskId, stream, line }).run()
+}
+
+// ─── Project operations ─────────────────────────────────
+
+export function getProjects(): ProjectRow[] {
+  return getDb()
+    .select()
+    .from(schema.projects)
+    .orderBy(desc(schema.projects.lastUsedAt), desc(schema.projects.updatedAt))
+    .all()
+}
+
+export function getProject(id: string): ProjectRow | undefined {
+  return getDb()
+    .select()
+    .from(schema.projects)
+    .where(eq(schema.projects.id, id))
+    .get()
+}
+
+export function getProjectByPath(absolutePath: string): ProjectRow | undefined {
+  return getDb()
+    .select()
+    .from(schema.projects)
+    .where(eq(schema.projects.absolutePath, absolutePath))
+    .get()
+}
+
+export function upsertProject(input: {
+  id: string
+  name: string
+  absolutePath: string
+  remoteUrl: string | null
+  owner: string | null
+  source: string
+  defaultBranch: string | null
+}) {
+  getDb()
+    .insert(schema.projects)
+    .values({
+      ...input,
+      updatedAt: sql`datetime('now')`,
+      lastUsedAt: sql`datetime('now')`,
+    })
+    .onConflictDoUpdate({
+      target: schema.projects.absolutePath,
+      set: {
+        id: input.id,
+        name: input.name,
+        remoteUrl: input.remoteUrl,
+        owner: input.owner,
+        source: input.source,
+        defaultBranch: input.defaultBranch,
+        updatedAt: sql`datetime('now')`,
+      },
+    })
+    .run()
+}
+
+export function markProjectUsed(id: string) {
+  getDb()
+    .update(schema.projects)
+    .set({
+      updatedAt: sql`datetime('now')`,
+      lastUsedAt: sql`datetime('now')`,
+    })
+    .where(eq(schema.projects.id, id))
+    .run()
 }
 
 // ─── Tool path operations ───────────────────────────────

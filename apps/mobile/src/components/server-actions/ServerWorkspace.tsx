@@ -88,7 +88,7 @@ export default function ServerWorkspace() {
         serverLabel={serverLabel}
         uptime={uptime}
         incidentCount={errors.length}
-        summary="Prototype the mobile ops surface now, then swap the mock store for your server transport once the backend test harness is in place."
+        summary="Track workspace health, recent activity, and coding environment signals from one place."
       />
 
       <View style={styles.header}>

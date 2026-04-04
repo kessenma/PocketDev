@@ -2,21 +2,26 @@ import { Elysia, t } from 'elysia'
 import { readdir, readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises'
 import { join, resolve, relative } from 'node:path'
 import type { TreeEntry } from '@pocketdev/shared/types'
-
-/** Base directory for file operations — prevents traversal attacks */
-const BASE_DIR = process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
+import { authenticateRequest } from '../services/auth.ts'
+import { getActiveProjectPath } from '../services/projects.ts'
 
 /** Resolve and validate a path is within BASE_DIR */
-function safePath(requestedPath: string): string | null {
-  const resolved = resolve(BASE_DIR, requestedPath)
-  if (!resolved.startsWith(resolve(BASE_DIR))) return null
+function safePath(baseDir: string, requestedPath: string): string | null {
+  const resolved = resolve(baseDir, requestedPath)
+  if (!resolved.startsWith(resolve(baseDir))) return null
   return resolved
 }
 
 export const fileRoutes = new Elysia({ prefix: '/files' })
   // Directory listing
-  .get('/tree', async ({ query, set }) => {
-    const targetPath = safePath(query.path ?? '.')
+  .get('/tree', async ({ request, query, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+    const baseDir = await getActiveProjectPath()
+    const targetPath = safePath(baseDir, query.path ?? '.')
     if (!targetPath) {
       set.status = 403
       return { error: 'Path outside allowed directory' }
@@ -25,8 +30,8 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
     try {
       const depth = Math.min(Number(query.depth ?? 2), 5)
       console.log(`[files] GET /files/tree path=${query.path ?? '.'} depth=${depth}`)
-      const tree = await buildTree(targetPath, depth)
-      return { base: BASE_DIR, tree }
+      const tree = await buildTree(baseDir, targetPath, depth)
+      return { base: baseDir, tree }
     } catch (err) {
       set.status = 404
       return { error: 'Directory not found' }
@@ -39,8 +44,14 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
   })
 
   // Read file content
-  .get('/read', async ({ query, set }) => {
-    const targetPath = safePath(query.path)
+  .get('/read', async ({ request, query, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+    const baseDir = await getActiveProjectPath()
+    const targetPath = safePath(baseDir, query.path)
     if (!targetPath) {
       set.status = 403
       return { error: 'Path outside allowed directory' }
@@ -53,7 +64,7 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
         return { error: 'File too large (>1MB)' }
       }
       const content = await readFile(targetPath, 'utf-8')
-      return { path: relative(BASE_DIR, targetPath), content, size: info.size }
+      return { path: relative(baseDir, targetPath), content, size: info.size }
     } catch {
       set.status = 404
       return { error: 'File not found' }
@@ -65,8 +76,14 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
   })
 
   // Write file content
-  .put('/write', async ({ body, set }) => {
-    const targetPath = safePath(body.path)
+  .put('/write', async ({ request, body, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+    const baseDir = await getActiveProjectPath()
+    const targetPath = safePath(baseDir, body.path)
     if (!targetPath) {
       set.status = 403
       return { error: 'Path outside allowed directory' }
@@ -74,7 +91,7 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
 
     try {
       await writeFile(targetPath, body.content, 'utf-8')
-      return { path: relative(BASE_DIR, targetPath), written: true }
+      return { path: relative(baseDir, targetPath), written: true }
     } catch (err) {
       set.status = 500
       return { error: 'Failed to write file' }
@@ -87,8 +104,14 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
   })
 
   // Create directory
-  .post('/mkdir', async ({ body, set }) => {
-    const targetPath = safePath(body.path)
+  .post('/mkdir', async ({ request, body, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+    const baseDir = await getActiveProjectPath()
+    const targetPath = safePath(baseDir, body.path)
     if (!targetPath) {
       set.status = 403
       return { error: 'Path outside allowed directory' }
@@ -96,7 +119,7 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
 
     try {
       await mkdir(targetPath, { recursive: true })
-      return { path: relative(BASE_DIR, targetPath), created: true }
+      return { path: relative(baseDir, targetPath), created: true }
     } catch {
       set.status = 500
       return { error: 'Failed to create directory' }
@@ -108,22 +131,28 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
   })
 
   // Delete file or directory
-  .delete('/delete', async ({ query, set }) => {
-    const targetPath = safePath(query.path)
+  .delete('/delete', async ({ request, query, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+    const baseDir = await getActiveProjectPath()
+    const targetPath = safePath(baseDir, query.path)
     if (!targetPath) {
       set.status = 403
       return { error: 'Path outside allowed directory' }
     }
 
     // Prevent deleting base dir itself
-    if (resolve(targetPath) === resolve(BASE_DIR)) {
+    if (resolve(targetPath) === resolve(baseDir)) {
       set.status = 403
       return { error: 'Cannot delete base directory' }
     }
 
     try {
       await rm(targetPath, { recursive: true })
-      return { path: relative(BASE_DIR, targetPath), deleted: true }
+      return { path: relative(baseDir, targetPath), deleted: true }
     } catch {
       set.status = 404
       return { error: 'Path not found' }
@@ -135,8 +164,14 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
   })
 
   // Search files using ripgrep (falls back to grep)
-  .get('/search', async ({ query, set }) => {
-    const searchPath = safePath(query.path ?? '.')
+  .get('/search', async ({ request, query, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+    const baseDir = await getActiveProjectPath()
+    const searchPath = safePath(baseDir, query.path ?? '.')
     if (!searchPath) {
       set.status = 403
       return { error: 'Path outside allowed directory' }
@@ -178,7 +213,7 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
           r?.type === 'match',
         )
         .map((r) => ({
-          path: relative(BASE_DIR, (r.data.path as { text: string }).text),
+          path: relative(baseDir, (r.data.path as { text: string }).text),
           line_number: (r.data.line_number as number),
           text: (r.data.lines as { text: string }).text.trim(),
         }))
@@ -197,6 +232,7 @@ export const fileRoutes = new Elysia({ prefix: '/files' })
 
 /** Recursively build a directory tree */
 async function buildTree(
+  baseDir: string,
   dirPath: string,
   maxDepth: number,
   currentDepth = 0,
@@ -212,10 +248,10 @@ async function buildTree(
       if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
 
       const fullPath = join(dirPath, entry.name)
-      const relativePath = relative(BASE_DIR, fullPath)
+      const relativePath = relative(baseDir, fullPath)
 
       if (entry.isDirectory()) {
-        const children = await buildTree(fullPath, maxDepth, currentDepth + 1)
+        const children = await buildTree(baseDir, fullPath, maxDepth, currentDepth + 1)
         result.push({ name: entry.name, path: relativePath, type: 'dir', children })
       } else {
         result.push({ name: entry.name, path: relativePath, type: 'file' })
@@ -230,4 +266,3 @@ async function buildTree(
     return []
   }
 }
-

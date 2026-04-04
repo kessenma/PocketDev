@@ -90,9 +90,9 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
         </View>
       </View>
 
-      <Text style={[styles.title, { color: colors.text }]}>SSH Key</Text>
+      <Text style={[styles.title, { color: colors.text }]}>Git Access Key</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Generate an SSH key so your server can securely connect to GitHub.
+        Create a secure key so this workspace can connect to GitHub.
       </Text>
 
       {/* Overwrite warning */}
@@ -105,7 +105,7 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
             </Text>
           </View>
           <Text style={[styles.warningText, { color: colors.textSecondary }]}>
-            Your server already has an SSH key ({sshStatus?.ssh_key_type ?? 'unknown'} type).
+            This workspace already has a key ({sshStatus?.ssh_key_type ?? 'unknown'} type).
             You can use the existing key or generate a new one.
           </Text>
           <View style={styles.warningActions}>
@@ -134,7 +134,7 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
         <>
           <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              PocketDev will create a secure Ed25519 SSH key pair on your server. This key allows your server to authenticate with GitHub without a password.
+              PocketDev will create a secure Ed25519 key pair for this workspace. It lets GitHub access happen without a password prompt.
             </Text>
             <Text style={[styles.infoDetail, { color: colors.textTertiary }]}>
               The key will be stored at ~/.ssh/id_ed25519
@@ -145,8 +145,8 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
             style={[styles.generateButton, { backgroundColor: colors.primary }]}
             onPress={() => {
               Alert.alert(
-                'Generate SSH Key',
-                'This will create a new SSH key pair on your server. The private key stays on your server and the public key will be shared with GitHub.\n\nProceed?',
+                'Generate Access Key',
+                'This will create a new key pair for this workspace. The private key stays with the workspace and the public key will be shared with GitHub.\n\nProceed?',
                 [
                   { text: 'Cancel', style: 'cancel' },
                   { text: 'Generate Key', onPress: () => generateKey(false) },
@@ -156,7 +156,7 @@ export default function GenerateKeyStep({ dispatch, sshStatus, publicKey }: Prop
             activeOpacity={0.7}
           >
             <Key color={colors.primaryText} size={18} strokeWidth={2.25} />
-            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Generate SSH Key</Text>
+            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Generate Access Key</Text>
           </TouchableOpacity>
         </>
       )}

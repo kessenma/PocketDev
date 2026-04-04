@@ -214,7 +214,7 @@ export default function GitWizardSheet({ visible, onClose, onComplete }: Props) 
           </View>
           <Text style={[styles.completedTitle, { color: colors.text }]}>Git is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your server is fully configured for Git and GitHub.
+            Your paired workspace is ready for Git and GitHub.
           </Text>
           {state.githubUsername && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
@@ -272,7 +272,7 @@ export default function GitWizardSheet({ visible, onClose, onComplete }: Props) 
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Git Setup</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Git</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>

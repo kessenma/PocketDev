@@ -142,7 +142,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
   }, [callbackUrl, server, session])
 
   const helperText = !started
-    ? 'Choose how you want to authenticate before PocketDev starts the Codex login flow on your server.'
+    ? 'Choose how you want to authenticate before PocketDev starts the Codex sign-in flow for this workspace.'
     : session?.authenticated
       ? 'Codex sign-in completed. Continue to verify the CLI and sync the cached provider state.'
       : session?.state === 'awaiting_code'
@@ -157,7 +157,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             ? 'Waiting for Codex CLI to finish the authentication flow.'
             : session?.state === 'failed'
               ? (session.error ?? 'Codex authentication failed.')
-              : 'Starting the authentication flow on your server.'
+              : 'Starting the authentication flow for this workspace.'
 
   return (
     <KeyboardAvoidingView
