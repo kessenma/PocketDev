@@ -110,10 +110,14 @@ type GithubRepoWire = {
   private: boolean
 }
 
-async function fetchGithubRepos(githubUsername: string | null): Promise<{
+type GithubRepoFetchResult = {
   githubUsername: string | null
   repos: GithubRepoWire[]
-}> {
+  source: 'gh' | 'public_api' | 'none'
+  error: string | null
+}
+
+async function fetchGithubRepos(githubUsername: string | null): Promise<GithubRepoFetchResult> {
   if (await hasGhAuth()) {
     const userResult = await exec('gh api user --jq .login')
     const authedUsername = userResult.exitCode === 0 && userResult.stdout ? userResult.stdout.trim() : githubUsername
@@ -132,21 +136,35 @@ async function fetchGithubRepos(githubUsername: string | null): Promise<{
       return {
         githubUsername: authedUsername,
         repos: rawRepos,
+        source: 'gh',
+        error: null,
       }
+    }
+
+    return {
+      githubUsername: authedUsername,
+      repos: [],
+      source: 'gh',
+      error: reposResult.stderr || reposResult.stdout || 'gh api user/repos failed',
     }
   }
 
   if (!githubUsername) {
-    return { githubUsername, repos: [] }
+    return { githubUsername, repos: [], source: 'none', error: null }
   }
 
   const response = await fetch(`https://api.github.com/users/${githubUsername}/repos?per_page=100&sort=updated`)
   if (!response.ok) {
-    return { githubUsername, repos: [] }
+    return {
+      githubUsername,
+      repos: [],
+      source: 'public_api',
+      error: `GitHub API returned ${response.status}`,
+    }
   }
 
   const repos = await response.json() as GithubRepoWire[]
-  return { githubUsername, repos }
+  return { githubUsername, repos, source: 'public_api', error: null }
 }
 
 export async function ensureSeedProject() {
@@ -246,6 +264,43 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
       return a.name.localeCompare(b.name)
     }),
     githubUsername,
+  }
+}
+
+export async function getProjectsDebug() {
+  await ensureSeedProject()
+
+  const activeProjectId = getActiveProjectId()
+  const localProjects = getProjects().map((project) => projectToSummary(project, activeProjectId))
+  const sshStatus = await checkSshStatus()
+  const githubData = await fetchGithubRepos(sshStatus.github_username)
+  const listed = await listProjects()
+
+  const privateRepos = githubData.repos.filter((repo) => repo.private)
+  const publicRepos = githubData.repos.filter((repo) => !repo.private)
+  const listedPrivate = listed.projects.filter((project) => project.visibility === 'private')
+  const listedPublic = listed.projects.filter((project) => project.visibility === 'public')
+
+  return {
+    activeProjectId,
+    sshGithubUsername: sshStatus.github_username,
+    ghCliUsername: sshStatus.gh_cli_username,
+    ghCliAuthenticated: sshStatus.gh_cli_authenticated,
+    privateRepoAccess: sshStatus.private_repo_access,
+    fetchSource: githubData.source,
+    fetchError: githubData.error,
+    fetchedGithubUsername: githubData.githubUsername,
+    fetchedRepoCount: githubData.repos.length,
+    fetchedPrivateCount: privateRepos.length,
+    fetchedPublicCount: publicRepos.length,
+    fetchedPrivateSample: privateRepos.slice(0, 8).map((repo) => `${repo.owner.login}/${repo.name}`),
+    fetchedPublicSample: publicRepos.slice(0, 8).map((repo) => `${repo.owner.login}/${repo.name}`),
+    localProjectCount: localProjects.length,
+    listedProjectCount: listed.projects.length,
+    listedPrivateCount: listedPrivate.length,
+    listedPublicCount: listedPublic.length,
+    listedUnknownCount: listed.projects.filter((project) => project.visibility === 'unknown').length,
+    listedPrivateSample: listedPrivate.slice(0, 8).map((project) => `${project.owner ?? 'unknown'}/${project.name}`),
   }
 }
 

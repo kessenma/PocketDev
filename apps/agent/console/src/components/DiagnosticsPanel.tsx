@@ -7,11 +7,13 @@ import {
   fetchCodexAuthDebug,
   fetchClaudeAuthDebug,
   fetchGitHubAuthDebug,
+  fetchProjectsDebug,
   fetchTerminalDebug,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
   type GitHubAuthDebugInfo,
+  type ProjectsDebugInfo,
   type TerminalDebugEntry,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
@@ -37,6 +39,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [codexInfo, setCodexInfo] = useState<CodexAuthDebugInfo | null>(null)
   const [claudeInfo, setClaudeInfo] = useState<ClaudeAuthDebugInfo | null>(null)
   const [githubInfo, setGitHubInfo] = useState<GitHubAuthDebugInfo | null>(null)
+  const [projectsInfo, setProjectsInfo] = useState<ProjectsDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,18 +50,20 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     setLoading(true)
     setError(null)
     try {
-      const [authData, termData, codexData, claudeData, githubData] = await Promise.all([
+      const [authData, termData, codexData, claudeData, githubData, projectsData] = await Promise.all([
         fetchAuthDebug(),
         fetchTerminalDebug(),
         fetchCodexAuthDebug(),
         fetchClaudeAuthDebug(),
         fetchGitHubAuthDebug(),
+        fetchProjectsDebug(),
       ])
       setInfo(authData)
       setTermLog(termData)
       setCodexInfo(codexData)
       setClaudeInfo(claudeData)
       setGitHubInfo(githubData)
+      setProjectsInfo(projectsData)
       setLastUpdated(new Date().toISOString())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to fetch')
@@ -467,6 +472,29 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                   This panel shows the raw `gh auth login --web` session state that the mobile wizard is polling. If the browser asks for a device code but no code appears here, the issue is in the agent parser or the terminal output stream.
                 </div>
               </div>
+
+              <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+                <p className="text-sm font-medium">Repo Discovery</p>
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3 text-sm text-[#f4f0e8]/78">
+                    <p>Fetch source: {projectsInfo?.fetchSource ?? 'Unknown'}</p>
+                    <p>SSH user: {projectsInfo?.sshGithubUsername ?? 'Unknown'}</p>
+                    <p>GH user: {projectsInfo?.ghCliUsername ?? 'Unknown'}</p>
+                    <p>GH authenticated: {projectsInfo?.ghCliAuthenticated ? 'Yes' : 'No'}</p>
+                    <p>Private repo access: {projectsInfo?.privateRepoAccess ? 'Yes' : 'No'}</p>
+                    <p>Fetch error: {projectsInfo?.fetchError ?? 'None'}</p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3 text-sm text-[#f4f0e8]/78">
+                    <p>Fetched repos: {projectsInfo?.fetchedRepoCount ?? 0}</p>
+                    <p>Fetched private: {projectsInfo?.fetchedPrivateCount ?? 0}</p>
+                    <p>Fetched public: {projectsInfo?.fetchedPublicCount ?? 0}</p>
+                    <p>Listed in picker: {projectsInfo?.listedProjectCount ?? 0}</p>
+                    <p>Listed private: {projectsInfo?.listedPrivateCount ?? 0}</p>
+                    <p>Listed public: {projectsInfo?.listedPublicCount ?? 0}</p>
+                    <p>Listed unknown: {projectsInfo?.listedUnknownCount ?? 0}</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid min-h-0 gap-3 lg:grid-cols-2">
@@ -522,6 +550,18 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                     <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#9df6cd]">
                       {githubInfo?.sessions[0]?.outputExcerpt ?? 'No GitHub CLI output captured yet.'}
                     </pre>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Private Repo Samples</p>
+                    <div className="mt-2 space-y-2">
+                      {projectsInfo?.fetchedPrivateSample.length ? (
+                        projectsInfo.fetchedPrivateSample.map((repo, index) => (
+                          <div key={`${repo}-${index}`} className="font-mono text-xs text-[#9df6cd]">{repo}</div>
+                        ))
+                      ) : (
+                        <div className="text-xs text-[#f4f0e8]/58">No private repos in the fetched result.</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

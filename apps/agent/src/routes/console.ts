@@ -19,6 +19,7 @@ import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
 import { getClaudeAuthDebug } from '../services/claude-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
+import { getProjectsDebug } from '../services/projects.ts'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
 
@@ -268,6 +269,15 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return getGitHubAuthDebug()
+  })
+
+  .get('/debug/projects', async ({ request, set }) => {
+    if (!validateSession(request.headers.get('cookie'))) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    return await getProjectsDebug()
   })
 
   // ─── Prerequisites (requires session) ─────────────────

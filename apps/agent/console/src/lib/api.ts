@@ -272,3 +272,31 @@ export async function fetchGitHubAuthDebug(): Promise<GitHubAuthDebugInfo> {
   if (!res.ok) throw new Error('Failed to fetch GitHub auth debug')
   return res.json()
 }
+
+export interface ProjectsDebugInfo {
+  activeProjectId: string | null
+  sshGithubUsername: string | null
+  ghCliUsername: string | null
+  ghCliAuthenticated: boolean
+  privateRepoAccess: boolean
+  fetchSource: 'gh' | 'public_api' | 'none'
+  fetchError: string | null
+  fetchedGithubUsername: string | null
+  fetchedRepoCount: number
+  fetchedPrivateCount: number
+  fetchedPublicCount: number
+  fetchedPrivateSample: string[]
+  fetchedPublicSample: string[]
+  localProjectCount: number
+  listedProjectCount: number
+  listedPrivateCount: number
+  listedPublicCount: number
+  listedUnknownCount: number
+  listedPrivateSample: string[]
+}
+
+export async function fetchProjectsDebug(): Promise<ProjectsDebugInfo> {
+  const res = await get('/debug/projects')
+  if (!res.ok) throw new Error('Failed to fetch projects debug')
+  return res.json()
+}

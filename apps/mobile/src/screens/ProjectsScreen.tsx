@@ -8,11 +8,18 @@ import ServerSegmentedControl from '../components/server-actions/ServerSegmented
 import { Globe, Lock, type LucideIcon } from 'lucide-react-native'
 
 type ProjectFilter = 'all' | 'local' | 'needsClone'
+type VisibilityFilter = 'all' | 'public' | 'private'
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'All' },
   { value: 'local', label: 'On Device' },
   { value: 'needsClone', label: 'Needs Clone' },
+] as const
+
+const VISIBILITY_FILTER_OPTIONS = [
+  { value: 'all', label: 'Any Visibility' },
+  { value: 'public', label: 'Public' },
+  { value: 'private', label: 'Private' },
 ] as const
 
 export default function ProjectsScreen() {
@@ -27,6 +34,7 @@ export default function ProjectsScreen() {
   const lastActionMessage = useProjectsStore((state) => state.lastActionMessage)
   const [branchDrafts, setBranchDrafts] = React.useState<Record<string, string>>({})
   const [filter, setFilter] = React.useState<ProjectFilter>('all')
+  const [visibilityFilter, setVisibilityFilter] = React.useState<VisibilityFilter>('all')
 
   React.useEffect(() => {
     refresh()
@@ -39,14 +47,20 @@ export default function ProjectsScreen() {
       return true
     })
 
-    return [...filtered].sort((a, b) => {
+    const visibilityFiltered = filtered.filter((project) => {
+      if (visibilityFilter === 'public') return project.visibility === 'public'
+      if (visibilityFilter === 'private') return project.visibility === 'private'
+      return true
+    })
+
+    return [...visibilityFiltered].sort((a, b) => {
       const aTime = a.lastUpdatedAt ? new Date(a.lastUpdatedAt).getTime() : 0
       const bTime = b.lastUpdatedAt ? new Date(b.lastUpdatedAt).getTime() : 0
       if (aTime !== bTime) return bTime - aTime
       if (a.isActive !== b.isActive) return a.isActive ? -1 : 1
       return a.name.localeCompare(b.name)
     })
-  }, [filter, projects])
+  }, [filter, projects, visibilityFilter])
 
   return (
     <AdaptiveShell maxWidth={1240} style={{ backgroundColor: colors.background }}>
@@ -70,6 +84,11 @@ export default function ProjectsScreen() {
               value={filter}
               options={FILTER_OPTIONS}
               onChange={setFilter}
+            />
+            <ServerSegmentedControl
+              value={visibilityFilter}
+              options={VISIBILITY_FILTER_OPTIONS}
+              onChange={setVisibilityFilter}
             />
             <Text style={[styles.countText, { color: colors.textSecondary }]}>
               {visibleProjects.length} shown
@@ -164,6 +183,10 @@ export default function ProjectsScreen() {
                 ? 'No local repos match this filter yet.'
                 : filter === 'needsClone'
                   ? 'Everything in the current list is already available on device.'
+                  : visibilityFilter === 'private'
+                    ? 'No private repos matched the current filters.'
+                    : visibilityFilter === 'public'
+                      ? 'No public repos matched the current filters.'
                   : 'Connect GitHub in workspace setup or register a local repo from the paired server seed path.'}
             </Text>
           </View>
