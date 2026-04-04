@@ -18,6 +18,7 @@ import { checkAllPrerequisites } from '../services/prerequisites.ts'
 import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
 import { getClaudeAuthDebug } from '../services/claude-setup.ts'
+import { getGitHubAuthDebug } from '../services/git-setup.ts'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
 
@@ -258,6 +259,15 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return getClaudeAuthDebug()
+  })
+
+  .get('/debug/github-auth', ({ request, set }) => {
+    if (!validateSession(request.headers.get('cookie'))) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    return getGitHubAuthDebug()
   })
 
   // ─── Prerequisites (requires session) ─────────────────

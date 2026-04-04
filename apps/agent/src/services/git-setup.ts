@@ -1,5 +1,6 @@
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { getToolRecord } from '../db/index.ts'
 import type {
   GitSshStatus,
   GitSshKeyResult,
@@ -37,6 +38,8 @@ interface InternalGhAuthSession {
   authenticated: boolean
   completed: boolean
   error: string | null
+  startedAt: number
+  updatedAt: number
 }
 
 const ghAuthSessions = new Map<string, InternalGhAuthSession>()
@@ -173,6 +176,7 @@ function refreshGhSessionState(session: InternalGhAuthSession) {
   const urls = session.output.match(GH_AUTH_URL_PATTERN)
   session.authUrl = urls?.find((url) => url.includes('github.com')) ?? session.authUrl
   session.verificationCode = parseGhVerificationCode(session.output) ?? session.verificationCode
+  session.updatedAt = Date.now()
 
   if (session.authenticated) {
     session.state = 'authenticated'
@@ -371,6 +375,8 @@ export async function startGitHubCliAuth(): Promise<GitHubCliAuthStartResult> {
     authenticated: false,
     completed: false,
     error: null,
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
   }
   ghAuthSessions.set(sessionId, session)
   terminal.send(`${command}\n`)
@@ -383,6 +389,31 @@ export async function startGitHubCliAuth(): Promise<GitHubCliAuthStartResult> {
 export function getGitHubCliAuthStatus(sessionId: string): GitHubCliAuthSessionStatus {
   const session = getGhSessionOrThrow(sessionId)
   return toGhAuthStatus(session)
+}
+
+export function getGitHubAuthDebug() {
+  const sessions = Array.from(ghAuthSessions.values())
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((session) => ({
+      sessionId: session.id,
+      state: session.state,
+      authenticated: session.authenticated,
+      completed: session.completed,
+      authUrl: session.authUrl,
+      verificationCode: session.verificationCode,
+      githubUsername: session.githubUsername,
+      privateRepoAccess: session.privateRepoAccess,
+      error: session.error,
+      startedAt: new Date(session.startedAt).toISOString(),
+      updatedAt: new Date(session.updatedAt).toISOString(),
+      outputExcerpt: getGhOutputExcerpt(session.output),
+    }))
+
+  return {
+    activeSessionCount: sessions.length,
+    sessions,
+    persistedState: getToolRecord('github_cli'),
+  }
 }
 
 export async function generateSshKey(overwrite: boolean): Promise<GitSshKeyResult> {

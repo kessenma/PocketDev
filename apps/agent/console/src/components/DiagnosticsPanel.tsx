@@ -6,16 +6,18 @@ import {
   fetchAuthDebug,
   fetchCodexAuthDebug,
   fetchClaudeAuthDebug,
+  fetchGitHubAuthDebug,
   fetchTerminalDebug,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
+  type GitHubAuthDebugInfo,
   type TerminalDebugEntry,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Bug, Maximize2, RefreshCw, Smartphone, Terminal, Waves, KeyRound, Sparkles } from 'lucide-react'
 
-type DiagnosticsTab = 'terminal' | 'registry' | 'codex' | 'claude'
+type DiagnosticsTab = 'terminal' | 'registry' | 'codex' | 'claude' | 'github'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -34,6 +36,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [info, setInfo] = useState<AuthDebugInfo | null>(null)
   const [codexInfo, setCodexInfo] = useState<CodexAuthDebugInfo | null>(null)
   const [claudeInfo, setClaudeInfo] = useState<ClaudeAuthDebugInfo | null>(null)
+  const [githubInfo, setGitHubInfo] = useState<GitHubAuthDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,16 +47,18 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     setLoading(true)
     setError(null)
     try {
-      const [authData, termData, codexData, claudeData] = await Promise.all([
+      const [authData, termData, codexData, claudeData, githubData] = await Promise.all([
         fetchAuthDebug(),
         fetchTerminalDebug(),
         fetchCodexAuthDebug(),
         fetchClaudeAuthDebug(),
+        fetchGitHubAuthDebug(),
       ])
       setInfo(authData)
       setTermLog(termData)
       setCodexInfo(codexData)
       setClaudeInfo(claudeData)
+      setGitHubInfo(githubData)
       setLastUpdated(new Date().toISOString())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to fetch')
@@ -103,6 +108,17 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return 'No Claude auth activity yet.'
   }, [claudeInfo])
 
+  const githubSummary = useMemo(() => {
+    if (!githubInfo) return 'No GitHub auth diagnostics yet.'
+    if (githubInfo.activeSessionCount > 0) {
+      return `${githubInfo.activeSessionCount} active session${githubInfo.activeSessionCount === 1 ? '' : 's'}`
+    }
+    if (githubInfo.persistedState?.authenticated) {
+      return 'GitHub CLI authenticated'
+    }
+    return 'No GitHub auth activity yet.'
+  }, [githubInfo])
+
   return (
     <section className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#111111_0%,#181818_100%)] text-[#f4f0e8] shadow-[0_14px_40px_rgba(0,0,0,0.18)]">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/8 px-5 py-4 sm:px-6">
@@ -122,7 +138,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-full border border-white/10 bg-black/30 p-1">
-            {(['terminal', 'claude', 'codex', 'registry'] as const).map((tab) => (
+            {(['terminal', 'claude', 'codex', 'github', 'registry'] as const).map((tab) => (
               <Button
                 key={tab}
                 size="sm"
@@ -133,7 +149,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                 )}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === 'terminal' ? 'Terminal' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : 'Registry'}
+                {tab === 'terminal' ? 'Terminal' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'github' ? 'GitHub' : 'Registry'}
               </Button>
             ))}
           </div>
@@ -162,6 +178,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
               ? claudeSummary
               : activeTab === 'codex'
                 ? codexSummary
+                : activeTab === 'github'
+                  ? githubSummary
                 : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
         </Badge>
         {lastUpdated ? (
@@ -413,6 +431,93 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                         {codexInfo?.lastReplayDebug?.sessionOutputExcerpt ?? codexInfo?.sessions[0]?.outputExcerpt ?? 'No Codex output captured yet.'}
                       </pre>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'github' ? (
+          <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
+            <div className="space-y-3">
+              <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-[#f0c419]" />
+                  <p className="text-sm font-medium">GitHub CLI Auth State</p>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-[1.2rem] border border-white/8 bg-[#f0c419] p-4 text-black">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Active Sessions</p>
+                    <p className="mt-2 text-3xl font-semibold">{githubInfo?.activeSessionCount ?? 0}</p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Persisted CLI State</p>
+                    <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                      <p>Path: {githubInfo?.persistedState?.path ?? 'Not stored'}</p>
+                      <p>Version: {githubInfo?.persistedState?.version ?? 'Unknown'}</p>
+                      <p>Authenticated: {githubInfo?.persistedState ? (githubInfo.persistedState.authenticated ? 'Yes' : 'No') : 'Unknown'}</p>
+                      <p>Updated: {githubInfo?.persistedState?.updatedAt ? new Date(githubInfo.persistedState.updatedAt).toLocaleString() : 'Unknown'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+                <p className="text-sm font-medium">Why This Helps</p>
+                <div className="mt-3 rounded-[1.2rem] border border-white/8 bg-black/30 p-4 text-sm text-[#f4f0e8]/72">
+                  This panel shows the raw `gh auth login --web` session state that the mobile wizard is polling. If the browser asks for a device code but no code appears here, the issue is in the agent parser or the terminal output stream.
+                </div>
+              </div>
+            </div>
+
+            <div className="grid min-h-0 gap-3 lg:grid-cols-2">
+              <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
+                <p className="text-sm font-medium">Active GitHub Sessions</p>
+                <div className="mt-3 space-y-3">
+                  {githubInfo?.sessions.length ? (
+                    githubInfo.sessions.map((session) => (
+                      <div key={session.sessionId} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{session.state}</p>
+                            <p className="mt-1 break-all font-mono text-xs text-[#f4f0e8]/50">{session.sessionId}</p>
+                          </div>
+                          <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/75">
+                            {session.authenticated ? 'Authenticated' : session.completed ? 'Completed' : 'Active'}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
+                          <p>Verification code: {session.verificationCode ?? 'Not parsed yet'}</p>
+                          <p>GitHub user: {session.githubUsername ?? 'Unknown'}</p>
+                          <p>Private repo access: {session.privateRepoAccess ? 'Yes' : 'No'}</p>
+                          <p>Error: {session.error ?? 'None'}</p>
+                          <p>Started: {new Date(session.startedAt).toLocaleString()}</p>
+                          <p>Updated: {new Date(session.updatedAt).toLocaleString()}</p>
+                          {session.authUrl ? (
+                            <p className="break-all font-mono text-[11px] text-[#9df6cd]">{session.authUrl}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                      No active GitHub auth sessions. Start private repo setup from the mobile app to capture one.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
+                <p className="text-sm font-medium">Recent GitHub Output</p>
+                <div className="mt-3 space-y-3">
+                  <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Parsed Device Code</p>
+                    <p className="mt-2 font-mono text-sm text-[#9df6cd]">{githubInfo?.sessions[0]?.verificationCode ?? 'No code parsed yet.'}</p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output Excerpt</p>
+                    <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#9df6cd]">
+                      {githubInfo?.sessions[0]?.outputExcerpt ?? 'No GitHub CLI output captured yet.'}
+                    </pre>
                   </div>
                 </div>
               </div>

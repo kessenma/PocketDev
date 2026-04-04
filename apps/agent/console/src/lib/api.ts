@@ -238,3 +238,36 @@ export async function fetchClaudeAuthDebug(): Promise<ClaudeAuthDebugInfo> {
   if (!res.ok) throw new Error('Failed to fetch Claude auth debug')
   return res.json()
 }
+
+export interface GitHubAuthDebugSession {
+  sessionId: string
+  state: string
+  authenticated: boolean
+  completed: boolean
+  authUrl: string | null
+  verificationCode: string | null
+  githubUsername: string | null
+  privateRepoAccess: boolean
+  error: string | null
+  startedAt: string
+  updatedAt: string
+  outputExcerpt: string | null
+}
+
+export interface GitHubAuthDebugInfo {
+  activeSessionCount: number
+  sessions: GitHubAuthDebugSession[]
+  persistedState: {
+    toolId: string
+    path: string | null
+    version: string | null
+    authenticated: boolean
+    updatedAt: string | null
+  } | null
+}
+
+export async function fetchGitHubAuthDebug(): Promise<GitHubAuthDebugInfo> {
+  const res = await get('/debug/github-auth')
+  if (!res.ok) throw new Error('Failed to fetch GitHub auth debug')
+  return res.json()
+}
