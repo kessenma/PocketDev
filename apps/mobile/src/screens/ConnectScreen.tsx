@@ -11,8 +11,9 @@ import {
   ScrollView,
 } from 'react-native'
 import { useTheme } from '../contexts/ThemeContext'
-import { pairWithServer } from '../services/api'
+import { fetchPrerequisites, pairWithServer } from '../services/api'
 import { useConnectionStore } from '../stores/connection'
+import { useSetupStore } from '../stores/setup'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
@@ -24,6 +25,7 @@ import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
 import QRScanner, { type QRScanResult } from '../components/QRScanner'
 import { ArrowRight, Link, ScanLine, Server, Sparkles, Unplug } from 'lucide-react-native'
 import PairingAnimation from '../components/animations/PairingAnimation'
+import type { PrerequisitesReport } from '@pocketdev/shared/types'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connect'>
@@ -42,10 +44,53 @@ export default function ConnectScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [scannerVisible, setScannerVisible] = useState(false)
   const [showPairing, setShowPairing] = useState(false)
+  const [postPairSetupReady, setPostPairSetupReady] = useState(false)
 
   const handlePairingComplete = useCallback(() => {
+    if (postPairSetupReady) {
+      navigation.replace('Main', { screen: 'Server' })
+      return
+    }
+
     navigation.replace('ServerSetup')
-  }, [navigation])
+  }, [navigation, postPairSetupReady])
+
+  const resolvePostPairDestination = useCallback(async (ip: string, port: number) => {
+    try {
+      const report = await fetchPrerequisites(ip, port) as PrerequisitesReport
+      useSetupStore.setState({ report, loading: false, error: null })
+      return report.ready
+    } catch (e) {
+      console.warn('[ConnectScreen] Failed to resolve setup readiness:', e)
+      useSetupStore.setState({
+        error: e instanceof Error ? e.message : 'Failed to check prerequisites',
+        loading: false,
+      })
+      return false
+    }
+  }, [])
+
+  const reconnectToExistingServer = useCallback(async () => {
+    if (!existingServer || loading) return
+
+    console.log('[ConnectScreen] Reconnecting to existing server:', existingServer)
+    setError(null)
+    setLoading(true)
+
+    try {
+      connect()
+      const setupReady = await resolvePostPairDestination(existingServer.ip, existingServer.port)
+      if (setupReady) {
+        navigation.replace('Main', { screen: 'Server' })
+        return
+      }
+      navigation.replace('ServerSetup')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to reconnect')
+    } finally {
+      setLoading(false)
+    }
+  }, [connect, existingServer, loading, navigation, resolvePostPairDestination])
 
   const parsed = parseConnectionString(connectionInput)
   const canSubmit = parsed !== null && !loading
@@ -66,6 +111,8 @@ export default function ConnectScreen({ navigation }: Props) {
     try {
       const result = await pairWithServer(parsed.host, parsed.port, parsed.code)
       setPaired({ ip: parsed.host, port: parsed.port, deviceId: result.deviceId })
+      const setupReady = await resolvePostPairDestination(parsed.host, parsed.port)
+      setPostPairSetupReady(setupReady)
       setShowPairing(true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to connect')
@@ -81,8 +128,10 @@ export default function ConnectScreen({ navigation }: Props) {
       setError(null)
       setLoading(true)
       pairWithServer(result.host, result.port, normalizeSetupCode(result.code).trim())
-        .then((pairResult) => {
+        .then(async (pairResult) => {
           setPaired({ ip: result.host, port: result.port, deviceId: pairResult.deviceId })
+          const setupReady = await resolvePostPairDestination(result.host, result.port)
+          setPostPairSetupReady(setupReady)
           setShowPairing(true)
         })
         .catch((e) => {
@@ -100,11 +149,8 @@ export default function ConnectScreen({ navigation }: Props) {
           <View style={[styles.existingConnection, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(37,99,235,0.08)', borderColor: isDark ? 'rgba(96,165,250,0.26)' : 'rgba(37,99,235,0.16)' }]}>
             <TouchableOpacity
               style={styles.existingConnectionInfo}
-              onPress={() => {
-                console.log('[ConnectScreen] Reconnecting to existing server:', existingServer)
-                connect()
-                navigation.replace('ServerSetup')
-              }}
+              onPress={reconnectToExistingServer}
+              disabled={loading}
               activeOpacity={0.7}
             >
               <Server color={colors.primary} size={16} strokeWidth={2.25} />

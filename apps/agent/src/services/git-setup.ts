@@ -1,6 +1,12 @@
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import type { GitSshStatus, GitSshKeyResult, GitConfigureResult, GitTestConnectionResult } from '@pocketdev/shared/types'
+import type {
+  GitSshStatus,
+  GitSshKeyResult,
+  GitConfigureResult,
+  GitTestConnectionResult,
+  GitHubCliAuthResult,
+} from '@pocketdev/shared/types'
 
 const SSH_DIR = join(process.env.HOME ?? '/root', '.ssh')
 const SSH_CONFIG_PATH = join(SSH_DIR, 'config')
@@ -71,6 +77,54 @@ Host github.com
   writeFileSync(SSH_CONFIG_PATH, config + entry, { mode: 0o600 })
 }
 
+async function getGhStatus(): Promise<{
+  installed: boolean
+  version: string | null
+  authenticated: boolean
+  username: string | null
+  privateRepoAccess: boolean
+  output: string | null
+}> {
+  const which = await exec('which gh')
+  if (which.exitCode !== 0 || !which.stdout) {
+    return {
+      installed: false,
+      version: null,
+      authenticated: false,
+      username: null,
+      privateRepoAccess: false,
+      output: null,
+    }
+  }
+
+  const versionResult = await exec('gh --version')
+  const versionMatch = versionResult.stdout.match(/gh version ([^\s]+)/)
+  const authResult = await exec('gh auth status 2>&1')
+  const authenticated = authResult.exitCode === 0
+
+  let username: string | null = null
+  let privateRepoAccess = false
+
+  if (authenticated) {
+    const userResult = await exec('gh api user --jq .login')
+    if (userResult.exitCode === 0 && userResult.stdout) {
+      username = userResult.stdout.trim()
+    }
+
+    const repoProbe = await exec("gh api 'user/repos?per_page=1&visibility=private&affiliation=owner'")
+    privateRepoAccess = repoProbe.exitCode === 0
+  }
+
+  return {
+    installed: true,
+    version: versionMatch?.[1] ?? null,
+    authenticated,
+    username,
+    privateRepoAccess,
+    output: authResult.stdout || authResult.stderr || null,
+  }
+}
+
 // ─── Public API ──────────────────────────────────────────────────────
 
 export async function checkSshStatus(): Promise<GitSshStatus> {
@@ -107,6 +161,8 @@ export async function checkSshStatus(): Promise<GitSshStatus> {
     gitUserEmail = email || null
   }
 
+  const ghStatus = await getGhStatus()
+
   return {
     git_installed: gitInstalled,
     ssh_key_exists: !!existingKey,
@@ -114,8 +170,59 @@ export async function checkSshStatus(): Promise<GitSshStatus> {
     ssh_key_path: existingKey?.path ?? null,
     github_ssh_works: githubSshWorks,
     github_username: githubUsername,
+    gh_cli_installed: ghStatus.installed,
+    gh_cli_version: ghStatus.version,
+    gh_cli_authenticated: ghStatus.authenticated,
+    gh_cli_username: ghStatus.username,
+    private_repo_access: ghStatus.privateRepoAccess,
     git_user_name: gitUserName,
     git_user_email: gitUserEmail,
+  }
+}
+
+export async function configureGitHubCliToken(token: string): Promise<GitHubCliAuthResult> {
+  if (!token.trim()) {
+    return {
+      success: false,
+      github_username: null,
+      private_repo_access: false,
+      output: null,
+      error: 'GitHub token is required',
+    }
+  }
+
+  const ghStatus = await getGhStatus()
+  if (!ghStatus.installed) {
+    return {
+      success: false,
+      github_username: null,
+      private_repo_access: false,
+      output: null,
+      error: 'GitHub CLI is not installed',
+    }
+  }
+
+  const escapedToken = token.replace(/'/g, `'\\''`)
+  const login = await exec(`printf '%s' '${escapedToken}' | gh auth login --hostname github.com --with-token`)
+  if (login.exitCode !== 0) {
+    return {
+      success: false,
+      github_username: null,
+      private_repo_access: false,
+      output: login.stdout || login.stderr || null,
+      error: login.stderr || 'GitHub CLI authentication failed',
+    }
+  }
+
+  await exec('gh auth setup-git')
+  const finalStatus = await getGhStatus()
+
+  return {
+    success: finalStatus.authenticated,
+    github_username: finalStatus.username,
+    private_repo_access: finalStatus.privateRepoAccess,
+    output: finalStatus.output,
+    error: finalStatus.authenticated ? null : 'GitHub CLI is still not authenticated',
   }
 }
 

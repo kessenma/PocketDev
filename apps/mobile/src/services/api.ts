@@ -30,6 +30,7 @@ import type {
   GitSshKeyResult,
   GitConfigureResult,
   GitTestConnectionResult,
+  GitHubCliAuthResult,
   ClaudeSetupStatus,
   ClaudeAuthSessionStatus,
   CodexSetupStatus,
@@ -496,6 +497,23 @@ export async function postTestGitConnection(ip: string, port: number): Promise<G
   })
   if (!response.ok) throw new Error(`Failed to test git connection (${response.status})`)
   return response.json() as Promise<GitTestConnectionResult>
+}
+
+export async function postConfigureGitHubCliToken(
+  ip: string,
+  port: number,
+  token: string,
+): Promise<GitHubCliAuthResult> {
+  const response = await fetch(apiUrl(ip, port, '/git-setup/github-cli/auth-token'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ token }),
+  })
+  if (!response.ok) throw new Error(`Failed to configure GitHub CLI (${response.status})`)
+  return response.json() as Promise<GitHubCliAuthResult>
 }
 
 // ─── Claude CLI Setup ──────────────────────────────────────────────

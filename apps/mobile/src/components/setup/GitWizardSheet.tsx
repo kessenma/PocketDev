@@ -10,6 +10,8 @@ import InstallGitStep from './git-wizard/InstallGitStep'
 import GenerateKeyStep from './git-wizard/GenerateKeyStep'
 import AddToGitHubStep from './git-wizard/AddToGitHubStep'
 import TestConnectionStep from './git-wizard/TestConnectionStep'
+import InstallGitHubCliStep from './git-wizard/InstallGitHubCliStep'
+import GitHubCliAuthStep from './git-wizard/GitHubCliAuthStep'
 import ConfigureIdentityStep from './git-wizard/ConfigureIdentityStep'
 import type { GitSshStatus, GitWizardStep, GitWizardStepStatus } from '@pocketdev/shared/types'
 
@@ -22,7 +24,7 @@ interface Props {
 // ─── State machine ──────────────────────────────────────
 
 const ALL_STEPS: GitWizardStep[] = [
-  'detect', 'install', 'generate-key', 'add-to-github', 'test-connection', 'configure-identity',
+  'detect', 'install', 'generate-key', 'add-to-github', 'test-connection', 'install-gh', 'github-cli-auth', 'configure-identity',
 ]
 
 interface WizardState {
@@ -94,6 +96,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         newStatuses['add-to-github'] = 'skipped'
         newStatuses['test-connection'] = 'skipped'
       }
+      if (ss.gh_cli_installed) newStatuses['install-gh'] = 'skipped'
+      if (ss.gh_cli_authenticated && ss.private_repo_access) newStatuses['github-cli-auth'] = 'skipped'
       if (ss.git_user_name && ss.git_user_email) newStatuses['configure-identity'] = 'skipped'
 
       // Check if everything is already configured
@@ -247,6 +251,10 @@ export default function GitWizardSheet({ visible, onClose, onComplete }: Props) 
         return <AddToGitHubStep dispatch={dispatch} publicKey={state.publicKey} />
       case 'test-connection':
         return <TestConnectionStep dispatch={dispatch} />
+      case 'install-gh':
+        return <InstallGitHubCliStep dispatch={dispatch} />
+      case 'github-cli-auth':
+        return <GitHubCliAuthStep dispatch={dispatch} />
       case 'configure-identity':
         return (
           <ConfigureIdentityStep

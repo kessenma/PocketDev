@@ -6,6 +6,7 @@ import {
   readPublicKey,
   configureIdentity,
   testGithubConnection,
+  configureGitHubCliToken,
 } from '../services/git-setup.ts'
 
 export const gitSetupRoutes = new Elysia({ prefix: '/git-setup' })
@@ -58,4 +59,20 @@ export const gitSetupRoutes = new Elysia({ prefix: '/git-setup' })
     if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
 
     return testGithubConnection()
+  })
+
+  .post('/github-cli/auth-token', async ({ request, set, body }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    if (!body.token?.trim()) {
+      set.status = 400
+      return { error: 'Token is required' }
+    }
+
+    return configureGitHubCliToken(body.token.trim())
+  }, {
+    body: t.Object({
+      token: t.String(),
+    }),
   })

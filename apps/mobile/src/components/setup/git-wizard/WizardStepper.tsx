@@ -10,6 +10,8 @@ const VISIBLE_STEPS: { key: GitWizardStep; label: string }[] = [
   { key: 'generate-key', label: 'SSH Key' },
   { key: 'add-to-github', label: 'GitHub' },
   { key: 'test-connection', label: 'Test' },
+  { key: 'install-gh', label: 'GH CLI' },
+  { key: 'github-cli-auth', label: 'Private' },
   { key: 'configure-identity', label: 'Identity' },
 ]
 

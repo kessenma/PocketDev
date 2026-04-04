@@ -48,6 +48,7 @@ export default function GitWorkspace() {
   const currentBranch = branches.find((branch) => branch.current) ?? branches[0]
   const selectedFile = changes.find((change) => change.id === selectedFileId) ?? null
   const canCommit = commitMessage.trim().length > 0 && changes.length > 0 && !isCommitting
+  const hasRepoContext = repoName.length > 0 || repoPath.length > 0 || branches.length > 0
 
   const header = (
     <View style={styles.header}>
@@ -153,9 +154,16 @@ export default function GitWorkspace() {
       <GitRepoSummaryCard
         repoName={repoName}
         repoPath={repoPath}
-        branch={currentBranch}
+        branch={currentBranch ?? null}
         remote={remote}
       />
+      {!hasRepoContext && !isRefreshing ? (
+        <View style={[styles.messageBanner, { backgroundColor: colors.backgroundSecondary }]}>
+          <Text style={[styles.messageText, { color: colors.textSecondary }]}>
+            Open the repo picker from the server screen to choose a local repository or clone one from GitHub.
+          </Text>
+        </View>
+      ) : null}
       {activeView === 'changes' ? changesView : null}
       {activeView === 'history' ? historyView : null}
       {activeView === 'branches' ? branchesView : null}

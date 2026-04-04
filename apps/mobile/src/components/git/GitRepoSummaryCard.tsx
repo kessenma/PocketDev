@@ -9,7 +9,7 @@ import type { GitBranchOption, GitRemoteState } from './model'
 type Props = {
   repoName: string
   repoPath: string
-  branch: GitBranchOption
+  branch: GitBranchOption | null
   remote: GitRemoteState
 }
 
@@ -27,11 +27,11 @@ export default function GitRepoSummaryCard({ repoName, repoPath, branch, remote 
       <GitCardHeader>
         <View style={styles.headerRow}>
           <View style={styles.titleBlock}>
-            <GitCardTitle>{repoName}</GitCardTitle>
-            <GitCardDescription>{repoPath}</GitCardDescription>
+            <GitCardTitle>{repoName || 'No repository selected'}</GitCardTitle>
+            <GitCardDescription>{repoPath || 'Pick a repository to load git status.'}</GitCardDescription>
           </View>
-          <GitBadge variant={branch.protected ? 'primary' : 'outline'}>
-            {branch.name}
+          <GitBadge variant={branch?.protected ? 'primary' : 'outline'}>
+            {branch?.name ?? 'No branch'}
           </GitBadge>
         </View>
       </GitCardHeader>
@@ -40,7 +40,7 @@ export default function GitRepoSummaryCard({ repoName, repoPath, branch, remote 
         <View style={styles.metricRow}>
           <View style={styles.metricCell}>
             <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>Upstream</Text>
-            <Text style={[styles.metricValue, { color: colors.text }]}>{remote.upstream}</Text>
+            <Text style={[styles.metricValue, { color: colors.text }]}>{remote.upstream || 'Not connected'}</Text>
           </View>
           <View style={styles.metricCell}>
             <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>Last push</Text>

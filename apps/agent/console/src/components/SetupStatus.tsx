@@ -62,6 +62,7 @@ function toolIntentDetail(tool: ToolCheck): string | null {
 function GitDetails({ tool }: { tool: ToolCheck }) {
   const sshExists = tool.details.ssh_key_exists === 'true'
   const githubConnected = tool.details.github_connected === 'true'
+  const privateRepoAccess = tool.details.private_repo_access === 'true'
 
   return (
     <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -84,16 +85,45 @@ function GitDetails({ tool }: { tool: ToolCheck }) {
         )}
         GitHub
       </span>
+      <span className="flex items-center gap-1">
+        {privateRepoAccess ? (
+          <Check className="h-3 w-3 text-green-500" />
+        ) : (
+          <X className="h-3 w-3 text-red-500" />
+        )}
+        Private Repos
+      </span>
+    </div>
+  )
+}
+
+function GitHubCliDetails({ tool }: { tool: ToolCheck }) {
+  const privateRepoAccess = tool.details.private_repo_access === 'true'
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {tool.details.github_username ? (
+        <span>@{tool.details.github_username}</span>
+      ) : null}
+      <span className="flex items-center gap-1">
+        {privateRepoAccess ? (
+          <Check className="h-3 w-3 text-green-500" />
+        ) : (
+          <X className="h-3 w-3 text-red-500" />
+        )}
+        Private Repo Access
+      </span>
     </div>
   )
 }
 
 function hasRichDetails(tool: ToolCheck) {
-  return tool.id === 'git' || !!tool.version || tool.auth_status === 'unauthenticated' || tool.status === 'misconfigured'
+  return tool.id === 'git' || tool.id === 'github_cli' || !!tool.version || tool.auth_status === 'unauthenticated' || tool.status === 'misconfigured'
 }
 
 function getBauhausTileClass(tool: ToolCheck, index: number) {
   if (tool.id === 'git') return 'sm:col-span-2 sm:row-span-2 xl:col-span-4 xl:row-span-2'
+  if (tool.id === 'github_cli') return 'sm:col-span-2 xl:col-span-3'
   if (tool.status === 'missing' && tool.required) return 'sm:col-span-1 sm:row-span-2 xl:col-span-2 xl:row-span-2'
   if (tool.status === 'misconfigured' || tool.auth_status === 'unauthenticated') return 'sm:col-span-2 xl:col-span-3'
   if (tool.version && tool.status === 'installed') return index % 3 === 0 ? 'sm:col-span-2 xl:col-span-3' : 'xl:col-span-2'
@@ -119,6 +149,9 @@ function ToolListRow({ tool }: { tool: ToolCheck }) {
         ) : null}
         {tool.id === 'git' && tool.status !== 'missing' ? (
           <GitDetails tool={tool} />
+        ) : null}
+        {tool.id === 'github_cli' && tool.status !== 'missing' ? (
+          <GitHubCliDetails tool={tool} />
         ) : null}
       </div>
       <div className="flex items-center gap-2 self-start sm:pl-3">
@@ -154,6 +187,9 @@ function ToolGridTile({ tool, className }: { tool: ToolCheck, className?: string
           ) : null}
           {tool.id === 'git' && tool.status !== 'missing' ? (
             <GitDetails tool={tool} />
+          ) : null}
+          {tool.id === 'github_cli' && tool.status !== 'missing' ? (
+            <GitHubCliDetails tool={tool} />
           ) : null}
         </div>
       </div>

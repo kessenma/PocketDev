@@ -89,6 +89,47 @@ async function checkGit(): Promise<ToolCheck> {
   }
 }
 
+async function checkGitHubCli(): Promise<ToolCheck> {
+  const path = await which('gh')
+  if (!path) {
+    return {
+      id: 'github_cli', name: 'GitHub CLI', status: 'missing', auth_status: 'unauthenticated',
+      version: null, path: null, required: false,
+      install_command: 'type gh >/dev/null 2>&1 || (curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y)',
+      auth_command: 'gh auth login',
+      details: {},
+    }
+  }
+
+  const version = await getVersion('gh --version')
+  const { stdout: authOutput, exitCode: authExit } = await exec('gh auth status 2>&1')
+  const authenticated = authExit === 0
+  let username: string | null = null
+  let privateRepoAccess = false
+
+  if (authenticated) {
+    const { stdout: userOut, exitCode: userExit } = await exec('gh api user --jq .login')
+    if (userExit === 0 && userOut) username = userOut
+
+    const { exitCode: privateExit } = await exec("gh api 'user/repos?per_page=1&visibility=private&affiliation=owner' >/dev/null 2>&1")
+    privateRepoAccess = privateExit === 0
+  }
+
+  upsertToolPath('github_cli', path, version, authenticated)
+
+  return {
+    id: 'github_cli', name: 'GitHub CLI', status: 'installed', auth_status: authenticated ? 'authenticated' : 'unauthenticated',
+    version, path, required: false,
+    install_command: null,
+    auth_command: authenticated ? null : 'gh auth login',
+    details: {
+      github_username: username,
+      private_repo_access: privateRepoAccess ? 'true' : 'false',
+      auth_output: authOutput || null,
+    },
+  }
+}
+
 async function checkNode(): Promise<ToolCheck> {
   const node = await checkPkgNode()
   if (!node.installed || !node.path) {
@@ -414,6 +455,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     getOsInfo(),
     detectRunningDatabases(),
     checkGit(),
+    checkGitHubCli(),
     checkNode(),
     checkNpm(),
     checkClaudeCli(),
@@ -428,15 +470,17 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
   // ready = git configured + node + npm + at least one AI CLI installed & authenticated
   const gitReady =
     tools[0].status === 'installed' && tools[0].auth_status === 'authenticated'
-  const nodeReady = tools[1].status === 'installed'
-  const npmReady = tools[2].status === 'installed'
+  const githubCliReady =
+    tools[1].status === 'installed' && tools[1].auth_status === 'authenticated'
+  const nodeReady = tools[2].status === 'installed'
+  const npmReady = tools[3].status === 'installed'
   const claudeReady =
-    tools[3].status === 'installed' && tools[3].auth_status === 'authenticated'
-  const codexReady =
     tools[4].status === 'installed' && tools[4].auth_status === 'authenticated'
+  const codexReady =
+    tools[5].status === 'installed' && tools[5].auth_status === 'authenticated'
   const aiReady = claudeReady || codexReady
 
-  const ready = gitReady && nodeReady && npmReady && aiReady
+  const ready = gitReady && githubCliReady && nodeReady && npmReady && aiReady
 
   return {
     ...osInfo,

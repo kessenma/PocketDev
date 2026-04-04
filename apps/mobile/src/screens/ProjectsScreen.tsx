@@ -4,6 +4,15 @@ import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import { useProjectsStore } from '../stores/projects'
+import ServerSegmentedControl from '../components/server-actions/ServerSegmentedControl'
+
+type ProjectFilter = 'all' | 'local' | 'needsClone'
+
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'local', label: 'On Device' },
+  { value: 'needsClone', label: 'Needs Clone' },
+] as const
 
 export default function ProjectsScreen() {
   const { colors } = useTheme()
@@ -16,10 +25,27 @@ export default function ProjectsScreen() {
   const isMutating = useProjectsStore((state) => state.isMutating)
   const lastActionMessage = useProjectsStore((state) => state.lastActionMessage)
   const [branchDrafts, setBranchDrafts] = React.useState<Record<string, string>>({})
+  const [filter, setFilter] = React.useState<ProjectFilter>('all')
 
   React.useEffect(() => {
     refresh()
   }, [refresh])
+
+  const visibleProjects = React.useMemo(() => {
+    const filtered = projects.filter((project) => {
+      if (filter === 'local') return project.isLocal
+      if (filter === 'needsClone') return project.needsClone
+      return true
+    })
+
+    return [...filtered].sort((a, b) => {
+      const aTime = a.lastUpdatedAt ? new Date(a.lastUpdatedAt).getTime() : 0
+      const bTime = b.lastUpdatedAt ? new Date(b.lastUpdatedAt).getTime() : 0
+      if (aTime !== bTime) return bTime - aTime
+      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+  }, [filter, projects])
 
   return (
     <AdaptiveShell maxWidth={1240} style={{ backgroundColor: colors.background }}>
@@ -30,14 +56,27 @@ export default function ProjectsScreen() {
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Local repos are ready to open. GitHub repos stay metadata-only until you clone them.
           </Text>
+          <Text style={[styles.helperText, { color: colors.textTertiary }]}>
+            Sorted by most recent update by default.
+          </Text>
           <View style={[styles.messageBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.messageText, { color: colors.textSecondary }]}>
               {githubUsername ? `GitHub profile: @${githubUsername}. ` : ''}{lastActionMessage}
             </Text>
           </View>
+          <View style={styles.filterRow}>
+            <ServerSegmentedControl
+              value={filter}
+              options={FILTER_OPTIONS}
+              onChange={setFilter}
+            />
+            <Text style={[styles.countText, { color: colors.textSecondary }]}>
+              {visibleProjects.length} shown
+            </Text>
+          </View>
         </View>
 
-        {projects.map((project) => {
+        {visibleProjects.map((project) => {
           const branchDraft = branchDrafts[project.id] ?? ''
           return (
             <View
@@ -50,6 +89,9 @@ export default function ProjectsScreen() {
                   <Text style={[styles.repoMeta, { color: colors.textSecondary }]}>
                     {project.owner ? `${project.owner} · ` : ''}
                     {project.localPath ?? project.remoteUrl ?? 'No path available'}
+                  </Text>
+                  <Text style={[styles.updatedText, { color: colors.textTertiary }]}>
+                    {formatLastUpdated(project.lastUpdatedAt)}
                   </Text>
                 </View>
                 <View style={styles.badges}>
@@ -108,11 +150,15 @@ export default function ProjectsScreen() {
           )
         })}
 
-        {!isLoading && projects.length === 0 ? (
+        {!isLoading && visibleProjects.length === 0 ? (
           <View style={[styles.emptyState, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No repositories found</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              Connect GitHub in workspace setup or register a local repo from the paired server seed path.
+              {filter === 'local'
+                ? 'No local repos match this filter yet.'
+                : filter === 'needsClone'
+                  ? 'Everything in the current list is already available on device.'
+                  : 'Connect GitHub in workspace setup or register a local repo from the paired server seed path.'}
             </Text>
           </View>
         ) : null}
@@ -127,6 +173,19 @@ function Badge({ label, color }: { label: string; color: string }) {
       <Text style={[styles.badgeText, { color }]}>{label}</Text>
     </View>
   )
+}
+
+function formatLastUpdated(value: string | null): string {
+  if (!value) return 'Updated date unavailable'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Updated date unavailable'
+
+  const diff = Date.now() - date.getTime()
+  if (diff < 60_000) return 'Updated just now'
+  if (diff < 3_600_000) return `Updated ${Math.floor(diff / 60_000)}m ago`
+  if (diff < 86_400_000) return `Updated ${Math.floor(diff / 3_600_000)}h ago`
+  if (diff < 604_800_000) return `Updated ${Math.floor(diff / 86_400_000)}d ago`
+  return `Updated ${date.toLocaleDateString()}`
 }
 
 const styles = StyleSheet.create({
@@ -152,6 +211,9 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typographyScale.base,
   },
+  helperText: {
+    ...typographyScale.sm,
+  },
   messageBanner: {
     borderWidth: 1,
     borderRadius: borderRadius.lg,
@@ -160,6 +222,13 @@ const styles = StyleSheet.create({
   },
   messageText: {
     ...typographyScale.sm,
+  },
+  filterRow: {
+    gap: spacing[2],
+  },
+  countText: {
+    ...typographyScale.sm,
+    fontWeight: '600',
   },
   card: {
     borderWidth: 1,
@@ -179,6 +248,10 @@ const styles = StyleSheet.create({
   },
   repoMeta: {
     ...typographyScale.sm,
+  },
+  updatedText: {
+    ...typographyScale.xs,
+    fontWeight: '600',
   },
   badges: {
     flexDirection: 'row',

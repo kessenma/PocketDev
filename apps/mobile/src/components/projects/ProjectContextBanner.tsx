@@ -30,7 +30,7 @@ export default function ProjectContextBanner({ onOpenProjects }: Props) {
         onPress={onOpenProjects}
         activeOpacity={0.7}
       >
-        <Text style={[styles.buttonText, { color: colors.primary }]}>Manage Repos</Text>
+        <Text style={[styles.buttonText, { color: colors.primary }]}>Open Repo Picker</Text>
       </TouchableOpacity>
     </View>
   )

@@ -23,6 +23,7 @@ export type {
   GitSshKeyResult,
   GitConfigureResult,
   GitTestConnectionResult,
+  GitHubCliAuthResult,
   GitWizardStep,
   GitWizardStepStatus,
   ClaudeSetupStatus,

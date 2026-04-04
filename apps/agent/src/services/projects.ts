@@ -30,6 +30,14 @@ async function exec(cmd: string, cwd?: string): Promise<{ stdout: string; stderr
   return { stdout: stdout.trim(), stderr: stderr.trim(), exitCode: proc.exitCode ?? 1 }
 }
 
+async function hasGhAuth(): Promise<boolean> {
+  const whichGh = await exec('which gh')
+  if (whichGh.exitCode !== 0 || !whichGh.stdout) return false
+
+  const auth = await exec('gh auth status')
+  return auth.exitCode === 0
+}
+
 function projectToSummary(
   project: {
     id: string
@@ -91,6 +99,52 @@ function parseGitHubOwner(remoteUrl: string | null): string | null {
   return sshMatch?.[1] ?? null
 }
 
+type GithubRepoWire = {
+  name: string
+  owner: { login: string }
+  clone_url: string
+  updated_at: string
+  default_branch: string
+}
+
+async function fetchGithubRepos(githubUsername: string | null): Promise<{
+  githubUsername: string | null
+  repos: GithubRepoWire[]
+}> {
+  if (await hasGhAuth()) {
+    const userResult = await exec('gh api user --jq .login')
+    const authedUsername = userResult.exitCode === 0 && userResult.stdout ? userResult.stdout.trim() : githubUsername
+    const reposResult = await exec("gh api 'user/repos?per_page=100&visibility=all&affiliation=owner&sort=updated'")
+
+    if (reposResult.exitCode === 0 && reposResult.stdout) {
+      const rawRepos = JSON.parse(reposResult.stdout) as Array<{
+        name: string
+        owner: { login: string }
+        clone_url: string
+        updated_at: string
+        default_branch: string
+      }>
+
+      return {
+        githubUsername: authedUsername,
+        repos: rawRepos,
+      }
+    }
+  }
+
+  if (!githubUsername) {
+    return { githubUsername, repos: [] }
+  }
+
+  const response = await fetch(`https://api.github.com/users/${githubUsername}/repos?per_page=100&sort=updated`)
+  if (!response.ok) {
+    return { githubUsername, repos: [] }
+  }
+
+  const repos = await response.json() as GithubRepoWire[]
+  return { githubUsername, repos }
+}
+
 export async function ensureSeedProject() {
   if (!existsSync(INITIAL_PROJECT_DIR)) return
 
@@ -142,51 +196,41 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
   const activeProjectId = getActiveProjectId()
   const localProjects = getProjects().map((project) => projectToSummary(project, activeProjectId))
   const sshStatus = await checkSshStatus()
-  const githubUsername = sshStatus.github_username
+  let githubUsername = sshStatus.github_username
   const merged = new Map(localProjects.map((project) => [project.id, project]))
 
-  if (githubUsername) {
-    try {
-      const response = await fetch(`https://api.github.com/users/${githubUsername}/repos?per_page=100&sort=updated`)
-      if (response.ok) {
-        const repos = await response.json() as Array<{
-          name: string
-          owner: { login: string }
-          clone_url: string
-          updated_at: string
-          default_branch: string
-        }>
+  try {
+    const githubData = await fetchGithubRepos(githubUsername)
+    githubUsername = githubData.githubUsername
 
-        for (const repo of repos) {
-          const matchingLocal = localProjects.find((project) => project.remoteUrl === repo.clone_url)
-          if (matchingLocal) {
-            merged.set(matchingLocal.id, {
-              ...matchingLocal,
-              defaultBranch: matchingLocal.defaultBranch ?? repo.default_branch,
-              lastUpdatedAt: repo.updated_at,
-            })
-            continue
-          }
-
-          const id = buildProfileProjectId(repo.owner.login, repo.name)
-          merged.set(id, {
-            id,
-            name: repo.name,
-            owner: repo.owner.login,
-            remoteUrl: repo.clone_url,
-            localPath: null,
-            isLocal: false,
-            isActive: false,
-            needsClone: true,
-            defaultBranch: repo.default_branch,
-            lastUpdatedAt: repo.updated_at,
-            source: 'github_profile',
-          })
-        }
+    for (const repo of githubData.repos) {
+      const matchingLocal = localProjects.find((project) => project.remoteUrl === repo.clone_url)
+      if (matchingLocal) {
+        merged.set(matchingLocal.id, {
+          ...matchingLocal,
+          defaultBranch: matchingLocal.defaultBranch ?? repo.default_branch,
+          lastUpdatedAt: repo.updated_at,
+        })
+        continue
       }
-    } catch {
-      // Degrade to local-only results when GitHub is unreachable.
+
+      const id = buildProfileProjectId(repo.owner.login, repo.name)
+      merged.set(id, {
+        id,
+        name: repo.name,
+        owner: repo.owner.login,
+        remoteUrl: repo.clone_url,
+        localPath: null,
+        isLocal: false,
+        isActive: false,
+        needsClone: true,
+        defaultBranch: repo.default_branch,
+        lastUpdatedAt: repo.updated_at,
+        source: 'github_profile',
+      })
     }
+  } catch {
+    // Degrade to local-only results when GitHub is unreachable.
   }
 
   return {

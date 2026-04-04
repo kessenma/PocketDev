@@ -6,7 +6,8 @@ import type { ToolCheck } from '@pocketdev/shared/types'
 import { Assets } from '../../../assets'
 
 const toolAssetMap: Record<string, { light: ImageSourcePropType; dark: ImageSourcePropType }> = {
-  git: { light: Assets.githubBlack, dark: Assets.githubWhite },
+  git: { light: Assets.gitBlack, dark: Assets.gitWhite },
+  github_cli: { light: Assets.githubBlack, dark: Assets.githubWhite },
   docker: { light: Assets.dockerBlack, dark: Assets.dockerWhite },
   python: { light: Assets.pythonBlack, dark: Assets.pythonWhite },
   node: { light: Assets.nodeBlack, dark: Assets.nodeWhite },

@@ -3,6 +3,8 @@
 export const Assets = {
   githubWhite: require('./github-white.png'),
   githubBlack: require('./github-black.png'),
+  gitBlack: require('./github-black.png'),
+  gitWhite: require('./github-white.png'),
   codexWhite: require('./codex-white.png'),
   codexBlack: require('./codex-black.png'),
   claudeWhite: require('./claude-white.png'),

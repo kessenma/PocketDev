@@ -64,6 +64,11 @@ export interface GitSshStatus {
   ssh_key_path: string | null
   github_ssh_works: boolean
   github_username: string | null
+  gh_cli_installed: boolean
+  gh_cli_version: string | null
+  gh_cli_authenticated: boolean
+  gh_cli_username: string | null
+  private_repo_access: boolean
   git_user_name: string | null
   git_user_email: string | null
 }
@@ -89,7 +94,15 @@ export interface GitTestConnectionResult {
   error: string | null
 }
 
-export type GitWizardStep = 'detect' | 'install' | 'generate-key' | 'add-to-github' | 'test-connection' | 'configure-identity'
+export interface GitHubCliAuthResult {
+  success: boolean
+  github_username: string | null
+  private_repo_access: boolean
+  output: string | null
+  error: string | null
+}
+
+export type GitWizardStep = 'detect' | 'install' | 'generate-key' | 'add-to-github' | 'test-connection' | 'install-gh' | 'github-cli-auth' | 'configure-identity'
 export type GitWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
 // ─── Claude CLI wizard types ────────────────────────────────────────
