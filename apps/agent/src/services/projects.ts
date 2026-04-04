@@ -17,10 +17,18 @@ const INITIAL_PROJECT_DIR = resolve(process.env.POCKETDEV_PROJECT_DIR ?? process
 const CLONE_ROOT = resolve(process.env.POCKETDEV_REPOS_DIR ?? join(process.env.HOME ?? '/', 'PocketDev', 'repos'))
 
 async function exec(cmd: string, cwd?: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
   const proc = Bun.spawn(['bash', '-lc', cmd], {
     cwd,
     stdout: 'pipe',
     stderr: 'pipe',
+    env: {
+      ...process.env,
+      HOME: home,
+      PATH: process.env.PATH
+        ? `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${process.env.PATH}`
+        : '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+    },
   })
   const [stdout, stderr] = await Promise.all([
     new Response(proc.stdout).text(),
