@@ -1,6 +1,6 @@
 import { basename, join, resolve } from 'node:path'
 import { existsSync, mkdirSync } from 'node:fs'
-import type { ProjectMutationResult, ProjectSummary } from '@pocketdev/shared/types'
+import type { ProjectMutationResult, ProjectSummary, ProjectVisibility } from '@pocketdev/shared/types'
 import {
   getConfig,
   getProject,
@@ -49,6 +49,7 @@ function projectToSummary(
     defaultBranch: string | null
     updatedAt?: string | null
     lastUpdatedAt?: string | null
+    visibility?: ProjectVisibility | null
     source: string
   },
   activeProjectId: string | null,
@@ -65,6 +66,7 @@ function projectToSummary(
     needsClone: !localPath,
     defaultBranch: project.defaultBranch,
     lastUpdatedAt: project.lastUpdatedAt ?? project.updatedAt ?? null,
+    visibility: project.visibility ?? 'unknown',
     source: project.source as ProjectSummary['source'],
   }
 }
@@ -105,6 +107,7 @@ type GithubRepoWire = {
   clone_url: string
   updated_at: string
   default_branch: string
+  private: boolean
 }
 
 async function fetchGithubRepos(githubUsername: string | null): Promise<{
@@ -123,6 +126,7 @@ async function fetchGithubRepos(githubUsername: string | null): Promise<{
         clone_url: string
         updated_at: string
         default_branch: string
+        private: boolean
       }>
 
       return {
@@ -210,6 +214,7 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
           ...matchingLocal,
           defaultBranch: matchingLocal.defaultBranch ?? repo.default_branch,
           lastUpdatedAt: repo.updated_at,
+          visibility: repo.private ? 'private' : 'public',
         })
         continue
       }
@@ -226,6 +231,7 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
         needsClone: true,
         defaultBranch: repo.default_branch,
         lastUpdatedAt: repo.updated_at,
+        visibility: repo.private ? 'private' : 'public',
         source: 'github_profile',
       })
     }

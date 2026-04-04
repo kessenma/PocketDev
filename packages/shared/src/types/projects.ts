@@ -1,4 +1,5 @@
 export type ProjectSource = 'seeded' | 'local' | 'github_clone' | 'github_profile'
+export type ProjectVisibility = 'public' | 'private' | 'unknown'
 
 export interface ProjectSummary {
   id: string
@@ -11,6 +12,7 @@ export interface ProjectSummary {
   needsClone: boolean
   defaultBranch: string | null
   lastUpdatedAt: string | null
+  visibility: ProjectVisibility
   source: ProjectSource
 }
 

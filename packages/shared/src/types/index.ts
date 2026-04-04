@@ -115,6 +115,7 @@ export type {
 } from './files.js'
 export type {
   ProjectSource,
+  ProjectVisibility,
   ProjectSummary,
   ListProjectsResponse,
   SelectProjectRequest,

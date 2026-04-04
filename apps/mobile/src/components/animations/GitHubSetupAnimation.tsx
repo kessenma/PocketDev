@@ -6,6 +6,8 @@ import { palette } from '@pocketdev/shared/theme'
 import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
+  interpolate,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -23,7 +25,19 @@ const TOKEN_DELAY = 280
 const CONNECTOR_DELAY = 640
 const REPO_DELAY = 980
 const UNLOCK_DELAY = 1500
-const HOLD_DURATION = 900
+const OUTRO_LINES_DELAY = 2350
+const OUTRO_MAIN_DELAY = 3180
+const HOLD_DURATION = 980
+const ZOOM_LINE_DURATION = 1380
+const OUTRO_MAIN_DURATION = 760
+
+const ZOOM_LINES = Array.from({ length: 28 }, (_, index) => ({
+  leftRatio: 0.03 + (index % 14) * 0.07 + (index >= 14 ? 0.018 : 0),
+  width: index % 6 === 0 ? 4 : index % 3 === 0 ? 3 : 2,
+  height: 120 + (index % 7) * 32 + (index >= 14 ? 26 : 0),
+  delay: index * 34,
+  depth: (index % 3 === 0 ? 'front' : index % 3 === 1 ? 'mid' : 'back') as 'front' | 'mid' | 'back',
+}))
 
 type Props = {
   onComplete: () => void
@@ -45,6 +59,10 @@ export default function GitHubSetupAnimation({ onComplete }: Props) {
   const reposTranslateY = useSharedValue(28)
   const unlockOpacity = useSharedValue(0)
   const unlockScale = useSharedValue(0.7)
+  const outroLinesProgress = useSharedValue(0)
+  const outroMainTranslateY = useSharedValue(0)
+  const outroMainScale = useSharedValue(1)
+  const outroMainOpacity = useSharedValue(1)
 
   useEffect(() => {
     overlayOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) })
@@ -97,8 +115,24 @@ export default function GitHubSetupAnimation({ onComplete }: Props) {
       UNLOCK_DELAY,
       withSpring(1, { damping: 12, stiffness: 150 }),
     )
+    outroLinesProgress.value = withDelay(
+      OUTRO_LINES_DELAY,
+      withTiming(1, { duration: ZOOM_LINE_DURATION, easing: Easing.out(Easing.cubic) }),
+    )
+    outroMainTranslateY.value = withDelay(
+      OUTRO_MAIN_DELAY,
+      withTiming(-SCREEN_HEIGHT * 0.42, { duration: OUTRO_MAIN_DURATION, easing: Easing.inOut(Easing.cubic) }),
+    )
+    outroMainScale.value = withDelay(
+      OUTRO_MAIN_DELAY,
+      withTiming(1.08, { duration: OUTRO_MAIN_DURATION, easing: Easing.inOut(Easing.cubic) }),
+    )
+    outroMainOpacity.value = withDelay(
+      OUTRO_MAIN_DELAY,
+      withTiming(0, { duration: OUTRO_MAIN_DURATION, easing: Easing.in(Easing.quad) }),
+    )
 
-    const totalDuration = UNLOCK_DELAY + 700 + HOLD_DURATION
+    const totalDuration = OUTRO_MAIN_DELAY + OUTRO_MAIN_DURATION + HOLD_DURATION
     const timeout = setTimeout(() => {
       triggerExit()
     }, totalDuration)
@@ -118,6 +152,10 @@ export default function GitHubSetupAnimation({ onComplete }: Props) {
     reposTranslateY,
     unlockOpacity,
     unlockScale,
+    outroLinesProgress,
+    outroMainTranslateY,
+    outroMainScale,
+    outroMainOpacity,
     triggerExit,
   ])
 
@@ -155,43 +193,69 @@ export default function GitHubSetupAnimation({ onComplete }: Props) {
     transform: [{ scale: unlockScale.value }],
   }))
 
+  const animationGroupStyle = useAnimatedStyle(() => ({
+    opacity: outroMainOpacity.value,
+    transform: [
+      { translateY: outroMainTranslateY.value },
+      { scale: outroMainScale.value },
+    ],
+  }))
+
   const bgColor = isDark ? 'rgba(10, 10, 10, 0.96)' : BAUHAUS.black
   const gitLogo = isDark ? Assets.gitWhite : Assets.gitBlack
+  const zoomLineColor = isDark ? 'rgba(244, 240, 232, 0.95)' : BAUHAUS.blue
 
   return (
     <Animated.View style={[styles.overlay, { backgroundColor: bgColor }, overlayStyle]}>
-      <View style={styles.stage}>
-        <Animated.View style={[styles.gitDock, gitStyle]}>
-          <View style={[styles.gitHalo, { backgroundColor: BAUHAUS.blue }]} />
-          <View style={styles.gitIconFrame}>
-            <Image source={gitLogo} style={styles.icon} resizeMode="contain" />
-          </View>
-        </Animated.View>
-
-        <Animated.View style={[styles.connector, connectorStyle]}>
-          <View style={[styles.connectorLine, { backgroundColor: BAUHAUS.yellow }]} />
-          <Animated.View style={[styles.connectorPulse, { backgroundColor: BAUHAUS.red }, pulseStyle]} />
-        </Animated.View>
-
-        <Animated.View style={[styles.tokenCard, tokenStyle]}>
-          <View style={[styles.tokenAccent, { backgroundColor: BAUHAUS.red }]} />
-          <KeyRound color={BAUHAUS.black} size={20} strokeWidth={2.2} />
-        </Animated.View>
+      <View style={styles.zoomLinesLayer} pointerEvents="none">
+        {ZOOM_LINES.map((line, index) => (
+          <ZoomLine
+            key={`${line.leftRatio}-${index}`}
+            progress={outroLinesProgress}
+            delay={line.delay}
+            left={Math.round(SCREEN_WIDTH * line.leftRatio)}
+            width={line.width}
+            height={line.height}
+            color={zoomLineColor}
+            depth={line.depth}
+          />
+        ))}
       </View>
 
-      <Animated.View style={[styles.repoGrid, reposStyle]}>
-        <RepoTile tone={BAUHAUS.blue} />
-        <RepoTile tone={BAUHAUS.red} />
-        <RepoTile tone={BAUHAUS.yellow} />
-        <View style={[styles.repoTile, styles.lockedRepoTile]}>
-          <View style={[styles.repoTileBar, { backgroundColor: '#9ca3af' }]} />
-          <View style={[styles.repoTileLine, { backgroundColor: '#6b7280' }]} />
-          <View style={[styles.repoTileLineShort, { backgroundColor: '#6b7280' }]} />
-          <Lock color="#e5e7eb" size={16} strokeWidth={2.2} />
-          <Animated.View style={[styles.unlockBadge, { backgroundColor: BAUHAUS.yellow }, unlockStyle]}>
-            <Check color={BAUHAUS.black} size={14} strokeWidth={3} />
+      <Animated.View style={[styles.animationGroup, animationGroupStyle]}>
+        <View style={styles.stage}>
+          <Animated.View style={[styles.gitDock, gitStyle]}>
+            <View style={[styles.gitHalo, { backgroundColor: BAUHAUS.blue }]} />
+            <View style={styles.gitIconFrame}>
+              <Image source={gitLogo} style={styles.icon} resizeMode="contain" />
+            </View>
+          </Animated.View>
+
+          <Animated.View style={[styles.connector, connectorStyle]}>
+            <View style={[styles.connectorLine, { backgroundColor: BAUHAUS.yellow }]} />
+            <Animated.View style={[styles.connectorPulse, { backgroundColor: BAUHAUS.red }, pulseStyle]} />
+          </Animated.View>
+
+          <Animated.View style={[styles.tokenCard, tokenStyle]}>
+            <View style={[styles.tokenAccent, { backgroundColor: BAUHAUS.red }]} />
+            <KeyRound color={BAUHAUS.black} size={20} strokeWidth={2.2} />
           </Animated.View>
         </View>
+
+        <Animated.View style={[styles.repoGrid, reposStyle]}>
+          <RepoTile tone={BAUHAUS.blue} />
+          <RepoTile tone={BAUHAUS.red} />
+          <RepoTile tone={BAUHAUS.yellow} />
+          <View style={[styles.repoTile, styles.lockedRepoTile]}>
+            <View style={[styles.repoTileBar, { backgroundColor: '#9ca3af' }]} />
+            <View style={[styles.repoTileLine, { backgroundColor: '#6b7280' }]} />
+            <View style={[styles.repoTileLineShort, { backgroundColor: '#6b7280' }]} />
+            <Lock color="#e5e7eb" size={16} strokeWidth={2.2} />
+            <Animated.View style={[styles.unlockBadge, { backgroundColor: BAUHAUS.yellow }, unlockStyle]}>
+              <Check color={BAUHAUS.black} size={14} strokeWidth={3} />
+            </Animated.View>
+          </View>
+        </Animated.View>
       </Animated.View>
     </Animated.View>
   )
@@ -207,6 +271,58 @@ function RepoTile({ tone }: { tone: string }) {
   )
 }
 
+function ZoomLine({
+  progress,
+  delay,
+  left,
+  width,
+  height,
+  color,
+  depth,
+}: {
+  progress: SharedValue<number>
+  delay: number
+  left: number
+  width: number
+  height: number
+  color: string
+  depth: 'front' | 'mid' | 'back'
+}) {
+  const lineStyle = useAnimatedStyle(() => {
+    const start = delay / ZOOM_LINE_DURATION
+    const localProgress = Math.max(0, Math.min(1, (progress.value - start) / (1 - start || 1)))
+    const startY = depth === 'front' ? SCREEN_HEIGHT * 0.46 : depth === 'mid' ? SCREEN_HEIGHT * 0.34 : SCREEN_HEIGHT * 0.24
+    const endY = depth === 'front' ? -SCREEN_HEIGHT * 0.92 : depth === 'mid' ? -SCREEN_HEIGHT * 0.76 : -SCREEN_HEIGHT * 0.58
+    const startScale = depth === 'front' ? 0.84 : depth === 'mid' ? 0.66 : 0.48
+    const endScale = depth === 'front' ? 1.85 : depth === 'mid' ? 1.32 : 1.02
+    const peakOpacity = depth === 'front' ? 0.95 : depth === 'mid' ? 0.62 : 0.34
+
+    return {
+      opacity: interpolate(localProgress, [0, 0.1, 0.82, 1], [0, peakOpacity * 0.24, peakOpacity, 0]),
+      transform: [
+        { translateY: interpolate(localProgress, [0, 1], [startY, endY]) },
+        { scaleY: interpolate(localProgress, [0, 1], [startScale, endScale]) },
+      ],
+    }
+  })
+
+  return (
+    <Animated.View
+      style={[
+        styles.zoomLine,
+        {
+          left,
+          width,
+          height,
+          backgroundColor: color,
+          opacity: depth === 'front' ? 0.92 : depth === 'mid' ? 0.55 : 0.28,
+        },
+        lineStyle,
+      ]}
+    />
+  )
+}
+
 const ICON_SIZE = 54
 
 const styles = StyleSheet.create({
@@ -216,6 +332,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 28,
+  },
+  zoomLinesLayer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  zoomLine: {
+    position: 'absolute',
+    bottom: -140,
+    borderRadius: 999,
+    opacity: 0,
+  },
+  animationGroup: {
+    width: '100%',
+    alignItems: 'center',
   },
   stage: {
     width: '100%',

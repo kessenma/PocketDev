@@ -5,6 +5,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import { useProjectsStore } from '../stores/projects'
 import ServerSegmentedControl from '../components/server-actions/ServerSegmentedControl'
+import { Globe, Lock, type LucideIcon } from 'lucide-react-native'
 
 type ProjectFilter = 'all' | 'local' | 'needsClone'
 
@@ -97,6 +98,11 @@ export default function ProjectsScreen() {
                 <View style={styles.badges}>
                   {project.isActive ? <Badge label="Active" color={colors.primary} /> : null}
                   <Badge label={project.isLocal ? 'Local' : 'GitHub'} color={project.isLocal ? '#16a34a' : '#2563eb'} />
+                  {project.visibility === 'private' ? (
+                    <Badge label="Private" color="#f59e0b" icon={Lock} />
+                  ) : project.visibility === 'public' ? (
+                    <Badge label="Public" color="#38bdf8" icon={Globe} />
+                  ) : null}
                 </View>
               </View>
 
@@ -167,9 +173,18 @@ export default function ProjectsScreen() {
   )
 }
 
-function Badge({ label, color }: { label: string; color: string }) {
+function Badge({
+  label,
+  color,
+  icon: Icon,
+}: {
+  label: string
+  color: string
+  icon?: LucideIcon
+}) {
   return (
     <View style={[styles.badge, { borderColor: color, backgroundColor: color + '14' }]}>
+      {Icon ? <Icon color={color} size={12} strokeWidth={2.2} /> : null}
       <Text style={[styles.badgeText, { color }]}>{label}</Text>
     </View>
   )
@@ -263,6 +278,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing[2],
     paddingVertical: spacing[1],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
   },
   badgeText: {
     ...typographyScale.xs,
