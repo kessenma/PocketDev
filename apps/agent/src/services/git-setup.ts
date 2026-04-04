@@ -16,6 +16,9 @@ const SSH_DIR = join(process.env.HOME ?? '/root', '.ssh')
 const SSH_CONFIG_PATH = join(SSH_DIR, 'config')
 const GH_AUTH_URL_PATTERN = /https:\/\/[^\s]+/g
 const GH_AUTH_CODE_PATTERNS = [
+  /[Oo]ne-?time code[:\s]+([A-Z0-9-]{4,})/i,
+  /[Cc]ode[:\s]+([A-Z0-9-]{4,})/i,
+  /enter this code[:\s]+([A-Z0-9-]{4,})/i,
   /code[:\s]+([A-Z0-9-]{4,})/i,
   /enter code[:\s]+([A-Z0-9-]{4,})/i,
   /\b([A-Z0-9]{4}(?:-[A-Z0-9]{4})+)\b/,

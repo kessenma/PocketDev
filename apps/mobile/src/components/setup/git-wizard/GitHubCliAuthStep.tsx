@@ -187,11 +187,30 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
           </View>
         )}
 
+        {selectedMethod === 'browser' && session?.verification_code && !session?.authenticated && (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Step 1: Copy the code</Text>
+            <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+              GitHub will ask for this one-time code after you open the verification page.
+            </Text>
+            <View style={[styles.codeBox, { backgroundColor: colors.background }]}>
+              <Text style={[styles.codeText, { color: colors.text }]} selectable>
+                {session.verification_code}
+              </Text>
+            </View>
+            <CopyButton value={session.verification_code} label="Copy code" />
+          </View>
+        )}
+
         {selectedMethod === 'browser' && session?.auth_url && !session?.authenticated && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>GitHub verification</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              {session.verification_code ? 'Step 2: Open GitHub' : 'Open GitHub'}
+            </Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              Open the GitHub verification page in your mobile browser and complete the GitHub CLI sign-in.
+              {session.verification_code
+                ? 'After GitHub opens, paste the code you copied in the previous step and complete sign-in.'
+                : 'Open the GitHub verification page in your mobile browser and complete the GitHub CLI sign-in.'}
             </Text>
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
@@ -205,20 +224,19 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
           </View>
         )}
 
-        {selectedMethod === 'browser' && session?.verification_code && !session?.authenticated && (
+        {selectedMethod === 'browser' && session && !session.authenticated && !session.verification_code && !session.auth_url ? (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Verification code</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Preparing GitHub sign-in</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              GitHub may ask for this one-time code during browser sign-in.
+              Waiting for the paired server to produce the GitHub verification link and one-time code.
             </Text>
-            <View style={[styles.codeBox, { backgroundColor: colors.background }]}>
-              <Text style={[styles.codeText, { color: colors.text }]} selectable>
-                {session.verification_code}
+            {session.output_excerpt ? (
+              <Text style={[styles.outputText, { color: colors.textTertiary }]}>
+                {session.output_excerpt}
               </Text>
-            </View>
-            <CopyButton value={session.verification_code} label="Copy code" />
+            ) : null}
           </View>
-        )}
+        ) : null}
 
         {session?.authenticated ? (
           <View style={[styles.successCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -317,6 +335,10 @@ const styles = StyleSheet.create({
   },
   cardCopy: {
     ...typographyScale.sm,
+  },
+  outputText: {
+    ...typographyScale.xs,
+    lineHeight: 18,
   },
   optionCard: {
     borderWidth: 1,
