@@ -1,4 +1,5 @@
 import { createMMKV, type MMKV } from 'react-native-mmkv'
+import type { FileNode } from '../components/files/model'
 
 let storage: MMKV
 
@@ -19,6 +20,7 @@ const KEYS = {
   RECENT_PROMPTS: 'recent.prompts',
   NEW_TASK_DRAFT: 'newTask.draft',
   WORKSPACE_NAV_EXPANDED: 'workspace.navExpanded',
+  FILE_DIRECTORY_CACHE_PREFIX: 'files.directoryCache',
 } as const
 
 // --- Keypair ---
@@ -136,6 +138,55 @@ export function setWorkspaceNavExpanded(expanded: boolean) {
   getStorage().set(KEYS.WORKSPACE_NAV_EXPANDED, expanded)
 }
 
+// --- Files Directory Cache ---
+
+type StoredDirectorySnapshot = {
+  base: string
+  path: string
+  entries: FileNode[]
+  cachedAt: number
+}
+
+export function getCachedDirectorySnapshot(
+  serverId: string,
+  path: string,
+): StoredDirectorySnapshot | null {
+  const raw = getStorage().getString(getDirectoryCacheKey(serverId, path))
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredDirectorySnapshot>
+    if (
+      typeof parsed.base !== 'string' ||
+      typeof parsed.path !== 'string' ||
+      typeof parsed.cachedAt !== 'number' ||
+      !Array.isArray(parsed.entries)
+    ) {
+      return null
+    }
+
+    return {
+      base: parsed.base,
+      path: parsed.path,
+      entries: parsed.entries as FileNode[],
+      cachedAt: parsed.cachedAt,
+    }
+  } catch {
+    return null
+  }
+}
+
+export function saveCachedDirectorySnapshot(
+  serverId: string,
+  snapshot: Omit<StoredDirectorySnapshot, 'cachedAt'>,
+) {
+  const value: StoredDirectorySnapshot = {
+    ...snapshot,
+    cachedAt: Date.now(),
+  }
+  getStorage().set(getDirectoryCacheKey(serverId, snapshot.path), JSON.stringify(value))
+}
+
 // --- Clear All ---
 
 export function clearAll() {
@@ -153,4 +204,8 @@ function hexToBytes(hex: string): Uint8Array {
     bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16)
   }
   return bytes
+}
+
+function getDirectoryCacheKey(serverId: string, path: string): string {
+  return `${KEYS.FILE_DIRECTORY_CACHE_PREFIX}:${serverId}:${path}`
 }

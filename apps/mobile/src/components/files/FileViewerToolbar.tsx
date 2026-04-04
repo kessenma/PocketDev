@@ -1,6 +1,6 @@
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { ArrowLeft, Pin, PinOff, WrapText } from 'lucide-react-native'
+import { ArrowLeft, Info, Pin, PinOff, WrapText } from 'lucide-react-native'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 
@@ -10,6 +10,9 @@ type Props = {
   onBack?: () => void
   contextSelected?: boolean
   onToggleContext?: () => void
+  showSyntaxInfo?: boolean
+  syntaxInfoVisible?: boolean
+  onToggleSyntaxInfo?: () => void
 }
 
 export default function FileViewerToolbar({
@@ -18,6 +21,9 @@ export default function FileViewerToolbar({
   onBack,
   contextSelected = false,
   onToggleContext,
+  showSyntaxInfo = false,
+  syntaxInfoVisible = false,
+  onToggleSyntaxInfo,
 }: Props) {
   const { colors } = useTheme()
 
@@ -59,6 +65,17 @@ export default function FileViewerToolbar({
             <Text style={[styles.wrapButtonText, { color: contextSelected ? colors.primaryText : colors.text }]}>
               {contextSelected ? 'Pinned' : 'Pin'}
             </Text>
+          </Pressable>
+        ) : null}
+
+        {showSyntaxInfo && onToggleSyntaxInfo ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={syntaxInfoVisible ? 'Hide syntax highlighting info' : 'Show syntax highlighting info'}
+            onPress={onToggleSyntaxInfo}
+            style={[styles.iconButton, { borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
+          >
+            <Info color={colors.textSecondary} size={16} strokeWidth={2.25} />
           </Pressable>
         ) : null}
 
@@ -121,5 +138,13 @@ const styles = StyleSheet.create({
   wrapButtonText: {
     ...typographyScale.sm,
     fontWeight: '700',
+  },
+  iconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: borderRadius.full,
+    width: 36,
+    height: 36,
   },
 })

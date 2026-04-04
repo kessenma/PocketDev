@@ -4,15 +4,21 @@ jest.mock('../services/api', () => ({
   searchFiles: jest.fn(),
 }))
 
+jest.mock('../services/storage', () => ({
+  getCachedDirectorySnapshot: jest.fn(),
+  saveCachedDirectorySnapshot: jest.fn(),
+}))
+
 jest.mock('./connection', () => ({
   useConnectionStore: {
     getState: () => ({
-      server: { ip: '127.0.0.1', port: 8787 },
+      server: { ip: '127.0.0.1', port: 8787, deviceId: 'device-1' },
     }),
   },
 }))
 
 const { listDirectory, fetchFileContent, searchFiles } = require('../services/api')
+const { getCachedDirectorySnapshot, saveCachedDirectorySnapshot } = require('../services/storage')
 const { useFilesStore } = require('./files')
 
 describe('useFilesStore', () => {
@@ -36,6 +42,7 @@ describe('useFilesStore', () => {
   })
 
   it('loads a directory and updates the current path', async () => {
+    getCachedDirectorySnapshot.mockReturnValue(null)
     listDirectory.mockResolvedValue({
       base: '/work/repo',
       path: 'src',
@@ -54,6 +61,46 @@ describe('useFilesStore', () => {
       'src/components',
       'src/App.tsx',
     ])
+    expect(saveCachedDirectorySnapshot).toHaveBeenCalledWith('device-1', expect.anything())
+  })
+
+  it('hydrates a directory from persistent cache before revalidating', async () => {
+    getCachedDirectorySnapshot.mockReturnValue({
+      base: '/work/repo',
+      path: 'src',
+      cachedAt: Date.now(),
+      entries: [
+        { id: 'src/cached.ts', name: 'cached.ts', path: 'src/cached.ts', kind: 'file', language: 'typescript' },
+      ],
+    })
+
+    let release
+    listDirectory.mockImplementation(() => new Promise((resolve) => {
+      release = resolve
+    }))
+
+    const openPromise = useFilesStore.getState().openDirectory('src')
+
+    const stateWhileRefreshing = useFilesStore.getState()
+    expect(stateWhileRefreshing.currentEntries.map((entry) => entry.path)).toEqual(['src/cached.ts'])
+    expect(stateWhileRefreshing.lastActionMessage).toBe('Loading src...')
+
+    release({
+      base: '/work/repo',
+      path: 'src',
+      entries: [
+        { name: 'fresh.ts', path: 'src/fresh.ts', type: 'file' },
+      ],
+    })
+
+    await openPromise
+
+    const state = useFilesStore.getState()
+    expect(state.currentEntries.map((entry) => entry.path)).toEqual(['src/fresh.ts'])
+    expect(saveCachedDirectorySnapshot).toHaveBeenCalledWith('device-1', expect.objectContaining({
+      base: '/work/repo',
+      path: 'src',
+    }))
   })
 
   it('selects a file, loads content, and enters viewer mode', async () => {

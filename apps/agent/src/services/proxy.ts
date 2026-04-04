@@ -109,6 +109,24 @@ function buildSessionRoutePath(sessionId: string, targetUrl: URL): string {
   return `/PocketDev/browser/session/${sessionId}${path}${targetUrl.search}`
 }
 
+export function createBrowserSession(target: string): BrowserSessionCreateResult {
+  pruneBrowserSessions()
+  const targetUrl = normalizeLocalTarget(target)
+  const id = crypto.randomUUID()
+  browserSessions.set(id, {
+    id,
+    targetUrl: targetUrl.toString(),
+    targetOrigin: targetUrl.origin,
+    createdAt: Date.now(),
+  })
+
+  return {
+    session_id: id,
+    target_url: targetUrl.toString(),
+    proxied_url: buildSessionRoutePath(id, targetUrl),
+  }
+}
+
 /** Update the dev server port (called when auto-detected from task output) */
 export function setDevServerPort(port: number) {
   devServerPort = port
@@ -152,21 +170,7 @@ export const proxyRoutes = new Elysia()
       : ''
 
     try {
-      const targetUrl = normalizeLocalTarget(target)
-      const id = crypto.randomUUID()
-      browserSessions.set(id, {
-        id,
-        targetUrl: targetUrl.toString(),
-        targetOrigin: targetUrl.origin,
-        createdAt: Date.now(),
-      })
-
-      const result: BrowserSessionCreateResult = {
-        session_id: id,
-        target_url: targetUrl.toString(),
-        proxied_url: buildSessionRoutePath(id, targetUrl),
-      }
-      return result
+      return createBrowserSession(target)
     } catch (error) {
       set.status = 400
       return { error: error instanceof Error ? error.message : 'Invalid browser target' }

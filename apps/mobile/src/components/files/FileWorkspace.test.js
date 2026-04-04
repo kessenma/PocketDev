@@ -93,6 +93,16 @@ jest.mock('../../services/storage', () => ({
   saveNewTaskDraft: jest.fn(),
 }))
 
+jest.mock('react-native-enriched-markdown', () => {
+  const React = require('react')
+
+  return {
+    EnrichedMarkdownText: function EnrichedMarkdownText(props) {
+      return React.createElement('EnrichedMarkdownText', props, props.markdown)
+    },
+  }
+})
+
 jest.mock('../../stores/connection', () => ({
   useConnectionStore: {
     getState: () => ({
@@ -120,6 +130,7 @@ jest.mock('lucide-react-native', () => {
     RefreshCcw: createIcon('RefreshCcw'),
     Search: createIcon('Search'),
     Sparkles: createIcon('Sparkles'),
+    Info: createIcon('Info'),
     ArrowLeft: createIcon('ArrowLeft'),
     WrapText: createIcon('WrapText'),
     PinOff: createIcon('PinOff'),

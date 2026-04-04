@@ -7,6 +7,7 @@ import { DeviceList } from '#/components/DeviceList'
 import { SetupStatus } from '#/components/SetupStatus'
 import { ServerTerminal } from '#/components/ServerTerminal'
 import { DiagnosticsPanel } from '#/components/DiagnosticsPanel'
+import { RepoInspectorPanel } from '#/components/RepoInspectorPanel'
 import { Modal } from '#/components/ui/modal'
 import { checkHealth, fetchStatus, logout, type ConsoleStatus } from '#/lib/api'
 import { Server, LogOut, Maximize2 } from 'lucide-react'
@@ -130,6 +131,10 @@ export function ConsolePage() {
                   }
                 }}
               />
+            </div>
+
+            <div className="lg:col-span-12">
+              <RepoInspectorPanel />
             </div>
 
             <div className="lg:col-span-12">

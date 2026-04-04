@@ -305,3 +305,79 @@ export async function fetchProjectsDebug(): Promise<ProjectsDebugInfo> {
   if (!res.ok) throw new Error('Failed to fetch projects debug')
   return res.json()
 }
+
+export interface RepoSummary {
+  repoName: string
+  repoPath: string
+  branchName: string
+}
+
+export interface RepoEntry {
+  name: string
+  path: string
+  type: 'file' | 'dir'
+}
+
+export interface RepoListResponse {
+  base: string
+  path: string
+  entries: RepoEntry[]
+}
+
+export interface RepoSearchMatch {
+  path: string
+  line_number: number
+  text: string
+}
+
+export interface RepoSearchResponse {
+  base: string
+  query: string
+  path: string
+  results: RepoSearchMatch[]
+}
+
+export interface RepoFileRead {
+  path: string
+  content: string
+  size: number
+}
+
+export interface ConsoleBrowserSession {
+  session_id: string
+  target_url: string
+  proxied_url: string
+}
+
+export async function fetchRepoSummary(): Promise<RepoSummary> {
+  const res = await get('/repo/summary')
+  if (!res.ok) throw new Error('Failed to fetch repo summary')
+  return res.json()
+}
+
+export async function fetchRepoList(path = '.'): Promise<RepoListResponse> {
+  const res = await get(`/repo/list?path=${encodeURIComponent(path)}`)
+  if (!res.ok) throw new Error('Failed to list repo files')
+  return res.json()
+}
+
+export async function fetchRepoSearch(query: string, path = '.'): Promise<RepoSearchResponse> {
+  const res = await get(`/repo/search?q=${encodeURIComponent(query)}&path=${encodeURIComponent(path)}`)
+  if (!res.ok) throw new Error('Failed to search repo files')
+  return res.json()
+}
+
+export async function fetchRepoFile(path: string): Promise<RepoFileRead> {
+  const res = await get(`/repo/read?path=${encodeURIComponent(path)}`)
+  if (!res.ok) throw new Error('Failed to read repo file')
+  return res.json()
+}
+
+export async function createRepoPreviewSession(targetUrl: string): Promise<ConsoleBrowserSession> {
+  const res = await post('/repo/preview-session', { target_url: targetUrl })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Failed to create preview session' }))
+    throw new Error(data.error || 'Failed to create preview session')
+  }
+  return res.json()
+}

@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { existsSync } from 'node:fs'
-import { join, extname } from 'node:path'
+import { readdir, readFile, stat } from 'node:fs/promises'
+import { join, extname, relative, resolve } from 'node:path'
 import {
   createAdmin,
   verifyAdmin,
@@ -19,7 +20,10 @@ import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
 import { getClaudeAuthDebug } from '../services/claude-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
-import { getProjectsDebug } from '../services/projects.ts'
+import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
+import { getGitSummary } from '../services/git.ts'
+import { createBrowserSession } from '../services/proxy.ts'
+import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
 
@@ -47,6 +51,41 @@ function extractHostIp(request: Request): string {
   // Strip port
   const ip = host.replace(/:\d+$/, '')
   return ip || '0.0.0.0'
+}
+
+function requireConsoleSession(request: Request, set: { status?: unknown }) {
+  if (!validateSession(request.headers.get('cookie'))) {
+    set.status = 401
+    return false
+  }
+  return true
+}
+
+function safeRepoPath(baseDir: string, requestedPath: string) {
+  const resolved = resolve(baseDir, requestedPath)
+  if (!resolved.startsWith(resolve(baseDir))) return null
+  return resolved
+}
+
+async function listRepoDirectory(baseDir: string, dirPath: string): Promise<TreeEntry[]> {
+  const entries = await readdir(dirPath, { withFileTypes: true })
+  const result: TreeEntry[] = []
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.') || entry.name === 'node_modules') continue
+
+    const fullPath = join(dirPath, entry.name)
+    result.push({
+      name: entry.name,
+      path: relative(baseDir, fullPath),
+      type: entry.isDirectory() ? 'dir' : 'file',
+    })
+  }
+
+  return result.sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'dir' ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
 }
 
 export const consoleRoutes = new Elysia({ prefix: '/api/console' })
@@ -107,8 +146,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Status (requires session) ────────────────────────
   .get('/status', ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -130,8 +168,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Set custom passcode (requires session) ──────────
   .post('/passcode', ({ request, body, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -145,8 +182,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Refresh passcode (requires session) ──────────────
   .post('/passcode/refresh', ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -156,8 +192,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Rename device (requires session) ─────────────────
   .patch('/devices/:id', ({ request, params, body, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -171,8 +206,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Delete device (requires session) ─────────────────
   .delete('/devices/:id', ({ request, params, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -182,8 +216,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Auth debug (requires session) ────────────────────
   .get('/debug/auth', ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -205,8 +238,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Test auth header (requires session, simulates mobile auth check) ──
   .post('/debug/test-auth', async ({ request, body, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -236,8 +268,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Terminal debug log (requires session) ────────────
   .get('/debug/terminal', ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -245,8 +276,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   })
 
   .get('/debug/codex-auth', ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -254,8 +284,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   })
 
   .get('/debug/claude-auth', ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -263,8 +292,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   })
 
   .get('/debug/github-auth', ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -272,8 +300,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   })
 
   .get('/debug/projects', async ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
@@ -282,12 +309,160 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Prerequisites (requires session) ─────────────────
   .get('/prerequisites', async ({ request, set }) => {
-    if (!validateSession(request.headers.get('cookie'))) {
-      set.status = 401
+    if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
     return checkAllPrerequisites()
+  })
+
+  .get('/repo/summary', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+
+    try {
+      const summary = await getGitSummary()
+      return {
+        repoName: summary.repoName,
+        repoPath: summary.repoPath,
+        branchName: summary.currentBranch.name,
+      }
+    } catch (error) {
+      const repoPath = await getActiveProjectPath()
+      return {
+        repoName: repoPath.split('/').filter(Boolean).pop() ?? 'Workspace',
+        repoPath,
+        branchName: 'No branch',
+        error: error instanceof Error ? error.message : 'Failed to inspect git summary',
+      }
+    }
+  })
+
+  .get('/repo/list', async ({ request, query, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+
+    const baseDir = await getActiveProjectPath()
+    const targetPath = safeRepoPath(baseDir, query.path ?? '.')
+    if (!targetPath) {
+      set.status = 403
+      return { error: 'Path outside allowed directory' }
+    }
+
+    try {
+      const entries = await listRepoDirectory(baseDir, targetPath)
+      return {
+        base: baseDir,
+        path: relative(baseDir, targetPath) || '.',
+        entries,
+      }
+    } catch {
+      set.status = 404
+      return { error: 'Directory not found' }
+    }
+  }, {
+    query: t.Object({
+      path: t.Optional(t.String()),
+    }),
+  })
+
+  .get('/repo/read', async ({ request, query, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+
+    const baseDir = await getActiveProjectPath()
+    const targetPath = safeRepoPath(baseDir, query.path)
+    if (!targetPath) {
+      set.status = 403
+      return { error: 'Path outside allowed directory' }
+    }
+
+    try {
+      const info = await stat(targetPath)
+      if (info.size > 1_048_576) {
+        set.status = 413
+        return { error: 'File too large (>1MB)' }
+      }
+
+      const content = await readFile(targetPath, 'utf-8')
+      return {
+        path: relative(baseDir, targetPath),
+        content,
+        size: info.size,
+      }
+    } catch {
+      set.status = 404
+      return { error: 'File not found' }
+    }
+  }, {
+    query: t.Object({
+      path: t.String(),
+    }),
+  })
+
+  .get('/repo/search', async ({ request, query, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+
+    const baseDir = await getActiveProjectPath()
+    const searchPath = safeRepoPath(baseDir, query.path ?? '.')
+    if (!searchPath) {
+      set.status = 403
+      return { error: 'Path outside allowed directory' }
+    }
+
+    try {
+      const proc = Bun.spawn(
+        ['rg', '--json', '--max-count', '50', query.q, searchPath],
+        { stdout: 'pipe', stderr: 'pipe' },
+      )
+      const output = await new Response(proc.stdout).text()
+      const exitCode = await proc.exited
+
+      if (exitCode > 1) {
+        set.status = 500
+        return { error: 'Search failed' }
+      }
+
+      const results = output
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          try { return JSON.parse(line) } catch { return null }
+        })
+        .filter((entry): entry is { type: string; data: Record<string, unknown> } => entry?.type === 'match')
+        .map((entry) => ({
+          path: relative(baseDir, (entry.data.path as { text: string }).text),
+          line_number: entry.data.line_number as number,
+          text: (entry.data.lines as { text: string }).text.trim(),
+        })) as FileSearchResult[]
+
+      return {
+        base: baseDir,
+        query: query.q,
+        path: query.path ?? '.',
+        results,
+      }
+    } catch {
+      set.status = 500
+      return { error: 'Search failed' }
+    }
+  }, {
+    query: t.Object({
+      q: t.String(),
+      path: t.Optional(t.String()),
+    }),
+  })
+
+  .post('/repo/preview-session', ({ request, body, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+
+    try {
+      return createBrowserSession(body.target_url)
+    } catch (error) {
+      set.status = 400
+      return { error: error instanceof Error ? error.message : 'Invalid browser target' }
+    }
+  }, {
+    body: t.Object({
+      target_url: t.String(),
+    }),
   })
 
 // ─── Static file serving for console SPA ────────────────

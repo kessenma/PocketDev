@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import type { FileSearchResult } from '@pocketdev/shared/types'
 import type { FileNode, FileView } from '../components/files/model'
-import { treeEntryToFileNode, pathToName } from '../components/files/model'
+import { inferLanguage, treeEntryToFileNode, pathToName } from '../components/files/model'
 import { listDirectory, fetchFileContent, searchFiles } from '../services/api'
+import { getCachedDirectorySnapshot, saveCachedDirectorySnapshot } from '../services/storage'
 import { useConnectionStore } from './connection'
 
 type FilesState = {
@@ -115,9 +116,14 @@ export const useFilesStore = create<FilesState>((set, get) => ({
 
   openDirectory: async (path) => {
     const cached = get().directoryEntriesByPath[path]
+    const server = useConnectionStore.getState().server
+    const persisted = server ? getCachedDirectorySnapshot(server.deviceId, path) : null
+    const hydratedEntries = cached ?? persisted?.entries ?? []
     set({
-      currentPath: path,
-      currentEntries: cached ?? [],
+      rootLabel: persisted?.base.split('/').pop() ?? get().rootLabel,
+      rootPath: persisted?.base ?? get().rootPath,
+      currentPath: persisted?.path ?? path,
+      currentEntries: hydratedEntries,
       activePhoneView: 'browser',
       error: null,
     })
@@ -129,10 +135,19 @@ export const useFilesStore = create<FilesState>((set, get) => ({
       return
     }
 
-    const server = useConnectionStore.getState().server
     if (!server) {
       set({ lastActionMessage: 'Not connected to server.', error: 'Not connected' })
       return
+    }
+
+    if (persisted) {
+      set((state) => ({
+        directoryEntriesByPath: {
+          ...state.directoryEntriesByPath,
+          [persisted.path]: persisted.entries,
+        },
+        lastActionMessage: `Showing cached ${persisted.path === '.' ? 'project root' : persisted.path}...`,
+      }))
     }
 
     set({ isRefreshing: true, lastActionMessage: `Loading ${path === '.' ? 'project root' : path}...` })
@@ -140,6 +155,11 @@ export const useFilesStore = create<FilesState>((set, get) => ({
     try {
       const result = await listDirectory(server.ip, server.port, path)
       const entries = result.entries.map(treeEntryToFileNode)
+      saveCachedDirectorySnapshot(server.deviceId, {
+        base: result.base,
+        path: result.path,
+        entries,
+      })
       set((state) => ({
         rootLabel: result.base.split('/').pop() ?? result.base,
         rootPath: result.base,
@@ -298,5 +318,6 @@ function findFileByPath(state: FilesState, filePath: string): FileNode | null {
     name: pathToName(filePath),
     path: filePath,
     kind: 'file',
+    language: inferLanguage(filePath),
   }
 }

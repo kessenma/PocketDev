@@ -253,7 +253,7 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
                 )}
                 <View style={styles.entryCopy}>
                   <Text style={[styles.entryTitle, { color: isCurrentFile ? colors.primary : colors.text }]} numberOfLines={1}>
-                    {item.name}
+                    {renderFileLabel(item.name, item.kind, isCurrentFile ? colors.primary : colors.text)}
                   </Text>
                   <Text style={[styles.entryDescription, { color: colors.textSecondary }]} numberOfLines={2}>
                     {item.description}
@@ -547,6 +547,75 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
       ) : null}
     </>
   )
+}
+
+function renderFileLabel(name: string, kind: 'directory' | 'file', defaultColor: string) {
+  if (kind === 'directory') return name
+
+  const parts = splitFileName(name)
+  if (!parts.extension) return name
+
+  return (
+    <>
+      {parts.base}
+      <Text style={{ color: colorForExtension(parts.extension, defaultColor) }}>{parts.extension}</Text>
+    </>
+  )
+}
+
+function splitFileName(name: string): { base: string; extension: string | null } {
+  const dotIndex = name.lastIndexOf('.')
+  if (dotIndex <= 0 || dotIndex === name.length - 1) {
+    return { base: name, extension: null }
+  }
+
+  return {
+    base: name.slice(0, dotIndex),
+    extension: name.slice(dotIndex),
+  }
+}
+
+function colorForExtension(extension: string, defaultColor: string): string {
+  switch (extension.toLowerCase()) {
+    case '.ts':
+    case '.tsx':
+      return '#2563eb'
+    case '.js':
+    case '.jsx':
+    case '.mjs':
+    case '.cjs':
+      return '#d97706'
+    case '.py':
+      return '#16a34a'
+    case '.md':
+    case '.markdown':
+    case '.mdx':
+      return '#db2777'
+    case '.rs':
+      return '#dc2626'
+    case '.json':
+    case '.jsonc':
+      return '#7c3aed'
+    case '.yml':
+    case '.yaml':
+    case '.toml':
+      return '#0891b2'
+    case '.sh':
+    case '.bash':
+    case '.zsh':
+    case '.fish':
+      return '#0f766e'
+    case '.html':
+    case '.css':
+    case '.scss':
+    case '.sass':
+    case '.less':
+      return '#c2410c'
+    case '.sql':
+      return '#9333ea'
+    default:
+      return defaultColor
+  }
 }
 
 function providerToAgentType(providerId: string): AgentType {
