@@ -8,7 +8,7 @@ import {
   postConfigureGitHubCliToken,
   postStartGitHubCliAuth,
 } from '../../../services/api'
-import { CheckCircle, ExternalLink, KeyRound, ShieldCheck, Globe, Circle, CircleDot } from 'lucide-react-native'
+import { CheckCircle, ChevronDown, ChevronUp, ExternalLink, KeyRound, ShieldCheck, Globe, Circle, CircleDot } from 'lucide-react-native'
 import type { GitHubCliAuthSessionStatus } from '@pocketdev/shared/types'
 import CopyButton from '../../shared/CopyButton'
 
@@ -23,6 +23,34 @@ interface Props {
   dispatch: (action: WizardAction) => void
 }
 
+const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]/g
+const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
+const VERIFICATION_CODE_PATTERNS = [
+  /[Oo]ne-?time code[:\s]+([A-Z0-9]{4}(?:-[A-Z0-9]{4})+)/i,
+  /[Cc]ode[:\s]+([A-Z0-9]{4}(?:-[A-Z0-9]{4})+)/i,
+  /\b([A-Z0-9]{4}(?:-[A-Z0-9]{4})+)\b/,
+]
+
+function normalizeOutput(text: string | null | undefined) {
+  if (!text) return ''
+  return text
+    .replace(ANSI_RE, '')
+    .replace(/\r/g, '\n')
+    .replace(CONTROL_RE, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
+function extractVerificationCode(text: string | null | undefined) {
+  const normalized = normalizeOutput(text)
+  for (const pattern of VERIFICATION_CODE_PATTERNS) {
+    const match = normalized.match(pattern)
+    if (match?.[1]) return match[1]
+  }
+  return null
+}
+
 export default function GitHubCliAuthStep({ dispatch }: Props) {
   const { colors } = useTheme()
   const server = useConnectionStore((s) => s.server)
@@ -31,6 +59,7 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
   const [token, setToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showDebugOutput, setShowDebugOutput] = useState(false)
 
   const syncSession = useCallback((next: GitHubCliAuthSessionStatus) => {
     setSession(next)
@@ -112,6 +141,12 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
       ? 'Start a GitHub sign-in flow on the paired server, then finish it in your mobile browser.'
       : 'Use a GitHub token only if you prefer not to use the browser sign-in flow.'
 
+  const normalizedOutputExcerpt = normalizeOutput(session?.output_excerpt)
+  const fallbackVerificationCode = !session?.verification_code
+    ? extractVerificationCode(session?.output_excerpt)
+    : null
+  const displayVerificationCode = session?.verification_code ?? fallbackVerificationCode
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -187,28 +222,33 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
           </View>
         )}
 
-        {selectedMethod === 'browser' && session?.verification_code && !session?.authenticated && (
+        {selectedMethod === 'browser' && displayVerificationCode && !session?.authenticated && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Step 1: Copy the code</Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
               GitHub will ask for this one-time code after you open the verification page.
             </Text>
+            {fallbackVerificationCode ? (
+              <Text style={[styles.fallbackNote, { color: colors.textTertiary }]}>
+                Using a fallback code extracted from the terminal output.
+              </Text>
+            ) : null}
             <View style={[styles.codeBox, { backgroundColor: colors.background }]}>
               <Text style={[styles.codeText, { color: colors.text }]} selectable>
-                {session.verification_code}
+                {displayVerificationCode}
               </Text>
             </View>
-            <CopyButton value={session.verification_code} label="Copy code" />
+            <CopyButton value={displayVerificationCode} label="Copy code" />
           </View>
         )}
 
         {selectedMethod === 'browser' && session?.auth_url && !session?.authenticated && (
           <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
-              {session.verification_code ? 'Step 2: Open GitHub' : 'Open GitHub'}
+              {displayVerificationCode ? 'Step 2: Open GitHub' : 'Open GitHub'}
             </Text>
             <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
-              {session.verification_code
+              {displayVerificationCode
                 ? 'After GitHub opens, paste the code you copied in the previous step and complete sign-in.'
                 : 'Open the GitHub verification page in your mobile browser and complete the GitHub CLI sign-in.'}
             </Text>
@@ -234,6 +274,43 @@ export default function GitHubCliAuthStep({ dispatch }: Props) {
               <Text style={[styles.outputText, { color: colors.textTertiary }]}>
                 {session.output_excerpt}
               </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {selectedMethod === 'browser' && session && !session.authenticated && normalizedOutputExcerpt ? (
+          <View style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={styles.debugHeader}
+              onPress={() => setShowDebugOutput((current) => !current)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.debugHeaderText}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Troubleshooting Output</Text>
+                <Text style={[styles.cardCopy, { color: colors.textSecondary }]}>
+                  Expand to inspect the raw GitHub CLI prompt if the code card does not appear.
+                </Text>
+              </View>
+              {showDebugOutput
+                ? <ChevronUp color={colors.textSecondary} size={18} strokeWidth={2.25} />
+                : <ChevronDown color={colors.textSecondary} size={18} strokeWidth={2.25} />}
+            </TouchableOpacity>
+
+            {showDebugOutput ? (
+              <>
+                {fallbackVerificationCode ? (
+                  <View style={[styles.fallbackCodeCard, { backgroundColor: colors.background }]}>
+                    <Text style={[styles.fallbackLabel, { color: colors.textTertiary }]}>Detected Code</Text>
+                    <Text style={[styles.fallbackCodeText, { color: colors.text }]} selectable>
+                      {fallbackVerificationCode}
+                    </Text>
+                    <CopyButton value={fallbackVerificationCode} label="Copy detected code" />
+                  </View>
+                ) : null}
+                <Text style={[styles.outputText, { color: colors.textSecondary }]}>
+                  {normalizedOutputExcerpt}
+                </Text>
+              </>
             ) : null}
           </View>
         ) : null}
@@ -339,6 +416,10 @@ const styles = StyleSheet.create({
   outputText: {
     ...typographyScale.xs,
     lineHeight: 18,
+    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+  },
+  fallbackNote: {
+    ...typographyScale.xs,
   },
   optionCard: {
     borderWidth: 1,
@@ -389,6 +470,30 @@ const styles = StyleSheet.create({
     ...typographyScale.xl,
     fontWeight: '700',
     letterSpacing: 1.5,
+  },
+  debugHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+  },
+  debugHeaderText: {
+    flex: 1,
+    gap: spacing[1],
+  },
+  fallbackCodeCard: {
+    borderRadius: borderRadius.lg,
+    padding: spacing[3],
+    gap: spacing[2],
+  },
+  fallbackLabel: {
+    ...typographyScale.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  fallbackCodeText: {
+    ...typographyScale.lg,
+    fontWeight: '700',
+    letterSpacing: 1.25,
   },
   successCard: {
     borderWidth: 1,

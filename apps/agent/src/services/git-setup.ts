@@ -18,6 +18,7 @@ const SSH_CONFIG_PATH = join(SSH_DIR, 'config')
 const GH_AUTH_URL_PATTERN = /https:\/\/[^\s]+/g
 const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]/g
 const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
+const GH_PRESS_ENTER_PATTERN = /press enter to open/i
 const GH_AUTH_CODE_PATTERNS = [
   /[Oo]ne-?time code[:\s]+([A-Z0-9-]{4,})/i,
   /[Cc]ode[:\s]+([A-Z0-9-]{4,})/i,
@@ -42,6 +43,7 @@ interface InternalGhAuthSession {
   error: string | null
   startedAt: number
   updatedAt: number
+  browserLaunchHandled: boolean
 }
 
 const ghAuthSessions = new Map<string, InternalGhAuthSession>()
@@ -191,6 +193,11 @@ function refreshGhSessionState(session: InternalGhAuthSession) {
   session.authUrl = urls?.find((url) => url.includes('github.com')) ?? session.authUrl
   session.verificationCode = parseGhVerificationCode(session.output) ?? session.verificationCode
   session.updatedAt = Date.now()
+
+  if (!session.browserLaunchHandled && GH_PRESS_ENTER_PATTERN.test(normalized)) {
+    session.browserLaunchHandled = true
+    session.terminal.send('\r')
+  }
 
   if (session.authenticated) {
     session.state = 'authenticated'
@@ -391,6 +398,7 @@ export async function startGitHubCliAuth(): Promise<GitHubCliAuthStartResult> {
     error: null,
     startedAt: Date.now(),
     updatedAt: Date.now(),
+    browserLaunchHandled: false,
   }
   ghAuthSessions.set(sessionId, session)
   terminal.send(`${command}\n`)
