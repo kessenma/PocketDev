@@ -16,6 +16,8 @@ import { createTerminalSession, type TerminalSession } from './terminal.ts'
 const SSH_DIR = join(process.env.HOME ?? '/root', '.ssh')
 const SSH_CONFIG_PATH = join(SSH_DIR, 'config')
 const GH_AUTH_URL_PATTERN = /https:\/\/[^\s]+/g
+const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]/g
+const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
 const GH_AUTH_CODE_PATTERNS = [
   /[Oo]ne-?time code[:\s]+([A-Z0-9-]{4,})/i,
   /[Cc]ode[:\s]+([A-Z0-9-]{4,})/i,
@@ -43,6 +45,16 @@ interface InternalGhAuthSession {
 }
 
 const ghAuthSessions = new Map<string, InternalGhAuthSession>()
+
+function normalizeGhOutput(text: string): string {
+  return text
+    .replace(ANSI_RE, '')
+    .replace(/\r/g, '\n')
+    .replace(CONTROL_RE, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
 
 /** Run a command in a login shell with HOME explicitly set */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
@@ -159,21 +171,23 @@ async function getGhStatus(): Promise<{
 }
 
 function parseGhVerificationCode(output: string): string | null {
+  const normalized = normalizeGhOutput(output)
   for (const pattern of GH_AUTH_CODE_PATTERNS) {
-    const match = output.match(pattern)
+    const match = normalized.match(pattern)
     if (match?.[1]) return match[1]
   }
   return null
 }
 
 function getGhOutputExcerpt(output: string): string | null {
-  const trimmed = output.trim()
+  const trimmed = normalizeGhOutput(output)
   if (!trimmed) return null
   return trimmed.slice(-GH_OUTPUT_EXCERPT_LENGTH)
 }
 
 function refreshGhSessionState(session: InternalGhAuthSession) {
-  const urls = session.output.match(GH_AUTH_URL_PATTERN)
+  const normalized = normalizeGhOutput(session.output)
+  const urls = normalized.match(GH_AUTH_URL_PATTERN)
   session.authUrl = urls?.find((url) => url.includes('github.com')) ?? session.authUrl
   session.verificationCode = parseGhVerificationCode(session.output) ?? session.verificationCode
   session.updatedAt = Date.now()
@@ -184,7 +198,7 @@ function refreshGhSessionState(session: InternalGhAuthSession) {
     return
   }
 
-  const lower = session.output.toLowerCase()
+  const lower = normalized.toLowerCase()
   if (session.completed && !session.authenticated) {
     session.state = 'failed'
     session.error = session.error ?? (lower.includes('error') ? 'GitHub CLI authentication failed.' : 'GitHub CLI authentication could not be verified.')
