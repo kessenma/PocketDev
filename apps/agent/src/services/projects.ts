@@ -146,42 +146,46 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
   const merged = new Map(localProjects.map((project) => [project.id, project]))
 
   if (githubUsername) {
-    const response = await fetch(`https://api.github.com/users/${githubUsername}/repos?per_page=100&sort=updated`)
-    if (response.ok) {
-      const repos = await response.json() as Array<{
-        name: string
-        owner: { login: string }
-        clone_url: string
-        updated_at: string
-        default_branch: string
-      }>
+    try {
+      const response = await fetch(`https://api.github.com/users/${githubUsername}/repos?per_page=100&sort=updated`)
+      if (response.ok) {
+        const repos = await response.json() as Array<{
+          name: string
+          owner: { login: string }
+          clone_url: string
+          updated_at: string
+          default_branch: string
+        }>
 
-      for (const repo of repos) {
-        const matchingLocal = localProjects.find((project) => project.remoteUrl === repo.clone_url)
-        if (matchingLocal) {
-          merged.set(matchingLocal.id, {
-            ...matchingLocal,
-            defaultBranch: matchingLocal.defaultBranch ?? repo.default_branch,
+        for (const repo of repos) {
+          const matchingLocal = localProjects.find((project) => project.remoteUrl === repo.clone_url)
+          if (matchingLocal) {
+            merged.set(matchingLocal.id, {
+              ...matchingLocal,
+              defaultBranch: matchingLocal.defaultBranch ?? repo.default_branch,
+              lastUpdatedAt: repo.updated_at,
+            })
+            continue
+          }
+
+          const id = buildProfileProjectId(repo.owner.login, repo.name)
+          merged.set(id, {
+            id,
+            name: repo.name,
+            owner: repo.owner.login,
+            remoteUrl: repo.clone_url,
+            localPath: null,
+            isLocal: false,
+            isActive: false,
+            needsClone: true,
+            defaultBranch: repo.default_branch,
             lastUpdatedAt: repo.updated_at,
+            source: 'github_profile',
           })
-          continue
         }
-
-        const id = buildProfileProjectId(repo.owner.login, repo.name)
-        merged.set(id, {
-          id,
-          name: repo.name,
-          owner: repo.owner.login,
-          remoteUrl: repo.clone_url,
-          localPath: null,
-          isLocal: false,
-          isActive: false,
-          needsClone: true,
-          defaultBranch: repo.default_branch,
-          lastUpdatedAt: repo.updated_at,
-          source: 'github_profile',
-        })
       }
+    } catch {
+      // Degrade to local-only results when GitHub is unreachable.
     }
   }
 
