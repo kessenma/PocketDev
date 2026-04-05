@@ -51,6 +51,27 @@ export function getDb() {
       sqlite.exec(`
         CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
       `)
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS passkey_credentials (
+          id TEXT PRIMARY KEY NOT NULL,
+          admin_id INTEGER NOT NULL,
+          credential_id TEXT NOT NULL,
+          public_key TEXT NOT NULL,
+          counter INTEGER DEFAULT 0 NOT NULL,
+          credential_device_type TEXT,
+          credential_backed_up INTEGER DEFAULT 0,
+          transports TEXT,
+          device_name TEXT,
+          aaguid TEXT,
+          is_active INTEGER DEFAULT 1 NOT NULL,
+          last_used_at TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now'))
+        );
+      `)
+      sqlite.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);
+      `)
       // Create the Drizzle tracking table and stamp with far-future timestamp
       sqlite.exec(`
         CREATE TABLE IF NOT EXISTS __drizzle_migrations (
@@ -88,6 +109,27 @@ export function getDb() {
         sqlite.exec(`
           CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
         `)
+        sqlite.exec(`
+          CREATE TABLE IF NOT EXISTS passkey_credentials (
+            id TEXT PRIMARY KEY NOT NULL,
+            admin_id INTEGER NOT NULL,
+            credential_id TEXT NOT NULL,
+            public_key TEXT NOT NULL,
+            counter INTEGER DEFAULT 0 NOT NULL,
+            credential_device_type TEXT,
+            credential_backed_up INTEGER DEFAULT 0,
+            transports TEXT,
+            device_name TEXT,
+            aaguid TEXT,
+            is_active INTEGER DEFAULT 1 NOT NULL,
+            last_used_at TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+          );
+        `)
+        sqlite.exec(`
+          CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);
+        `)
         console.log('[db] Stamps fixed')
       }
     }
@@ -95,6 +137,28 @@ export function getDb() {
     console.log('[db] Running Drizzle migrate...')
     migrate(_db, { migrationsFolder })
     console.log('[db] Migration complete')
+
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS passkey_credentials (
+        id TEXT PRIMARY KEY NOT NULL,
+        admin_id INTEGER NOT NULL,
+        credential_id TEXT NOT NULL,
+        public_key TEXT NOT NULL,
+        counter INTEGER DEFAULT 0 NOT NULL,
+        credential_device_type TEXT,
+        credential_backed_up INTEGER DEFAULT 0,
+        transports TEXT,
+        device_name TEXT,
+        aaguid TEXT,
+        is_active INTEGER DEFAULT 1 NOT NULL,
+        last_used_at TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+    `)
+    sqlite.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);
+    `)
 
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS projects (
