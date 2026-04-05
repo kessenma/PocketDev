@@ -17,7 +17,8 @@ const MAX_OUTPUT_LENGTH = 16_000
 const OUTPUT_EXCERPT_LENGTH = 1_500
 const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]/g
 const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
-const TRUST_PROMPT_PATTERN = /do you trust the files in this folder\?/i
+const TRUST_PROMPT_PATTERN = /do you trust (?:the files in this folder|the contents of this directory)\?/i
+const TRUST_CONTINUE_PATTERN = /press enter to continue/i
 const COPILOT_UI_READY_PATTERN = /\u001b\]2;GitHub Copilot\u0007|\u001b\[\?1049h/
 const READY_PATTERNS = [
   /describe a task to get started\./i,
@@ -215,7 +216,7 @@ function parseTrustState(session: InternalTrustSession) {
   const normalized = normalizeOutput(session.output)
   const prompt = derivePrompt(session.output)
   const ready = READY_PATTERNS.some((pattern) => pattern.test(normalized))
-  const awaitingTrust = TRUST_PROMPT_PATTERN.test(normalized)
+  const awaitingTrust = TRUST_PROMPT_PATTERN.test(normalized) || TRUST_CONTINUE_PATTERN.test(normalized)
   const match = normalized.match(/confirm folder trust\s*\n([^\n]+)/i)
   const trustTarget = match?.[1]?.trim() || session.trustTarget || getWorkspaceTrustTarget()
   const lower = normalized.toLowerCase()
@@ -277,13 +278,13 @@ function refreshTrustSessionState(session: InternalTrustSession) {
   const derived = parseTrustState(session)
 
   if (derived.state === 'awaiting_trust' && !session.trustHandled) {
-    recordDebugEvent(session.id, `Trust prompt detected for ${derived.trustTarget ?? 'unknown target'}; auto-selecting remember option`)
+    recordDebugEvent(session.id, `Trust prompt detected for ${derived.trustTarget ?? 'unknown target'}; sending enter to accept default trust option`)
     session.trustHandled = true
     session.trustTarget = derived.trustTarget
     session.prompt = derived.prompt
     session.state = 'pending'
     session.updatedAt = Date.now()
-    session.terminal.send('\u001b[B\r')
+    session.terminal.send('\r')
     return
   }
 
@@ -309,8 +310,8 @@ function scheduleFallbackTrustAttempt(session: InternalTrustSession) {
     if (!latest || latest.completed || latest.trusted || latest.trustHandled || latest.fallbackTrustAttempted || !latest.uiReady) return
     latest.fallbackTrustAttempted = true
     latest.updatedAt = Date.now()
-    recordDebugEvent(sessionId, 'No trust prompt parsed yet after UI ready; sending fallback down+enter to Copilot TUI')
-    latest.terminal.send('\u001b[B\r')
+    recordDebugEvent(sessionId, 'No trust prompt parsed yet after UI ready; sending enter to Copilot TUI')
+    latest.terminal.send('\r')
   }, 1800)
 }
 
