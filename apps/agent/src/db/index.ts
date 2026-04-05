@@ -252,6 +252,17 @@ export function insertTaskLog(taskId: string, stream: string, line: string) {
   getDb().insert(schema.taskLogs).values({ taskId, stream, line }).run()
 }
 
+export function getTaskLogs(taskId: string, limit = 100) {
+  return getDb()
+    .select()
+    .from(schema.taskLogs)
+    .where(eq(schema.taskLogs.taskId, taskId))
+    .orderBy(desc(schema.taskLogs.id))
+    .limit(limit)
+    .all()
+    .reverse()
+}
+
 // ─── Project operations ─────────────────────────────────
 
 export function getProjects(): ProjectRow[] {

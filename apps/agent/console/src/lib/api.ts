@@ -368,6 +368,12 @@ export interface TaskDebugEntry {
   exitCode: number | null
 }
 
+export interface TaskLogEntry {
+  stream: string
+  line: string
+  timestamp: string | null
+}
+
 export interface TasksDebugInfo {
   tasks: TaskDebugEntry[]
   activeProcesses: Array<{
@@ -376,6 +382,7 @@ export interface TasksDebugInfo {
     status: string | null
   }>
   totalCount: number
+  taskLogs: Record<string, TaskLogEntry[]>
 }
 
 export async function fetchTasksDebug(): Promise<TasksDebugInfo> {

@@ -72,19 +72,24 @@ export function getServerSetupStatus(report: PrerequisitesReport | null) {
 }
 
 export function getCodexBlockedReason(report: PrerequisitesReport | null): string | null {
+  if (!report) return null
   const npmTool = getToolById(report, 'npm')
-  if (npmTool?.status === 'installed') return null
+  if (!npmTool || npmTool.status === 'installed') return null
   return 'Install package managers first to make npm available for Codex.'
 }
 
 export function getCopilotBlockedReason(report: PrerequisitesReport | null): string | null {
+  // Don't block while the report is still loading — the Copilot wizard's
+  // own detect step will verify prerequisites before proceeding.
+  if (!report) return null
+
   const gitTool = getToolById(report, 'git')
-  if (!gitTool || gitTool.status !== 'installed' || gitTool.auth_status !== 'authenticated') {
+  if (gitTool && (gitTool.status !== 'installed' || gitTool.auth_status !== 'authenticated')) {
     return 'Complete Git setup first so Copilot can use your Git identity and GitHub access.'
   }
 
   const githubCliTool = getToolById(report, 'github_cli')
-  if (!githubCliTool || githubCliTool.status !== 'installed' || githubCliTool.auth_status !== 'authenticated') {
+  if (githubCliTool && (githubCliTool.status !== 'installed' || githubCliTool.auth_status !== 'authenticated')) {
     return 'Complete GitHub CLI setup first so Copilot can sign in with GitHub.'
   }
 

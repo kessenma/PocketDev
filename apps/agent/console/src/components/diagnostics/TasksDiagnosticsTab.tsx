@@ -113,6 +113,18 @@ export function TasksDiagnosticsTab({ tasksInfo }: Props) {
                     cwd: {task.workingDirectory}
                   </p>
                 )}
+                {tasksInfo?.taskLogs[task.id]?.length ? (
+                  <div className="mt-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output</p>
+                    <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-white/8 bg-black/40 p-3 font-mono text-xs">
+                      {tasksInfo.taskLogs[task.id].map((log, i) => (
+                        <span key={i} className={log.stream === 'stderr' ? 'text-red-400' : 'text-[#9df6cd]'}>
+                          {log.line}{'\n'}
+                        </span>
+                      ))}
+                    </pre>
+                  </div>
+                ) : null}
               </div>
             ))
           ) : (

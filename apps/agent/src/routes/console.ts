@@ -14,7 +14,7 @@ import {
   sessionCookieHeader,
 } from '../services/console-auth.ts'
 import { hasDevices } from '../services/setup.ts'
-import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName, getToolRecord } from '../db/index.ts'
+import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName, getToolRecord, getTaskLogs } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
 import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
@@ -331,7 +331,16 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
         return { taskId: task.id, hasProcess: !!proc, status: proc?.status ?? null }
       })
 
-    return { tasks, activeProcesses, totalCount: tasks.length }
+    // Include logs for recent failed/running tasks (last 50 lines each)
+    const taskLogs: Record<string, Array<{ stream: string; line: string; timestamp: string | null }>> = {}
+    for (const task of tasks.slice(0, 10)) {
+      const logs = getTaskLogs(task.id, 50)
+      if (logs.length > 0) {
+        taskLogs[task.id] = logs.map((l) => ({ stream: l.stream, line: l.line, timestamp: l.timestamp }))
+      }
+    }
+
+    return { tasks, activeProcesses, totalCount: tasks.length, taskLogs }
   })
 
   // ─── Setup debug (requires session) ───────────────────
