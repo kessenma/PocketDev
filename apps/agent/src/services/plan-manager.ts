@@ -24,9 +24,11 @@ import {
   getPlanQuestions,
   getPlanMessages,
   getPlanHistory as dbGetPlanHistory,
+  getTask,
   type PlanRow,
 } from '../db/index.ts'
 import { broadcast, makeMessage } from './ws.ts'
+import { startTask } from './task-manager.ts'
 
 // ─── Plan lifecycle ──────────────────────────────────────
 
@@ -81,12 +83,30 @@ export function handlePlanMessage(payload: PlanMessageCommand, _deviceId: string
 }
 
 export function acceptPlan(payload: PlanAcceptCommand): void {
+  // Get plan before resolving so we can look up the associated task
+  const plan = getActivePlanEntry()
+
   resolvePlan(payload.planId, 'accepted', payload.notes)
 
   broadcast(makeMessage('plan.resolved', {
     planId: payload.planId,
     status: 'accepted',
   } satisfies PlanResolvedEvent))
+
+  // Re-run the associated task with acceptEdits (default) mode
+  if (plan?.taskId) {
+    const task = getTask(plan.taskId)
+    if (task) {
+      console.log(`[plan-manager] Plan accepted — re-running task ${task.id} with acceptEdits mode`)
+      startTask(
+        task.prompt,
+        task.agentType ?? 'claude',
+        task.workingDirectory ?? null,
+        task.model ?? null,
+        'default',
+      )
+    }
+  }
 }
 
 export function denyPlan(payload: PlanDenyCommand): void {

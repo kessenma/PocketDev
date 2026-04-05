@@ -1,7 +1,9 @@
 import type { Subprocess } from 'bun'
+import type { PlanStep, PlanQuestion } from '@pocketdev/shared/types'
 import { insertTaskLog, updateTaskStatus } from '../db/index.ts'
 import { broadcast, makeMessage } from './ws.ts'
 import { detectDevServerPort, setDevServerPort } from './proxy.ts'
+import { proposePlan } from './plan-manager.ts'
 
 type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'killed'
 
@@ -100,18 +102,64 @@ function parseStreamJsonLine(json: Record<string, unknown>): string | null {
   return null
 }
 
+interface CollectedToolUse {
+  name: string
+  id: string
+  input: Record<string, unknown>
+}
+
+function toolUseToPlanStep(tool: CollectedToolUse): PlanStep {
+  const base = { id: tool.id, completed: false }
+  const name = tool.name
+  const input = tool.input
+
+  if (name === 'Edit') {
+    return { ...base, kind: 'modify', title: `Edit ${input.file_path ?? 'file'}`, description: '', filePath: input.file_path as string | undefined }
+  }
+  if (name === 'Write') {
+    return { ...base, kind: 'create', title: `Create ${input.file_path ?? 'file'}`, description: '', filePath: input.file_path as string | undefined }
+  }
+  if (name === 'Bash') {
+    const cmd = (input.command as string) ?? ''
+    return { ...base, kind: 'run', title: `Run command`, description: cmd.length > 200 ? cmd.slice(0, 200) + '...' : cmd }
+  }
+  if (name === 'Read' || name === 'Glob' || name === 'Grep') {
+    const target = (input.file_path ?? input.pattern ?? input.path ?? '') as string
+    return { ...base, kind: 'note', title: `${name}: ${target}`, description: '' }
+  }
+  if (name === 'Agent') {
+    return { ...base, kind: 'note', title: `Agent: ${(input.description as string) ?? ''}`, description: (input.prompt as string)?.slice(0, 200) ?? '' }
+  }
+  return { ...base, kind: 'note', title: `${name}`, description: JSON.stringify(input).slice(0, 200) }
+}
+
+export interface ManagedProcessOptions {
+  taskId: string
+  command: string[]
+  cwd: string | null
+  mode: 'default' | 'plan'
+  agentType: string
+}
+
 export class ManagedProcess {
   readonly taskId: string
   private proc: Subprocess | null = null
   private _status: TaskStatus = 'pending'
   private killTimer: ReturnType<typeof setTimeout> | null = null
+  private mode: 'default' | 'plan'
+  private agentType: string
+  private collectedToolUses: CollectedToolUse[] = []
+  private collectedThinking = ''
+  private collectedText = ''
+  private command: string[]
+  private cwd: string | null
 
-  constructor(
-    taskId: string,
-    private command: string[],
-    private cwd: string | null,
-  ) {
-    this.taskId = taskId
+  constructor(opts: ManagedProcessOptions) {
+    this.taskId = opts.taskId
+    this.command = opts.command
+    this.cwd = opts.cwd
+    this.mode = opts.mode
+    this.agentType = opts.agentType
   }
 
   get status(): TaskStatus {
@@ -160,6 +208,11 @@ export class ManagedProcess {
           status,
         }),
       )
+
+      // If plan mode and we collected tool uses, create a plan for review
+      if (this.mode === 'plan' && this.collectedToolUses.length > 0) {
+        this.createPlanFromToolUses()
+      }
     })
   }
 
@@ -221,6 +274,9 @@ export class ManagedProcess {
             try {
               const parsed = JSON.parse(line)
 
+              // Collect tool_use blocks and text for plan creation
+              this.collectFromStreamJson(parsed)
+
               // Check for permission denials
               if (parsed.permission_denials?.length) {
                 broadcast(
@@ -279,5 +335,56 @@ export class ManagedProcess {
     } catch (err) {
       console.error(`Error reading ${name} for task ${this.taskId}:`, err)
     }
+  }
+
+  private collectFromStreamJson(parsed: Record<string, unknown>) {
+    if (parsed.type !== 'assistant') return
+    const message = parsed.message as Record<string, unknown> | undefined
+    const content = message?.content as Array<Record<string, unknown>> | undefined
+    if (!content?.length) return
+
+    for (const block of content) {
+      if (block.type === 'thinking' && block.thinking) {
+        this.collectedThinking = block.thinking as string
+      } else if (block.type === 'text' && block.text) {
+        this.collectedText += (block.text as string) + '\n'
+      } else if (block.type === 'tool_use') {
+        this.collectedToolUses.push({
+          name: block.name as string,
+          id: block.id as string,
+          input: (block.input as Record<string, unknown>) ?? {},
+        })
+      }
+    }
+  }
+
+  private createPlanFromToolUses() {
+    const actionableTools = this.collectedToolUses.filter(
+      (t) => !['Read', 'Glob', 'Grep', 'TodoWrite'].includes(t.name),
+    )
+    const steps: PlanStep[] = this.collectedToolUses.map(toolUseToPlanStep)
+
+    // Build title from first text or thinking
+    const titleSource = this.collectedText.trim() || this.collectedThinking
+    const title = titleSource.length > 80
+      ? titleSource.slice(0, 80) + '...'
+      : titleSource || 'Proposed plan'
+
+    const description = this.collectedThinking.length > 500
+      ? this.collectedThinking.slice(0, 500) + '...'
+      : this.collectedThinking || this.collectedText.slice(0, 500) || 'Agent proposed the following actions.'
+
+    const questions: PlanQuestion[] = [
+      {
+        id: crypto.randomUUID(),
+        question: `Approve this plan (${actionableTools.length} action${actionableTools.length === 1 ? '' : 's'}) and re-run with full permissions?`,
+        required: true,
+      },
+    ]
+
+    const agentName = this.agentType === 'codex' ? 'Codex' : 'Claude'
+
+    console.log(`[managed-process] Creating plan from ${steps.length} tool uses for task ${this.taskId}`)
+    proposePlan(this.taskId, title, description, agentName, steps, questions)
   }
 }

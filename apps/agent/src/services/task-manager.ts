@@ -55,7 +55,7 @@ export function startTask(
   const command = buildCommand(agentType, prompt, model, mode)
   console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
   console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
-  const proc = new ManagedProcess(taskId, command, cwd)
+  const proc = new ManagedProcess({ taskId, command, cwd, mode, agentType })
   processes.set(taskId, proc)
 
   proc.start()
