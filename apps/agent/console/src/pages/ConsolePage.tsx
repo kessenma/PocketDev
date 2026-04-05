@@ -6,6 +6,7 @@ import { ConnectionWizard } from '#/components/ConnectionWizard'
 import { DeviceList } from '#/components/DeviceList'
 import { SetupStatus } from '#/components/SetupStatus'
 import { DomainSettings } from '#/components/DomainSettings'
+import { PasskeySettings } from '#/components/PasskeySettings'
 import { ServerTerminal } from '#/components/ServerTerminal'
 import { DiagnosticsPanel } from '#/components/DiagnosticsPanel'
 import { RepoInspectorPanel } from '#/components/RepoInspectorPanel'
@@ -109,8 +110,12 @@ export function ConsolePage() {
               <SetupStatus />
             </div>
 
-            <div className="lg:col-span-12">
+            <div className="lg:col-span-7">
               <DomainSettings />
+            </div>
+
+            <div className="lg:col-span-5">
+              <PasskeySettings />
             </div>
 
             <div className="lg:col-span-7">

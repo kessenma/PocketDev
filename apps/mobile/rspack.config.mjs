@@ -36,6 +36,12 @@ export default Repack.defineRspackConfig({
       '@pocketdev/shared/schema': path.resolve(__dirname, '../../packages/shared/src/schema/index.ts'),
       '@pocketdev/shared/crypto': path.resolve(__dirname, '../../packages/shared/src/crypto/index.ts'),
       '@pocketdev/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
+      // Shim unused react-native-executorch LLM-only deps (we only use TextEmbeddingsModule)
+      '@huggingface/jinja': path.resolve(__dirname, 'src/vendor-shims/empty.js'),
+      'zod/v4': path.resolve(__dirname, 'src/vendor-shims/empty.js'),
+      'zod/v4/core': path.resolve(__dirname, 'src/vendor-shims/empty.js'),
+      'jsonschema': path.resolve(__dirname, 'src/vendor-shims/empty.js'),
+      'jsonrepair': path.resolve(__dirname, 'src/vendor-shims/empty.js'),
     },
   },
   module: {

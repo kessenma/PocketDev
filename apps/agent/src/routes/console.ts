@@ -14,7 +14,7 @@ import {
   sessionCookieHeader,
 } from '../services/console-auth.ts'
 import { hasDevices } from '../services/setup.ts'
-import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName, getToolRecord, getTaskLogs } from '../db/index.ts'
+import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName, getToolRecord, getTaskLogs, hasPasskeyCredentials } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
 import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
@@ -96,6 +96,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     hasAdmin: hasAdminAccount(),
     paired: hasDevices(),
     uptime: process.uptime(),
+    hasPasskeys: hasPasskeyCredentials(),
   }))
 
   // ─── Setup (create admin, no auth) ────────────────────

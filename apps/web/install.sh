@@ -199,32 +199,46 @@ USER_DOMAIN="$(echo "$USER_DOMAIN" | tr -d '[:space:]')"
 
 # Install Caddy
 if ! command -v caddy >/dev/null 2>&1; then
-  info "Installing Caddy..."
+  info "Installing Caddy (this may take a minute)..."
   case "$OS_TYPE" in
     ubuntu|debian|pop|linuxmint|zorin)
+      info "  Installing prerequisites (keyring, apt-transport-https)..."
       apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tail -1 || true
+      info "  Adding Caddy GPG key..."
       curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
+      info "  Adding Caddy APT repository..."
       curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+      info "  Updating package lists..."
       apt-get update -qq 2>&1 | tail -1 || true
+      info "  Installing caddy package..."
       apt-get install -y -qq caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
       ;;
     centos|fedora|rhel|rocky|almalinux|amzn)
+      info "  Enabling Caddy COPR repository..."
       dnf install -y 'dnf-command(copr)' 2>&1 | tail -1 || true
       dnf copr enable -y @caddy/caddy 2>&1 | tail -1 || true
+      info "  Installing caddy package..."
       dnf install -y caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
       ;;
     arch|manjaro)
+      info "  Installing caddy package..."
       pacman -Sy --noconfirm caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
       ;;
     alpine)
+      info "  Installing caddy package..."
       apk add caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
       ;;
     *)
       warn "Unknown OS '$OS_TYPE' — trying apt-get for Caddy"
+      info "  Installing prerequisites (keyring, apt-transport-https)..."
       apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tail -1 || true
+      info "  Adding Caddy GPG key..."
       curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
+      info "  Adding Caddy APT repository..."
       curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+      info "  Updating package lists..."
       apt-get update -qq 2>&1 | tail -1 || true
+      info "  Installing caddy package..."
       apt-get install -y -qq caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
       ;;
   esac

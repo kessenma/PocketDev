@@ -143,6 +143,7 @@ export type PlanQuestionRow = typeof schema.planQuestions.$inferSelect
 export type PlanMessageRow = typeof schema.planMessages.$inferSelect
 export type ToolPathRow = typeof schema.toolPaths.$inferSelect
 export type AdminAccountRow = typeof schema.adminAccounts.$inferSelect
+export type PasskeyCredentialRow = typeof schema.passkeyCredentials.$inferSelect
 
 // ─── Device operations ──────────────────────────────────
 
@@ -542,4 +543,84 @@ export function getAdminAccount(): AdminAccountRow | undefined {
 
 export function insertAdminAccount(email: string, passwordHash: string) {
   getDb().insert(schema.adminAccounts).values({ email, passwordHash }).run()
+}
+
+// ─── Passkey credential operations ─────────────────────
+
+export function getPasskeysByAdminId(adminId: number): PasskeyCredentialRow[] {
+  return getDb()
+    .select()
+    .from(schema.passkeyCredentials)
+    .where(eq(schema.passkeyCredentials.adminId, adminId))
+    .all()
+    .filter((row) => row.isActive === 1)
+}
+
+export function getPasskeyByCredentialId(credentialId: string): PasskeyCredentialRow | undefined {
+  return getDb()
+    .select()
+    .from(schema.passkeyCredentials)
+    .where(eq(schema.passkeyCredentials.credentialId, credentialId))
+    .get()
+}
+
+export function insertPasskeyCredential(input: {
+  id: string
+  adminId: number
+  credentialId: string
+  publicKey: string
+  counter: number
+  credentialDeviceType: string | null
+  credentialBackedUp: boolean
+  transports: string[] | null
+  deviceName: string | null
+  aaguid: string | null
+}) {
+  getDb()
+    .insert(schema.passkeyCredentials)
+    .values({
+      id: input.id,
+      adminId: input.adminId,
+      credentialId: input.credentialId,
+      publicKey: input.publicKey,
+      counter: input.counter,
+      credentialDeviceType: input.credentialDeviceType,
+      credentialBackedUp: input.credentialBackedUp ? 1 : 0,
+      transports: input.transports ? JSON.stringify(input.transports) : null,
+      deviceName: input.deviceName,
+      aaguid: input.aaguid,
+    })
+    .run()
+}
+
+export function updatePasskeyCounter(credentialId: string, newCounter: number) {
+  getDb()
+    .update(schema.passkeyCredentials)
+    .set({
+      counter: newCounter,
+      lastUsedAt: sql`datetime('now')`,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(schema.passkeyCredentials.credentialId, credentialId))
+    .run()
+}
+
+export function softDeletePasskey(id: string) {
+  getDb()
+    .update(schema.passkeyCredentials)
+    .set({
+      isActive: 0,
+      updatedAt: sql`datetime('now')`,
+    })
+    .where(eq(schema.passkeyCredentials.id, id))
+    .run()
+}
+
+export function hasPasskeyCredentials(): boolean {
+  const row = getDb()
+    .select({ count: count() })
+    .from(schema.passkeyCredentials)
+    .where(eq(schema.passkeyCredentials.isActive, 1))
+    .get()
+  return (row?.count ?? 0) > 0
 }

@@ -2041,6 +2041,8 @@ PODS:
     - Yoga
   - RNDeviceInfo (15.0.2):
     - React-Core
+  - RNFS (2.20.0):
+    - React-Core
   - RNGestureHandler (2.30.1):
     - hermes-engine
     - RCTRequired
@@ -2418,6 +2420,7 @@ DEPENDENCIES:
   - "RNCClipboard (from `../node_modules/@react-native-clipboard/clipboard`)"
   - "RNCMaskedView (from `../node_modules/@react-native-masked-view/masked-view`)"
   - RNDeviceInfo (from `../node_modules/react-native-device-info`)
+  - RNFS (from `../node_modules/react-native-fs`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
@@ -2603,6 +2606,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-masked-view/masked-view"
   RNDeviceInfo:
     :path: "../node_modules/react-native-device-info"
+  RNFS:
+    :path: "../node_modules/react-native-fs"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
   RNKeychain:
@@ -2708,6 +2713,7 @@ SPEC CHECKSUMS:
   RNCClipboard: 398455e1ad6a44a94d679452b951ffb788e8599b
   RNCMaskedView: 3c9d7586e2b9bbab573591dcb823918bc4668005
   RNDeviceInfo: d79872e11c8e9c4de0d65b0ee6e0cee719f37fea
+  RNFS: 4ac0f0ea233904cb798630b3c077808c06931688
   RNGestureHandler: 399aee990348a3aa26bbf5907f40d192a0cc09bf
   RNKeychain: a9cc7fbc091b8cb891b36825368e12022ec03fc4
   RNReanimated: 078beff6acdffd7ee939f21af987b8dd4c5fd840

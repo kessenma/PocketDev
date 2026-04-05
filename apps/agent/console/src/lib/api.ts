@@ -29,6 +29,7 @@ export async function checkHealth(): Promise<{
   hasAdmin: boolean
   paired: boolean
   uptime: number
+  hasPasskeys: boolean
 }> {
   const res = await get('/health')
   return res.json()
@@ -533,4 +534,80 @@ export async function updateDomain(domain: string): Promise<{ ok: boolean; url: 
     throw new Error(data.error || 'Failed to update domain')
   }
   return res.json()
+}
+
+// ─── Passkey ───────────────────────────────────────────
+
+export async function getPasskeyRegistrationOptions(): Promise<{
+  options: any
+  challengeId: string
+}> {
+  const res = await post('/passkey/register/options')
+  if (!res.ok) throw new Error('Failed to get registration options')
+  return res.json()
+}
+
+export async function verifyPasskeyRegistration(
+  challengeId: string,
+  credential: any,
+  deviceName?: string,
+): Promise<{ verified: boolean; credentialId: string }> {
+  const res = await fetch(`${BASE}/passkey/register/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challengeId, credential, deviceName }),
+    credentials: 'same-origin',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Registration failed' }))
+    throw new Error(data.error || 'Registration failed')
+  }
+  return res.json()
+}
+
+export async function getPasskeyAuthenticationOptions(): Promise<{
+  options: any
+  challengeId: string
+}> {
+  const res = await post('/passkey/authenticate/options')
+  if (!res.ok) throw new Error('Failed to get authentication options')
+  return res.json()
+}
+
+export async function verifyPasskeyAuthentication(
+  challengeId: string,
+  credential: any,
+): Promise<{ verified: boolean }> {
+  const res = await fetch(`${BASE}/passkey/authenticate/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ challengeId, credential }),
+    credentials: 'same-origin',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Authentication failed' }))
+    throw new Error(data.error || 'Authentication failed')
+  }
+  return res.json()
+}
+
+export interface PasskeyCredential {
+  id: string
+  deviceName: string | null
+  credentialDeviceType: string | null
+  credentialBackedUp: boolean
+  createdAt: string | null
+  lastUsedAt: string | null
+}
+
+export async function listPasskeys(): Promise<PasskeyCredential[]> {
+  const res = await get('/passkey/credentials')
+  if (!res.ok) throw new Error('Failed to list passkeys')
+  const data = await res.json() as { credentials: PasskeyCredential[] }
+  return data.credentials
+}
+
+export async function removePasskey(id: string): Promise<void> {
+  const res = await del(`/passkey/credentials/${id}`)
+  if (!res.ok) throw new Error('Failed to remove passkey')
 }

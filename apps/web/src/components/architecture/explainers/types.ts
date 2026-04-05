@@ -16,5 +16,8 @@ export type ExplainerCardProps = {
   legend?: ExplainerLegendItem[]
   cardClassName?: string
   stageMinHeight?: number
+  stageBorderless?: boolean
+  svgClassName?: string
+  preserveAspectRatio?: string
   children: (state: ExplainerRenderState) => ReactNode
 }

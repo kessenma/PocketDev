@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Button } from '#/components/ui/button'
-import { login } from '#/lib/api'
+import { Separator } from '#/components/ui/separator'
+import { login, checkHealth } from '#/lib/api'
+import { PasskeyButton } from '#/components/PasskeyButton'
 import { Server, LogIn } from 'lucide-react'
 
 export function LoginPage() {
@@ -13,6 +15,11 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [hasPasskeys, setHasPasskeys] = useState(false)
+
+  useEffect(() => {
+    checkHealth().then((h) => setHasPasskeys(h.hasPasskeys)).catch(() => {})
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -86,6 +93,18 @@ export function LoginPage() {
                 )}
               </Button>
             </form>
+
+            {hasPasskeys && (
+              <>
+                <div className="relative my-4">
+                  <Separator />
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                    or
+                  </span>
+                </div>
+                <PasskeyButton onSuccess={() => navigate('/console', { replace: true })} />
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

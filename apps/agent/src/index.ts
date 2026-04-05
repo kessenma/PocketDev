@@ -23,6 +23,7 @@ import { taskRoutes } from './routes/tasks.ts'
 import { projectRoutes } from './routes/projects.ts'
 import { screenshotRoutes } from './services/preview-screenshot.ts'
 import { consoleRoutes, consoleStaticRoutes } from './routes/console.ts'
+import { passkeyRoutes } from './routes/passkey.ts'
 import { initSetup, getServerKeypair } from './services/setup.ts'
 import { getDb } from './db/index.ts'
 
@@ -55,6 +56,8 @@ new Elysia()
     .use(healthRoutes)
     // Console API (admin setup, login, passcode, status)
     .use(consoleRoutes)
+    // Passkey auth routes
+    .use(passkeyRoutes)
     // API routes (most require device auth)
     .group('/api', (api) => api
       .use(setupRoutes)

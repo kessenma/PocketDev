@@ -12,23 +12,36 @@ function mapProgress(value: number, start: number, end: number) {
   return clamp((value - start) / (end - start), 0, 1)
 }
 
+function mix(start: number, end: number, amount: number) {
+  return start + (end - start) * amount
+}
+
 type BrandStreamItem = {
   key: string
   href: string
-  x: number
-  y: number
+  orbitHref: string
+  startX: number
+  startY: number
+  midX: number
+  midY: number
+  orbitX: number
+  orbitY: number
   size: number
 }
 
+const CIRCLE_CX = 160
+const CIRCLE_CY = 154
+const CIRCLE_R = 42
+
 const STREAM_ITEMS: BrandStreamItem[] = [
-  { key: 'github', href: brandAssets.githubBlack, x: 48, y: 56, size: 20 },
-  { key: 'git', href: brandAssets.gitBlack, x: 76, y: 80, size: 18 },
-  { key: 'npm', href: brandAssets.npmBlack, x: 42, y: 108, size: 24 },
-  { key: 'node', href: brandAssets.nodeBlack, x: 84, y: 134, size: 20 },
-  { key: 'claude', href: brandAssets.claudeBlack, x: 38, y: 154, size: 22 },
-  { key: 'codex', href: brandAssets.codexBlack, x: 108, y: 58, size: 20 },
-  { key: 'copilot', href: brandAssets.githubCopilotBlack, x: 110, y: 100, size: 18 },
-  { key: 'docker', href: brandAssets.dockerBlack, x: 96, y: 156, size: 22 },
+  { key: 'github', href: brandAssets.githubBlack, orbitHref: brandAssets.githubWhite, startX: 94, startY: 10, midX: 122, midY: 66, orbitX: -21, orbitY: -18, size: 17 },
+  { key: 'git', href: brandAssets.gitBlack, orbitHref: brandAssets.gitWhite, startX: 124, startY: -2, midX: 136, midY: 82, orbitX: 0, orbitY: -24, size: 16 },
+  { key: 'npm', href: brandAssets.npmBlack, orbitHref: brandAssets.npmWhite, startX: 160, startY: 8, midX: 158, midY: 92, orbitX: 22, orbitY: -10, size: 18 },
+  { key: 'node', href: brandAssets.nodeBlack, orbitHref: brandAssets.nodeWhite, startX: 194, startY: -6, midX: 180, midY: 78, orbitX: -18, orbitY: 2, size: 16 },
+  { key: 'claude', href: brandAssets.claudeBlack, orbitHref: brandAssets.claudeWhite, startX: 228, startY: 14, midX: 198, midY: 64, orbitX: 12, orbitY: 14, size: 17 },
+  { key: 'codex', href: brandAssets.codexBlack, orbitHref: brandAssets.codexWhite, startX: 110, startY: -16, midX: 132, midY: 58, orbitX: -2, orbitY: 22, size: 16 },
+  { key: 'copilot', href: brandAssets.githubCopilotBlack, orbitHref: brandAssets.githubCopilotWhite, startX: 178, startY: -18, midX: 174, midY: 68, orbitX: 20, orbitY: 18, size: 15 },
+  { key: 'docker', href: brandAssets.dockerBlack, orbitHref: brandAssets.dockerWhite, startX: 212, startY: 2, midX: 188, midY: 90, orbitX: -22, orbitY: 20, size: 17 },
 ]
 
 export function SetupExplainer({
@@ -40,98 +53,106 @@ export function SetupExplainer({
 }) {
   const reduceMotion = useReducedMotion()
   const scrollProgress = reduceMotion ? 1 : progress
-  const funnelReveal = mapProgress(scrollProgress, 0.24, 0.5)
-  const streamReveal = mapProgress(scrollProgress, 0.42, 0.94)
-  const connectedReveal = mapProgress(scrollProgress, 0.84, 1)
-  const animate = active && !reduceMotion && connectedReveal > 0.96
+  const funnelReveal = mapProgress(scrollProgress, 0.22, 0.46)
+  const streamReveal = mapProgress(scrollProgress, 0.36, 0.9)
+  const floatReveal = mapProgress(scrollProgress, 0.74, 1)
+  const animate = active && !reduceMotion && floatReveal > 0.92
 
-  const absorbedCount = Math.floor(streamReveal * STREAM_ITEMS.length)
-  const circleScale = 1 + absorbedCount * 0.055
-  const circleOpacity = 0.94 + absorbedCount * 0.006
+  const collectedCount = Math.floor(streamReveal * STREAM_ITEMS.length)
+  const circleScale = 1 + collectedCount * 0.04
 
   return (
     <>
-      <ExplainerBackdrop />
+      <ExplainerBackdrop hideFrame />
 
-      <motion.rect
-        x="24"
-        y="34"
-        width="108"
-        height="134"
-        rx="20"
-        fill="none"
-        stroke="#8d8476"
-        strokeWidth="1.5"
-        animate={{ opacity: clamp(funnelReveal * 1.3, 0, 1) }}
-        transition={{ duration: 0.24, ease: 'easeOut' }}
-      />
+      <defs>
+        <clipPath id="setup-funnel-circle-clip">
+          <circle cx={CIRCLE_CX} cy={CIRCLE_CY} r={CIRCLE_R - 1} />
+        </clipPath>
+      </defs>
 
       <motion.path
-        d="M 128 58 C 158 68, 180 82, 194 96"
+        d="M 82 34 L 238 34"
         fill="none"
         stroke={palette.bauhaus.black}
         strokeWidth="4"
         strokeLinecap="round"
         pathLength={1}
         animate={{ opacity: funnelReveal, pathLength: funnelReveal }}
-        transition={{ duration: 0.2, ease: 'linear' }}
+        transition={{ duration: 0.22, ease: 'linear' }}
       />
       <motion.path
-        d="M 128 144 C 158 136, 180 122, 194 108"
+        d="M 82 34 L 148 106 L 148 124"
         fill="none"
         stroke={palette.bauhaus.black}
         strokeWidth="4"
         strokeLinecap="round"
+        strokeLinejoin="round"
         pathLength={1}
         animate={{ opacity: funnelReveal, pathLength: funnelReveal }}
-        transition={{ duration: 0.2, ease: 'linear' }}
+        transition={{ duration: 0.22, ease: 'linear' }}
+      />
+      <motion.path
+        d="M 238 34 L 172 106 L 172 124"
+        fill="none"
+        stroke={palette.bauhaus.black}
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        animate={{ opacity: funnelReveal, pathLength: funnelReveal }}
+        transition={{ duration: 0.22, ease: 'linear' }}
       />
 
       <motion.circle
-        cx="226"
-        cy="102"
-        r="56"
+        cx={CIRCLE_CX}
+        cy={CIRCLE_CY}
+        r={CIRCLE_R + 28}
         fill={palette.bauhaus.yellow}
-        animate={{ opacity: connectedReveal * 0.1 }}
+        animate={{ opacity: floatReveal * 0.12 }}
         transition={{ duration: 0.24, ease: 'easeOut' }}
       />
       <motion.circle
-        cx="226"
-        cy="102"
-        r="34"
+        cx={CIRCLE_CX}
+        cy={CIRCLE_CY}
+        r={CIRCLE_R}
         fill={palette.bauhaus.blue}
-        animate={{ scale: circleScale, opacity: circleOpacity }}
+        animate={{ scale: circleScale, opacity: 0.96 }}
         transition={{ duration: 0.24, ease: 'easeOut' }}
-        style={{ transformOrigin: '226px 102px' }}
+        style={{ transformOrigin: `${CIRCLE_CX}px ${CIRCLE_CY}px` }}
       />
 
       {STREAM_ITEMS.map((item, index) => {
         const start = index / STREAM_ITEMS.length
-        const end = start + 0.22
-        const localProgress = mapProgress(streamReveal, start, end)
-        const eased = localProgress * localProgress * (3 - 2 * localProgress)
-        const targetX = 226 - item.size / 2
-        const targetY = 102 - item.size / 2
-        const x = item.x + (targetX - item.x) * eased
-        const y = item.y + (targetY - item.y) * eased
-        const opacity = absorbedCount > index ? 0 : clamp(0.14 + funnelReveal + (1 - eased) * 0.5, 0, 1)
+        const end = start + 0.2
+        const local = mapProgress(streamReveal, start, end)
+        const lower = mapProgress(local, 0, 0.62)
+        const drop = mapProgress(local, 0.62, 1)
+        const x = lower < 1
+          ? mix(item.startX, item.midX, lower)
+          : mix(item.midX, CIRCLE_CX - item.size / 2, drop)
+        const y = lower < 1
+          ? mix(item.startY, item.midY, lower)
+          : mix(item.midY, CIRCLE_CY - item.size / 2, drop)
+        const scale = lower < 1 ? 1 : mix(1, 0.76, drop)
+        const visible = collectedCount <= index
 
         return (
           <motion.g
             key={item.key}
             animate={{
-              x: x - item.x,
-              y: y - item.y,
-              scale: 1 - eased * 0.32,
-              opacity,
+              x: x - item.startX,
+              y: y - item.startY,
+              scale,
+              opacity: visible ? clamp(0.24 + funnelReveal + (1 - local) * 0.36, 0, 1) : 0,
             }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            style={{ transformOrigin: `${item.x + item.size / 2}px ${item.y + item.size / 2}px` }}
+            style={{ transformOrigin: `${item.startX + item.size / 2}px ${item.startY + item.size / 2}px` }}
           >
             <image
               href={item.href}
-              x={item.x}
-              y={item.y}
+              x={item.startX}
+              y={item.startY}
               width={item.size}
               height={item.size}
               preserveAspectRatio="xMidYMid meet"
@@ -140,46 +161,86 @@ export function SetupExplainer({
         )
       })}
 
-      <motion.path
-        d="M 194 96 C 206 98, 214 100, 220 100"
-        fill="none"
-        stroke={palette.bauhaus.blue}
-        strokeWidth="3"
-        strokeLinecap="round"
-        pathLength={1}
-        strokeDasharray="0.16 1"
-        animate={animate ? { strokeDashoffset: [1, 0, 0] } : { opacity: connectedReveal, strokeDashoffset: 0 }}
-        transition={
-          animate
-            ? { duration: EXPLAINER_TIMINGS.long, repeat: Infinity, times: [0, 0.28, 1], ease: 'easeInOut' }
-            : undefined
-        }
-      />
-      <motion.path
-        d="M 194 108 C 206 106, 214 104, 220 104"
-        fill="none"
-        stroke={palette.bauhaus.blue}
-        strokeWidth="3"
-        strokeLinecap="round"
-        pathLength={1}
-        strokeDasharray="0.16 1"
-        animate={animate ? { strokeDashoffset: [1, 0, 0] } : { opacity: connectedReveal * 0.85, strokeDashoffset: 0.2 }}
-        transition={
-          animate
-            ? {
-                duration: EXPLAINER_TIMINGS.long,
-                repeat: Infinity,
-                delay: EXPLAINER_TIMINGS.long * 0.12,
-                times: [0, 0.32, 1],
-                ease: 'easeInOut',
-              }
-            : undefined
-        }
-      />
+      <g clipPath="url(#setup-funnel-circle-clip)">
+        {STREAM_ITEMS.map((item, index) => {
+          if (collectedCount <= index && !reduceMotion) {
+            return null
+          }
 
-      <text x="78" y="182" textAnchor="middle" fontSize="10" fill="#5c5549">tooling stream</text>
-      <text x="226" y="182" textAnchor="middle" fontSize="10" fill="#5c5549">helper scripts</text>
-      <text x="226" y="56" textAnchor="middle" fontSize="9" fill="#5c5549">automated install funnel</text>
+          const baseX = CIRCLE_CX + item.orbitX - item.size / 2
+          const baseY = CIRCLE_CY + item.orbitY - item.size / 2
+          const driftX = [0, 4 - (index % 3), -3 + (index % 2), 0]
+          const driftY = [0, -3 + (index % 3), 4 - (index % 2), 0]
+
+          return (
+            <motion.g
+              key={`${item.key}-orbit`}
+              animate={
+                animate
+                  ? {
+                      x: driftX,
+                      y: driftY,
+                      rotate: [0, index % 2 === 0 ? 2 : -2, 0],
+                      opacity: [0.82, 0.96, 0.82],
+                    }
+                  : { x: 0, y: 0, rotate: 0, opacity: reduceMotion ? 0.92 : floatReveal }
+              }
+              transition={
+                animate
+                  ? {
+                      duration: EXPLAINER_TIMINGS.long + index * 0.12,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }
+                  : undefined
+              }
+              style={{ transformOrigin: `${baseX + item.size / 2}px ${baseY + item.size / 2}px` }}
+            >
+              <image
+                href={item.orbitHref}
+                x={baseX}
+                y={baseY}
+                width={item.size}
+                height={item.size}
+                preserveAspectRatio="xMidYMid meet"
+                opacity={0.94}
+              />
+            </motion.g>
+          )
+        })}
+
+        {[0, 1, 2, 3].map((particle) => {
+          const px = CIRCLE_CX - 12 + particle * 8
+          const py = CIRCLE_CY - 8 + (particle % 2) * 10
+          return (
+            <motion.circle
+              key={`particle-${particle}`}
+              cx={px}
+              cy={py}
+              r={particle % 2 === 0 ? 2 : 1.5}
+              fill={particle % 2 === 0 ? 'rgba(255,255,255,0.72)' : palette.bauhaus.yellow}
+              animate={
+                animate
+                  ? {
+                      cx: [px, px + 7, px - 5, px],
+                      cy: [py, py - 5, py + 6, py],
+                      opacity: [0.24, 0.72, 0.4, 0.24],
+                    }
+                  : { opacity: floatReveal * 0.5 }
+              }
+              transition={
+                animate
+                  ? {
+                      duration: EXPLAINER_TIMINGS.long + particle * 0.2,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }
+                  : undefined
+              }
+            />
+          )
+        })}
+      </g>
     </>
   )
 }

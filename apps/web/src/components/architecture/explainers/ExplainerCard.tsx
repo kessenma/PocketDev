@@ -10,6 +10,9 @@ export function ExplainerCard({
   legend,
   cardClassName,
   stageMinHeight = 236,
+  stageBorderless = false,
+  svgClassName,
+  preserveAspectRatio = 'xMidYMid meet',
   children,
 }: ExplainerCardProps) {
   const { ref, isActive, progress } = useViewportActivity<HTMLDivElement>(0.35)
@@ -27,7 +30,10 @@ export function ExplainerCard({
       style={architectureTextStyles.surface}
     >
       <div
-        className="rounded-[1.1rem] border p-3 sm:p-4"
+        className={[
+          'flex items-center justify-center overflow-hidden rounded-[1.1rem] p-3 sm:p-4',
+          stageBorderless ? '' : 'border',
+        ].join(' ')}
         style={{
           ...architectureTextStyles.surface,
           minHeight: stageMinHeight,
@@ -38,8 +44,8 @@ export function ExplainerCard({
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox={EXPLAINER_VIEWBOX}
-          className="h-auto w-full"
-          preserveAspectRatio="xMidYMid meet"
+          className={svgClassName ?? 'block h-full w-full'}
+          preserveAspectRatio={preserveAspectRatio}
           aria-hidden="true"
         >
           {children({ active: isActive, progress })}
@@ -73,20 +79,22 @@ export function ExplainerCard({
   )
 }
 
-export function ExplainerBackdrop() {
+export function ExplainerBackdrop({ hideFrame = false }: { hideFrame?: boolean }) {
   return (
     <>
-      <rect
-        x="12"
-        y="12"
-        width="296"
-        height="176"
-        rx="22"
-        fill="none"
-        stroke={architectureTokens.colors.border}
-        strokeOpacity="0.6"
-        strokeWidth="1.5"
-      />
+      {hideFrame ? null : (
+        <rect
+          x="12"
+          y="12"
+          width="296"
+          height="176"
+          rx="22"
+          fill="none"
+          stroke={architectureTokens.colors.border}
+          strokeOpacity="0.6"
+          strokeWidth="1.5"
+        />
+      )}
       <circle
         cx="252"
         cy="56"

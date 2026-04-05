@@ -68,7 +68,10 @@ export function HowPocketDevWorks() {
             title="Prepare The Workspace"
             caption="As the card assembles, PocketDev shifts from pairing into guided server prep: helper scripts wire up git SSH, package tooling, AI CLIs, and Docker on the box itself."
             cardClassName="md:col-span-2"
-            stageMinHeight={292}
+            stageMinHeight={504}
+            stageBorderless
+            svgClassName="block h-full w-full"
+            preserveAspectRatio="xMidYMid slice"
             legend={[
               { label: 'GitHub', icon: <SiGithub size={14} color={`#${SiGithubHex}`} /> },
               { label: 'Docker', icon: <SiDocker size={14} color={`#${SiDockerHex}`} /> },
