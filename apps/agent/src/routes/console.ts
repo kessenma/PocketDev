@@ -22,7 +22,7 @@ import { getClaudeAuthDebug } from '../services/claude-setup.ts'
 import { getCopilotAuthDebug } from '../services/copilot-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
 import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
-import { getTaskList, getProcess } from '../services/task-manager.ts'
+import { getTaskList, getProcess, buildCommand } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
@@ -340,7 +340,16 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       }
     }
 
-    return { tasks, activeProcesses, totalCount: tasks.length, taskLogs }
+    // Reconstruct commands for debug visibility
+    const taskCommands: Record<string, string> = {}
+    for (const task of tasks.slice(0, 10)) {
+      try {
+        const cmd = buildCommand(task.agentType ?? 'claude', task.prompt, task.model ?? null, (task.mode ?? 'default') as 'default' | 'plan')
+        taskCommands[task.id] = cmd.map((c: string) => c.includes(' ') ? `"${c}"` : c).join(' ')
+      } catch { /* ignore */ }
+    }
+
+    return { tasks, activeProcesses, totalCount: tasks.length, taskLogs, taskCommands }
   })
 
   // ─── Setup debug (requires session) ───────────────────

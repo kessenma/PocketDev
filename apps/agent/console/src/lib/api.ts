@@ -384,6 +384,7 @@ export interface TasksDebugInfo {
   }>
   totalCount: number
   taskLogs: Record<string, TaskLogEntry[]>
+  taskCommands: Record<string, string>
 }
 
 export async function fetchTasksDebug(): Promise<TasksDebugInfo> {

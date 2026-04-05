@@ -8,7 +8,7 @@ const processes = new Map<string, ManagedProcess>()
 type TaskMode = 'default' | 'plan'
 
 /** Build the command array for a given agent type, using stored tool paths when available */
-function buildCommand(agentType: string, prompt: string, model: string | null, mode: TaskMode): string[] {
+export function buildCommand(agentType: string, prompt: string, model: string | null, mode: TaskMode): string[] {
   switch (agentType) {
     case 'claude': {
       const claudePath = getToolPath('claude_cli') ?? 'claude'

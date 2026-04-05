@@ -109,6 +109,14 @@ export function TasksDiagnosticsTab({ tasksInfo }: Props) {
                   {task.startedAt && <p>Started: {formatShortTime(task.startedAt)}</p>}
                   {task.completedAt && <p>Completed: {formatShortTime(task.completedAt)}</p>}
                 </div>
+                {tasksInfo?.taskCommands[task.id] && (
+                  <div className="mt-2">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Command</p>
+                    <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">
+                      {tasksInfo.taskCommands[task.id]}
+                    </p>
+                  </div>
+                )}
                 {task.workingDirectory && (
                   <p className="mt-2 truncate font-mono text-[11px] text-[#f4f0e8]/40">
                     cwd: {task.workingDirectory}

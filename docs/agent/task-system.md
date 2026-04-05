@@ -64,9 +64,11 @@ startTask(
 
 | Agent Type | Command |
 |---|---|
-| `claude` | `[claudePath, '--dangerously-skip-permissions', ...[--model M], '-p', prompt]` |
+| `claude` | `[claudePath, '--output-format', 'stream-json', '--permission-mode', mode, '--verbose', ...[--model M], '-p', prompt]` |
 | `codex` | `[codexPath, ...[--model M], '--prompt', prompt]` |
 | `shell` | `['sh', '-c', prompt]` |
+
+Permission modes: `acceptEdits` (default) auto-approves file edits; `plan` blocks all tools and emits `permission_denials` in stream-json output.
 
 Tool paths resolved from SQLite `tool_paths` table via `getToolPath()`, with fallback to bare CLI names.
 
