@@ -18,6 +18,7 @@ const OUTPUT_EXCERPT_LENGTH = 1_500
 const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]/g
 const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
 const TRUST_PROMPT_PATTERN = /do you trust the files in this folder\?/i
+const COPILOT_UI_READY_PATTERN = /\u001b\]2;GitHub Copilot\u0007|\u001b\[\?1049h/
 const READY_PATTERNS = [
   /describe a task to get started\./i,
   /tip:\s*\/usage/i,
@@ -35,6 +36,7 @@ interface InternalTrustSession {
   error: string | null
   trustHandled: boolean
   fallbackTrustAttempted: boolean
+  uiReady: boolean
   startedAt: number
   updatedAt: number
 }
@@ -265,6 +267,13 @@ function completeTrustSession(session: InternalTrustSession) {
 }
 
 function refreshTrustSessionState(session: InternalTrustSession) {
+  if (!session.uiReady && COPILOT_UI_READY_PATTERN.test(session.output)) {
+    session.uiReady = true
+    session.updatedAt = Date.now()
+    recordDebugEvent(session.id, 'Copilot alternate-screen UI detected')
+    scheduleFallbackTrustAttempt(session)
+  }
+
   const derived = parseTrustState(session)
 
   if (derived.state === 'awaiting_trust' && !session.trustHandled) {
@@ -292,15 +301,15 @@ function refreshTrustSessionState(session: InternalTrustSession) {
 }
 
 function scheduleFallbackTrustAttempt(session: InternalTrustSession) {
-  if (session.fallbackTrustAttempted || session.completed || session.trusted) return
+  if (session.fallbackTrustAttempted || session.completed || session.trusted || !session.uiReady) return
 
   const sessionId = session.id
   setTimeout(() => {
     const latest = trustSessions.get(sessionId)
-    if (!latest || latest.completed || latest.trusted || latest.trustHandled || latest.fallbackTrustAttempted) return
+    if (!latest || latest.completed || latest.trusted || latest.trustHandled || latest.fallbackTrustAttempted || !latest.uiReady) return
     latest.fallbackTrustAttempted = true
     latest.updatedAt = Date.now()
-    recordDebugEvent(sessionId, 'No trust prompt parsed yet; sending fallback down+enter to Copilot TUI')
+    recordDebugEvent(sessionId, 'No trust prompt parsed yet after UI ready; sending fallback down+enter to Copilot TUI')
     latest.terminal.send('\u001b[B\r')
   }, 1800)
 }
@@ -447,6 +456,7 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
     error: null,
     trustHandled: false,
     fallbackTrustAttempted: false,
+    uiReady: false,
     startedAt: Date.now(),
     updatedAt: Date.now(),
   }
@@ -458,7 +468,6 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
 
   await waitForTrustBootstrap(sessionId)
   refreshTrustSessionState(session)
-  scheduleFallbackTrustAttempt(session)
   recordDebugEvent(sessionId, `Bootstrap complete: state=${session.state} prompt=${session.prompt ?? 'none'}`)
   return toTrustStatus(session)
 }
@@ -502,6 +511,7 @@ export async function verifyCopilotSetup(): Promise<CopilotSetupStatus> {
       error: null,
       trustHandled: false,
       fallbackTrustAttempted: false,
+      uiReady: false,
       startedAt: Date.now(),
       updatedAt: Date.now(),
     }
@@ -509,7 +519,6 @@ export async function verifyCopilotSetup(): Promise<CopilotSetupStatus> {
     terminal.send(`exec ${shellEscape(status.path ?? 'copilot')}\n`)
     await Bun.sleep(2000)
     refreshTrustSessionState(session)
-    scheduleFallbackTrustAttempt(session)
     if (session.trusted) {
       storeTrustedTarget(session.trustTarget ?? getWorkspaceTrustTarget())
     }
@@ -538,6 +547,7 @@ export const __test = {
       error: null,
       trustHandled: false,
       fallbackTrustAttempted: false,
+      uiReady: false,
       startedAt: 0,
       updatedAt: 0,
     }
@@ -561,6 +571,7 @@ export function getCopilotAuthDebug() {
       trustTarget: session.trustTarget,
       trustHandled: session.trustHandled,
       fallbackTrustAttempted: session.fallbackTrustAttempted,
+      uiReady: session.uiReady,
       error: session.error,
       startedAt: new Date(session.startedAt).toISOString(),
       updatedAt: new Date(session.updatedAt).toISOString(),

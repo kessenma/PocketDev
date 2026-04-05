@@ -569,6 +569,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                         <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
                           <p>Trust handled: {session.trustHandled ? 'Yes' : 'No'}</p>
                           <p>Fallback attempted: {session.fallbackTrustAttempted ? 'Yes' : 'No'}</p>
+                          <p>UI ready: {session.uiReady ? 'Yes' : 'No'}</p>
                           <p>Trust target: {session.trustTarget ?? 'Unknown'}</p>
                           <p>Prompt: {session.prompt ?? 'None'}</p>
                           <p>Error: {session.error ?? 'None'}</p>

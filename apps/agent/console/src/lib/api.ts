@@ -282,6 +282,7 @@ export interface CopilotAuthDebugSession {
   trustTarget: string | null
   trustHandled: boolean
   fallbackTrustAttempted: boolean
+  uiReady: boolean
   error: string | null
   startedAt: string
   updatedAt: string
