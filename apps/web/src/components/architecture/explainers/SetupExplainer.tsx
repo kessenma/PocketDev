@@ -64,7 +64,6 @@ export function SetupExplainer({
   return (
     <>
       <ExplainerBackdrop hideFrame />
-
       <defs>
         <clipPath id="setup-funnel-circle-clip">
           <circle cx={CIRCLE_CX} cy={CIRCLE_CY} r={CIRCLE_R - 1} />
