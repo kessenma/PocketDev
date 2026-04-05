@@ -19,6 +19,7 @@ import { checkAllPrerequisites } from '../services/prerequisites.ts'
 import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
 import { getClaudeAuthDebug } from '../services/claude-setup.ts'
+import { getCopilotAuthDebug } from '../services/copilot-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
 import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
 import { getGitSummary } from '../services/git.ts'
@@ -297,6 +298,14 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return getGitHubAuthDebug()
+  })
+
+  .get('/debug/copilot-auth', ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    return getCopilotAuthDebug()
   })
 
   .get('/debug/projects', async ({ request, set }) => {

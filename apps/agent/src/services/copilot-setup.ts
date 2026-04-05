@@ -485,3 +485,32 @@ export const __test = {
     return getToolRecord('copilot_cli')
   },
 }
+
+export function getCopilotAuthDebug() {
+  const sessions = Array.from(trustSessions.values())
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((session) => ({
+      sessionId: session.id,
+      state: session.state,
+      trusted: session.trusted,
+      completed: session.completed,
+      prompt: session.prompt,
+      trustTarget: session.trustTarget,
+      trustHandled: session.trustHandled,
+      error: session.error,
+      startedAt: new Date(session.startedAt).toISOString(),
+      updatedAt: new Date(session.updatedAt).toISOString(),
+      outputExcerpt: getOutputExcerpt(session.output),
+    }))
+
+  return {
+    activeSessionCount: sessions.length,
+    sessions,
+    persistedState: getToolRecord('copilot_cli'),
+    trustMarkers: Object.keys(readTrustMarkers()).sort(),
+    liveStatusTarget: getWorkspaceTrustTarget(),
+    liveStatus: {
+      trustConfigured: hasStoredTrust(),
+    },
+  }
+}

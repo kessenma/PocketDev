@@ -273,6 +273,43 @@ export async function fetchGitHubAuthDebug(): Promise<GitHubAuthDebugInfo> {
   return res.json()
 }
 
+export interface CopilotAuthDebugSession {
+  sessionId: string
+  state: string
+  trusted: boolean
+  completed: boolean
+  prompt: string | null
+  trustTarget: string | null
+  trustHandled: boolean
+  error: string | null
+  startedAt: string
+  updatedAt: string
+  outputExcerpt: string | null
+}
+
+export interface CopilotAuthDebugInfo {
+  activeSessionCount: number
+  sessions: CopilotAuthDebugSession[]
+  persistedState: {
+    toolId: string
+    path: string | null
+    version: string | null
+    authenticated: boolean
+    updatedAt: string | null
+  } | null
+  trustMarkers: string[]
+  liveStatusTarget: string
+  liveStatus: {
+    trustConfigured: boolean
+  }
+}
+
+export async function fetchCopilotAuthDebug(): Promise<CopilotAuthDebugInfo> {
+  const res = await get('/debug/copilot-auth')
+  if (!res.ok) throw new Error('Failed to fetch Copilot auth debug')
+  return res.json()
+}
+
 export interface ProjectsDebugInfo {
   activeProjectId: string | null
   sshGithubUsername: string | null

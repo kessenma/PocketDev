@@ -6,12 +6,14 @@ import {
   fetchAuthDebug,
   fetchCodexAuthDebug,
   fetchClaudeAuthDebug,
+  fetchCopilotAuthDebug,
   fetchGitHubAuthDebug,
   fetchProjectsDebug,
   fetchTerminalDebug,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
+  type CopilotAuthDebugInfo,
   type GitHubAuthDebugInfo,
   type ProjectsDebugInfo,
   type TerminalDebugEntry,
@@ -19,7 +21,7 @@ import {
 import { cn } from '#/lib/utils'
 import { Bug, Maximize2, RefreshCw, Smartphone, Terminal, Waves, KeyRound, Sparkles } from 'lucide-react'
 
-type DiagnosticsTab = 'terminal' | 'registry' | 'codex' | 'claude' | 'github'
+type DiagnosticsTab = 'terminal' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -38,6 +40,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [info, setInfo] = useState<AuthDebugInfo | null>(null)
   const [codexInfo, setCodexInfo] = useState<CodexAuthDebugInfo | null>(null)
   const [claudeInfo, setClaudeInfo] = useState<ClaudeAuthDebugInfo | null>(null)
+  const [copilotInfo, setCopilotInfo] = useState<CopilotAuthDebugInfo | null>(null)
   const [githubInfo, setGitHubInfo] = useState<GitHubAuthDebugInfo | null>(null)
   const [projectsInfo, setProjectsInfo] = useState<ProjectsDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
@@ -50,11 +53,12 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     setLoading(true)
     setError(null)
     try {
-      const [authData, termData, codexData, claudeData, githubData, projectsData] = await Promise.all([
+      const [authData, termData, codexData, claudeData, copilotData, githubData, projectsData] = await Promise.all([
         fetchAuthDebug(),
         fetchTerminalDebug(),
         fetchCodexAuthDebug(),
         fetchClaudeAuthDebug(),
+        fetchCopilotAuthDebug(),
         fetchGitHubAuthDebug(),
         fetchProjectsDebug(),
       ])
@@ -62,6 +66,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
       setTermLog(termData)
       setCodexInfo(codexData)
       setClaudeInfo(claudeData)
+      setCopilotInfo(copilotData)
       setGitHubInfo(githubData)
       setProjectsInfo(projectsData)
       setLastUpdated(new Date().toISOString())
@@ -124,6 +129,17 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return 'No GitHub auth activity yet.'
   }, [githubInfo])
 
+  const copilotSummary = useMemo(() => {
+    if (!copilotInfo) return 'No Copilot trust diagnostics yet.'
+    if (copilotInfo.activeSessionCount > 0) {
+      return `${copilotInfo.activeSessionCount} active trust session${copilotInfo.activeSessionCount === 1 ? '' : 's'}`
+    }
+    if (copilotInfo.liveStatus.trustConfigured) {
+      return 'Workspace trust recorded'
+    }
+    return 'No Copilot trust activity yet.'
+  }, [copilotInfo])
+
   const panelShell = 'rounded-[0.95rem] border-2 border-[var(--border)] bg-[#1a1713]'
   const panelInset = 'rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d]'
   const panelAccent = 'rounded-[0.85rem] border-2 border-[var(--border)] bg-[#f0c419] text-black'
@@ -149,7 +165,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d] p-1">
-            {(['terminal', 'claude', 'codex', 'github', 'registry'] as const).map((tab) => (
+            {(['terminal', 'claude', 'codex', 'copilot', 'github', 'registry'] as const).map((tab) => (
               <Button
                 key={tab}
                 size="sm"
@@ -160,7 +176,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                 )}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === 'terminal' ? 'Terminal' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'github' ? 'GitHub' : 'Registry'}
+                {tab === 'terminal' ? 'Terminal' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : 'Registry'}
               </Button>
             ))}
           </div>
@@ -189,6 +205,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
               ? claudeSummary
               : activeTab === 'codex'
                 ? codexSummary
+                : activeTab === 'copilot'
+                  ? copilotSummary
                 : activeTab === 'github'
                   ? githubSummary
                 : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
@@ -444,6 +462,97 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'copilot' ? (
+          <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
+            <div className="space-y-3">
+              <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[#f0c419]" />
+                  <p className="text-sm font-medium">Copilot Trust State</p>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-[1.2rem] border border-white/8 bg-[#f0c419] p-4 text-black">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Active Sessions</p>
+                    <p className="mt-2 text-3xl font-semibold">{copilotInfo?.activeSessionCount ?? 0}</p>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Persisted CLI State</p>
+                    <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                      <p>Path: {copilotInfo?.persistedState?.path ?? 'Not stored'}</p>
+                      <p>Version: {copilotInfo?.persistedState?.version ?? 'Unknown'}</p>
+                      <p>Authenticated: {copilotInfo?.persistedState ? (copilotInfo.persistedState.authenticated ? 'Yes' : 'No') : 'Unknown'}</p>
+                      <p>Updated: {copilotInfo?.persistedState?.updatedAt ? new Date(copilotInfo.persistedState.updatedAt).toLocaleString() : 'Unknown'}</p>
+                    </div>
+                  </div>
+                  <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Live Trust Check</p>
+                    <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                      <p>Target: {copilotInfo?.liveStatusTarget ?? 'Unknown'}</p>
+                      <p>Trust configured: {copilotInfo?.liveStatus.trustConfigured ? 'Yes' : 'No'}</p>
+                      <p>Markers: {copilotInfo?.trustMarkers.length ?? 0}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+                <p className="text-sm font-medium">Trust Marker Paths</p>
+                <div className="mt-3 space-y-2">
+                  {copilotInfo?.trustMarkers.length ? (
+                    copilotInfo.trustMarkers.map((marker) => (
+                      <div key={marker} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3 font-mono text-xs text-[#9df6cd]">
+                        {marker}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                      No remembered Copilot trust markers yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
+              <p className="text-sm font-medium">Active Copilot Sessions</p>
+              <div className="mt-3 space-y-3">
+                {copilotInfo?.sessions.length ? (
+                  copilotInfo.sessions.map((session) => (
+                    <div key={session.sessionId} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{session.state}</p>
+                          <p className="mt-1 break-all font-mono text-xs text-[#f4f0e8]/50">{session.sessionId}</p>
+                        </div>
+                        <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/75">
+                          {session.trusted ? 'Trusted' : session.completed ? 'Completed' : 'Active'}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
+                        <p>Trust handled: {session.trustHandled ? 'Yes' : 'No'}</p>
+                        <p>Trust target: {session.trustTarget ?? 'Unknown'}</p>
+                        <p>Prompt: {session.prompt ?? 'None'}</p>
+                        <p>Error: {session.error ?? 'None'}</p>
+                        <p>Updated: {new Date(session.updatedAt).toLocaleString()}</p>
+                      </div>
+                      {session.outputExcerpt ? (
+                        <div className="mt-3">
+                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output Excerpt</p>
+                          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#9df6cd]">
+                            {session.outputExcerpt}
+                          </pre>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                    No active Copilot trust sessions. Open the Copilot wizard on the mobile app to start one.
+                  </div>
+                )}
               </div>
             </div>
           </div>
