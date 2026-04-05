@@ -5,13 +5,16 @@ import { getActiveProjectId } from './projects.ts'
 /** Active processes keyed by task ID */
 const processes = new Map<string, ManagedProcess>()
 
+type TaskMode = 'default' | 'plan'
+
 /** Build the command array for a given agent type, using stored tool paths when available */
-function buildCommand(agentType: string, prompt: string, model: string | null): string[] {
+function buildCommand(agentType: string, prompt: string, model: string | null, mode: TaskMode): string[] {
   switch (agentType) {
     case 'claude': {
       const claudePath = getToolPath('claude_cli') ?? 'claude'
       const cmd = [claudePath, '--dangerously-skip-permissions']
       if (model) cmd.push('--model', model)
+      if (mode === 'plan') cmd.push('--permission-mode', 'plan')
       cmd.push('-p', prompt)
       return cmd
     }
@@ -19,6 +22,7 @@ function buildCommand(agentType: string, prompt: string, model: string | null): 
       const codexPath = getToolPath('codex_cli') ?? 'codex'
       const cmd = [codexPath]
       if (model) cmd.push('--model', model)
+      if (mode === 'plan') cmd.push('-c', 'collaboration_mode="plan"')
       cmd.push('--prompt', prompt)
       return cmd
     }
@@ -35,16 +39,17 @@ export function startTask(
   agentType: string,
   workingDirectory: string | null,
   model: string | null = null,
+  mode: TaskMode = 'default',
 ): string {
   const taskId = crypto.randomUUID()
   const projectId = getActiveProjectId()
   const project = projectId ? getProject(projectId) : undefined
   const cwd = workingDirectory ?? project?.absolutePath ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
-  insertTask(taskId, prompt, agentType, cwd, project?.id ?? null, project?.name ?? null, model)
+  insertTask(taskId, prompt, agentType, mode, cwd, project?.id ?? null, project?.name ?? null, model)
 
-  const command = buildCommand(agentType, prompt, model)
+  const command = buildCommand(agentType, prompt, model, mode)
   console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
-  console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} agent=${agentType}`)
+  console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
   const proc = new ManagedProcess(taskId, command, cwd)
   processes.set(taskId, proc)
 

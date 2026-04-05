@@ -12,6 +12,32 @@ packages/shared/       Theme tokens, Zod schemas, wire protocol types, crypto ut
 packages/db/           Drizzle ORM schema + migrations (Postgres - web app DB)
 ```
 
+## Documentation
+
+Each app/package has its own CLAUDE.md with detailed architecture:
+
+- `apps/mobile/CLAUDE.md` — Screens, navigation, stores, services, Bauhaus design system
+- `apps/agent/CLAUDE.md` — Server database, routes, build & bundle
+- `apps/agent/console/CLAUDE.md` — Console SPA pages, components, API client
+- `apps/web/CLAUDE.md` — Landing page routes and components
+- `packages/shared/CLAUDE.md` — Wire protocol types, theme tokens, schema, crypto
+- `packages/db/CLAUDE.md` — Web app PostgreSQL schema
+
+Deep-dive documentation lives in `docs/` — see each CLAUDE.md for links to relevant deep-dives:
+
+- `docs/mobile/` — Navigation, setup wizards, adaptive layout, design system, task flow, stores
+- `docs/connection/` — Pairing flow, reconnection logic
+- `docs/protocol/` — Wire types, WebSocket lifecycle
+- `docs/agent/` — Task system, terminal, preview proxy, CLI providers, prerequisites
+- `docs/console/` — Diagnostics panel, setup status grid
+- `docs/docker/` — Container UI, server Docker setup
+- `docs/git/` — Mobile git workspace, server git operations
+- `docs/files/` — Mobile file browser
+- `docs/plan/` — Plan review workspace
+- `docs/projects/` — Project system
+- `docs/testing/` — Local testing setup, testing infrastructure
+- `docs/database/` — Agent migrations
+
 ## Key Commands
 
 ```bash

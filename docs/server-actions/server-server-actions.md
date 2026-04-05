@@ -1,6 +1,6 @@
 # Server Actions Server Integration Plan
 
-This is a planning document only. It does not describe implementation work already completed.
+> **Status**: Implemented. The server actions integration described below is now complete and live. See [docs/mobile/stores.md](../mobile/stores.md) for the current store architecture.
 
 The goal is to connect the mobile server-actions workspace to the PocketDev agent in a way that reuses the existing authentication, REST routes, WebSocket transport, and terminal session support already present in `apps/agent`.
 

@@ -1,4 +1,4 @@
-import type { TaskStatus, ChangeType, DevicePlatform, AgentType } from '../schema/enums.js'
+import type { TaskStatus, TaskMode, ChangeType, DevicePlatform, AgentType } from '../schema/enums.js'
 
 export interface Device {
   id: string
@@ -13,6 +13,7 @@ export interface Task {
   id: string
   prompt: string
   agent_type: AgentType
+  mode: TaskMode
   model: string | null
   status: TaskStatus
   working_directory: string | null

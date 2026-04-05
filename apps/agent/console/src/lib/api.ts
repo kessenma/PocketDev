@@ -357,6 +357,7 @@ export interface TaskDebugEntry {
   id: string
   prompt: string
   agentType: string
+  mode: 'default' | 'plan'
   model: string | null
   status: string
   workingDirectory: string | null

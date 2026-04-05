@@ -1,12 +1,12 @@
 # Git UI
 
-This document tracks the mobile-only prototype for the git workspace under `apps/mobile/src/components/git/`.
+> **Status**: Fully server-integrated. For the git store architecture, see [docs/mobile/stores.md](../mobile/stores.md).
+
+This document covers the mobile git workspace under `apps/mobile/src/components/git/`.
 
 ## Purpose
 
-The current implementation is client-side only. It exists to shape the mobile git workflow and interaction model before any real git execution is wired into the server-side app.
-
-Right now the git workspace is intentionally backed by local mock state. No branch changes, commits, pushes, diffs, or refreshes are executed against a real repository from the mobile app yet.
+The git workspace is fully connected to the paired PocketDev agent. All operations execute against real repositories on the server via REST API: `fetchGitSummary`, `fetchGitChanges`, `fetchGitDiff`, `fetchGitHistory`, `fetchGitBranches`, `postGitCheckout`, `postGitCommit`, and `postGitPush`.
 
 Primary git areas represented in the UI:
 

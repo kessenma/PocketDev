@@ -19,6 +19,7 @@ type NewTaskDraftState = StoredNewTaskDraft & {
   isLoadingCapabilities: boolean
   setPrompt: (prompt: string) => void
   applyRecentPrompt: (prompt: string) => void
+  selectTaskMode: (mode: StoredNewTaskDraft['selectedTaskMode']) => void
   selectProvider: (providerId: ModelProviderId) => void
   selectModel: (providerId: ModelProviderId, modelId: string) => void
   submitDraft: () => void
@@ -35,6 +36,7 @@ function getInitialState(): StoredNewTaskDraft {
       prompt: '',
       selectedProviderId: defaultSelection.selectedProviderId,
       selectedModelId: defaultSelection.selectedModelId,
+      selectedTaskMode: 'default',
       lastActionMessage: 'Select a provider and model, then write your prompt.',
     }
   }
@@ -46,6 +48,7 @@ function getInitialState(): StoredNewTaskDraft {
     prompt: stored.prompt,
     selectedProviderId: provider.id,
     selectedModelId: model?.id ?? provider.models[0].id,
+    selectedTaskMode: stored.selectedTaskMode,
     lastActionMessage: stored.lastActionMessage,
   }
 }
@@ -70,6 +73,14 @@ export const useNewTaskDraftStore = create<NewTaskDraftState>((set, get) => ({
   applyRecentPrompt: (prompt) => {
     set((state) => {
       const nextState = { ...state, prompt }
+      persistDraft(nextState)
+      return nextState
+    })
+  },
+
+  selectTaskMode: (selectedTaskMode) => {
+    set((state) => {
+      const nextState = { ...state, selectedTaskMode }
       persistDraft(nextState)
       return nextState
     })

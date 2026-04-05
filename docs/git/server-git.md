@@ -1,6 +1,6 @@
 # Git Server Integration Plan
 
-This is a planning document only. It does not describe implementation work already completed.
+> **Status**: Implemented. The git server integration described below is now complete and live. See [docs/mobile/stores.md](../mobile/stores.md) for the current store architecture and [docs/agent/task-system.md](../agent/task-system.md) for agent-side details.
 
 The goal is to connect the mobile git workspace to the PocketDev agent so the UI can display real repository state and execute git actions on the paired server.
 

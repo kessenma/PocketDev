@@ -39,8 +39,13 @@ const TERMINAL_QUERY_RESPONSES: Array<{ pattern: RegExp; response: string; label
   { pattern: /\u001b\]10;\?(?:\u001b\\|\u0007)/, response: '\u001b]10;rgb:f4f0/e8e8/d0d0\u001b\\', label: 'OSC 10 (fg color)' },
   // Kitty keyboard protocol query → reply with no flags
   { pattern: /\u001b\[\?u/, response: '\u001b[?0u', label: 'Kitty keyboard query' },
+  // OSC 4 - color palette query (e.g., color 0) → reply with black
+  { pattern: /\u001b\]4;\d+;\?(?:\u001b\\|\u0007)/, response: '\u001b]4;0;rgb:0000/0000/0000\u001b\\', label: 'OSC 4 (palette)' },
   // Terminal size in chars (DTTERM)
   { pattern: /\u001b\[18t/, response: '\u001b[8;24;80t', label: 'Terminal size query' },
+  // Focus event tracking enabled → send focus gained event
+  // Many TUI apps wait for this before starting to render
+  { pattern: /\u001b\[\?1004h/, response: '\u001b[I', label: 'Focus tracking (send focus-in)' },
 ]
 const TRUST_REMEMBERED_PATTERN = /has been added to trusted folders/i
 const READY_PATTERNS = [

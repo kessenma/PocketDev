@@ -1,7 +1,7 @@
 /**
  * Docs: see `docs/plan/mobile-plan.md` for the workspace map, entry points, and backend
- * wiring notes. This module is mobile/client-side only today and still needs
- * to be wired into the server-side app.
+ * wiring notes. This module is wired to the mobile plan store and the paired
+ * server plan transport.
  */
 export { default as PlanActionBar } from './PlanActionBar'
 export { default as PlanBadge } from './PlanBadge'

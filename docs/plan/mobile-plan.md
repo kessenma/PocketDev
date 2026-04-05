@@ -1,12 +1,10 @@
 # Plan UI
 
-This document tracks the mobile-only prototype for the agent plan review workspace under `apps/mobile/src/components/plan/`.
+This document tracks the mobile agent plan review workspace under `apps/mobile/src/components/plan/`.
 
 ## Purpose
 
-The current implementation is a UI-first prototype for reviewing AI agent plans on mobile. It is intentionally backed by local mock state so the interaction model can be shaped before wiring it to the server-side app.
-
-Right now this workspace is client-side only. The mobile app is not yet receiving real plans from, or sending plan decisions to, the paired server.
+The current implementation supports reviewing AI agent plans on mobile against the paired agent server. The mobile store consumes plan history and active plans from the server, and plan actions flow over the existing task WebSocket transport.
 
 Primary plan review areas represented in the UI:
 
@@ -25,7 +23,7 @@ Primary plan review areas represented in the UI:
 - `apps/mobile/src/components/plan/PlanWorkspace.tsx`
   - top-level workspace composition and segmented views
 - `apps/mobile/src/stores/plan.ts`
-  - prototype Zustand store and mock plan data
+  - Zustand store for active plan state, history, and plan actions
 - `apps/mobile/src/components/plan/index.ts`
   - barrel export for the module
 
@@ -66,33 +64,14 @@ Primary plan review areas represented in the UI:
 
 ## Current Behavior
 
-- all data is local mock data
-- refresh only updates the status banner from the prototype store
-- answering questions updates local state only
-- sending conversation messages triggers a mock agent auto-reply
-- accept moves the active plan to history with status `accepted`
-- deny moves the active plan to history with status `denied`
+- refresh fetches the active plan and plan history from the paired server
+- answering questions updates local state and sends `plan.answer` over WebSocket
+- sending conversation messages appends locally and sends `plan.message`
+- accept sends `plan.accept` and moves the resolved plan into history after the server event arrives
+- deny sends `plan.deny` and moves the resolved plan into history after the server event arrives
 - the workspace supports phone and tablet split layouts
 - plan step descriptions and conversation messages render as markdown via `react-native-enriched-markdown`
 - the notes editor supports live markdown editing via `EnrichedMarkdownInput`
-
-## Expected Backend Wiring Later
-
-When the server-side app is ready, this client-only store should be replaced or adapted to consume real plan data and actions from the paired server.
-
-Expected server-backed capabilities:
-
-- receive plan proposals from the agent over the existing WebSocket connection
-- submit question answers back to the agent
-- send accept or deny decisions
-- stream conversation messages in real time
-- fetch plan history from the agent
-
-Suggested next backend-facing additions:
-
-- define a shared plan payload between mobile and server in `@pocketdev/shared/types`
-- map plan actions to WebSocket commands (plan.accept, plan.deny, plan.answer, plan.message)
-- decide whether plan history is stored on the agent or only in the mobile store
 
 ## Update Rule
 

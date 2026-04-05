@@ -101,6 +101,7 @@ export function TasksDiagnosticsTab({ tasksInfo }: Props) {
                 </div>
                 <div className="mt-3 grid gap-x-4 gap-y-1 text-xs text-[#f4f0e8]/65 sm:grid-cols-2">
                   <p>Agent: <span className="font-medium text-[#f4f0e8]/85">{task.agentType}</span></p>
+                  <p>Mode: <span className="font-medium capitalize text-[#f4f0e8]/85">{task.mode}</span></p>
                   <p>Model: <span className="font-medium text-[#f4f0e8]/85">{task.model ?? 'default'}</span></p>
                   <p>Project: {task.projectName ?? 'None'}</p>
                   <p>Exit code: {task.exitCode ?? '—'}</p>

@@ -1,6 +1,8 @@
 export {
   taskStatusEnum,
   type TaskStatus,
+  taskModeEnum,
+  type TaskMode,
   changeTypeEnum,
   type ChangeType,
   devicePlatformEnum,

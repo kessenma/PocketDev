@@ -1,12 +1,12 @@
 # Server Actions UI
 
-This document tracks the mobile-only prototype for the server operations workspace added under `apps/mobile/src/components/server-actions/`.
+> **Status**: Server-integrated. For the store architecture, see [docs/mobile/stores.md](../mobile/stores.md).
+
+This document covers the mobile server operations workspace under `apps/mobile/src/components/server-actions/`.
 
 ## Purpose
 
-The current implementation is a UI-first prototype for mobile server debugging. It is intentionally backed by local mock state so the interaction model can be shaped before wiring it to the server-side app and test infrastructure.
-
-Right now this workspace is client-side only. The mobile app is not yet fetching real diagnostics, executing server commands, or streaming live operational output from the paired server.
+The server actions workspace is connected to the paired PocketDev agent. It fetches real diagnostics, server metrics, and operational data via REST API: `fetchServerSummary`, `fetchServerPorts`, `fetchServerNetwork`, `fetchServerErrors`, `fetchServerActions`, and `runServerAction`.
 
 Primary debugging areas represented in the UI:
 

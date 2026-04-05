@@ -13,7 +13,7 @@ import {
 } from 'react-native'
 import { X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import type { AgentType } from '@pocketdev/shared/schema'
+import type { AgentType, TaskMode } from '@pocketdev/shared/schema'
 import { useTheme } from '../../contexts/ThemeContext'
 import { getRecentPrompts, addRecentPrompt } from '../../services/storage'
 import { useNewTaskDraftStore } from '../../stores/new-task-draft'
@@ -45,6 +45,8 @@ export default function NewTaskSheet({ visible, onClose }: Props) {
   const selectedModelId = useNewTaskDraftStore((state) => state.selectedModelId)
   const setPrompt = useNewTaskDraftStore((state) => state.setPrompt)
   const applyRecentPrompt = useNewTaskDraftStore((state) => state.applyRecentPrompt)
+  const selectedTaskMode = useNewTaskDraftStore((state) => state.selectedTaskMode)
+  const selectTaskMode = useNewTaskDraftStore((state) => state.selectTaskMode)
   const selectProvider = useNewTaskDraftStore((state) => state.selectProvider)
   const selectModel = useNewTaskDraftStore((state) => state.selectModel)
   const submitDraft = useNewTaskDraftStore((state) => state.submitDraft)
@@ -104,7 +106,7 @@ export default function NewTaskSheet({ visible, onClose }: Props) {
     ].join('\n')
 
     const cliModelId = getCliModelId(selectedProviderId as ModelProviderId, selectedModelId)
-    startTask(taskPrompt, agentType, rootPath || null, cliModelId)
+    startTask(taskPrompt, agentType, rootPath || null, cliModelId, selectedTaskMode)
     submitDraft()
     onClose()
   }
@@ -156,6 +158,32 @@ export default function NewTaskSheet({ visible, onClose }: Props) {
               </View>
             </BauhausPanel>
           ) : null}
+
+          <BauhausPanel style={styles.section} accentColor={colors.accentRed}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Task Mode</Text>
+            <View style={styles.modeRow}>
+              {TASK_MODE_OPTIONS.map((option) => {
+                const selected = option.value === selectedTaskMode
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    activeOpacity={0.85}
+                    onPress={() => selectTaskMode(option.value)}
+                    style={[
+                      styles.modeCard,
+                      {
+                        backgroundColor: selected ? colors.panelAlt : colors.panel,
+                        borderColor: selected ? option.accent : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.modeTitle, { color: colors.text }]}>{option.label}</Text>
+                    <Text style={[styles.modeBody, { color: colors.textSecondary }]}>{option.description}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </BauhausPanel>
 
           <BauhausPanel style={styles.section} accentColor={colors.accentRed}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Prompt</Text>
@@ -212,6 +240,26 @@ function providerToAgentType(providerId: string): AgentType {
   return 'codex'
 }
 
+const TASK_MODE_OPTIONS: Array<{
+  value: TaskMode
+  label: string
+  description: string
+  accent: string
+}> = [
+  {
+    value: 'default',
+    label: 'Default',
+    description: 'Full execution mode for normal coding and repo work.',
+    accent: '#3b82f6',
+  },
+  {
+    value: 'plan',
+    label: 'Plan',
+    description: 'Ask the agent to stay in planning mode before execution.',
+    accent: '#f59e0b',
+  },
+]
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -254,6 +302,21 @@ const styles = StyleSheet.create({
     ...typeStyles.bodyStrong,
   },
   selectionBody: {
+    ...typeStyles.bodySmall,
+  },
+  modeRow: {
+    gap: spacing[2],
+  },
+  modeCard: {
+    borderWidth: 2,
+    borderRadius: borderRadius.lg,
+    padding: spacing[3],
+    gap: spacing[1],
+  },
+  modeTitle: {
+    ...typeStyles.bodyStrong,
+  },
+  modeBody: {
     ...typeStyles.bodySmall,
   },
   chipRow: {

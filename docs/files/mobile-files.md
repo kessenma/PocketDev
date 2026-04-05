@@ -1,12 +1,12 @@
 # Files UI
 
-This document tracks the mobile-only prototype for the read-only file explorer under `apps/mobile/src/components/files/`.
+> **Status**: Server-integrated. For the full file store architecture, see [docs/mobile/stores.md](../mobile/stores.md).
+
+This document covers the mobile file explorer under `apps/mobile/src/components/files/`.
 
 ## Purpose
 
-The current implementation is a UI-first prototype for browsing project files on mobile. It is intentionally backed by local mock state so the browsing and code-reading flow can be shaped before wiring it to the PocketDev server transport.
-
-Right now this workspace is client-side only. The mobile app is not yet fetching real trees, loading file contents on demand, or streaming updates from the paired server.
+The file explorer provides server-backed browsing and code reading. It fetches real directory trees via `listDirectory()`, loads file content on demand via `fetchFileContent()`, and supports ripgrep search via `searchFiles()` — all through the paired PocketDev agent's REST API.
 
 Primary areas represented in the UI:
 

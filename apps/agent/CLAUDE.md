@@ -29,6 +29,14 @@ pnpm db:generate    # Generate migration SQL in drizzle/
 
 See [docs/database/agent-migrations.md](../../docs/database/agent-migrations.md) for the full migration guide.
 
+## Key Documentation
+<!-- Deep dives for agent internals -->
+<!-- docs/agent/task-system.md — Task creation, process spawning, streaming, state machine -->
+<!-- docs/agent/terminal.md — PTY allocation, WebSocket streaming, session lifecycle -->
+<!-- docs/agent/preview-proxy.md — /preview/* reverse proxy, port auto-detection -->
+<!-- docs/agent/cli-providers.md — Claude/Codex/Copilot CLI invocation, capability detection -->
+<!-- docs/agent/prerequisites.md — Tool detection system, prerequisites report -->
+
 ## Routes
 
 All routes are prefixed with `/PocketDev/`:
@@ -44,7 +52,7 @@ All routes are prefixed with `/PocketDev/`:
 
 ## Console SPA
 
-The web console lives at `console/` (a separate Vite + React + shadcn app). It builds to `console/dist/` and is served as static files by the agent.
+The web console lives at `console/` (a separate Vite + React + shadcn app). It builds to `console/dist/` and is served as static files by the agent. See `console/CLAUDE.md` for full console architecture.
 
 ```bash
 cd console && pnpm dev    # Dev server for console UI

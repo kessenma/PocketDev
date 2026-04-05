@@ -100,6 +100,7 @@ export interface StoredNewTaskDraft {
   prompt: string
   selectedProviderId: string
   selectedModelId: string
+  selectedTaskMode: 'default' | 'plan'
   lastActionMessage: string
 }
 
@@ -118,7 +119,13 @@ export function getNewTaskDraft(): StoredNewTaskDraft | null {
       return null
     }
 
-    return parsed as StoredNewTaskDraft
+    return {
+      prompt: parsed.prompt,
+      selectedProviderId: parsed.selectedProviderId,
+      selectedModelId: parsed.selectedModelId,
+      selectedTaskMode: parsed.selectedTaskMode === 'plan' ? 'plan' : 'default',
+      lastActionMessage: parsed.lastActionMessage,
+    }
   } catch {
     return null
   }

@@ -9,6 +9,9 @@ export const taskStatusEnum = z.enum([
 ])
 export type TaskStatus = z.infer<typeof taskStatusEnum>
 
+export const taskModeEnum = z.enum(['default', 'plan'])
+export type TaskMode = z.infer<typeof taskModeEnum>
+
 export const changeTypeEnum = z.enum(['created', 'modified', 'deleted'])
 export type ChangeType = z.infer<typeof changeTypeEnum>
 

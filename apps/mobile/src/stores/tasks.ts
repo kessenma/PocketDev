@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Task } from '@pocketdev/shared/types'
-import type { TaskStatus, AgentType } from '@pocketdev/shared/schema'
+import type { TaskStatus, AgentType, TaskMode } from '@pocketdev/shared/schema'
 import { fetchTaskList } from '../services/api'
 import { useConnectionStore } from './connection'
 
@@ -10,7 +10,13 @@ interface TaskState {
   taskLogs: Map<string, string[]>
   setTasks: (tasks: Task[]) => void
   refreshFromServer: () => Promise<void>
-  startTask: (prompt: string, agentType: AgentType, workingDirectory?: string | null, model?: string | null) => void
+  startTask: (
+    prompt: string,
+    agentType: AgentType,
+    workingDirectory?: string | null,
+    model?: string | null,
+    mode?: TaskMode,
+  ) => void
   killTask: (id: string) => void
   appendLog: (taskId: string, line: string) => void
   updateTaskStatus: (taskId: string, status: TaskStatus) => void
@@ -42,11 +48,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set({ activeTaskId: nextActiveTaskId })
   },
 
-  startTask: (prompt: string, agentType: AgentType, workingDirectory = null, model = null) => {
+  startTask: (prompt: string, agentType: AgentType, workingDirectory = null, model = null, mode = 'default') => {
     const ws = useConnectionStore.getState().ws
     if (!ws) return
 
-    ws.send('task.start', { prompt, agentType, workingDirectory, model })
+    ws.send('task.start', { prompt, agentType, workingDirectory, model, mode })
     setTimeout(() => {
       void get().refreshFromServer().catch(() => {})
     }, 250)

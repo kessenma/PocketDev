@@ -45,10 +45,10 @@ export default function PlanWorkspace() {
   const header = (
     <View style={styles.header}>
       <View style={styles.headerText}>
-        <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Plan Prototype</Text>
+        <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Plan Review</Text>
         <Text style={[styles.title, { color: colors.text }]}>Agent plan review</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          This feature uses local mock interactions today. Plan review and approval will be wired to the agent transport later.
+          Review agent-proposed plans, answer questions, and accept or deny them before implementation continues.
         </Text>
       </View>
 

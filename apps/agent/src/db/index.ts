@@ -121,6 +121,10 @@ export function getDb() {
     if (!taskColumns.some((column) => column.name === 'model')) {
       sqlite.exec(`ALTER TABLE tasks ADD COLUMN model TEXT;`)
     }
+    if (!taskColumns.some((column) => column.name === 'mode')) {
+      sqlite.exec(`ALTER TABLE tasks ADD COLUMN mode TEXT DEFAULT 'default';`)
+      sqlite.exec(`UPDATE tasks SET mode = 'default' WHERE mode IS NULL;`)
+    }
   }
   return _db
 }
@@ -204,6 +208,7 @@ export function insertTask(
   id: string,
   prompt: string,
   agentType: string,
+  mode: string,
   workingDirectory: string | null,
   projectId: string | null,
   projectName: string | null,
@@ -213,6 +218,7 @@ export function insertTask(
     id,
     prompt,
     agentType,
+    mode,
     model,
     workingDirectory,
     projectId,

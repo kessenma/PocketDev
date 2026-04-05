@@ -13,7 +13,7 @@ import { checkCopilotStatus } from './copilot-setup.ts'
 /** Run commands in a shell that can see standard system-wide tool locations. */
 async function exec(cmd: string): Promise<{ stdout: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
-  const wrapped = `export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"; ${cmd}`
+  const wrapped = `export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"; source ~/.bashrc 2>/dev/null; ${cmd}`
   const proc = Bun.spawn(['bash', '-lc', wrapped], {
     stdout: 'pipe',
     stderr: 'pipe',
