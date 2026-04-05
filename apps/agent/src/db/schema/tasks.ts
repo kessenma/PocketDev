@@ -5,6 +5,7 @@ export const tasks = sqliteTable('tasks', {
   id: text('id').primaryKey(),
   prompt: text('prompt').notNull(),
   agentType: text('agent_type').default('claude'),
+  model: text('model'),
   status: text('status').default('pending'),
   projectId: text('project_id'),
   projectName: text('project_name'),

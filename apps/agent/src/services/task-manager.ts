@@ -6,15 +6,21 @@ import { getActiveProjectId } from './projects.ts'
 const processes = new Map<string, ManagedProcess>()
 
 /** Build the command array for a given agent type, using stored tool paths when available */
-function buildCommand(agentType: string, prompt: string): string[] {
+function buildCommand(agentType: string, prompt: string, model: string | null): string[] {
   switch (agentType) {
     case 'claude': {
       const claudePath = getToolPath('claude_cli') ?? 'claude'
-      return [claudePath, '--dangerously-skip-permissions', '-p', prompt]
+      const cmd = [claudePath, '--dangerously-skip-permissions']
+      if (model) cmd.push('--model', model)
+      cmd.push('-p', prompt)
+      return cmd
     }
     case 'codex': {
       const codexPath = getToolPath('codex_cli') ?? 'codex'
-      return [codexPath, '--prompt', prompt]
+      const cmd = [codexPath]
+      if (model) cmd.push('--model', model)
+      cmd.push('--prompt', prompt)
+      return cmd
     }
     case 'shell':
       return ['sh', '-c', prompt]
@@ -28,14 +34,15 @@ export function startTask(
   prompt: string,
   agentType: string,
   workingDirectory: string | null,
+  model: string | null = null,
 ): string {
   const taskId = crypto.randomUUID()
   const projectId = getActiveProjectId()
   const project = projectId ? getProject(projectId) : undefined
   const cwd = workingDirectory ?? project?.absolutePath ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
-  insertTask(taskId, prompt, agentType, cwd, project?.id ?? null, project?.name ?? null)
+  insertTask(taskId, prompt, agentType, cwd, project?.id ?? null, project?.name ?? null, model)
 
-  const command = buildCommand(agentType, prompt)
+  const command = buildCommand(agentType, prompt, model)
   const proc = new ManagedProcess(taskId, command, cwd)
   processes.set(taskId, proc)
 

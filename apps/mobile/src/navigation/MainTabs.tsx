@@ -1,21 +1,22 @@
 import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import { View, StyleSheet } from 'react-native'
+import { Text, View, StyleSheet } from 'react-native'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import TasksScreen from '../screens/TasksScreen'
-import FilesScreen from '../screens/FilesScreen'
-import ServerScreen from '../screens/ServerScreen'
-import NewTaskScreen from '../screens/NewTaskScreen'
+import CodeScreen from '../screens/CodeScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import { useConnectionStore } from '../stores/connection'
 import type { MainTabParamList } from './types'
 import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import WorkspaceNavigation from '../components/navigation/WorkspaceNavigation'
 import { renderTabIcon } from './tab-icons'
+import { typeStyles } from '../theme/typography'
 
 const Tab = createBottomTabNavigator<MainTabParamList>()
 
 function StatusDot() {
+  const { colors } = useTheme()
   const status = useConnectionStore((s) => s.status)
   const color =
     status === 'connected'
@@ -24,7 +25,12 @@ function StatusDot() {
         ? '#facc15'
         : '#ef4444'
 
-  return <View style={[styles.dot, { backgroundColor: color }]} />
+  return (
+    <View style={[styles.statusPill, { borderColor: colors.border, backgroundColor: colors.panelAlt }]}>
+      <View style={[styles.dot, { backgroundColor: color }]} />
+      <Text style={[typeStyles.meta, { color: colors.text }]}>{status}</Text>
+    </View>
+  )
 }
 
 function renderWorkspaceTabBar(
@@ -45,14 +51,23 @@ export default function MainTabs() {
     <Tab.Navigator
       tabBar={isTabletDevice ? renderWorkspaceTabBar : undefined}
       screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
+        headerStyle: { backgroundColor: colors.panel },
         headerTintColor: colors.text,
         sceneStyle: { backgroundColor: colors.background },
         tabBarStyle: isTabletDevice
           ? { display: 'none' }
-          : { backgroundColor: colors.surface, borderTopColor: colors.border },
+          : {
+              backgroundColor: colors.panel,
+              borderTopColor: colors.border,
+              borderTopWidth: 2,
+              height: 72,
+              paddingBottom: spacing[2],
+              paddingTop: spacing[2],
+            },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
+        tabBarLabelStyle: typeStyles.meta,
+        tabBarItemStyle: { borderRadius: borderRadius.md, marginHorizontal: spacing[1] },
       }}
     >
       <Tab.Screen
@@ -64,27 +79,11 @@ export default function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="Files"
-        component={FilesScreen}
+        name="Code"
+        component={CodeScreen}
         options={{
-          title: 'Workspace',
-          tabBarIcon: ({ color, size }) => renderTabIcon('Files', { color, size }),
-        }}
-      />
-      <Tab.Screen
-        name="Server"
-        component={ServerScreen}
-        options={{
-          title: 'Workspace',
-          tabBarIcon: ({ color, size }) => renderTabIcon('Server', { color, size }),
-        }}
-      />
-      <Tab.Screen
-        name="NewTask"
-        component={NewTaskScreen}
-        options={{
-          title: 'New Task',
-          tabBarIcon: ({ color, size }) => renderTabIcon('NewTask', { color, size }),
+          title: 'Code',
+          tabBarIcon: ({ color, size }) => renderTabIcon('Code', { color, size }),
         }}
       />
       <Tab.Screen
@@ -102,9 +101,17 @@ export default function MainTabs() {
 }
 
 const styles = StyleSheet.create({
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    borderWidth: 1.5,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+  },
   dot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
   },
 })

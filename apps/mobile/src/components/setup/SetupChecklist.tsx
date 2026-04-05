@@ -6,7 +6,14 @@ import { useSetupStore } from '../../stores/setup'
 import SetupCheckItem from './SetupCheckItem'
 import DatabaseSetup from './DatabaseSetup'
 import type { ToolCheck } from '@pocketdev/shared/types'
-import { getCodexBlockedReason } from './setup-tool-utils'
+import {
+  getAiAssistantTools,
+  getCodexBlockedReason,
+  getCopilotBlockedReason,
+  getLanguageTools,
+  getRequiredSetupTools,
+  getServerSetupStatus,
+} from './setup-tool-utils'
 
 interface Props {
   onInstall: (tool: ToolCheck) => void
@@ -15,6 +22,8 @@ interface Props {
   onClaudeWizard: (tool: ToolCheck) => void
   onCodexWizard: (tool: ToolCheck) => void
   onBlockedCodexWizard: (tool: ToolCheck) => void
+  onCopilotWizard: (tool: ToolCheck) => void
+  onBlockedCopilotWizard: (tool: ToolCheck) => void
   onPkgWizard: (tool: ToolCheck) => void
   onPythonWizard: (tool: ToolCheck) => void
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
@@ -27,6 +36,8 @@ export default function SetupChecklist({
   onClaudeWizard,
   onCodexWizard,
   onBlockedCodexWizard,
+  onCopilotWizard,
+  onBlockedCopilotWizard,
   onPkgWizard,
   onPythonWizard,
   onScroll,
@@ -51,11 +62,40 @@ export default function SetupChecklist({
     )
   }
 
-  const required = report?.tools.filter((t) => t.required) ?? []
-  const optional = report?.tools.filter((t) => !t.required) ?? []
+  const required = getRequiredSetupTools(report)
+  const aiAssistants = getAiAssistantTools(report)
+  const languages = getLanguageTools(report)
   const dockerTool = report?.tools.find((t) => t.id === 'docker')
   const dockerInstalled = dockerTool?.status === 'installed'
   const codexBlockedReason = getCodexBlockedReason(report)
+  const copilotBlockedReason = getCopilotBlockedReason(report)
+  const setupStatus = getServerSetupStatus(report)
+
+  function renderTools(tools: ToolCheck[]) {
+    return tools.map((tool) => (
+      <SetupCheckItem
+        key={`${tool.id}-${tool.name}`}
+        tool={tool}
+        onInstall={onInstall}
+        onAuthenticate={onAuthenticate}
+        onGitWizard={onGitWizard}
+        onClaudeWizard={onClaudeWizard}
+        onCodexWizard={onCodexWizard}
+        onBlockedCodexWizard={onBlockedCodexWizard}
+        onCopilotWizard={onCopilotWizard}
+        onBlockedCopilotWizard={onBlockedCopilotWizard}
+        onPkgWizard={onPkgWizard}
+        onPythonWizard={onPythonWizard}
+        disabledReason={
+          tool.id === 'codex_cli'
+            ? codexBlockedReason
+            : tool.id === 'copilot_cli'
+              ? copilotBlockedReason
+              : null
+        }
+      />
+    ))
+  }
 
   return (
     <Animated.FlatList
@@ -72,50 +112,36 @@ export default function SetupChecklist({
           {report && (
             <View style={styles.serverInfoRow}>
               <View style={[styles.serverInfoCard, { backgroundColor: bauhaus.black }]}>
-                <Text style={[styles.serverInfoLabel, { color: 'rgba(255,255,255,0.55)' }]}>Workspace</Text>
-                <Text style={[styles.serverInfoValue, { color: '#ffffff' }]}>
-                  {report.ready ? 'Coding tools ready' : 'Tool setup in progress'}
+              <Text style={[styles.serverInfoLabel, { color: 'rgba(255,255,255,0.55)' }]}>Workspace</Text>
+              <Text style={[styles.serverInfoValue, { color: '#ffffff' }]}>
+                  {setupStatus.ready ? 'Coding tools ready' : 'Tool setup in progress'}
                 </Text>
               </View>
             </View>
           )}
 
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Core Tools</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Required Setup</Text>
+          <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+            Complete Git and package managers.
+          </Text>
           <View style={styles.section}>
-            {required.map((tool) => (
-              <SetupCheckItem
-                key={tool.id}
-                tool={tool}
-                onInstall={onInstall}
-                onAuthenticate={onAuthenticate}
-                onGitWizard={onGitWizard}
-                onClaudeWizard={onClaudeWizard}
-                onCodexWizard={onCodexWizard}
-                onBlockedCodexWizard={onBlockedCodexWizard}
-                onPkgWizard={onPkgWizard}
-                onPythonWizard={onPythonWizard}
-                disabledReason={tool.id === 'codex_cli' ? codexBlockedReason : null}
-              />
-            ))}
+            {renderTools(required)}
           </View>
 
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Extra Tools</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Assistant</Text>
+          <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+            Choose at least one: Claude, Codex, or GitHub Copilot.
+          </Text>
           <View style={styles.section}>
-            {optional.map((tool) => (
-              <SetupCheckItem
-                key={tool.id}
-                tool={tool}
-                onInstall={onInstall}
-                onAuthenticate={onAuthenticate}
-                onGitWizard={onGitWizard}
-                onClaudeWizard={onClaudeWizard}
-                onCodexWizard={onCodexWizard}
-                onBlockedCodexWizard={onBlockedCodexWizard}
-                onPkgWizard={onPkgWizard}
-                onPythonWizard={onPythonWizard}
-                disabledReason={tool.id === 'codex_cli' ? codexBlockedReason : null}
-              />
-            ))}
+            {renderTools(aiAssistants)}
+          </View>
+
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Language</Text>
+          <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+            Set up Python for workspace language support.
+          </Text>
+          <View style={styles.section}>
+            {renderTools(languages)}
           </View>
 
           <DatabaseSetup
@@ -176,5 +202,10 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: spacing[2],
+  },
+  sectionHint: {
+    ...typographyScale.sm,
+    marginTop: -spacing[1],
+    marginBottom: spacing[1],
   },
 })

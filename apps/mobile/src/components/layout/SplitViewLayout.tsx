@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react'
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
-import { spacing } from '@pocketdev/shared/theme'
+import { layoutGrid } from '@pocketdev/shared/theme'
 
 type Props = {
   leading: ReactNode
@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
-    gap: spacing[4],
+    gap: layoutGrid.panelGap,
   },
   leading: {
     flexShrink: 0,

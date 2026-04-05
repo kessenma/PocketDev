@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react'
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
-import { spacing } from '@pocketdev/shared/theme'
+import { layoutGrid, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../hooks/useAdaptiveLayout'
 
@@ -28,6 +28,9 @@ export default function AdaptiveShell({
           styles.content,
           isPhone ? styles.phoneContent : styles.tabletContent,
           !isPhone && { maxWidth },
+          {
+            borderColor: colors.border,
+          },
           contentStyle,
         ]}
       >
@@ -47,11 +50,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   phoneContent: {
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[4],
+    paddingHorizontal: layoutGrid.insetPhone,
+    paddingVertical: layoutGrid.insetPhone,
   },
   tabletContent: {
-    paddingHorizontal: spacing[6],
-    paddingVertical: spacing[6],
+    paddingHorizontal: layoutGrid.insetTablet,
+    paddingVertical: layoutGrid.insetTablet,
   },
 })

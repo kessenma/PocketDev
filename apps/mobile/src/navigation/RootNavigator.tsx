@@ -10,6 +10,7 @@ import ProjectsScreen from '../screens/ProjectsScreen'
 import MainTabs from './MainTabs'
 import { useConnectionStore } from '../stores/connection'
 import type { RootStackParamList } from './types'
+import { typeStyles } from '../theme/typography'
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
@@ -21,8 +22,14 @@ export default function RootNavigator() {
     <Stack.Navigator
       initialRouteName={server ? 'Main' : 'Connect'}
       screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
+        headerStyle: { backgroundColor: colors.panel },
         headerTintColor: colors.text,
+        headerShadowVisible: false,
+        headerTitleStyle: {
+          fontFamily: typeStyles.sectionTitle.fontFamily,
+          fontSize: typeStyles.sectionTitle.fontSize,
+          fontWeight: '800',
+        },
       }}
     >
       <Stack.Screen

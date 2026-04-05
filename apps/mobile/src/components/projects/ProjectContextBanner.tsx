@@ -1,8 +1,11 @@
 import React from 'react'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { StyleSheet, Text, View } from 'react-native'
+import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useProjectsStore } from '../../stores/projects'
+import { BauhausPanel } from '../shared/BauhausPanel'
+import BauhausButton from '../shared/BauhausButton'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   onOpenProjects: () => void
@@ -14,7 +17,7 @@ export default function ProjectContextBanner({ onOpenProjects }: Props) {
   const activeProject = projects.find((project) => project.isActive) ?? null
 
   return (
-    <View style={[styles.banner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <BauhausPanel style={styles.banner} accentColor={colors.accentYellow}>
       <View style={styles.copy}>
         <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Active Repo</Text>
         <Text style={[styles.title, { color: colors.text }]}>
@@ -25,47 +28,27 @@ export default function ProjectContextBanner({ onOpenProjects }: Props) {
         </Text>
       </View>
 
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '35' }]}
-        onPress={onOpenProjects}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.buttonText, { color: colors.primary }]}>Open Repo Picker</Text>
-      </TouchableOpacity>
-    </View>
+      <BauhausButton variant="secondary" onPress={onOpenProjects}>
+        Open Repo Picker
+      </BauhausButton>
+    </BauhausPanel>
   )
 }
 
 const styles = StyleSheet.create({
   banner: {
-    borderWidth: 1,
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
     gap: spacing[3],
   },
   copy: {
     gap: spacing[1],
   },
   eyebrow: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   title: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
   },
   path: {
-    ...typographyScale.sm,
-  },
-  button: {
-    borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing[3],
-    alignItems: 'center',
-  },
-  buttonText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
 })

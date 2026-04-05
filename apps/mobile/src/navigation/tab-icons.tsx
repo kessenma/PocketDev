@@ -1,5 +1,5 @@
 import React from 'react'
-import { FolderOpen, ListChecks, Plus, Server, Settings } from 'lucide-react-native'
+import { FolderOpen, ListChecks, Settings } from 'lucide-react-native'
 import type { MainTabParamList } from './types'
 
 type TabName = keyof MainTabParamList
@@ -14,12 +14,8 @@ export function renderTabIcon(routeName: TabName, { color, size, strokeWidth = 2
   switch (routeName) {
     case 'Tasks':
       return <ListChecks color={color} size={size} strokeWidth={strokeWidth} />
-    case 'Files':
+    case 'Code':
       return <FolderOpen color={color} size={size} strokeWidth={strokeWidth} />
-    case 'Server':
-      return <Server color={color} size={size} strokeWidth={strokeWidth} />
-    case 'NewTask':
-      return <Plus color={color} size={size} strokeWidth={strokeWidth} />
     case 'Settings':
       return <Settings color={color} size={size} strokeWidth={strokeWidth} />
     default:

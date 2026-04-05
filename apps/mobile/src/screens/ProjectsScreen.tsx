@@ -1,12 +1,16 @@
 import React from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import { useProjectsStore } from '../stores/projects'
 import ServerSegmentedControl from '../components/server-actions/ServerSegmentedControl'
 import { Globe, Lock, type LucideIcon } from 'lucide-react-native'
 import ProjectCloneCelebration from '../components/projects/ProjectCloneCelebration'
+import BauhausButton from '../components/shared/BauhausButton'
+import { BauhausPanel } from '../components/shared/BauhausPanel'
+import BauhausBadge from '../components/shared/BauhausBadge'
+import { typeStyles } from '../theme/typography'
 
 type ProjectFilter = 'all' | 'local' | 'needsClone'
 type VisibilityFilter = 'all' | 'public' | 'private'
@@ -79,17 +83,14 @@ export default function ProjectsScreen() {
           <Text style={[styles.helperText, { color: colors.textTertiary }]}>
             Sorted by most recent update by default.
           </Text>
-          <View style={[styles.messageBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.messageBanner, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
             <Text style={[styles.messageText, { color: colors.textSecondary }]}>
-              {githubUsername ? `GitHub profile: @${githubUsername}. ` : ''}{lastActionMessage}
+              {githubUsername ? `GitHub profile: @${githubUsername}. ` : ''}
+              {lastActionMessage}
             </Text>
           </View>
           <View style={styles.filterRow}>
-            <ServerSegmentedControl
-              value={filter}
-              options={FILTER_OPTIONS}
-              onChange={setFilter}
-            />
+            <ServerSegmentedControl value={filter} options={FILTER_OPTIONS} onChange={setFilter} />
             <ServerSegmentedControl
               value={visibilityFilter}
               options={VISIBILITY_FILTER_OPTIONS}
@@ -106,10 +107,12 @@ export default function ProjectsScreen() {
           const isProjectCloning = mutatingAction === 'clone' && mutatingProjectId === project.id
           const isProjectSelecting = mutatingAction === 'select' && mutatingProjectId === project.id
           const showCloneCelebration = cloneCelebrationProjectId === project.id
+
           return (
-            <View
+            <BauhausPanel
               key={project.id}
-              style={[styles.card, { backgroundColor: colors.surface, borderColor: project.isActive ? colors.primary : colors.border }]}
+              style={styles.card}
+              accentColor={project.isActive ? colors.accentRed : project.isLocal ? colors.accentBlue : colors.accentYellow}
             >
               {showCloneCelebration ? (
                 <ProjectCloneCelebration onComplete={clearCloneCelebration} />
@@ -127,87 +130,83 @@ export default function ProjectsScreen() {
                 </View>
                 <View style={styles.badges}>
                   {project.isActive ? <Badge label="Active" color={colors.primary} /> : null}
-                  <Badge label={project.isLocal ? 'Local' : 'GitHub'} color={project.isLocal ? '#16a34a' : '#2563eb'} />
+                  <Badge
+                    label={project.isLocal ? 'Local' : 'GitHub'}
+                    color={project.isLocal ? colors.accentBlue : colors.accentYellow}
+                  />
                   {project.visibility === 'private' ? (
-                    <Badge label="Private" color="#f59e0b" icon={Lock} />
+                    <Badge label="Private" color={colors.accentRed} icon={Lock} />
                   ) : project.visibility === 'public' ? (
-                    <Badge label="Public" color="#38bdf8" icon={Globe} />
+                    <Badge label="Public" color={colors.accentBlue} icon={Globe} />
                   ) : null}
                 </View>
               </View>
 
               {project.isLocal ? (
                 <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                    onPress={() => selectProject(project.id, false)}
-                    disabled={isMutating}
-                  >
-                    <ActionLabel
-                      busy={isProjectSelecting}
-                      color={colors.primaryText}
-                      idleLabel="Open"
-                      busyLabel="Opening..."
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.secondaryButton, { borderColor: colors.border }]}
-                    onPress={() => selectProject(project.id, true)}
-                    disabled={isMutating}
-                  >
-                    <ActionLabel
-                      busy={isProjectSelecting}
-                      color={colors.text}
-                      idleLabel="Pull + Open"
-                      busyLabel="Opening..."
-                    />
-                  </TouchableOpacity>
+                  <View style={styles.actionButton}>
+                    <BauhausButton
+                      loading={isProjectSelecting}
+                      onPress={() => selectProject(project.id, false)}
+                      disabled={isMutating}
+                    >
+                      Open
+                    </BauhausButton>
+                  </View>
+                  <View style={styles.actionButton}>
+                    <BauhausButton
+                      variant="secondary"
+                      loading={isProjectSelecting}
+                      onPress={() => selectProject(project.id, true)}
+                      disabled={isMutating}
+                    >
+                      Pull + Open
+                    </BauhausButton>
+                  </View>
                 </View>
               ) : (
                 <View style={styles.remoteSection}>
                   <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                      onPress={() => cloneProject(project.id, 'default')}
-                      disabled={isMutating}
-                    >
-                      <ActionLabel
-                        busy={isProjectCloning}
-                        color={colors.primaryText}
-                        idleLabel="Clone Default"
-                        busyLabel="Cloning..."
-                      />
-                    </TouchableOpacity>
+                    <View style={styles.actionButton}>
+                      <BauhausButton
+                        loading={isProjectCloning}
+                        onPress={() => cloneProject(project.id, 'default')}
+                        disabled={isMutating}
+                      >
+                        Clone Default
+                      </BauhausButton>
+                    </View>
                   </View>
 
                   <TextInput
-                    style={[styles.branchInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                    style={[
+                      styles.branchInput,
+                      { borderColor: colors.border, color: colors.text, backgroundColor: colors.panelAlt },
+                    ]}
                     value={branchDraft}
                     onChangeText={(value) => setBranchDrafts((state) => ({ ...state, [project.id]: value }))}
                     placeholder="New branch name"
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="none"
                   />
-                  <TouchableOpacity
-                    style={[styles.secondaryButton, { borderColor: colors.border }]}
-                    onPress={() => cloneProject(project.id, 'new', branchDraft)}
-                    disabled={isMutating || branchDraft.trim().length === 0}
-                  >
-                    <ActionLabel
-                      busy={isProjectCloning}
-                      color={colors.text}
-                      idleLabel="Clone + New Branch"
-                      busyLabel="Cloning..."
-                    />
-                  </TouchableOpacity>
+                  <View style={styles.actionButton}>
+                    <BauhausButton
+                      variant="secondary"
+                      loading={isProjectCloning}
+                      onPress={() => cloneProject(project.id, 'new', branchDraft)}
+                      disabled={isMutating || branchDraft.trim().length === 0}
+                    >
+                      Clone + New Branch
+                    </BauhausButton>
+                  </View>
                 </View>
               )}
-            </View>
+            </BauhausPanel>
           )
         })}
 
         {!isLoading && visibleProjects.length === 0 ? (
-          <View style={[styles.emptyState, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.emptyState, { backgroundColor: colors.panel, borderColor: colors.border }]}>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No repositories found</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {filter === 'local'
@@ -218,7 +217,7 @@ export default function ProjectsScreen() {
                     ? 'No private repos matched the current filters.'
                     : visibilityFilter === 'public'
                       ? 'No public repos matched the current filters.'
-                  : 'Connect GitHub in workspace setup or register a local repo from the paired server seed path.'}
+                      : 'Connect GitHub in workspace setup or register a local repo from the paired server seed path.'}
             </Text>
           </View>
         ) : null}
@@ -237,28 +236,9 @@ function Badge({
   icon?: LucideIcon
 }) {
   return (
-    <View style={[styles.badge, { borderColor: color, backgroundColor: color + '14' }]}>
+    <View style={styles.badgeRow}>
       {Icon ? <Icon color={color} size={12} strokeWidth={2.2} /> : null}
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
-    </View>
-  )
-}
-
-function ActionLabel({
-  busy,
-  color,
-  idleLabel,
-  busyLabel,
-}: {
-  busy: boolean
-  color: string
-  idleLabel: string
-  busyLabel: string
-}) {
-  return (
-    <View style={styles.actionContent}>
-      {busy ? <ActivityIndicator size="small" color={color} /> : null}
-      <Text style={[styles.actionText, { color }]}>{busy ? busyLabel : idleLabel}</Text>
+      <BauhausBadge label={label} color={color} />
     </View>
   )
 }
@@ -288,43 +268,34 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   eyebrow: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   title: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.display,
   },
   subtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
   },
   helperText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   messageBanner: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
   },
   messageText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   filterRow: {
     gap: spacing[2],
   },
   countText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   card: {
-    borderWidth: 1,
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
     gap: spacing[3],
-    overflow: 'hidden',
-    position: 'relative',
   },
   cardHeader: {
     gap: spacing[2],
@@ -333,34 +304,23 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   repoName: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
   },
   repoMeta: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   updatedText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   badges: {
     flexDirection: 'row',
     gap: spacing[2],
     flexWrap: 'wrap',
   },
-  badge: {
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing[2],
-    paddingVertical: spacing[1],
+  badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[1],
-  },
-  badgeText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
   },
   actionRow: {
     flexDirection: 'row',
@@ -368,50 +328,28 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   actionButton: {
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-  },
-  actionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing[2],
-  },
-  actionText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-  },
-  secondaryText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    minWidth: 160,
   },
   remoteSection: {
     gap: spacing[3],
   },
   branchInput: {
-    borderWidth: 1,
+    ...typeStyles.body,
+    borderWidth: 2,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
   },
   emptyState: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.xl,
     padding: spacing[5],
     gap: spacing[2],
   },
   emptyTitle: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
   },
   emptyText: {
-    ...typographyScale.base,
+    ...typeStyles.body,
   },
 })

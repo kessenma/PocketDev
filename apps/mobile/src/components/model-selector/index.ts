@@ -4,5 +4,5 @@
  * today and intentionally does not connect to the server agent yet.
  */
 export { default as ModelSelector } from './ModelSelector'
-export { MODEL_PROVIDERS, getDefaultModelSelection, getModelById, getProviderById, mergeServerAvailability } from './catalog'
+export { MODEL_PROVIDERS, getDefaultModelSelection, getModelById, getProviderById, getCliModelId, mergeServerAvailability } from './catalog'
 export type { ModelProvider, ModelProviderId, SelectableModel } from './model'

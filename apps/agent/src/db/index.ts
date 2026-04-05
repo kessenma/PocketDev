@@ -118,6 +118,9 @@ export function getDb() {
     if (!taskColumns.some((column) => column.name === 'project_name')) {
       sqlite.exec(`ALTER TABLE tasks ADD COLUMN project_name TEXT;`)
     }
+    if (!taskColumns.some((column) => column.name === 'model')) {
+      sqlite.exec(`ALTER TABLE tasks ADD COLUMN model TEXT;`)
+    }
   }
   return _db
 }
@@ -204,11 +207,13 @@ export function insertTask(
   workingDirectory: string | null,
   projectId: string | null,
   projectName: string | null,
+  model: string | null,
 ) {
   getDb().insert(schema.tasks).values({
     id,
     prompt,
     agentType,
+    model,
     workingDirectory,
     projectId,
     projectName,

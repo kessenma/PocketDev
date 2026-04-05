@@ -44,6 +44,10 @@ import type {
   CodexAuthSubmitResult,
   CodexAuthCallbackReplayResult,
   CodexAuthMode,
+  CopilotSetupStatus,
+  CopilotInstallResult,
+  CopilotTrustStartResult,
+  CopilotTrustSessionStatus,
   BrowserSessionCreateResult,
   PythonSetupStatus,
   PkgManagerStatus,
@@ -738,6 +742,55 @@ export async function postVerifyCodexAuth(ip: string, port: number): Promise<Cod
   })
   if (!response.ok) throw new Error(`Failed to verify Codex auth (${response.status})`)
   return response.json() as Promise<CodexSetupStatus>
+}
+
+// ─── GitHub Copilot CLI Setup ──────────────────────────────────────
+
+export async function fetchCopilotSetupStatus(ip: string, port: number): Promise<CopilotSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/copilot-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch GitHub Copilot status (${response.status})`)
+  return response.json() as Promise<CopilotSetupStatus>
+}
+
+export async function postInstallCopilot(ip: string, port: number): Promise<CopilotInstallResult> {
+  const response = await fetch(apiUrl(ip, port, '/copilot-setup/install'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to install GitHub Copilot (${response.status})`)
+  return response.json() as Promise<CopilotInstallResult>
+}
+
+export async function postStartCopilotTrust(ip: string, port: number): Promise<CopilotTrustStartResult> {
+  const response = await fetch(apiUrl(ip, port, '/copilot-setup/trust/start'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to start GitHub Copilot trust setup (${response.status})`)
+  return response.json() as Promise<CopilotTrustStartResult>
+}
+
+export async function fetchCopilotTrustStatus(
+  ip: string,
+  port: number,
+  sessionId: string,
+): Promise<CopilotTrustSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, `/copilot-setup/trust/status/${encodeURIComponent(sessionId)}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch GitHub Copilot trust status (${response.status})`)
+  return response.json() as Promise<CopilotTrustSessionStatus>
+}
+
+export async function postVerifyCopilotSetup(ip: string, port: number): Promise<CopilotSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/copilot-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify GitHub Copilot setup (${response.status})`)
+  return response.json() as Promise<CopilotSetupStatus>
 }
 
 // ─── Python Setup ──────────────────────────────────────────────

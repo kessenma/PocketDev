@@ -1,8 +1,9 @@
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import type { ModelProvider, ModelProviderId } from './model'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   providers: ModelProvider[]
@@ -28,57 +29,73 @@ export default function ModelSelector({
       <View style={styles.providerRow}>
         {providers.map((provider) => {
           const isSelected = provider.id === selectedProvider.id
+          const isUnavailable = provider.availability === 'not_installed'
+          const needsAuth = provider.availability === 'installed_no_auth'
 
           return (
             <Pressable
               key={provider.id}
               accessibilityRole="button"
+              disabled={isUnavailable}
               onPress={() => onSelectProvider(provider.id)}
               style={[
                 styles.providerChip,
                 {
-                  backgroundColor: isSelected ? colors.primary : colors.background,
-                  borderColor: isSelected ? colors.primary : colors.border,
+                  backgroundColor: isUnavailable
+                    ? colors.backgroundSecondary
+                    : isSelected
+                      ? colors.primary
+                      : colors.panelAlt,
+                  borderColor: needsAuth ? colors.accentYellow : colors.border,
+                  opacity: isUnavailable ? 0.5 : 1,
                 },
               ]}
             >
               <Text
                 style={[
                   styles.providerChipText,
-                  { color: isSelected ? colors.primaryText : colors.text },
+                  { color: isUnavailable ? colors.textTertiary : isSelected ? colors.primaryText : colors.text },
                 ]}
               >
                 {provider.label}
+                {isUnavailable ? ' (N/A)' : needsAuth ? ' (!)' : ''}
               </Text>
             </Pressable>
           )
         })}
       </View>
 
-      <View
-        style={[
-          styles.providerPanel,
-          { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-        ]}
-      >
+      <View style={[styles.providerPanel, { backgroundColor: colors.panel, borderColor: colors.border }]}>
         <Text style={[styles.providerSummary, { color: colors.textSecondary }]}>
           {selectedProvider.summary}
         </Text>
+        {selectedProvider.availability === 'not_installed' && (
+          <Text style={[styles.providerWarning, { color: colors.textTertiary }]}>
+            Not installed on server — set up via Settings.
+          </Text>
+        )}
+        {selectedProvider.availability === 'installed_no_auth' && (
+          <Text style={[styles.providerWarning, { color: colors.accentYellow }]}>
+            Installed but not authenticated — complete setup in Settings.
+          </Text>
+        )}
 
         <View style={styles.modelList}>
           {selectedProvider.models.map((model) => {
             const isSelected = model.id === selectedModelId
+            const providerDisabled = selectedProvider.availability === 'not_installed' || selectedProvider.availability === 'installed_no_auth'
 
             return (
               <Pressable
                 key={model.id}
                 accessibilityRole="button"
+                disabled={providerDisabled}
                 onPress={() => onSelectModel(selectedProvider.id, model.id)}
                 style={[
                   styles.modelCard,
                   {
-                    backgroundColor: isSelected ? colors.surface : colors.background,
-                    borderColor: isSelected ? colors.primary : colors.border,
+                    backgroundColor: isSelected ? colors.panelAlt : colors.backgroundSecondary,
+                    borderColor: colors.border,
                   },
                 ]}
               >
@@ -120,27 +137,30 @@ const styles = StyleSheet.create({
   providerChip: {
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[2],
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
   },
   providerChipText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
   providerPanel: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.xl,
     padding: spacing[3],
     gap: spacing[3],
   },
   providerSummary: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
+  },
+  providerWarning: {
+    ...typeStyles.bodySmall,
+    fontWeight: '600',
   },
   modelList: {
     gap: spacing[3],
   },
   modelCard: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.lg,
     padding: spacing[3],
     gap: spacing[2],
@@ -149,19 +169,16 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   modelName: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyStrong,
   },
   modelContext: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
   modelHeadline: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '600',
   },
   modelDescription: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

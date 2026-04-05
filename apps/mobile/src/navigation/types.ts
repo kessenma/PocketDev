@@ -12,8 +12,6 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Tasks: undefined
-  Files: undefined
-  Server: undefined
-  NewTask: undefined
+  Code: undefined
   Settings: undefined
 }

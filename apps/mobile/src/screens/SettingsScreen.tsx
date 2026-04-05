@@ -1,15 +1,19 @@
 import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
+import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import { useConnectionStore } from '../stores/connection'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { useServerActionsStore } from '../stores/server-actions'
 import type { CompositeNavigationProp } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { MainTabParamList, RootStackParamList } from '../navigation/types'
-import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
-import SplitViewLayout from '../components/layout/SplitViewLayout'
+import ServerWorkspace from '../components/server-actions/ServerWorkspace'
+import BauhausButton from '../components/shared/BauhausButton'
+import { BauhausPanel } from '../components/shared/BauhausPanel'
+import BauhausBadge from '../components/shared/BauhausBadge'
+import { typeStyles } from '../theme/typography'
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -20,10 +24,14 @@ type Props = {
 
 export default function SettingsScreen({ navigation }: Props) {
   const { colors } = useTheme()
-  const { layoutMode } = useAdaptiveLayout()
   const server = useConnectionStore((s) => s.server)
   const status = useConnectionStore((s) => s.status)
   const unpair = useConnectionStore((s) => s.unpair)
+  const refreshServer = useServerActionsStore((s) => s.refresh)
+
+  React.useEffect(() => {
+    refreshServer()
+  }, [refreshServer])
 
   const statusColor =
     status === 'connected'
@@ -40,106 +48,87 @@ export default function SettingsScreen({ navigation }: Props) {
     })
   }
 
-  const connectionSection = (
-    <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Workspace</Text>
-      <View style={styles.row}>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
-        <View style={styles.statusRow}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.value, { color: colors.text }]}>{status}</Text>
-        </View>
-      </View>
-      {server ? (
-        <>
-          <View style={styles.row}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Paired Host</Text>
-            <Text style={[styles.value, { color: colors.text }]}>
-              {server.ip}:{server.port}
-            </Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Pairing ID</Text>
-            <Text style={[styles.value, { color: colors.text }]} numberOfLines={1}>
-              {server.deviceId}
-            </Text>
-          </View>
-        </>
-      ) : null}
-      <TouchableOpacity
-        style={[styles.setupButton, { backgroundColor: colors.primary + '14', borderColor: colors.primary + '30' }]}
-        onPress={() => navigation.getParent()?.navigate('ServerSetup')}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.setupButtonText, { color: colors.primary }]}>Workspace Tools</Text>
-      </TouchableOpacity>
-      <View style={styles.row}>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Services</Text>
-        <TouchableOpacity
-          onPress={() => navigation.getParent()?.navigate('Containers')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.value, { color: colors.primary }]}>Open</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.row}>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Plans</Text>
-        <TouchableOpacity
-          onPress={() => navigation.getParent()?.navigate('Plan')}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.value, { color: colors.primary }]}>Review</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  )
-
-  const appSection = (
-    <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>App</Text>
-      <View style={styles.row}>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Version</Text>
-        <Text style={[styles.value, { color: colors.text }]}>1.0.0</Text>
-      </View>
-      <TouchableOpacity
-        style={[styles.unpairButton, { backgroundColor: colors.errorBackground }]}
-        onPress={handleUnpair}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.unpairText, { color: colors.error }]}>Remove Pairing</Text>
-      </TouchableOpacity>
-    </View>
-  )
-
   return (
-    <AdaptiveShell maxWidth={1100} style={{ backgroundColor: colors.background }}>
-      {layoutMode === 'tabletSplit' ? (
-        <SplitViewLayout leading={connectionSection} trailing={appSection} leadingWidth={420} />
-      ) : (
-        <View style={styles.container}>
-          {connectionSection}
-          {appSection}
-        </View>
-      )}
+    <AdaptiveShell maxWidth={1200} style={{ backgroundColor: colors.background }}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Connection</Text>
+          <View style={styles.row}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
+            <View style={styles.statusRow}>
+              <BauhausBadge label={status} color={statusColor} />
+            </View>
+          </View>
+          {server ? (
+            <>
+              <View style={styles.row}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Paired Host</Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  {server.ip}:{server.port}
+                </Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Pairing ID</Text>
+                <Text style={[styles.value, { color: colors.text }]} numberOfLines={1}>
+                  {server.deviceId}
+                </Text>
+              </View>
+            </>
+          ) : null}
+        </BauhausPanel>
+
+        <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Workspace</Text>
+          <BauhausButton onPress={() => navigation.getParent()?.navigate('ServerSetup')}>
+            Workspace Tools
+          </BauhausButton>
+          <View style={styles.row}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Services</Text>
+            <TouchableOpacity onPress={() => navigation.getParent()?.navigate('Containers')} activeOpacity={0.7}>
+              <Text style={[styles.value, { color: colors.primary }]}>Open</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.row}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Plans</Text>
+            <TouchableOpacity onPress={() => navigation.getParent()?.navigate('Plan')} activeOpacity={0.7}>
+              <Text style={[styles.value, { color: colors.primary }]}>Review</Text>
+            </TouchableOpacity>
+          </View>
+        </BauhausPanel>
+
+        <BauhausPanel style={styles.section} accentColor={colors.accentRed}>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Server Health</Text>
+          <ServerWorkspace />
+        </BauhausPanel>
+
+        <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>App</Text>
+          <View style={styles.row}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Version</Text>
+            <Text style={[styles.value, { color: colors.text }]}>1.0.0</Text>
+          </View>
+          <BauhausButton variant="danger" onPress={handleUnpair}>
+            Remove Pairing
+          </BauhausButton>
+        </BauhausPanel>
+      </ScrollView>
     </AdaptiveShell>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     gap: spacing[4],
+    paddingBottom: spacing[8],
   },
   section: {
-    borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    padding: spacing[4],
     gap: spacing[3],
   },
   sectionTitle: {
-    ...typographyScale.xs,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   row: {
     flexDirection: 'row',
@@ -147,11 +136,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   label: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   value: {
-    ...typographyScale.sm,
-    fontWeight: '500',
+    ...typeStyles.bodyStrong,
     flexShrink: 1,
     textAlign: 'right',
   },
@@ -159,30 +147,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  unpairButton: {
-    borderRadius: borderRadius.lg,
-    paddingVertical: spacing[4],
-    alignItems: 'center',
-    marginTop: spacing[6],
-  },
-  unpairText: {
-    ...typographyScale.base,
-    fontWeight: '600',
-  },
-  setupButton: {
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    paddingVertical: spacing[4],
-    alignItems: 'center',
-  },
-  setupButtonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
   },
 })

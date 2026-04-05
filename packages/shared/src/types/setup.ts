@@ -251,6 +251,51 @@ export interface BrowserSessionCreateResult {
   proxied_url: string
 }
 
+// ─── GitHub Copilot CLI wizard types ───────────────────────────────
+
+export interface CopilotSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  authenticated: boolean
+  github_username: string | null
+  auth_output: string | null
+  trust_configured: boolean
+  trust_target: string | null
+}
+
+export interface CopilotInstallResult {
+  success: boolean
+  installed: boolean
+  version: string | null
+  path: string | null
+  output: string | null
+  error: string | null
+}
+
+export type CopilotTrustSessionState =
+  | 'starting'
+  | 'awaiting_trust'
+  | 'pending'
+  | 'trusted'
+  | 'failed'
+
+export interface CopilotTrustSessionStatus {
+  session_id: string
+  state: CopilotTrustSessionState
+  prompt: string | null
+  output_excerpt: string | null
+  trust_target: string | null
+  trusted: boolean
+  completed: boolean
+  error: string | null
+}
+
+export interface CopilotTrustStartResult extends CopilotTrustSessionStatus {}
+
+export type CopilotWizardStep = 'detect' | 'install' | 'authenticate' | 'trust' | 'verify'
+export type CopilotWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
 // ─── Python wizard types ──────────────────────────────────────────
 
 export interface PythonSetupStatus {

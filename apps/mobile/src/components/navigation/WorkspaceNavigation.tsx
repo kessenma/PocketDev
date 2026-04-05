@@ -1,7 +1,7 @@
 import React from 'react'
 import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
@@ -11,6 +11,7 @@ import {
   setWorkspaceNavExpanded,
 } from '../../services/storage'
 import { renderTabIcon } from '../../navigation/tab-icons'
+import { typeStyles } from '../../theme/typography'
 
 const SIDEBAR_EXPANDED = 220
 const SIDEBAR_COLLAPSED = 84
@@ -66,7 +67,7 @@ export default function WorkspaceNavigation({
         styles.container,
         {
           width,
-          backgroundColor: colors.surface,
+          backgroundColor: colors.panel,
           borderRightColor: colors.border,
         },
       ]}
@@ -121,15 +122,18 @@ export default function WorkspaceNavigation({
               onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
               style={[
                 styles.tabItem,
-                isFocused && { backgroundColor: colors.primary + '14' },
+                {
+                  backgroundColor: isFocused ? colors.panelAlt : 'transparent',
+                  borderColor: colors.border,
+                },
               ]}
             >
               <View
                 style={[
                   styles.iconBox,
                   {
-                    backgroundColor: isFocused ? colors.primary : colors.background,
-                    borderColor: isFocused ? colors.primary : colors.border,
+                    backgroundColor: isFocused ? colors.primary : colors.panelAlt,
+                    borderColor: colors.border,
                   },
                 ]}
               >
@@ -178,7 +182,7 @@ export default function WorkspaceNavigation({
 const styles = StyleSheet.create({
   container: {
     height: '100%',
-    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: 2,
   },
   toggleButton: {
     flexDirection: 'row',
@@ -186,11 +190,10 @@ const styles = StyleSheet.create({
     gap: spacing[3],
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[4],
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 2,
   },
   toggleLabel: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   tabList: {
     flex: 1,
@@ -201,6 +204,7 @@ const styles = StyleSheet.create({
   tabItem: {
     minHeight: 56,
     borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[3],
@@ -210,17 +214,16 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: borderRadius.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabLabel: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.labelStrong,
     flexShrink: 1,
   },
   footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 2,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[4],
   },
@@ -232,10 +235,9 @@ const styles = StyleSheet.create({
   statusDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
   },
   statusText: {
-    ...typographyScale.sm,
+    ...typeStyles.meta,
     textTransform: 'capitalize',
   },
 })

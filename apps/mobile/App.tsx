@@ -5,6 +5,7 @@ import { ThemeProvider, useTheme } from './src/contexts/ThemeContext'
 import RootNavigator from './src/navigation/RootNavigator'
 import { useConnectionStore } from './src/stores/connection'
 import { AppState, StyleSheet } from 'react-native'
+import { typeStyles } from './src/theme/typography'
 
 function AppInner() {
   const { colors } = useTheme()
@@ -39,10 +40,10 @@ function AppInner() {
           notification: colors.error,
         },
         fonts: {
-          regular: { fontFamily: 'System', fontWeight: '400' },
-          medium: { fontFamily: 'System', fontWeight: '500' },
-          bold: { fontFamily: 'System', fontWeight: '700' },
-          heavy: { fontFamily: 'System', fontWeight: '800' },
+          regular: { fontFamily: typeStyles.body.fontFamily ?? 'System', fontWeight: '400' },
+          medium: { fontFamily: typeStyles.bodyStrong.fontFamily ?? 'System', fontWeight: '500' },
+          bold: { fontFamily: typeStyles.button.fontFamily ?? 'System', fontWeight: '700' },
+          heavy: { fontFamily: typeStyles.screenTitle.fontFamily ?? 'System', fontWeight: '800' },
         },
       }}
     >

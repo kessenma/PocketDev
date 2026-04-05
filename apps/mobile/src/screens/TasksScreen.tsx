@@ -1,5 +1,7 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Plus } from 'lucide-react-native'
+import { borderRadius } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import { useTaskStore } from '../stores/tasks'
 import { useConnectionStore } from '../stores/connection'
@@ -13,6 +15,7 @@ import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import TaskListPane from '../components/tasks/TaskListPane'
 import TaskWorkspace from '../components/tasks/TaskWorkspace'
+import NewTaskSheet from '../components/tasks/NewTaskSheet'
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -30,6 +33,7 @@ export default function TasksScreen({ navigation }: Props) {
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
   const server = useConnectionStore((s) => s.server)
   const [refreshing, setRefreshing] = React.useState(false)
+  const [showNewTask, setShowNewTask] = React.useState(false)
 
   const taskList = React.useMemo(
     () =>
@@ -71,32 +75,55 @@ export default function TasksScreen({ navigation }: Props) {
   }
 
   return (
-    <AdaptiveShell style={{ backgroundColor: colors.background }} maxWidth={1360}>
-      <View style={styles.container}>
-        {layoutMode === 'tabletSplit' ? (
-          <TaskWorkspace
-            tasks={taskList}
-            activeTaskId={activeTaskId}
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            onTaskPress={handleTaskPress}
-          />
-        ) : (
-          <TaskListPane
-            tasks={taskList}
-            activeTaskId={activeTaskId}
-            onTaskPress={handleTaskPress}
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-          />
-        )}
-      </View>
-    </AdaptiveShell>
+    <>
+      <AdaptiveShell style={{ backgroundColor: colors.background }} maxWidth={1360}>
+        <View style={styles.container}>
+          {layoutMode === 'tabletSplit' ? (
+            <TaskWorkspace
+              tasks={taskList}
+              activeTaskId={activeTaskId}
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              onTaskPress={handleTaskPress}
+            />
+          ) : (
+            <TaskListPane
+              tasks={taskList}
+              activeTaskId={activeTaskId}
+              onTaskPress={handleTaskPress}
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          )}
+        </View>
+      </AdaptiveShell>
+
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.primary, borderColor: colors.border }]}
+        onPress={() => setShowNewTask(true)}
+        activeOpacity={0.7}
+      >
+        <Plus color={colors.primaryText} size={24} strokeWidth={2.5} />
+      </TouchableOpacity>
+
+      <NewTaskSheet visible={showNewTask} onClose={() => setShowNewTask(false)} />
+    </>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })

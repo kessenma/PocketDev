@@ -48,7 +48,7 @@ export default function ConnectScreen({ navigation }: Props) {
 
   const handlePairingComplete = useCallback(() => {
     if (postPairSetupReady) {
-      navigation.replace('Main', { screen: 'Server' })
+      navigation.replace('Main', { screen: 'Settings' })
       return
     }
 
@@ -81,7 +81,7 @@ export default function ConnectScreen({ navigation }: Props) {
       connect()
       const setupReady = await resolvePostPairDestination(existingServer.ip, existingServer.port)
       if (setupReady) {
-        navigation.replace('Main', { screen: 'Server' })
+        navigation.replace('Main', { screen: 'Settings' })
         return
       }
       navigation.replace('ServerSetup')

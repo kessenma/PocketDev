@@ -17,6 +17,7 @@ const toolAssetMap: Record<string, { light: ImageSourcePropType; dark: ImageSour
   bun: { light: Assets.bunBlack, dark: Assets.bunWhite },
   claude_cli: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
   codex_cli: { light: Assets.codexBlack, dark: Assets.codexWhite },
+  copilot_cli: { light: Assets.githubBlack, dark: Assets.githubWhite },
   rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
   java: { light: Assets.javaBlack, dark: Assets.javaWhite },
   cpp: { light: Assets.cppBlack, dark: Assets.cppWhite },
@@ -33,6 +34,8 @@ interface Props {
   onClaudeWizard?: (tool: ToolCheck) => void
   onCodexWizard?: (tool: ToolCheck) => void
   onBlockedCodexWizard?: (tool: ToolCheck) => void
+  onCopilotWizard?: (tool: ToolCheck) => void
+  onBlockedCopilotWizard?: (tool: ToolCheck) => void
   onPkgWizard?: (tool: ToolCheck) => void
   onPythonWizard?: (tool: ToolCheck) => void
   disabledReason?: string | null
@@ -78,6 +81,8 @@ export default function SetupCheckItem({
   onClaudeWizard,
   onCodexWizard,
   onBlockedCodexWizard,
+  onCopilotWizard,
+  onBlockedCopilotWizard,
   onPkgWizard,
   onPythonWizard,
   disabledReason,
@@ -103,6 +108,11 @@ export default function SetupCheckItem({
   const showCodexWizard = isCodex && !!onCodexWizard
   const codexBlocked = showCodexWizard && codexNeedsAction && !!disabledReason
 
+  const isCopilot = tool.id === 'copilot_cli'
+  const copilotNeedsAction = isCopilot && (tool.status === 'missing' || tool.auth_status === 'unauthenticated' || tool.details.trust_configured !== 'true')
+  const showCopilotWizard = isCopilot && !!onCopilotWizard
+  const copilotBlocked = showCopilotWizard && copilotNeedsAction && !!disabledReason
+
   // Package managers get a bulk wizard
   const isPkgManager = tool.id === 'node' || tool.id === 'npm' || tool.id === 'nvm' || tool.id === 'pnpm' || tool.id === 'bun'
   const pkgNeedsAction = isPkgManager && tool.status === 'missing'
@@ -112,7 +122,7 @@ export default function SetupCheckItem({
   const pythonNeedsAction = isPython && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showPythonWizard = isPython && !!onPythonWizard
 
-  const hasWizard = isGit || isClaude || isCodex || isPkgManager || isPython
+  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -239,6 +249,46 @@ export default function SetupCheckItem({
               {pkgNeedsAction ? 'Enable Package Tools' : 'Open Package Tools'}
             </Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {showCopilotWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              { backgroundColor: colors.primary },
+              copilotBlocked && styles.actionButtonDisabled,
+            ]}
+            onPress={() => {
+              if (copilotBlocked) {
+                onBlockedCopilotWizard?.(tool)
+                return
+              }
+              onCopilotWizard?.(tool)
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>
+              {copilotNeedsAction ? 'Enable Copilot' : 'Open Copilot'}
+            </Text>
+          </TouchableOpacity>
+          {copilotBlocked && (
+            <>
+              <Text style={[styles.inlineHint, { color: colors.textSecondary }]}>
+                {disabledReason}
+              </Text>
+              {onGitWizard && (
+                <TouchableOpacity
+                  style={[styles.secondaryActionButton, { borderColor: colors.border }]}
+                  onPress={() => onGitWizard(tool)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.secondaryActionText, { color: colors.text }]}>Open Git Setup</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
         </View>
       )}
 

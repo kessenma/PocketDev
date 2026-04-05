@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 
 type Option<T extends string> = {
   value: T
@@ -22,7 +23,7 @@ export default function ServerSegmentedControl<T extends string>({
   const { colors } = useTheme()
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+    <View style={[styles.container, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
       {options.map((option) => {
         const selected = option.value === value
 
@@ -34,13 +35,16 @@ export default function ServerSegmentedControl<T extends string>({
             onPress={() => onChange(option.value)}
             style={[
               styles.option,
-              selected && { backgroundColor: colors.surface, borderColor: colors.border },
+              {
+                backgroundColor: selected ? colors.primary : colors.panel,
+                borderColor: colors.border,
+              },
             ]}
           >
             <Text
               style={[
                 styles.label,
-                { color: selected ? colors.text : colors.textSecondary },
+                { color: selected ? colors.primaryText : colors.textSecondary },
               ]}
             >
               {option.label}
@@ -56,21 +60,20 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: borderRadius.lg,
     padding: spacing[1],
+    borderWidth: 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[1],
     alignSelf: 'flex-start',
   },
   option: {
-    minHeight: 36,
+    minHeight: 38,
     paddingHorizontal: spacing[3],
     borderRadius: borderRadius.md,
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
+    borderWidth: 1.5,
   },
   label: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
 })

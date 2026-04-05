@@ -1,11 +1,13 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import type { Task } from '@pocketdev/shared/types'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import SplitViewLayout from '../layout/SplitViewLayout'
 import TaskDetailPane from './TaskDetailPane'
 import TaskListPane from './TaskListPane'
+import { BauhausPanel } from '../shared/BauhausPanel'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   tasks: Task[]
@@ -27,7 +29,7 @@ export default function TaskWorkspace({
   return (
     <SplitViewLayout
       leading={
-        <View style={[styles.panel, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+        <BauhausPanel style={styles.panel} accentColor={colors.accentBlue}>
           <View style={[styles.panelHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.panelEyebrow, { color: colors.textTertiary }]}>Tasks</Text>
             <Text style={[styles.panelTitle, { color: colors.text }]}>Recent work</Text>
@@ -40,7 +42,7 @@ export default function TaskWorkspace({
             onRefresh={onRefresh}
             tablet
           />
-        </View>
+        </BauhausPanel>
       }
       trailing={
         <TaskDetailPane
@@ -56,23 +58,17 @@ export default function TaskWorkspace({
 const styles = StyleSheet.create({
   panel: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: borderRadius.xl,
     overflow: 'hidden',
   },
   panelHeader: {
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[4],
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: spacing[3],
+    borderBottomWidth: 2,
   },
   panelEyebrow: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '600',
+    ...typeStyles.sectionTitle,
   },
   panelTitle: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
     marginTop: spacing[1],
   },
 })

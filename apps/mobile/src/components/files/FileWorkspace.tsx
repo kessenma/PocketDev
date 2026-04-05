@@ -9,36 +9,23 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { Bot, ExternalLink, FileCode2, FolderOpen, Pin, RefreshCcw, Search, Sparkles } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
-import type { AgentType } from '@pocketdev/shared/schema'
+import { FileCode2, FolderOpen, Pin, RefreshCcw, Search } from 'lucide-react-native'
+import { borderRadius, palette, spacing, typographyScale, type SemanticTheme } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../hooks/useAdaptiveLayout'
 import { useFilesStore } from '../../stores/files'
-import { useGitStore } from '../../stores/git'
-import { useNewTaskDraftStore } from '../../stores/new-task-draft'
 import { usePreviewStore } from '../../stores/preview'
 import { useProjectsStore } from '../../stores/projects'
-import { useTaskStore } from '../../stores/tasks'
-import ServerSegmentedControl from '../server-actions/ServerSegmentedControl'
 import CodeViewer from './CodeViewer'
 import { pathToName } from './model'
-import TaskDetailPane from '../tasks/TaskDetailPane'
 import ServerWebBrowserSheet from '../browser/ServerWebBrowserSheet'
 
 type Props = {
   onOpenProjects: () => void
+  currentBranch?: string
 }
 
-type WorkspaceMode = 'files' | 'assistant' | 'preview'
-
-const WORKSPACE_OPTIONS = [
-  { value: 'files', label: 'Files' },
-  { value: 'assistant', label: 'Assistant' },
-  { value: 'preview', label: 'Preview' },
-] as const
-
-export default function FileWorkspace({ onOpenProjects }: Props) {
+export default function FileWorkspace({ onOpenProjects, currentBranch = 'No branch' }: Props) {
   const { colors } = useTheme()
   const { layoutMode } = useAdaptiveLayout()
   const projects = useProjectsStore((state) => state.projects)
@@ -69,39 +56,12 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
   const refresh = useFilesStore((state) => state.refresh)
   const toggleContextPath = useFilesStore((state) => state.toggleContextPath)
   const clearContextPaths = useFilesStore((state) => state.clearContextPaths)
-  const branches = useGitStore((state) => state.branches)
-  const prompt = useNewTaskDraftStore((state) => state.prompt)
-  const selectedProviderId = useNewTaskDraftStore((state) => state.selectedProviderId)
-  const selectedModelId = useNewTaskDraftStore((state) => state.selectedModelId)
-  const setPrompt = useNewTaskDraftStore((state) => state.setPrompt)
-  const submitDraft = useNewTaskDraftStore((state) => state.submitDraft)
-  const activeTaskId = useTaskStore((state) => state.activeTaskId)
-  const startTask = useTaskStore((state) => state.startTask)
-  const refreshTasks = useTaskStore((state) => state.refreshFromServer)
   const previewVisible = usePreviewStore((state) => state.visible)
   const previewProxiedUrl = usePreviewStore((state) => state.proxiedUrl)
-  const previewTargetUrl = usePreviewStore((state) => state.targetUrl)
-  const previewStatus = usePreviewStore((state) => state.status)
-  const previewError = usePreviewStore((state) => state.lastError)
   const openPreview = usePreviewStore((state) => state.openPreview)
   const closePreview = usePreviewStore((state) => state.closePreview)
   const markPreviewLoaded = usePreviewStore((state) => state.markLoaded)
   const markPreviewFailed = usePreviewStore((state) => state.markFailed)
-
-  const [mode, setMode] = React.useState<WorkspaceMode>('files')
-  const lastProjectIdRef = React.useRef<string | null>(activeProject?.id ?? null)
-  const currentBranch = branches.find((branch) => branch.current)?.name ?? 'No branch'
-
-  React.useEffect(() => {
-    void refreshTasks().catch(() => {})
-  }, [refreshTasks])
-
-  React.useEffect(() => {
-    const projectId = activeProject?.id ?? null
-    if (lastProjectIdRef.current === projectId) return
-    lastProjectIdRef.current = projectId
-    setMode('files')
-  }, [activeProject?.id])
 
   const hasSearchResults = searchQuery.trim().length > 0
   const items = hasSearchResults
@@ -119,43 +79,6 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
         description: entry.kind === 'directory' ? 'Folder' : entry.path,
         kind: entry.kind,
       }))
-
-  const contextPaths = React.useMemo(() => {
-    const merged = [...selectedContextPaths]
-    if (selectedFile?.path && !merged.includes(selectedFile.path)) merged.unshift(selectedFile.path)
-    return merged
-  }, [selectedContextPaths, selectedFile?.path])
-
-  async function handleOpenPreview() {
-    setMode('preview')
-    await openPreview()
-  }
-
-  function handleAskAi() {
-    const trimmedPrompt = prompt.trim()
-    if (!trimmedPrompt) return
-
-    const agentType = providerToAgentType(selectedProviderId)
-    const contextSection = contextPaths.length > 0
-      ? contextPaths.map((path) => `- ${path}`).join('\n')
-      : '- No specific files pinned'
-
-    const taskPrompt = [
-      'You are working in the active PocketDev repository context.',
-      `Repository: ${activeProject?.name ?? rootLabel ?? 'Unknown repo'}`,
-      `Workspace path: ${rootPath || 'Unknown path'}`,
-      `Current folder: ${currentPath}`,
-      `Current file focus: ${selectedFile?.path ?? 'None'}`,
-      'Pinned file context:',
-      contextSection,
-      '',
-      'User request:',
-      trimmedPrompt,
-    ].join('\n')
-
-    startTask(taskPrompt, agentType, rootPath || null)
-    submitDraft()
-  }
 
   const browserPane = (
     <View style={styles.stack}>
@@ -253,7 +176,7 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
                 )}
                 <View style={styles.entryCopy}>
                   <Text style={[styles.entryTitle, { color: isCurrentFile ? colors.primary : colors.text }]} numberOfLines={1}>
-                    {renderFileLabel(item.name, item.kind, isCurrentFile ? colors.primary : colors.text)}
+                    {renderFileLabel(item.name, item.kind, colors, isCurrentFile ? colors.primary : colors.text)}
                   </Text>
                   <Text style={[styles.entryDescription, { color: colors.textSecondary }]} numberOfLines={2}>
                     {item.description}
@@ -309,134 +232,7 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
     />
   )
 
-  const assistantPane = (
-    <View style={styles.stack}>
-      <View style={[styles.assistantCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Text style={[styles.sectionEyebrow, { color: colors.textTertiary }]}>Assistant Context</Text>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Ask AI with repo-aware context</Text>
-        <Text style={[styles.sectionBody, { color: colors.textSecondary }]}>
-          Selected files stay attached while you move between files and preview.
-        </Text>
-
-        <View style={[styles.contextSummary, { backgroundColor: colors.backgroundSecondary }]}>
-          <Text style={[styles.contextSummaryLabel, { color: colors.textTertiary }]}>Active Repo</Text>
-            <Text style={[styles.contextSummaryTitle, { color: colors.text }]}>
-            {activeProject?.name ?? rootLabel ?? 'No active repo'}
-          </Text>
-          <Text style={[styles.contextSummaryBody, { color: colors.textSecondary }]}>
-            {contextPaths.length} file{contextPaths.length === 1 ? '' : 's'} in context · {selectedModelId}
-          </Text>
-        </View>
-
-        <View style={styles.contextChipRow}>
-          {contextPaths.length > 0 ? contextPaths.map((path) => (
-            <View key={path} style={[styles.contextChip, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
-              <Text style={[styles.contextChipText, { color: colors.text }]} numberOfLines={1}>
-                {path}
-              </Text>
-            </View>
-          )) : (
-            <Text style={[styles.emptyInlineText, { color: colors.textSecondary }]}>
-              Pin files from the browser or viewer to give the assistant sharper context.
-            </Text>
-          )}
-        </View>
-
-        <TextInput
-          value={prompt}
-          onChangeText={setPrompt}
-          placeholder="Describe the change, bug, or question for the assistant."
-          placeholderTextColor={colors.textTertiary}
-          style={[styles.promptInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-          multiline
-          textAlignVertical="top"
-        />
-
-        <View style={styles.assistantActions}>
-          <TouchableOpacity
-            onPress={() => {
-              setMode('files')
-            }}
-            activeOpacity={0.7}
-            style={[styles.secondaryAction, { borderColor: colors.border }]}
-          >
-            <Text style={[styles.secondaryActionText, { color: colors.text }]}>Pick More Files</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleAskAi}
-            activeOpacity={0.7}
-            disabled={prompt.trim().length === 0}
-            style={[
-              styles.primaryAction,
-              { backgroundColor: prompt.trim().length === 0 ? colors.border : colors.primary },
-            ]}
-          >
-            <Sparkles color={colors.primaryText} size={16} strokeWidth={2.2} />
-            <Text style={[styles.primaryActionText, { color: colors.primaryText }]}>Ask AI</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.taskPane}>
-        <TaskDetailPane
-          taskId={activeTaskId}
-          emptyTitle="No active task yet"
-          emptyBody="Send a repo-aware prompt here. Task output will appear after the server starts running it."
-        />
-      </View>
-    </View>
-  )
-
-  const previewPane = (
-    <View style={styles.stack}>
-      <View style={[styles.previewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Text style={[styles.sectionEyebrow, { color: colors.textTertiary }]}>In-App Preview</Text>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Open localhost on your phone</Text>
-        <Text style={[styles.sectionBody, { color: colors.textSecondary }]}>
-          PocketDev proxies the paired server’s localhost dev server into the app using a browser session.
-        </Text>
-
-        <View style={[styles.previewStatus, { backgroundColor: colors.backgroundSecondary }]}>
-          <Text style={[styles.contextSummaryLabel, { color: colors.textTertiary }]}>Target</Text>
-          <Text style={[styles.contextSummaryTitle, { color: colors.text }]}>{previewTargetUrl}</Text>
-          <Text style={[styles.contextSummaryBody, { color: colors.textSecondary }]}>
-            {formatPreviewStatus(previewStatus, previewError)}
-          </Text>
-        </View>
-
-        <View style={styles.assistantActions}>
-          <TouchableOpacity
-            onPress={() => {
-              void openPreview()
-            }}
-            activeOpacity={0.7}
-            style={[styles.primaryAction, { backgroundColor: colors.primary }]}
-          >
-            <ExternalLink color={colors.primaryText} size={16} strokeWidth={2.2} />
-            <Text style={[styles.primaryActionText, { color: colors.primaryText }]}>Open Preview</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setMode('assistant')}
-            activeOpacity={0.7}
-            style={[styles.secondaryAction, { borderColor: colors.border }]}
-          >
-            <Bot color={colors.text} size={16} strokeWidth={2.2} />
-            <Text style={[styles.secondaryActionText, { color: colors.text }]}>Ask AI First</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  )
-
-  const content = mode === 'assistant'
-    ? assistantPane
-    : mode === 'preview'
-      ? previewPane
-      : activePhoneView === 'viewer'
-        ? viewerPane
-        : browserPane
+  const content = activePhoneView === 'viewer' ? viewerPane : browserPane
 
   return (
     <>
@@ -448,12 +244,12 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
         <View style={[styles.headerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.headerTop}>
             <View style={styles.headerCopy}>
-              <Text style={[styles.headerEyebrow, { color: colors.textTertiary }]}>Mobile Workspace</Text>
+              <Text style={[styles.headerEyebrow, { color: colors.textTertiary }]}>Code Browser</Text>
               <Text style={[styles.headerTitle, { color: colors.text }]}>
                 {activeProject?.name ?? rootLabel ?? 'Select a repository'}
               </Text>
               <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                {activeProject?.localPath ?? rootPath ?? 'Choose a repository to browse files, ask AI, and preview localhost.'}
+                {activeProject?.localPath ?? rootPath ?? 'Choose a repository to browse files.'}
               </Text>
             </View>
 
@@ -486,22 +282,13 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
 
             <TouchableOpacity
               onPress={() => {
-                void handleOpenPreview()
+                void openPreview()
               }}
               activeOpacity={0.7}
               style={[styles.primaryAction, { backgroundColor: colors.primary }]}
             >
-              <ExternalLink color={colors.primaryText} size={16} strokeWidth={2.2} />
-              <Text style={[styles.primaryActionText, { color: colors.primaryText }]}>Open Preview</Text>
+              <Text style={[styles.primaryActionText, { color: colors.primaryText }]}>Preview</Text>
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.modeRow}>
-            <ServerSegmentedControl
-              value={mode}
-              options={WORKSPACE_OPTIONS}
-              onChange={setMode}
-            />
           </View>
         </View>
 
@@ -549,7 +336,12 @@ export default function FileWorkspace({ onOpenProjects }: Props) {
   )
 }
 
-function renderFileLabel(name: string, kind: 'directory' | 'file', defaultColor: string) {
+function renderFileLabel(
+  name: string,
+  kind: 'directory' | 'file',
+  colors: SemanticTheme,
+  defaultColor: string,
+) {
   if (kind === 'directory') return name
 
   const parts = splitFileName(name)
@@ -558,7 +350,7 @@ function renderFileLabel(name: string, kind: 'directory' | 'file', defaultColor:
   return (
     <>
       {parts.base}
-      <Text style={{ color: colorForExtension(parts.extension, defaultColor) }}>{parts.extension}</Text>
+      <Text style={{ color: colorForExtension(parts.extension, colors, defaultColor) }}>{parts.extension}</Text>
     </>
   )
 }
@@ -575,60 +367,47 @@ function splitFileName(name: string): { base: string; extension: string | null }
   }
 }
 
-function colorForExtension(extension: string, defaultColor: string): string {
+function colorForExtension(extension: string, colors: SemanticTheme, defaultColor: string): string {
   switch (extension.toLowerCase()) {
     case '.ts':
     case '.tsx':
-      return '#2563eb'
+      return colors.primary
     case '.js':
     case '.jsx':
     case '.mjs':
     case '.cjs':
-      return '#d97706'
+      return palette.warning[600]
     case '.py':
-      return '#16a34a'
+      return colors.success
     case '.md':
     case '.markdown':
     case '.mdx':
-      return '#db2777'
+      return palette.accent[600]
     case '.rs':
-      return '#dc2626'
+      return colors.error
     case '.json':
     case '.jsonc':
-      return '#7c3aed'
+      return palette.primary[500]
     case '.yml':
     case '.yaml':
     case '.toml':
-      return '#0891b2'
+      return palette.accent[700]
     case '.sh':
     case '.bash':
     case '.zsh':
     case '.fish':
-      return '#0f766e'
+      return palette.success[700]
     case '.html':
     case '.css':
     case '.scss':
     case '.sass':
     case '.less':
-      return '#c2410c'
+      return palette.warning[700]
     case '.sql':
-      return '#9333ea'
+      return palette.accent[500]
     default:
       return defaultColor
   }
-}
-
-function providerToAgentType(providerId: string): AgentType {
-  if (providerId === 'codex') return 'codex'
-  if (providerId === 'claude') return 'claude'
-  return 'codex'
-}
-
-function formatPreviewStatus(status: string, error: string | null): string {
-  if (status === 'connecting') return 'Connecting to localhost:3000 on the paired machine.'
-  if (status === 'loaded') return 'Preview loaded in the in-app browser.'
-  if (status === 'failed') return error ?? 'Preview failed to load.'
-  return 'No preview session started yet.'
 }
 
 const styles = StyleSheet.create({
@@ -683,10 +462,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing[2],
-  },
-  modeRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
   },
   primaryAction: {
     flexDirection: 'row',
@@ -864,66 +639,5 @@ const styles = StyleSheet.create({
   },
   emptyBody: {
     ...typographyScale.sm,
-  },
-  assistantCard: {
-    borderWidth: 1,
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
-    gap: spacing[3],
-  },
-  sectionEyebrow: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-  sectionTitle: {
-    ...typographyScale.xl,
-    fontWeight: '700',
-  },
-  sectionBody: {
-    ...typographyScale.sm,
-  },
-  contextSummary: {
-    borderRadius: borderRadius.lg,
-    padding: spacing[3],
-    gap: spacing[1],
-  },
-  contextSummaryLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-  contextSummaryTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
-  },
-  contextSummaryBody: {
-    ...typographyScale.sm,
-  },
-  promptInput: {
-    ...typographyScale.base,
-    borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    padding: spacing[4],
-    minHeight: 140,
-  },
-  assistantActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-  },
-  taskPane: {
-    minHeight: 320,
-  },
-  previewCard: {
-    borderWidth: 1,
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
-    gap: spacing[3],
-  },
-  previewStatus: {
-    borderRadius: borderRadius.lg,
-    padding: spacing[3],
-    gap: spacing[1],
   },
 })

@@ -66,6 +66,12 @@ jest.mock('@pocketdev/shared/theme', () => ({
     xl: { fontSize: 20, lineHeight: 28 },
     '2xl': { fontSize: 24, lineHeight: 32 },
   },
+  palette: {
+    primary: { 500: '#3b82f6', 600: '#2563eb' },
+    accent: { 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce' },
+    success: { 700: '#15803d' },
+    warning: { 600: '#d97706', 700: '#b45309' },
+  },
 }), { virtual: true })
 
 jest.mock('../../hooks/useAdaptiveLayout', () => ({
@@ -80,17 +86,11 @@ jest.mock('../../hooks/useAdaptiveLayout', () => ({
 
 jest.mock('../../services/api', () => ({
   fetchCapabilities: jest.fn(),
-  fetchTaskList: jest.fn().mockResolvedValue([]),
   listDirectory: jest.fn(),
   fetchFileContent: jest.fn(),
   searchFiles: jest.fn(),
   postCreateBrowserSession: jest.fn(),
   browserSessionUrl: jest.fn((ip, port, proxiedPath) => `http://${ip}:${port}${proxiedPath}`),
-}))
-
-jest.mock('../../services/storage', () => ({
-  getNewTaskDraft: jest.fn(() => null),
-  saveNewTaskDraft: jest.fn(),
 }))
 
 jest.mock('react-native-enriched-markdown', () => {
@@ -122,14 +122,11 @@ jest.mock('lucide-react-native', () => {
   }
 
   return {
-    Bot: createIcon('Bot'),
-    ExternalLink: createIcon('ExternalLink'),
     FileCode2: createIcon('FileCode2'),
     FolderOpen: createIcon('FolderOpen'),
     Pin: createIcon('Pin'),
     RefreshCcw: createIcon('RefreshCcw'),
     Search: createIcon('Search'),
-    Sparkles: createIcon('Sparkles'),
     Info: createIcon('Info'),
     ArrowLeft: createIcon('ArrowLeft'),
     WrapText: createIcon('WrapText'),
@@ -139,13 +136,6 @@ jest.mock('lucide-react-native', () => {
     ChevronRight: createIcon('ChevronRight'),
     RotateCw: createIcon('RotateCw'),
     AlertCircle: createIcon('AlertCircle'),
-  }
-})
-
-jest.mock('../tasks/TaskDetailPane', () => {
-  const React = require('react')
-  return function TaskDetailPane(props) {
-    return React.createElement('TaskDetailPane', props)
   }
 })
 
@@ -162,9 +152,6 @@ const { Text, TouchableOpacity } = require('react-native')
 const FileWorkspace = require('./FileWorkspace').default
 const { useFilesStore } = require('../../stores/files')
 const { useProjectsStore } = require('../../stores/projects')
-const { useGitStore } = require('../../stores/git')
-const { useNewTaskDraftStore } = require('../../stores/new-task-draft')
-const { useTaskStore } = require('../../stores/tasks')
 const { usePreviewStore } = require('../../stores/preview')
 
 function renderWorkspace(props = {}) {
@@ -195,13 +182,13 @@ function collectText(tree) {
 
 function pressByLabel(tree, label) {
   const touchable = tree.root.findAllByType(TouchableOpacity).find((node) => {
-    const textChildren = node.findAllByType(Text).map((textNode) => {
+    const texts = node.findAllByType(Text).map((textNode) => {
       const children = Array.isArray(textNode.props.children)
         ? textNode.props.children
         : [textNode.props.children]
       return children.join('')
     })
-    return textChildren.includes(label)
+    return texts.includes(label)
   })
 
   touchable.props.onPress()
@@ -210,9 +197,6 @@ function pressByLabel(tree, label) {
 describe('FileWorkspace', () => {
   const initialFilesState = useFilesStore.getState()
   const initialProjectsState = useProjectsStore.getState()
-  const initialGitState = useGitStore.getState()
-  const initialDraftState = useNewTaskDraftStore.getState()
-  const initialTaskState = useTaskStore.getState()
   const initialPreviewState = usePreviewStore.getState()
 
   beforeEach(() => {
@@ -234,10 +218,6 @@ describe('FileWorkspace', () => {
           source: 'local',
         }],
       })
-      useGitStore.setState({
-        ...initialGitState,
-        branches: [{ name: 'main', current: true, ahead: 0, behind: 0, protected: false, description: '' }],
-      })
       useFilesStore.setState({
         ...initialFilesState,
         rootLabel: 'PocketDev',
@@ -251,18 +231,6 @@ describe('FileWorkspace', () => {
         selectedFile: { id: 'src/App.tsx', name: 'App.tsx', path: 'src/App.tsx', kind: 'file', language: 'tsx' },
         selectedFileContent: 'export default function App() { return null }',
         selectedContextPaths: ['src/App.tsx'],
-      })
-      useNewTaskDraftStore.setState({
-        ...initialDraftState,
-        prompt: 'Fix the mobile workspace flow',
-        selectedProviderId: 'codex',
-        selectedModelId: 'codex-gpt-5.4',
-      })
-      useTaskStore.setState({
-        ...initialTaskState,
-        activeTaskId: null,
-        startTask: jest.fn(),
-        refreshFromServer: jest.fn().mockResolvedValue(undefined),
       })
       usePreviewStore.setState({
         ...initialPreviewState,
@@ -282,36 +250,17 @@ describe('FileWorkspace', () => {
     const tree = renderWorkspace()
     const text = collectText(tree)
 
-    expect(text).toContain('Mobile Workspace')
+    expect(text).toContain('Code Browser')
     expect(text).toContain('PocketDev')
     expect(text).toContain('AI Context')
     expect(text).toContain('src/App.tsx')
-  })
-
-  it('switches to assistant mode and starts a repo-aware task', () => {
-    const tree = renderWorkspace()
-
-    renderer.act(() => {
-      pressByLabel(tree, 'Assistant')
-    })
-
-    renderer.act(() => {
-      pressByLabel(tree, 'Ask AI')
-    })
-
-    const startTask = useTaskStore.getState().startTask
-    expect(startTask).toHaveBeenCalledTimes(1)
-    expect(startTask.mock.calls[0][0]).toContain('Repository: PocketDev')
-    expect(startTask.mock.calls[0][0]).toContain('Pinned file context:\n- src/App.tsx')
-    expect(startTask.mock.calls[0][1]).toBe('codex')
-    expect(startTask.mock.calls[0][2]).toBe('/work/PocketDev')
   })
 
   it('opens preview from the workspace header', () => {
     const tree = renderWorkspace()
 
     renderer.act(() => {
-      pressByLabel(tree, 'Open Preview')
+      pressByLabel(tree, 'Preview')
     })
 
     expect(usePreviewStore.getState().openPreview).toHaveBeenCalledTimes(1)

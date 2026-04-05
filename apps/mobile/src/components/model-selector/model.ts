@@ -1,9 +1,10 @@
 import type { ProviderAvailability } from '@pocketdev/shared/types'
 
-export type ModelProviderId = 'claude' | 'codex' | 'copilot'
+export type ModelProviderId = 'claude' | 'codex'
 
 export type SelectableModel = {
   id: string
+  cliModelId: string
   name: string
   headline: string
   description: string

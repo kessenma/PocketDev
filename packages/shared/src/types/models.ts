@@ -13,6 +13,7 @@ export interface Task {
   id: string
   prompt: string
   agent_type: AgentType
+  model: string | null
   status: TaskStatus
   working_directory: string | null
   project_id: string | null

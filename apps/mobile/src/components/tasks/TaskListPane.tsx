@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { Task } from '@pocketdev/shared/types'
 import type { TaskStatus } from '@pocketdev/shared/schema'
 import { useTheme } from '../../contexts/ThemeContext'
+import BauhausBadge from '../shared/BauhausBadge'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   tasks: Task[]
@@ -46,7 +48,7 @@ export default function TaskListPane({
           styles.emptyContainer,
           tablet && styles.emptyContainerCard,
           tablet && {
-            backgroundColor: colors.surface,
+            backgroundColor: colors.panel,
             borderColor: colors.border,
           },
         ]}
@@ -72,20 +74,16 @@ export default function TaskListPane({
             style={[
               styles.taskCard,
               {
-                backgroundColor: colors.surface,
-                borderColor: isActive ? colors.primary : colors.border,
+                backgroundColor: isActive ? colors.panelAlt : colors.panel,
+                borderColor: colors.border,
               },
-              isActive && styles.activeTaskCard,
             ]}
             onPress={() => onTaskPress(item)}
             activeOpacity={0.7}
           >
             <View style={styles.taskHeader}>
-              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-              <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
-              <Text style={[styles.agentBadge, { color: colors.textTertiary }]}>
-                {item.agent_type}
-              </Text>
+              <BauhausBadge label={item.status} color={statusColor} />
+              <Text style={[styles.agentBadge, { color: colors.textTertiary }]}>{item.agent_type}</Text>
             </View>
             <Text style={[styles.taskPrompt, { color: colors.text }]} numberOfLines={2}>
               {item.prompt}
@@ -119,40 +117,25 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   taskCard: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.lg,
     padding: spacing[4],
     gap: spacing[2],
-  },
-  activeTaskCard: {
-    borderWidth: 1.5,
   },
   taskHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
   agentBadge: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     marginLeft: 'auto',
-    textTransform: 'uppercase',
-    fontWeight: '500',
   },
   taskPrompt: {
-    ...typographyScale.base,
+    ...typeStyles.body,
   },
   taskTime: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   emptyContainer: {
     flex: 1,
@@ -161,15 +144,14 @@ const styles = StyleSheet.create({
     padding: spacing[6],
   },
   emptyContainerCard: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.xl,
   },
   emptyTitle: {
-    ...typographyScale.xl,
-    fontWeight: '600',
+    ...typeStyles.screenTitle,
   },
   emptySubtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
     marginTop: spacing[2],
     maxWidth: 320,

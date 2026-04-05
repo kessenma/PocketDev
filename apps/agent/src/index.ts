@@ -13,6 +13,7 @@ import { capabilitiesRoutes } from './routes/capabilities.ts'
 import { gitRoutes } from './routes/git.ts'
 import { gitSetupRoutes } from './routes/git-setup.ts'
 import { claudeSetupRoutes } from './routes/claude-setup.ts'
+import { copilotSetupRoutes } from './routes/copilot-setup.ts'
 import { codexSetupRoutes } from './routes/codex-setup.ts'
 import { pkgSetupRoutes } from './routes/pkg-setup.ts'
 import { pythonSetupRoutes } from './routes/python-setup.ts'
@@ -63,6 +64,7 @@ new Elysia()
       .use(gitRoutes)
       .use(gitSetupRoutes)
       .use(claudeSetupRoutes)
+      .use(copilotSetupRoutes)
       .use(codexSetupRoutes)
       .use(pkgSetupRoutes)
       .use(pythonSetupRoutes)

@@ -61,25 +61,25 @@ export function ConsolePage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(240,196,25,0.2),transparent_28%),linear-gradient(180deg,#0d0d0d_0%,#0d0d0d_100%)]">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(240,196,25,0.16),transparent_24%),linear-gradient(180deg,#12100d_0%,#12100d_100%)] text-[#f5eedf]">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6">
-          <header className="mb-4 overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,#111111_0%,#111111_66%,#d93a2f_66%,#d93a2f_100%)] text-[#f4f0e8] shadow-[0_18px_60px_rgba(0,0,0,0.28)]">
+          <header className="mb-4 overflow-hidden rounded-[1.1rem] border-2 border-[var(--border)] bg-[linear-gradient(135deg,#1a1713_0%,#1a1713_72%,#d93025_72%,#d93025_100%)] text-[#f5eedf] shadow-[0_18px_42px_rgba(0,0,0,0.28)]">
             <div className="flex flex-col gap-5 px-5 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[1.2rem] bg-[#f0c419] text-black shadow-[6px_6px_0_0_rgba(0,0,0,0.24)]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[0.55rem] border-2 border-black/75 bg-[#f0c419] text-black shadow-[6px_6px_0_0_rgba(0,0,0,0.28)]">
                   <Server className="h-5 w-5" />
                 </div>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.34em] text-[#f4f0e8]/60">PocketDev Console</p>
-                    <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Server Control Board</h1>
+                    <p className="font-heading text-[0.68rem] font-semibold uppercase tracking-[0.34em] text-[#f5eedf]/58">PocketDev Console</p>
+                    <h1 className="font-heading text-[2rem] leading-none font-semibold uppercase tracking-[0.08em] sm:text-[2.5rem]">Server Control Board</h1>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <Badge className="bg-[#f4f0e8] text-black">{status.serverIp}:{status.port}</Badge>
-                    <Badge className={status.paired ? 'bg-[#f0c419] text-black' : 'bg-white/15 text-[#f4f0e8]'}>
+                    <Badge className="bg-[#f4efdf] text-black">{status.serverIp}:{status.port}</Badge>
+                    <Badge className={status.paired ? 'bg-[#f0c419] text-black' : 'bg-[#2a241d] text-[#f5eedf]'}>
                       {status.paired ? 'Paired' : 'Awaiting Pairing'}
                     </Badge>
-                    <Badge variant="outline" className="border-white/20 text-[#f4f0e8]">
+                    <Badge variant="outline" className="border-[var(--border)] text-[#f5eedf]">
                       {status.devices.length} device{status.devices.length !== 1 ? 's' : ''}
                     </Badge>
                   </div>
@@ -89,13 +89,13 @@ export function ConsolePage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-white/20 bg-white/8 text-[#f4f0e8] hover:bg-white/14"
+                  className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
                   onClick={() => setTerminalOpen(true)}
                 >
                   <Maximize2 className="mr-2 h-4 w-4" />
                   Terminal
                 </Button>
-                <Button variant="outline" size="sm" className="border-white/20 bg-white/8 text-[#f4f0e8] hover:bg-white/14" onClick={handleLogout}>
+                <Button variant="outline" size="sm" className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </Button>
@@ -150,7 +150,7 @@ export function ConsolePage() {
         title="Server Terminal"
         description="A full-screen terminal surface for server commands, logs, and focused debugging."
       >
-        <ServerTerminal className="h-full rounded-[1.5rem] border border-black/10 bg-black text-[#f4f0e8] shadow-none" heightClassName="h-full" />
+        <ServerTerminal className="h-full rounded-[0.9rem] border-2 border-[var(--border)] bg-black text-[#f5eedf] shadow-none" heightClassName="h-full" />
       </Modal>
     </>
   )

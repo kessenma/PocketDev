@@ -68,12 +68,13 @@ export const wsRoutes = new Elysia()
             break
 
           case 'task.start': {
-            const { prompt, agentType, workingDirectory } = msg.payload as {
+            const { prompt, agentType, workingDirectory, model } = msg.payload as {
               prompt: string
               agentType?: string
               workingDirectory?: string
+              model?: string
             }
-            startTask(prompt, agentType ?? 'claude', workingDirectory ?? null)
+            startTask(prompt, agentType ?? 'claude', workingDirectory ?? null, model ?? null)
             break
           }
 

@@ -8,6 +8,7 @@ import {
   checkNpm as checkPkgNpm,
   checkPnpm as checkPkgPnpm,
 } from './pkg-setup.ts'
+import { checkCopilotStatus } from './copilot-setup.ts'
 
 /** Run commands in a shell that can see standard system-wide tool locations. */
 async function exec(cmd: string): Promise<{ stdout: string; exitCode: number }> {
@@ -225,6 +226,39 @@ async function checkCodexCli(): Promise<ToolCheck> {
     install_command: null,
     auth_command: authenticated ? null : 'codex login',
     details: { auth_output: authOutput || null },
+  }
+}
+
+async function checkCopilotCli(): Promise<ToolCheck> {
+  const status = await checkCopilotStatus()
+  const authStatus: AuthStatus = status.authenticated ? 'authenticated' : 'unauthenticated'
+
+  if (!status.installed) {
+    return {
+      id: 'copilot_cli', name: 'GitHub Copilot', status: 'missing', auth_status: authStatus,
+      version: null, path: null, required: false,
+      install_command: 'curl -fsSL https://gh.io/copilot-install | bash',
+      auth_command: status.authenticated ? null : 'gh auth login',
+      details: {
+        github_username: status.github_username,
+        auth_output: status.auth_output,
+        trust_configured: status.trust_configured ? 'true' : 'false',
+        trust_target: status.trust_target,
+      },
+    }
+  }
+
+  return {
+    id: 'copilot_cli', name: 'GitHub Copilot', status: 'installed', auth_status: authStatus,
+    version: status.version, path: status.path, required: false,
+    install_command: null,
+    auth_command: status.authenticated ? null : 'gh auth login',
+    details: {
+      github_username: status.github_username,
+      auth_output: status.auth_output,
+      trust_configured: status.trust_configured ? 'true' : 'false',
+      trust_target: status.trust_target,
+    },
   }
 }
 
@@ -460,6 +494,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkNpm(),
     checkClaudeCli(),
     checkCodexCli(),
+    checkCopilotCli(),
     checkDocker(),
     checkBun(),
     checkPnpm(),

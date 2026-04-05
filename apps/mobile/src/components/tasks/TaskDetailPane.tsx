@@ -1,15 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import {
-  FlatList,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
+import BauhausBadge from '../shared/BauhausBadge'
+import BauhausButton from '../shared/BauhausButton'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   taskId: string | null
@@ -57,12 +53,7 @@ export default function TaskDetailPane({
 
   if (!task) {
     return (
-      <View
-        style={[
-          styles.emptyState,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-        ]}
-      >
+      <View style={[styles.emptyState, { backgroundColor: colors.panel, borderColor: colors.border }]}>
         <Text style={[styles.emptyTitle, { color: colors.text }]}>{emptyTitle}</Text>
         <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>{emptyBody}</Text>
       </View>
@@ -74,25 +65,20 @@ export default function TaskDetailPane({
   const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '--'
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}>
       <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
         <View style={styles.statusMeta}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusText, { color: statusColor }]}>{task.status}</Text>
+          <BauhausBadge label={task.status} color={statusColor} />
           <Text style={[styles.elapsed, { color: colors.textTertiary }]}>{elapsed}</Text>
         </View>
         {isRunning ? (
-          <TouchableOpacity
-            style={[styles.killButton, { backgroundColor: colors.error }]}
-            onPress={() => killTask(task.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.killButtonText}>Kill</Text>
-          </TouchableOpacity>
+          <BauhausButton variant="danger" compact onPress={() => killTask(task.id)}>
+            Kill
+          </BauhausButton>
         ) : null}
       </View>
 
-      <View style={[styles.promptCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
         <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
         <Text style={[styles.promptText, { color: colors.text }]}>{task.prompt}</Text>
       </View>
@@ -114,13 +100,11 @@ export default function TaskDetailPane({
       />
 
       {!autoScroll ? (
-        <TouchableOpacity
-          style={[styles.scrollButton, { backgroundColor: colors.primary }]}
-          onPress={handleScrollToBottom}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.scrollButtonText, { color: colors.primaryText }]}>Scroll to bottom</Text>
-        </TouchableOpacity>
+        <View style={styles.scrollButton}>
+          <BauhausButton compact onPress={handleScrollToBottom}>
+            Scroll To Bottom
+          </BauhausButton>
+        </View>
       ) : null}
     </View>
   )
@@ -139,25 +123,24 @@ function formatElapsed(startedAt: string, completedAt: string | null): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
   },
   emptyState: {
     flex: 1,
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing[8],
   },
   emptyTitle: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
     textAlign: 'center',
   },
   emptyBody: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     marginTop: spacing[2],
     maxWidth: 380,
     textAlign: 'center',
@@ -168,51 +151,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 2,
   },
   statusMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  statusText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
   elapsed: {
-    ...typographyScale.sm,
+    ...typeStyles.meta,
     marginLeft: spacing[2],
-  },
-  killButton: {
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[2],
-    borderRadius: borderRadius.md,
-  },
-  killButtonText: {
-    color: '#ffffff',
-    ...typographyScale.sm,
-    fontWeight: '600',
   },
   promptCard: {
     margin: spacing[4],
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: borderRadius.lg,
     padding: spacing[4],
     gap: spacing[1],
   },
   promptLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '600',
+    ...typeStyles.sectionTitle,
   },
   promptText: {
-    ...typographyScale.base,
+    ...typeStyles.body,
   },
   logList: {
     flex: 1,
@@ -222,25 +183,16 @@ const styles = StyleSheet.create({
     paddingBottom: spacing[6],
   },
   logLine: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 13,
-    lineHeight: 20,
+    ...typeStyles.mono,
     maxWidth: 900,
   },
   emptyLogs: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     paddingVertical: spacing[4],
   },
   scrollButton: {
     position: 'absolute',
     bottom: spacing[4],
     alignSelf: 'center',
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[2],
-    borderRadius: borderRadius.full,
-  },
-  scrollButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
   },
 })

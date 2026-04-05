@@ -3,7 +3,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Avenir Next", "Futura", "Helvetica Neue", sans-serif;
+  --font-sans: "Avenir Next", "Helvetica Neue", "Inter", sans-serif;
+  --font-display: "Avenir Next Condensed", "Futura Condensed ExtraBold", "Arial Narrow", sans-serif;
 }
 
 * {
@@ -17,7 +18,7 @@ body {
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -44,29 +45,29 @@ body {
 }
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #fafafa;
-  --card: #262626;
-  --card-foreground: #fafafa;
-  --popover: #262626;
-  --popover-foreground: #fafafa;
-  --primary: #3b82f6;
+  --background: #12100d;
+  --foreground: #f5eedf;
+  --card: #1a1713;
+  --card-foreground: #f5eedf;
+  --popover: #1a1713;
+  --popover-foreground: #f5eedf;
+  --primary: #4c79f0;
   --primary-foreground: #ffffff;
-  --secondary: #171717;
-  --secondary-foreground: #fafafa;
-  --muted: #171717;
-  --muted-foreground: #a3a3a3;
-  --accent: #a855f7;
+  --secondary: #2a241d;
+  --secondary-foreground: #f5eedf;
+  --muted: #1d1a16;
+  --muted-foreground: #998d79;
+  --accent: #f05244;
   --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --border: rgb(64 64 64 / 0.5);
-  --input: rgb(82 82 82 / 0.4);
-  --ring: #3b82f6;
-  --radius: 0.625rem;
-  --surface-strong: #0a0a0a;
-  --surface-soft: #171717;
-  --surface-paper: #fafafa;
-  --text-soft: #a3a3a3;
+  --destructive: #f05244;
+  --border: rgb(125 116 104 / 0.72);
+  --input: rgb(125 116 104 / 0.48);
+  --ring: #4c79f0;
+  --radius: 0.5rem;
+  --surface-strong: #12100d;
+  --surface-soft: #1d1a16;
+  --surface-paper: #f4efdf;
+  --text-soft: #d1c4af;
   --bauhaus-blue: #2D5FE5;
   --bauhaus-red: #D93025;
   --bauhaus-yellow: #E8B83D;
@@ -88,9 +89,10 @@ body {
     @apply bg-background text-foreground;
     background-image:
       radial-gradient(circle at top left, color-mix(in srgb, var(--bauhaus-yellow) 14%, transparent), transparent 24%),
-      linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--surface-strong) 94%, black) 100%);
+      linear-gradient(180deg, var(--background) 0%, color-mix(in srgb, var(--surface-strong) 96%, black) 100%);
     font-size: var(--text-base-size);
     line-height: var(--text-base-line);
+    font-family: var(--font-sans);
   }
   html {
     @apply font-sans;

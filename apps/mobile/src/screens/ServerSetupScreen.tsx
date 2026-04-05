@@ -8,6 +8,7 @@ import InstallSheet from '../components/setup/InstallSheet'
 import AiInspectSheet from '../components/setup/AiInspectSheet'
 import GitWizardSheet from '../components/setup/GitWizardSheet'
 import ClaudeWizardSheet from '../components/setup/ClaudeWizardSheet'
+import CopilotWizardSheet from '../components/setup/CopilotWizardSheet'
 import CodexWizardSheet from '../components/setup/CodexWizardSheet'
 import PythonWizardSheet from '../components/setup/PythonWizardSheet'
 import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
@@ -19,7 +20,7 @@ import AnimatedGradientBackground from '../components/background/AnimatedGradien
 import ConnectedAnimation from '../components/animations/ConnectedAnimation'
 import GitHubSetupAnimation from '../components/animations/GitHubSetupAnimation'
 import { ArrowRight, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
-import { getCodexBlockedReason } from '../components/setup/setup-tool-utils'
+import { getCodexBlockedReason, getCopilotBlockedReason, getServerSetupStatus } from '../components/setup/setup-tool-utils'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ServerSetup'>
@@ -30,6 +31,8 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const report = useSetupStore((s) => s.report)
   const bauhaus = palette.bauhaus
   const codexBlockedReason = getCodexBlockedReason(report)
+  const copilotBlockedReason = getCopilotBlockedReason(report)
+  const setupStatus = getServerSetupStatus(report)
   const scrollY = React.useRef(new Animated.Value(0)).current
 
   const [installTool, setInstallTool] = useState<ToolCheck | null>(null)
@@ -44,6 +47,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showGitHubAnimation, setShowGitHubAnimation] = useState(false)
   const [showClaudeWizard, setShowClaudeWizard] = useState(false)
   const [showCodexWizard, setShowCodexWizard] = useState(false)
+  const [showCopilotWizard, setShowCopilotWizard] = useState(false)
   const [showPkgWizard, setShowPkgWizard] = useState(false)
   const [showPkgAnimation, setShowPkgAnimation] = useState(false)
   const [showPythonWizard, setShowPythonWizard] = useState(false)
@@ -96,6 +100,27 @@ export default function ServerSetupScreen({ navigation }: Props) {
     setShowCodexWizard(false)
   }, [])
 
+  const handleCopilotWizard = useCallback(() => {
+    if (copilotBlockedReason) {
+      Alert.alert(
+        'Enable GitHub tools first',
+        copilotBlockedReason,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Git Setup', onPress: () => setShowGitWizard(true) },
+        ],
+      )
+      return
+    }
+    console.log('[ServerSetup] Opening Copilot wizard')
+    setShowCopilotWizard(true)
+  }, [copilotBlockedReason])
+
+  const handleCopilotWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] Copilot wizard complete')
+    setShowCopilotWizard(false)
+  }, [])
+
   const handlePkgWizard = useCallback(() => {
     console.log('[ServerSetup] Opening Pkg wizard')
     setShowPkgWizard(true)
@@ -111,6 +136,17 @@ export default function ServerSetupScreen({ navigation }: Props) {
       ],
     )
   }, [codexBlockedReason])
+
+  const handleBlockedCopilotWizard = useCallback(() => {
+    Alert.alert(
+      'Enable GitHub tools first',
+      copilotBlockedReason ?? 'Complete Git and GitHub CLI setup before enabling Copilot.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Git Setup', onPress: () => setShowGitWizard(true) },
+      ],
+    )
+  }, [copilotBlockedReason])
 
   const handlePkgWizardComplete = useCallback(() => {
     console.log('[ServerSetup] Pkg wizard complete')
@@ -224,14 +260,14 @@ export default function ServerSetupScreen({ navigation }: Props) {
               style={[
                 styles.statusBlock,
                 {
-                  backgroundColor: report?.ready ? bauhaus.yellow : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(26,26,26,0.05)'),
-                  borderColor: report?.ready ? bauhaus.yellow : colors.border,
+                  backgroundColor: setupStatus.ready ? bauhaus.yellow : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(26,26,26,0.05)'),
+                  borderColor: setupStatus.ready ? bauhaus.yellow : colors.border,
                 },
               ]}
             >
-              <Text style={[styles.statusBlockLabel, { color: report?.ready ? bauhaus.black : colors.textTertiary }]}>Workspace</Text>
-              <Text style={[styles.statusBlockValue, { color: report?.ready ? bauhaus.black : colors.text }]}>
-                {report?.ready ? 'Ready' : 'In Progress'}
+              <Text style={[styles.statusBlockLabel, { color: setupStatus.ready ? bauhaus.black : colors.textTertiary }]}>Workspace</Text>
+              <Text style={[styles.statusBlockValue, { color: setupStatus.ready ? bauhaus.black : colors.text }]}>
+                {setupStatus.ready ? 'Ready' : 'In Progress'}
               </Text>
             </View>
             <View style={[styles.statusBlock, { backgroundColor: bauhaus.blue, borderColor: bauhaus.blue }]}>
@@ -248,6 +284,8 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onClaudeWizard={handleClaudeWizard}
           onCodexWizard={handleCodexWizard}
           onBlockedCodexWizard={handleBlockedCodexWizard}
+          onCopilotWizard={handleCopilotWizard}
+          onBlockedCopilotWizard={handleBlockedCopilotWizard}
           onPkgWizard={handlePkgWizard}
           onPythonWizard={handlePythonWizard}
           onScroll={Animated.event(
@@ -260,10 +298,10 @@ export default function ServerSetupScreen({ navigation }: Props) {
           <TouchableOpacity
             style={[
               styles.continueButton,
-              { backgroundColor: report?.ready ? bauhaus.red : colors.border },
+              { backgroundColor: setupStatus.ready ? bauhaus.red : colors.border },
             ]}
             onPress={() => setShowConnected(true)}
-            disabled={!report?.ready}
+            disabled={!setupStatus.ready}
             activeOpacity={0.7}
           >
             <View style={styles.continueContent}>
@@ -309,6 +347,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           visible={showCodexWizard}
           onClose={() => setShowCodexWizard(false)}
           onComplete={handleCodexWizardComplete}
+        />
+
+        <CopilotWizardSheet
+          visible={showCopilotWizard}
+          onClose={() => setShowCopilotWizard(false)}
+          onComplete={handleCopilotWizardComplete}
         />
 
         <PackageManagerWizardSheet

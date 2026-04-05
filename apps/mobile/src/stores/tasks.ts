@@ -10,7 +10,7 @@ interface TaskState {
   taskLogs: Map<string, string[]>
   setTasks: (tasks: Task[]) => void
   refreshFromServer: () => Promise<void>
-  startTask: (prompt: string, agentType: AgentType, workingDirectory?: string | null) => void
+  startTask: (prompt: string, agentType: AgentType, workingDirectory?: string | null, model?: string | null) => void
   killTask: (id: string) => void
   appendLog: (taskId: string, line: string) => void
   updateTaskStatus: (taskId: string, status: TaskStatus) => void
@@ -42,11 +42,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set({ activeTaskId: nextActiveTaskId })
   },
 
-  startTask: (prompt: string, agentType: AgentType, workingDirectory = null) => {
+  startTask: (prompt: string, agentType: AgentType, workingDirectory = null, model = null) => {
     const ws = useConnectionStore.getState().ws
     if (!ws) return
 
-    ws.send('task.start', { prompt, agentType, workingDirectory })
+    ws.send('task.start', { prompt, agentType, workingDirectory, model })
     setTimeout(() => {
       void get().refreshFromServer().catch(() => {})
     }, 250)
