@@ -192,7 +192,7 @@ export default function CopilotWizardSheet({ visible, onClose, onComplete }: Pro
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
           <Image
-            source={isDark ? Assets.githubWhite : Assets.githubBlack}
+            source={isDark ? Assets.githubCopilotWhite : Assets.githubCopilotBlack}
             style={styles.completedLogo}
             resizeMode="contain"
           />

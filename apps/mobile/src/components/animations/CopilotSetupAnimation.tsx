@@ -217,7 +217,7 @@ export default function CopilotSetupAnimation({ onComplete }: Props) {
   }))
 
   const bgColor = isDark ? DARK_BG : LIGHT_BG
-  const githubLogo = isDark ? Assets.githubWhite : Assets.githubBlack
+  const githubLogo = isDark ? Assets.githubCopilotWhite : Assets.githubCopilotBlack
 
   return (
     <Animated.View style={[styles.overlay, { backgroundColor: bgColor }, overlayStyle]}>

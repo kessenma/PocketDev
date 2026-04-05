@@ -20,9 +20,11 @@ const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
 const TRUST_PROMPT_PATTERN = /do you trust (?:the files in this folder|the contents of this directory)\?/i
 const TRUST_CONTINUE_PATTERN = /press enter to continue/i
 const COPILOT_UI_READY_PATTERN = /\u001b\]2;GitHub Copilot\u0007|\u001b\[\?1049h/
+const TRUST_REMEMBERED_PATTERN = /has been added to trusted folders/i
 const READY_PATTERNS = [
   /describe a task to get started\./i,
   /tip:\s*\/usage/i,
+  TRUST_REMEMBERED_PATTERN,
 ]
 
 interface InternalTrustSession {
@@ -278,13 +280,20 @@ function refreshTrustSessionState(session: InternalTrustSession) {
   const derived = parseTrustState(session)
 
   if (derived.state === 'awaiting_trust' && !session.trustHandled) {
-    recordDebugEvent(session.id, `Trust prompt detected for ${derived.trustTarget ?? 'unknown target'}; sending enter to accept default trust option`)
+    recordDebugEvent(session.id, `Trust prompt detected for ${derived.trustTarget ?? 'unknown target'}; selecting option 2 (remember) with arrow-down + enter`)
     session.trustHandled = true
     session.trustTarget = derived.trustTarget
     session.prompt = derived.prompt
     session.state = 'pending'
     session.updatedAt = Date.now()
-    session.terminal.send('\r')
+    // Arrow down to select option 2 ("Yes, and remember this folder"), then enter
+    session.terminal.send('\x1b[B')
+    setTimeout(() => {
+      const latest = trustSessions.get(session.id)
+      if (latest && !latest.completed) {
+        latest.terminal.send('\r')
+      }
+    }, 300)
     return
   }
 
@@ -310,9 +319,36 @@ function scheduleFallbackTrustAttempt(session: InternalTrustSession) {
     if (!latest || latest.completed || latest.trusted || latest.trustHandled || latest.fallbackTrustAttempted || !latest.uiReady) return
     latest.fallbackTrustAttempted = true
     latest.updatedAt = Date.now()
-    recordDebugEvent(sessionId, 'No trust prompt parsed yet after UI ready; sending enter to Copilot TUI')
-    latest.terminal.send('\r')
+
+    // Check if copilot went straight to ready (trust already handled by user)
+    const normalized = normalizeOutput(latest.output)
+    const alreadyReady = READY_PATTERNS.some((p) => p.test(normalized))
+    if (alreadyReady) {
+      recordDebugEvent(sessionId, 'Copilot already at ready screen (trust was handled externally); completing session')
+      completeTrustSession(latest)
+      return
+    }
+
+    recordDebugEvent(sessionId, 'No trust prompt parsed yet after UI ready; sending arrow-down + enter to select remember option')
+    // Arrow down to select option 2 ("Yes, and remember this folder"), then enter
+    latest.terminal.send('\x1b[B')
+    setTimeout(() => {
+      const current = trustSessions.get(sessionId)
+      if (current && !current.completed) {
+        current.terminal.send('\r')
+      }
+    }, 300)
   }, 1800)
+}
+
+function scheduleSessionTimeout(sessionId: string) {
+  setTimeout(() => {
+    const session = trustSessions.get(sessionId)
+    if (!session || session.completed || session.trusted) return
+
+    recordDebugEvent(sessionId, 'Trust session timed out after 30s; finalizing')
+    void finalizeTrustSession(sessionId)
+  }, 30_000)
 }
 
 async function finalizeTrustSession(sessionId: string) {
@@ -463,6 +499,7 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
   }
 
   trustSessions.set(sessionId, session)
+  scheduleSessionTimeout(sessionId)
   const launchCommand = `exec ${shellEscape(copilotPath ?? 'copilot')}`
   recordDebugEvent(sessionId, `Sending \`${launchCommand}\` to PTY session`)
   terminal.send(`${launchCommand}\n`)
