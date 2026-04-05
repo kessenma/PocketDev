@@ -1,10 +1,12 @@
 import { Badge } from '#/components/ui/badge'
-import type { TasksDebugInfo } from '#/lib/api'
+import { Button } from '#/components/ui/button'
+import { killTaskFromConsole, type TasksDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
-import { Zap } from 'lucide-react'
+import { Zap, Square } from 'lucide-react'
 
 interface Props {
   tasksInfo: TasksDebugInfo | null
+  onRefresh?: () => void
 }
 
 function statusColor(status: string): string {
@@ -26,7 +28,7 @@ function formatShortTime(iso: string) {
   })
 }
 
-export function TasksDiagnosticsTab({ tasksInfo }: Props) {
+export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
   const runningCount = tasksInfo?.tasks.filter((t) => t.status === 'running').length ?? 0
   const completedCount = tasksInfo?.tasks.filter((t) => t.status === 'completed').length ?? 0
   const failedCount = tasksInfo?.tasks.filter((t) => t.status === 'failed').length ?? 0
@@ -95,9 +97,26 @@ export function TasksDiagnosticsTab({ tasksInfo }: Props) {
                     </p>
                     <p className="mt-1 font-mono text-[11px] text-[#f4f0e8]/40">{task.id}</p>
                   </div>
-                  <Badge variant="outline" className={cn(statusColor(task.status))}>
-                    {task.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {task.status === 'running' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/20"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          await killTaskFromConsole(task.id)
+                          onRefresh?.()
+                        }}
+                      >
+                        <Square className="mr-1 h-3 w-3" />
+                        Kill
+                      </Button>
+                    )}
+                    <Badge variant="outline" className={cn(statusColor(task.status))}>
+                      {task.status}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="mt-3 grid gap-x-4 gap-y-1 text-xs text-[#f4f0e8]/65 sm:grid-cols-2">
                   <p>Agent: <span className="font-medium text-[#f4f0e8]/85">{task.agentType}</span></p>

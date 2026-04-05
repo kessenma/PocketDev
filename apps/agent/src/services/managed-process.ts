@@ -2,7 +2,103 @@ import type { Subprocess } from 'bun'
 import { insertTaskLog, updateTaskStatus } from '../db/index.ts'
 import { broadcast, makeMessage } from './ws.ts'
 import { detectDevServerPort, setDevServerPort } from './proxy.ts'
+
 type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'killed'
+
+/**
+ * Parse a Claude CLI stream-json line into human-readable text.
+ * Returns null if the line should be suppressed (noise), or a readable string otherwise.
+ */
+function parseStreamJsonLine(json: Record<string, unknown>): string | null {
+  const type = json.type as string | undefined
+
+  if (type === 'system') {
+    const subtype = json.subtype as string | undefined
+    if (subtype === 'init') {
+      const model = (json as any).model ?? 'unknown'
+      const perm = (json as any).permissionMode ?? 'unknown'
+      return `[system] Session started — model: ${model}, permission: ${perm}`
+    }
+    if (subtype === 'task_started') {
+      const desc = (json as any).description ?? ''
+      return `[agent] Sub-task started: ${desc}`
+    }
+    if (subtype === 'task_progress') {
+      const desc = (json as any).description ?? ''
+      return `[agent] ${desc}`
+    }
+    if (subtype === 'task_completed') {
+      return `[agent] Sub-task completed`
+    }
+    return null // suppress other system messages
+  }
+
+  if (type === 'assistant') {
+    const message = json.message as Record<string, unknown> | undefined
+    if (!message) return null
+    const content = message.content as Array<Record<string, unknown>> | undefined
+    if (!content?.length) return null
+
+    const parts: string[] = []
+    for (const block of content) {
+      if (block.type === 'thinking') {
+        const text = (block.thinking as string) ?? ''
+        const preview = text.length > 200 ? text.slice(0, 200) + '...' : text
+        parts.push(`[thinking] ${preview}`)
+      } else if (block.type === 'text') {
+        parts.push(block.text as string)
+      } else if (block.type === 'tool_use') {
+        const name = block.name as string
+        const input = block.input as Record<string, unknown> | undefined
+        if (name === 'Bash' && input?.command) {
+          parts.push(`[tool] ${name}: ${input.command}`)
+        } else if ((name === 'Read' || name === 'Glob' || name === 'Grep') && input?.file_path) {
+          parts.push(`[tool] ${name}: ${input.file_path}`)
+        } else if ((name === 'Read' || name === 'Glob' || name === 'Grep') && input?.pattern) {
+          parts.push(`[tool] ${name}: ${input.pattern}`)
+        } else if (name === 'Edit' && input?.file_path) {
+          parts.push(`[tool] ${name}: ${input.file_path}`)
+        } else if (name === 'Write' && input?.file_path) {
+          parts.push(`[tool] ${name}: ${input.file_path}`)
+        } else if (name === 'Agent') {
+          const desc = (input?.description as string) ?? ''
+          parts.push(`[tool] ${name}: ${desc}`)
+        } else {
+          parts.push(`[tool] ${name}`)
+        }
+      }
+    }
+    return parts.length > 0 ? parts.join('\n') : null
+  }
+
+  if (type === 'user') {
+    // Tool results — show brief summary
+    const message = json.message as Record<string, unknown> | undefined
+    const content = message?.content as Array<Record<string, unknown>> | undefined
+    if (!content?.length) return null
+
+    for (const block of content) {
+      if (block.type === 'tool_result') {
+        const text = (block.content as string) ?? ''
+        const isError = block.is_error as boolean | undefined
+        if (isError) return `[error] ${text.slice(0, 300)}`
+        if (text.length > 300) return `[result] ${text.slice(0, 300)}...`
+        if (text.length > 0) return `[result] ${text}`
+      }
+    }
+    return null
+  }
+
+  if (type === 'result') {
+    const message = json.message as Record<string, unknown> | undefined
+    const stopReason = message?.stop_reason as string | undefined
+    return `[done] Task finished (${stopReason ?? 'complete'})`
+  }
+
+  if (type === 'rate_limit_event') return null
+
+  return null
+}
 
 export class ManagedProcess {
   readonly taskId: string
@@ -117,10 +213,15 @@ export class ManagedProcess {
           const port = detectDevServerPort(line)
           if (port) setDevServerPort(port)
 
-          // Parse stream-json for permission denials
+          // Store raw line in DB (for diagnostics)
+          insertTaskLog(this.taskId, name, line)
+
+          // Parse stream-json stdout for structured events
           if (name === 'stdout') {
             try {
               const parsed = JSON.parse(line)
+
+              // Check for permission denials
               if (parsed.permission_denials?.length) {
                 broadcast(
                   makeMessage('task.permission_request', {
@@ -129,17 +230,38 @@ export class ManagedProcess {
                   }),
                 )
               }
-            } catch { /* not JSON, ignore */ }
-          }
 
-          insertTaskLog(this.taskId, name, line)
-          broadcast(
-            makeMessage('task.output', {
-              taskId: this.taskId,
-              stream: name,
-              line,
-            }),
-          )
+              // Extract human-readable text for mobile
+              const readable = parseStreamJsonLine(parsed)
+              if (readable) {
+                broadcast(
+                  makeMessage('task.output', {
+                    taskId: this.taskId,
+                    stream: name,
+                    line: readable,
+                  }),
+                )
+              }
+            } catch {
+              // Not JSON — broadcast as-is (stderr or plain text)
+              broadcast(
+                makeMessage('task.output', {
+                  taskId: this.taskId,
+                  stream: name,
+                  line,
+                }),
+              )
+            }
+          } else {
+            // stderr — broadcast as-is
+            broadcast(
+              makeMessage('task.output', {
+                taskId: this.taskId,
+                stream: name,
+                line,
+              }),
+            )
+          }
         }
       }
 

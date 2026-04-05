@@ -22,7 +22,7 @@ import { getClaudeAuthDebug } from '../services/claude-setup.ts'
 import { getCopilotAuthDebug } from '../services/copilot-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
 import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
-import { getTaskList, getProcess, buildCommand } from '../services/task-manager.ts'
+import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
@@ -350,6 +350,16 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return { tasks, activeProcesses, totalCount: tasks.length, taskLogs, taskCommands }
+  })
+
+  // ─── Kill task (requires session) ──────────────────────
+  .post('/debug/tasks/:taskId/kill', ({ request, params, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const killed = killTask(params.taskId)
+    return { success: killed, taskId: params.taskId }
   })
 
   // ─── Setup debug (requires session) ───────────────────

@@ -393,6 +393,12 @@ export async function fetchTasksDebug(): Promise<TasksDebugInfo> {
   return res.json()
 }
 
+export async function killTaskFromConsole(taskId: string): Promise<{ success: boolean }> {
+  const res = await post(`/debug/tasks/${taskId}/kill`)
+  if (!res.ok) throw new Error('Failed to kill task')
+  return res.json()
+}
+
 // ─── Setup debug ────────────────────────────────────────
 
 export interface SetupProviderInfo {

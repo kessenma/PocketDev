@@ -50,8 +50,11 @@ const TERMINAL_QUERY_RESPONSES: Array<{ pattern: RegExp; response: string; label
 ]
 const TRUST_REMEMBERED_PATTERN = /has been added to trusted folders/i
 const READY_PATTERNS = [
-  /describe a task to get started\./i,
+  /describe a task to get started/i,
   /tip:\s*\/usage/i,
+  /type @ to mention files/i,
+  /environment loaded/i,
+  /check for mistakes/i,
   TRUST_REMEMBERED_PATTERN,
 ]
 

@@ -332,7 +332,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
             </div>
           </div>
         ) : activeTab === 'tasks' ? (
-          <TasksDiagnosticsTab tasksInfo={tasksInfo} />
+          <TasksDiagnosticsTab tasksInfo={tasksInfo} onRefresh={refresh} />
         ) : activeTab === 'setup' ? (
           <SetupDiagnosticsTab setupInfo={setupInfo} />
         ) : activeTab === 'claude' ? (
