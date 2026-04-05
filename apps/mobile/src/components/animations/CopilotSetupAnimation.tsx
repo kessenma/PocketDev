@@ -21,8 +21,8 @@ import { Check, ShieldCheck } from 'lucide-react-native'
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 const BAUHAUS = palette.bauhaus
-const LIGHT_BG = '#EEF2FF'
-const DARK_BG = '#0A0A0A'
+const LIGHT_BG = 'transparent'
+const DARK_BG = 'transparent'
 const PANEL_BG = '#111827'
 const PANEL_LINE = 'rgba(244, 240, 232, 0.74)'
 
@@ -31,9 +31,9 @@ const PANEL_DELAY = 280
 const CHIP_STAGGER = 180
 const CONNECTOR_DELAY = 720
 const SHIELD_DELAY = 1320
-const HOLD_DURATION = 980
-const MERGE_DURATION = 620
-const OUTRO_DURATION = 300
+const HOLD_DURATION = 200
+const MERGE_DURATION = 520
+const OUTRO_DURATION = 250
 const PANEL_WIDTH = SCREEN_WIDTH * 0.52
 const PANEL_HEIGHT = SCREEN_WIDTH * 0.34
 
@@ -159,7 +159,7 @@ export default function CopilotSetupAnimation({ onComplete }: Props) {
     const totalDuration = mergeStart + MERGE_DURATION + OUTRO_DURATION
     const timeout = setTimeout(() => {
       triggerExit()
-    }, totalDuration + 40)
+    }, totalDuration)
 
     return () => clearTimeout(timeout)
   }, [

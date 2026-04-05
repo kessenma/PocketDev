@@ -20,6 +20,18 @@ const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
 const TRUST_PROMPT_PATTERN = /do you trust (?:the files in this folder|the contents of this directory)\?/i
 const TRUST_CONTINUE_PATTERN = /press enter to continue/i
 const COPILOT_UI_READY_PATTERN = /\u001b\]2;GitHub Copilot\u0007|\u001b\[\?1049h/
+
+// Terminal query patterns that TUI apps send and expect responses for.
+// If we don't respond, the app may hang waiting for the terminal's reply.
+const TERMINAL_QUERY_RESPONSES: Array<{ pattern: RegExp; response: string; label: string }> = [
+  // OSC 11 - background color query → reply with dark background
+  // Terminated by either ST (ESC \) or BEL (\x07)
+  { pattern: /\u001b\]11;\?(?:\u001b\\|\u0007)/, response: '\u001b]11;rgb:0a0a/0a0a/0a0a\u001b\\', label: 'OSC 11 (bg color)' },
+  // OSC 10 - foreground color query → reply with light foreground
+  { pattern: /\u001b\]10;\?(?:\u001b\\|\u0007)/, response: '\u001b]10;rgb:f4f0/e8e8/d0d0\u001b\\', label: 'OSC 10 (fg color)' },
+  // Kitty keyboard protocol query → reply with no flags
+  { pattern: /\u001b\[\?u/, response: '\u001b[?0u', label: 'Kitty keyboard query' },
+]
 const TRUST_REMEMBERED_PATTERN = /has been added to trusted folders/i
 const READY_PATTERNS = [
   /describe a task to get started\./i,
@@ -130,6 +142,16 @@ function normalizeTrustTarget(target: string) {
 
 function shellEscape(value: string) {
   return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+/** Respond to terminal queries that TUI apps expect answers for. */
+function answerTerminalQueries(chunk: string, terminal: TerminalSession, sessionId: string) {
+  for (const { pattern, response, label } of TERMINAL_QUERY_RESPONSES) {
+    if (pattern.test(chunk)) {
+      recordDebugEvent(sessionId, `Responding to terminal query: ${label}`)
+      terminal.send(response)
+    }
+  }
 }
 
 function readTrustMarkers(): Record<string, true> {
@@ -310,13 +332,39 @@ function refreshTrustSessionState(session: InternalTrustSession) {
   session.state = session.completed && !session.trusted ? 'failed' : derived.state
 }
 
-function scheduleFallbackTrustAttempt(session: InternalTrustSession) {
+/** Minimum word count in normalized output to consider the TUI as rendered. */
+const MIN_TUI_WORDS = 4
+
+function hasMeaningfulText(output: string): boolean {
+  const normalized = normalizeOutput(output)
+  const words = normalized.split(/\s+/).filter((w) => w.length > 1)
+  return words.length >= MIN_TUI_WORDS
+}
+
+function scheduleFallbackTrustAttempt(session: InternalTrustSession, attempt = 0) {
   if (session.fallbackTrustAttempted || session.completed || session.trusted || !session.uiReady) return
 
   const sessionId = session.id
+  // First check at 3s, then retry every 2s up to 5 attempts (total ~13s before giving up)
+  const delay = attempt === 0 ? 3000 : 2000
+  const maxAttempts = 5
+
   setTimeout(() => {
     const latest = trustSessions.get(sessionId)
     if (!latest || latest.completed || latest.trusted || latest.trustHandled || latest.fallbackTrustAttempted || !latest.uiReady) return
+
+    // Don't send keystrokes until the TUI has actually rendered text content
+    if (!hasMeaningfulText(latest.output)) {
+      if (attempt < maxAttempts) {
+        recordDebugEvent(sessionId, `Fallback check ${attempt + 1}: TUI not fully rendered yet, waiting...`)
+        scheduleFallbackTrustAttempt(latest, attempt + 1)
+      } else {
+        recordDebugEvent(sessionId, `Fallback: TUI never rendered text after ${maxAttempts + 1} checks; session will be caught by timeout`)
+        latest.fallbackTrustAttempted = true
+      }
+      return
+    }
+
     latest.fallbackTrustAttempted = true
     latest.updatedAt = Date.now()
 
@@ -329,16 +377,21 @@ function scheduleFallbackTrustAttempt(session: InternalTrustSession) {
       return
     }
 
-    recordDebugEvent(sessionId, 'No trust prompt parsed yet after UI ready; sending arrow-down + enter to select remember option')
-    // Arrow down to select option 2 ("Yes, and remember this folder"), then enter
-    latest.terminal.send('\x1b[B')
-    setTimeout(() => {
-      const current = trustSessions.get(sessionId)
-      if (current && !current.completed) {
-        current.terminal.send('\r')
-      }
-    }, 300)
-  }, 1800)
+    // Check if trust prompt is actually visible before sending keystrokes
+    const hasTrustPrompt = TRUST_PROMPT_PATTERN.test(normalized) || TRUST_CONTINUE_PATTERN.test(normalized)
+    if (hasTrustPrompt) {
+      recordDebugEvent(sessionId, 'Fallback: trust prompt found in rendered TUI; sending arrow-down + enter')
+      latest.terminal.send('\x1b[B')
+      setTimeout(() => {
+        const current = trustSessions.get(sessionId)
+        if (current && !current.completed) {
+          current.terminal.send('\r')
+        }
+      }, 300)
+    } else {
+      recordDebugEvent(sessionId, `Fallback: TUI rendered but no trust prompt or ready pattern found; normalized excerpt: ${normalized.slice(-200)}`)
+    }
+  }, delay)
 }
 
 function scheduleSessionTimeout(sessionId: string) {
@@ -472,6 +525,7 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
       if (!session) return
       session.output = `${session.output}${chunk}`.slice(-MAX_OUTPUT_LENGTH)
       recordDebugEvent(sessionId, `PTY output chunk received (${chunk.length} chars)`)
+      answerTerminalQueries(chunk, session.terminal, sessionId)
       refreshTrustSessionState(session)
     },
     (exitCode) => {
@@ -528,6 +582,7 @@ export async function verifyCopilotSetup(): Promise<CopilotSetupStatus> {
       (chunk) => {
         if (!session) return
         session.output = `${session.output}${chunk}`.slice(-MAX_OUTPUT_LENGTH)
+        answerTerminalQueries(chunk, session.terminal, sessionId)
         refreshTrustSessionState(session)
       },
       (exitCode) => {
