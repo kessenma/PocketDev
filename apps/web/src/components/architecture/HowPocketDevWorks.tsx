@@ -69,6 +69,7 @@ export function HowPocketDevWorks() {
             caption="As the card assembles, PocketDev shifts from pairing into guided server prep: helper scripts wire up git SSH, package tooling, AI CLIs, and Docker on the box itself."
             cardClassName="md:col-span-2"
             stageMinHeight={504}
+            stageHeight={504}
             stageBorderless
             svgClassName="block h-full w-full"
             preserveAspectRatio="xMidYMid slice"

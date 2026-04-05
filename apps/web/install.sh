@@ -187,113 +187,190 @@ ok "Systemd service created"
 # ─── Step 4: Install and configure Caddy for HTTPS ───────────────
 step "Step 4/5: Setting up HTTPS (Caddy)"
 
-# Ask for optional domain
-echo ""
-echo -e "  ${CYAN}Do you have a domain pointing to this server?${NC}"
-echo -e "  Enter it now for a trusted HTTPS certificate (Let's Encrypt),"
-echo -e "  or leave blank for a self-signed certificate on the IP address."
-echo ""
-printf "  Domain (leave blank for IP-only): "
-read -r USER_DOMAIN </dev/tty || USER_DOMAIN=""
-USER_DOMAIN="$(echo "$USER_DOMAIN" | tr -d '[:space:]')"
+CADDY_FAILED=false
+CADDY_SKIPPED=false
+EXISTING_CADDY=false
 
-# Install Caddy
-if ! command -v caddy >/dev/null 2>&1; then
-  info "Installing Caddy (this may take a minute)..."
-  case "$OS_TYPE" in
-    ubuntu|debian|pop|linuxmint|zorin)
-      info "  Installing prerequisites (keyring, apt-transport-https)..."
-      apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tail -1 || true
-      info "  Adding Caddy GPG key..."
-      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
-      info "  Adding Caddy APT repository..."
-      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
-      info "  Updating package lists..."
-      apt-get update -qq 2>&1 | tail -1 || true
-      info "  Installing caddy package..."
-      apt-get install -y -qq caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
-      ;;
-    centos|fedora|rhel|rocky|almalinux|amzn)
-      info "  Enabling Caddy COPR repository..."
-      dnf install -y 'dnf-command(copr)' 2>&1 | tail -1 || true
-      dnf copr enable -y @caddy/caddy 2>&1 | tail -1 || true
-      info "  Installing caddy package..."
-      dnf install -y caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
-      ;;
-    arch|manjaro)
-      info "  Installing caddy package..."
-      pacman -Sy --noconfirm caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
-      ;;
-    alpine)
-      info "  Installing caddy package..."
-      apk add caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
-      ;;
-    *)
-      warn "Unknown OS '$OS_TYPE' — trying apt-get for Caddy"
-      info "  Installing prerequisites (keyring, apt-transport-https)..."
-      apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tail -1 || true
-      info "  Adding Caddy GPG key..."
-      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
-      info "  Adding Caddy APT repository..."
-      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
-      info "  Updating package lists..."
-      apt-get update -qq 2>&1 | tail -1 || true
-      info "  Installing caddy package..."
-      apt-get install -y -qq caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
-      ;;
-  esac
-  if command -v caddy >/dev/null 2>&1; then
-    ok "Caddy installed ($(caddy version 2>/dev/null | head -1))"
-  else
-    fail "Caddy installation failed"
+# Check if Caddy (or another reverse proxy) is already running on port 443
+if systemctl is-active --quiet caddy 2>/dev/null; then
+  EXISTING_CADDY=true
+  info "Detected an existing Caddy service already running on this server."
+  # Check if it looks like Coolify/Traefik manages it
+  EXISTING_CADDY_UNIT="$(systemctl show caddy --property=FragmentPath 2>/dev/null | cut -d= -f2)"
+  if [ -n "$EXISTING_CADDY_UNIT" ] && grep -qi "coolify\|docker" "$EXISTING_CADDY_UNIT" 2>/dev/null; then
+    info "  Appears to be managed by Coolify or Docker."
   fi
-else
-  ok "Caddy already installed ($(caddy version 2>/dev/null | head -1))"
+elif ss -tlnp 2>/dev/null | grep -q ':443 ' || netstat -tlnp 2>/dev/null | grep -q ':443 '; then
+  EXISTING_CADDY=true
+  info "Detected another service already listening on port 443."
 fi
 
-# Write Caddyfile
-info "Writing HTTPS config..."
-mkdir -p "$(dirname "$CADDY_FILE")"
+if [ "$EXISTING_CADDY" = true ]; then
+  echo ""
+  echo -e "  ${YELLOW}Another service is already using port 443 (HTTPS).${NC}"
+  echo -e "  This is common with Coolify, Traefik, or other reverse proxies."
+  echo ""
+  echo -e "  You have two options:"
+  echo -e "    ${BOLD}1)${NC} Skip — configure your existing reverse proxy to forward to localhost:${PORT}"
+  echo -e "    ${BOLD}2)${NC} Replace — let PocketDev manage Caddy (will overwrite existing config)"
+  echo ""
+  printf "  Choice [1/2] (default: 1 = skip): "
+  read -r CADDY_CHOICE </dev/tty || CADDY_CHOICE=""
+  CADDY_CHOICE="$(echo "$CADDY_CHOICE" | tr -d '[:space:]')"
 
-if [ -n "$USER_DOMAIN" ]; then
-  cat > "$CADDY_FILE" <<CADDYEOF
+  if [ "$CADDY_CHOICE" = "2" ]; then
+    info "Will replace existing Caddy config with PocketDev's."
+    EXISTING_CADDY=false
+  else
+    CADDY_SKIPPED=true
+    ok "Skipping Caddy setup — using existing reverse proxy"
+    echo ""
+    echo -e "  ${CYAN}To complete HTTPS setup, add a reverse proxy rule in your${NC}"
+    echo -e "  ${CYAN}existing tool (Coolify, Traefik, nginx, etc.) that forwards to:${NC}"
+    echo ""
+    echo -e "    ${BOLD}http://localhost:${PORT}${NC}"
+    echo ""
+    echo -e "  ${CYAN}The agent path prefix is /PocketDev/ — your proxy should forward${NC}"
+    echo -e "  ${CYAN}all paths including WebSocket upgrades.${NC}"
+    echo ""
+    # Agent needs to be externally accessible since we're not managing the proxy
+    sed -i "s/POCKETDEV_HOST=127.0.0.1/POCKETDEV_HOST=0.0.0.0/" "/etc/systemd/system/${SERVICE_NAME}.service"
+    systemctl daemon-reload
+    echo "" > "${DATA_DIR}/domain.txt"
+  fi
+fi
+
+if [ "$CADDY_SKIPPED" = false ]; then
+  # Ask for optional domain
+  echo ""
+  echo -e "  ${CYAN}Do you have a domain pointing to this server?${NC}"
+  echo -e "  Enter it now for a trusted HTTPS certificate (Let's Encrypt),"
+  echo -e "  or leave blank for a self-signed certificate on the IP address."
+  echo ""
+  printf "  Domain (leave blank for IP-only): "
+  read -r USER_DOMAIN </dev/tty || USER_DOMAIN=""
+  USER_DOMAIN="$(echo "$USER_DOMAIN" | tr -d '[:space:]')"
+
+  # Install Caddy if not already present
+  if ! command -v caddy >/dev/null 2>&1; then
+    info "Installing Caddy (this may take a minute)..."
+    case "$OS_TYPE" in
+      ubuntu|debian|pop|linuxmint|zorin)
+        info "  Installing prerequisites (keyring, apt-transport-https)..."
+        apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tail -1 || true
+        info "  Adding Caddy GPG key..."
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
+        info "  Adding Caddy APT repository..."
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+        info "  Updating package lists..."
+        apt-get update -qq 2>&1 | tail -1 || true
+        info "  Installing caddy package..."
+        apt-get install -y -qq caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+        ;;
+      centos|fedora|rhel|rocky|almalinux|amzn)
+        info "  Enabling Caddy COPR repository..."
+        dnf install -y 'dnf-command(copr)' 2>&1 | tail -1 || true
+        dnf copr enable -y @caddy/caddy 2>&1 | tail -1 || true
+        info "  Installing caddy package..."
+        dnf install -y caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+        ;;
+      arch|manjaro)
+        info "  Installing caddy package..."
+        pacman -Sy --noconfirm caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+        ;;
+      alpine)
+        info "  Installing caddy package..."
+        apk add caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+        ;;
+      *)
+        warn "Unknown OS '$OS_TYPE' — trying apt-get for Caddy"
+        info "  Installing prerequisites (keyring, apt-transport-https)..."
+        apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tail -1 || true
+        info "  Adding Caddy GPG key..."
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
+        info "  Adding Caddy APT repository..."
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+        info "  Updating package lists..."
+        apt-get update -qq 2>&1 | tail -1 || true
+        info "  Installing caddy package..."
+        apt-get install -y -qq caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+        ;;
+    esac
+    if command -v caddy >/dev/null 2>&1; then
+      ok "Caddy installed ($(caddy version 2>/dev/null | head -1))"
+    else
+      fail "Caddy installation failed"
+    fi
+  else
+    ok "Caddy already installed ($(caddy version 2>/dev/null | head -1))"
+  fi
+
+  # Write Caddyfile
+  info "Writing HTTPS config..."
+  mkdir -p "$(dirname "$CADDY_FILE")"
+
+  if [ -n "$USER_DOMAIN" ]; then
+    cat > "$CADDY_FILE" <<CADDYEOF
 ${USER_DOMAIN} {
   reverse_proxy localhost:${PORT}
 }
 CADDYEOF
-  echo "$USER_DOMAIN" > "${DATA_DIR}/domain.txt"
-  ok "Configured HTTPS for domain: $USER_DOMAIN (Let's Encrypt)"
-else
-  cat > "$CADDY_FILE" <<CADDYEOF
+    echo "$USER_DOMAIN" > "${DATA_DIR}/domain.txt"
+    ok "Configured HTTPS for domain: $USER_DOMAIN (Let's Encrypt)"
+  else
+    cat > "$CADDY_FILE" <<CADDYEOF
 :443 {
   tls internal
   reverse_proxy localhost:${PORT}
 }
 CADDYEOF
-  echo "" > "${DATA_DIR}/domain.txt"
-  ok "Configured HTTPS with self-signed certificate (IP-only)"
-fi
+    echo "" > "${DATA_DIR}/domain.txt"
+    ok "Configured HTTPS with self-signed certificate (IP-only)"
+  fi
 
-# Allow agent to update Caddy config later (from console UI)
-CADDY_BIN="$(which caddy)"
-cat > "/etc/sudoers.d/pocketdev-caddy" <<SUDOEOF
+  # Allow agent to update Caddy config later (from console UI)
+  cat > "/etc/sudoers.d/pocketdev-caddy" <<SUDOEOF
 # Allow PocketDev agent to update Caddy HTTPS config
 root ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload caddy
 root ALL=(ALL) NOPASSWD: /usr/bin/tee ${CADDY_FILE}
 SUDOEOF
-chmod 440 /etc/sudoers.d/pocketdev-caddy
+  chmod 440 /etc/sudoers.d/pocketdev-caddy
 
-# Start Caddy
-systemctl enable caddy >/dev/null 2>&1
-systemctl restart caddy
-sleep 1
+  # Stop Caddy before restarting with new config
+  systemctl stop caddy 2>/dev/null || true
 
-if systemctl is-active --quiet caddy; then
-  ok "Caddy is running (HTTPS on port 443)"
-else
-  warn "Caddy failed to start. Showing recent logs:"
-  journalctl -u caddy --no-pager -n 10 2>/dev/null || true
-  warn "HTTPS may not be available. The agent will still work on http://localhost:${PORT}"
+  # Validate the Caddyfile before starting
+  info "Validating Caddy config..."
+  if caddy validate --config "$CADDY_FILE" 2>&1; then
+    ok "Caddyfile is valid"
+  else
+    warn "Caddyfile validation failed — check $CADDY_FILE"
+    CADDY_FAILED=true
+  fi
+
+  # Start Caddy (use || true so set -e doesn't kill the install)
+  if [ "$CADDY_FAILED" = false ]; then
+    info "Starting Caddy..."
+    systemctl enable caddy >/dev/null 2>&1
+    systemctl start caddy 2>/dev/null || true
+    sleep 2
+    if systemctl is-active --quiet caddy; then
+      ok "Caddy is running (HTTPS on port 443)"
+    else
+      warn "Caddy failed to start. Showing recent logs:"
+      journalctl -u caddy --no-pager -n 15 2>/dev/null || true
+      echo ""
+      warn "You can debug with: journalctl -u caddy -f"
+      CADDY_FAILED=true
+    fi
+  fi
+
+  # If Caddy failed, bind agent externally so it's still accessible
+  if [ "$CADDY_FAILED" = true ]; then
+    warn "HTTPS not available. Agent will listen on http://0.0.0.0:${PORT} directly."
+    sed -i "s/POCKETDEV_HOST=127.0.0.1/POCKETDEV_HOST=0.0.0.0/" "/etc/systemd/system/${SERVICE_NAME}.service"
+    systemctl daemon-reload
+  fi
 fi
 
 # ─── Step 5: Start and verify ─────────────────────────────────────
@@ -322,6 +399,12 @@ else
   DISPLAY_HOST="$PUBLIC_IP"
 fi
 
+# Determine if PocketDev-managed Caddy is active
+POCKETDEV_HTTPS=false
+if [ "$CADDY_SKIPPED" = false ] && [ "$CADDY_FAILED" = false ]; then
+  POCKETDEV_HTTPS=true
+fi
+
 echo ""
 echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}  PocketDev installed successfully!${NC}"
@@ -329,22 +412,37 @@ echo -e "${GREEN}============================================${NC}"
 echo ""
 echo -e "  Open this URL in your browser to complete setup:"
 echo ""
-echo -e "    ${CYAN}https://${DISPLAY_HOST}/PocketDev/setup${NC}"
-echo ""
-if [ -z "$USER_DOMAIN" ]; then
-  echo -e "  ${YELLOW}Note:${NC} Using a self-signed certificate. Your browser will show"
-  echo "  a security warning — click 'Advanced' → 'Proceed' to continue."
+if [ "$POCKETDEV_HTTPS" = true ]; then
+  echo -e "    ${CYAN}https://${DISPLAY_HOST}/PocketDev/setup${NC}"
+  if [ -z "$USER_DOMAIN" ]; then
+    echo ""
+    echo -e "  ${YELLOW}Note:${NC} Using a self-signed certificate. Your browser will show"
+    echo "  a security warning — click 'Advanced' → 'Proceed' to continue."
+  fi
+elif [ "$CADDY_SKIPPED" = true ]; then
+  echo -e "    ${CYAN}http://${DISPLAY_HOST}:${PORT}/PocketDev/setup${NC}"
   echo ""
+  echo -e "  ${YELLOW}Note:${NC} Configure your existing reverse proxy to forward to"
+  echo -e "  localhost:${PORT} for HTTPS access."
+else
+  echo -e "    ${CYAN}http://${DISPLAY_HOST}:${PORT}/PocketDev/setup${NC}"
 fi
+echo ""
 echo "  Create your admin account, then pair your mobile device."
 echo "  You can add a custom domain later from the console settings."
 echo ""
-echo -e "  ${BOLD}Health:${NC}  https://${DISPLAY_HOST}/PocketDev/health"
+if [ "$POCKETDEV_HTTPS" = true ]; then
+  echo -e "  ${BOLD}Health:${NC}  https://${DISPLAY_HOST}/PocketDev/health"
+else
+  echo -e "  ${BOLD}Health:${NC}  http://${DISPLAY_HOST}:${PORT}/PocketDev/health"
+fi
 echo ""
 echo "  Useful commands:"
 echo "    journalctl -u $SERVICE_NAME -f        # Stream agent logs"
-echo "    journalctl -u caddy -f                # Stream Caddy logs"
+if [ "$POCKETDEV_HTTPS" = true ]; then
+  echo "    journalctl -u caddy -f                # Stream Caddy logs"
+  echo "    systemctl restart caddy                # Restart Caddy"
+fi
 echo "    systemctl restart $SERVICE_NAME        # Restart agent"
-echo "    systemctl restart caddy                # Restart Caddy"
 echo "    curl http://localhost:$PORT/PocketDev/health  # Health check (internal)"
 echo ""

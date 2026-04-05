@@ -10,6 +10,7 @@ export function ExplainerCard({
   legend,
   cardClassName,
   stageMinHeight = 236,
+  stageHeight,
   stageBorderless = false,
   svgClassName,
   preserveAspectRatio = 'xMidYMid meet',
@@ -37,6 +38,7 @@ export function ExplainerCard({
         style={{
           ...architectureTextStyles.surface,
           minHeight: stageMinHeight,
+          height: stageHeight,
           background:
             'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 34%)',
         }}
