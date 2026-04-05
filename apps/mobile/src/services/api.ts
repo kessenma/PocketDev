@@ -55,15 +55,24 @@ import type {
   PkgInstallResult,
 } from '@pocketdev/shared/types'
 
+// Module-level HTTPS flag — set once when connection is established
+let _useSecure = false
+export function setSecureMode(secure: boolean) { _useSecure = secure }
+
 function apiUrl(ip: string, port: number, path: string): string {
-  return `http://${ip}:${port}/PocketDev/api${path}`
+  const protocol = _useSecure ? 'https' : 'http'
+  return `${protocol}://${ip}:${port}/PocketDev/api${path}`
 }
 
 export async function pairWithServer(
   ip: string,
   port: number,
   code: string,
+  secure = false,
 ): Promise<PairResponse> {
+  // Set secure mode before making the pairing request
+  setSecureMode(secure)
+
   // Generate a fresh keypair for this device
   const keypair = generateDeviceKeypair()
   const publicKeyHex = Buffer.from(keypair.publicKey).toString('hex')
@@ -85,7 +94,7 @@ export async function pairWithServer(
   }
 
   const data = normalizePairResponse(await response.json())
-  saveServer(ip, port, data.deviceId)
+  saveServer(ip, port, data.deviceId, secure)
   return data
 }
 
@@ -101,15 +110,18 @@ export async function unpairFromServer(ip: string, port: number): Promise<void> 
 }
 
 export function buildWsUrl(ip: string, port: number): string {
-  return `ws://${ip}:${port}/PocketDev/ws`
+  const protocol = _useSecure ? 'wss' : 'ws'
+  return `${protocol}://${ip}:${port}/PocketDev/ws`
 }
 
 export function buildTerminalWsUrl(ip: string, port: number): string {
-  return `ws://${ip}:${port}/PocketDev/ws/terminal`
+  const protocol = _useSecure ? 'wss' : 'ws'
+  return `${protocol}://${ip}:${port}/PocketDev/ws/terminal`
 }
 
 export function browserSessionUrl(ip: string, port: number, proxiedPath: string): string {
-  return `http://${ip}:${port}${proxiedPath}`
+  const protocol = _useSecure ? 'https' : 'http'
+  return `${protocol}://${ip}:${port}${proxiedPath}`
 }
 
 export async function fetchPrerequisites(ip: string, port: number) {

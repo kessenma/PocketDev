@@ -5,6 +5,7 @@ import { borderRadius } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import { useTaskStore } from '../stores/tasks'
 import { useConnectionStore } from '../stores/connection'
+import { useNewTaskDraftStore } from '../stores/new-task-draft'
 import { fetchTaskList } from '../services/api'
 import type { Task } from '@pocketdev/shared/types'
 import type { CompositeNavigationProp } from '@react-navigation/native'
@@ -15,7 +16,6 @@ import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import TaskListPane from '../components/tasks/TaskListPane'
 import TaskWorkspace from '../components/tasks/TaskWorkspace'
-import NewTaskSheet from '../components/tasks/NewTaskSheet'
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -33,7 +33,6 @@ export default function TasksScreen({ navigation }: Props) {
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
   const server = useConnectionStore((s) => s.server)
   const [refreshing, setRefreshing] = React.useState(false)
-  const [showNewTask, setShowNewTask] = React.useState(false)
 
   const taskList = React.useMemo(
     () =>
@@ -64,6 +63,11 @@ export default function TasksScreen({ navigation }: Props) {
     }
   }
 
+  function handleRecentPromptPress(prompt: string) {
+    useNewTaskDraftStore.getState().applyRecentPrompt(prompt)
+    navigation.navigate('NewTask')
+  }
+
   function handleTaskPress(task: Task) {
     setActiveTask(task.id)
 
@@ -91,6 +95,7 @@ export default function TasksScreen({ navigation }: Props) {
               tasks={taskList}
               activeTaskId={activeTaskId}
               onTaskPress={handleTaskPress}
+              onRecentPromptPress={handleRecentPromptPress}
               refreshing={refreshing}
               onRefresh={handleRefresh}
             />
@@ -100,13 +105,11 @@ export default function TasksScreen({ navigation }: Props) {
 
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary, borderColor: colors.border }]}
-        onPress={() => setShowNewTask(true)}
+        onPress={() => navigation.navigate('NewTask')}
         activeOpacity={0.7}
       >
         <Plus color={colors.primaryText} size={24} strokeWidth={2.5} />
       </TouchableOpacity>
-
-      <NewTaskSheet visible={showNewTask} onClose={() => setShowNewTask(false)} />
     </>
   )
 }

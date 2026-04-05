@@ -109,8 +109,9 @@ export default function ConnectScreen({ navigation }: Props) {
     setLoading(true)
 
     try {
-      const result = await pairWithServer(parsed.host, parsed.port, parsed.code)
-      setPaired({ ip: parsed.host, port: parsed.port, deviceId: result.deviceId })
+      const secure = parsed.secure ?? false
+      const result = await pairWithServer(parsed.host, parsed.port, parsed.code, secure)
+      setPaired({ ip: parsed.host, port: parsed.port, deviceId: result.deviceId, secure })
       const setupReady = await resolvePostPairDestination(parsed.host, parsed.port)
       setPostPairSetupReady(setupReady)
       setShowPairing(true)
@@ -123,13 +124,15 @@ export default function ConnectScreen({ navigation }: Props) {
 
   function handleQRScan(result: QRScanResult) {
     setScannerVisible(false)
-    setConnectionInput(`pocketdev://${result.host}:${result.port}/${result.code}`)
+    const qrSecure = result.secure ?? false
+    const scheme = qrSecure ? 'pocketdevs' : 'pocketdev'
+    setConnectionInput(`${scheme}://${result.host}:${result.port}/${result.code}`)
     setTimeout(() => {
       setError(null)
       setLoading(true)
-      pairWithServer(result.host, result.port, normalizeSetupCode(result.code).trim())
+      pairWithServer(result.host, result.port, normalizeSetupCode(result.code).trim(), qrSecure)
         .then(async (pairResult) => {
-          setPaired({ ip: result.host, port: result.port, deviceId: pairResult.deviceId })
+          setPaired({ ip: result.host, port: result.port, deviceId: pairResult.deviceId, secure: qrSecure })
           const setupReady = await resolvePostPairDestination(result.host, result.port)
           setPostPairSetupReady(setupReady)
           setShowPairing(true)
@@ -489,16 +492,18 @@ const styles = StyleSheet.create({
   },
 })
 
-/** Parse a connection string in the format: pocketdev://host:port/code */
-function parseConnectionString(input: string): { host: string; port: number; code: string } | null {
+/** Parse a connection string in the format: pocketdev://host:port/code or pocketdevs://host:port/code */
+function parseConnectionString(input: string): { host: string; port: number; code: string; secure: boolean } | null {
   const trimmed = input.trim()
   if (!trimmed) return null
 
-  const urlMatch = trimmed.match(/^pocketdev:\/\/([^:/]+):(\d+)\/(.+)$/i)
+  // pocketdevs:// = secure (HTTPS), pocketdev:// = plain HTTP
+  const urlMatch = trimmed.match(/^pocketdev(s)?:\/\/([^:/]+):(\d+)\/(.+)$/i)
   if (urlMatch) {
-    const code = normalizeSetupCode(urlMatch[3]!)
+    const secure = urlMatch[1] === 's'
+    const code = normalizeSetupCode(urlMatch[4]!)
     if (!code) return null
-    return { host: urlMatch[1]!, port: parseInt(urlMatch[2]!, 10), code }
+    return { host: urlMatch[2]!, port: parseInt(urlMatch[3]!, 10), code, secure }
   }
 
   return null

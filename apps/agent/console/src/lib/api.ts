@@ -67,6 +67,7 @@ export interface ConsoleStatus {
   passcode: string | null
   serverIp: string
   port: number
+  secure: boolean
 }
 
 export async function fetchStatus(): Promise<ConsoleStatus> {
@@ -507,6 +508,29 @@ export async function createRepoPreviewSession(targetUrl: string): Promise<Conso
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Failed to create preview session' }))
     throw new Error(data.error || 'Failed to create preview session')
+  }
+  return res.json()
+}
+
+// ─── Domain / HTTPS settings ───────────────────────────
+
+export interface DomainSettings {
+  domain: string | null
+  httpsEnabled: boolean
+  serverIp: string
+}
+
+export async function fetchDomainSettings(): Promise<DomainSettings> {
+  const res = await get('/settings/domain')
+  if (!res.ok) throw new Error('Failed to fetch domain settings')
+  return res.json()
+}
+
+export async function updateDomain(domain: string): Promise<{ ok: boolean; url: string }> {
+  const res = await post('/settings/domain', { domain })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Failed to update domain' }))
+    throw new Error(data.error || 'Failed to update domain')
   }
   return res.json()
 }

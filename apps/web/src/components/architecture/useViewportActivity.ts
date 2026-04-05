@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 export function useViewportActivity<T extends HTMLElement>(threshold = 0.25) {
   const ref = useRef<T | null>(null)
   const [isInView, setIsInView] = useState(false)
+  const [intersectionRatio, setIntersectionRatio] = useState(0)
   const [isDocumentVisible, setIsDocumentVisible] = useState(
     typeof document === 'undefined' ? true : document.visibilityState === 'visible',
   )
@@ -27,14 +28,18 @@ export function useViewportActivity<T extends HTMLElement>(threshold = 0.25) {
   useEffect(() => {
     if (typeof IntersectionObserver === 'undefined' || !ref.current) {
       setIsInView(true)
+      setIntersectionRatio(1)
       return
     }
 
+    const thresholds = Array.from({ length: 21 }, (_, index) => index / 20)
+
     const observer = new IntersectionObserver(
       ([entry]) => {
+        setIntersectionRatio(entry.intersectionRatio)
         setIsInView(entry.isIntersecting && entry.intersectionRatio >= threshold)
       },
-      { threshold: [0, threshold, 0.5, 1] },
+      { threshold: thresholds },
     )
 
     observer.observe(ref.current)
@@ -47,5 +52,6 @@ export function useViewportActivity<T extends HTMLElement>(threshold = 0.25) {
   return {
     ref,
     isActive: isInView && isDocumentVisible,
+    progress: isDocumentVisible ? intersectionRatio : 0,
   }
 }

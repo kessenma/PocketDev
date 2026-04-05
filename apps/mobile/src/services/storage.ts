@@ -17,10 +17,14 @@ const KEYS = {
   SERVER_IP: 'server.ip',
   SERVER_PORT: 'server.port',
   SERVER_ID: 'server.id',
+  SERVER_SECURE: 'server.secure',
   RECENT_PROMPTS: 'recent.prompts',
   NEW_TASK_DRAFT: 'newTask.draft',
   WORKSPACE_NAV_EXPANDED: 'workspace.navExpanded',
   FILE_DIRECTORY_CACHE_PREFIX: 'files.directoryCache',
+  ONDEVICE_AI_MODEL_STATUS: 'ondeviceai.modelStatus',
+  ONDEVICE_AI_DOWNLOADED_AT: 'ondeviceai.downloadedAt',
+  ONDEVICE_AI_INDEX_CACHE_PREFIX: 'ondeviceai.indexCache',
 } as const
 
 // --- Keypair ---
@@ -54,13 +58,15 @@ export interface StoredServer {
   ip: string
   port: number
   deviceId: string
+  secure: boolean
 }
 
-export function saveServer(ip: string, port: number, deviceId: string) {
+export function saveServer(ip: string, port: number, deviceId: string, secure = false) {
   getStorage().set(KEYS.SERVER_IP, ip)
   getStorage().set(KEYS.SERVER_PORT, port)
   getStorage().set(KEYS.DEVICE_ID, deviceId)
   getStorage().set(KEYS.SERVER_ID, deviceId)
+  getStorage().set(KEYS.SERVER_SECURE, secure ? 'true' : 'false')
 }
 
 export function getServer(): StoredServer | null {
@@ -68,7 +74,8 @@ export function getServer(): StoredServer | null {
   const port = getStorage().getNumber(KEYS.SERVER_PORT)
   const deviceId = getStorage().getString(KEYS.DEVICE_ID) ?? getStorage().getString(KEYS.SERVER_ID)
   if (!ip || port === undefined || !deviceId) return null
-  return { ip, port, deviceId }
+  const secure = getStorage().getString(KEYS.SERVER_SECURE) === 'true'
+  return { ip, port, deviceId, secure }
 }
 
 export function clearServer() {
@@ -76,6 +83,7 @@ export function clearServer() {
   getStorage().remove(KEYS.SERVER_PORT)
   getStorage().remove(KEYS.DEVICE_ID)
   getStorage().remove(KEYS.SERVER_ID)
+  getStorage().remove(KEYS.SERVER_SECURE)
 }
 
 // --- Recent Prompts ---
@@ -192,6 +200,52 @@ export function saveCachedDirectorySnapshot(
     cachedAt: Date.now(),
   }
   getStorage().set(getDirectoryCacheKey(serverId, snapshot.path), JSON.stringify(value))
+}
+
+// --- On-Device AI ---
+
+export type OnDeviceAIModelStatus = 'not_downloaded' | 'downloaded'
+
+export function getOnDeviceAIModelStatus(): OnDeviceAIModelStatus {
+  const raw = getStorage().getString(KEYS.ONDEVICE_AI_MODEL_STATUS)
+  return raw === 'downloaded' ? 'downloaded' : 'not_downloaded'
+}
+
+export function setOnDeviceAIModelStatus(status: OnDeviceAIModelStatus) {
+  getStorage().set(KEYS.ONDEVICE_AI_MODEL_STATUS, status)
+  if (status === 'downloaded') {
+    getStorage().set(KEYS.ONDEVICE_AI_DOWNLOADED_AT, Date.now())
+  }
+}
+
+export interface CachedFileIndex {
+  rootPath: string
+  paths: string[]
+  enrichedTexts: string[]
+  vectors: number[][]
+  builtAt: number
+}
+
+const INDEX_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+
+export function getCachedFileIndex(rootPath: string): CachedFileIndex | null {
+  const key = `${KEYS.ONDEVICE_AI_INDEX_CACHE_PREFIX}:${rootPath}`
+  const raw = getStorage().getString(key)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as CachedFileIndex
+    if (Date.now() - parsed.builtAt > INDEX_CACHE_TTL) return null
+    if (!Array.isArray(parsed.paths) || !Array.isArray(parsed.vectors)) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+export function saveCachedFileIndex(index: CachedFileIndex) {
+  const key = `${KEYS.ONDEVICE_AI_INDEX_CACHE_PREFIX}:${index.rootPath}`
+  getStorage().set(key, JSON.stringify(index))
 }
 
 // --- Clear All ---

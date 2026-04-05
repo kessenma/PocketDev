@@ -1,5 +1,6 @@
 import React from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
@@ -7,15 +8,21 @@ import { typeStyles } from '../../theme/typography'
 type Props = {
   label: string
   color?: string
+  onRemove?: () => void
 }
 
-export default function BauhausBadge({ label, color }: Props) {
+export default function BauhausBadge({ label, color, onRemove }: Props) {
   const { colors } = useTheme()
 
   return (
     <View style={[styles.badge, { borderColor: colors.border }]}>
       <View style={[styles.marker, { backgroundColor: color ?? colors.accentYellow }]} />
       <Text style={[typeStyles.meta, { color: colors.text }]}>{label}</Text>
+      {onRemove ? (
+        <TouchableOpacity onPress={onRemove} activeOpacity={0.7} hitSlop={6}>
+          <X color={colors.textSecondary} size={12} strokeWidth={2.5} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   )
 }

@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { Task } from '@pocketdev/shared/types'
 import type { TaskStatus } from '@pocketdev/shared/schema'
 import { useTheme } from '../../contexts/ThemeContext'
+import { getRecentPrompts } from '../../services/storage'
 import BauhausBadge from '../shared/BauhausBadge'
 import { typeStyles } from '../../theme/typography'
 
@@ -18,6 +20,7 @@ type Props = {
   tasks: Task[]
   activeTaskId?: string | null
   onTaskPress: (task: Task) => void
+  onRecentPromptPress?: (prompt: string) => void
   refreshing: boolean
   onRefresh: () => void
   tablet?: boolean
@@ -35,11 +38,13 @@ export default function TaskListPane({
   tasks,
   activeTaskId,
   onTaskPress,
+  onRecentPromptPress,
   refreshing,
   onRefresh,
   tablet = false,
 }: Props) {
   const { colors } = useTheme()
+  const recentPrompts = getRecentPrompts()
 
   if (tasks.length === 0 && !refreshing) {
     return (
@@ -96,6 +101,24 @@ export default function TaskListPane({
       }}
       contentContainerStyle={styles.list}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      ListHeaderComponent={
+        recentPrompts.length > 0 && onRecentPromptPress ? (
+          <View style={[styles.recentSection, { borderColor: colors.border }]}>
+            <Text style={[styles.recentTitle, { color: colors.textTertiary }]}>Recent prompts</Text>
+            {recentPrompts.slice(0, 5).map((item, i) => (
+              <Pressable
+                key={`recent-${i}`}
+                style={[styles.recentItem, { borderColor: colors.border }]}
+                onPress={() => onRecentPromptPress(item)}
+              >
+                <Text style={[styles.recentText, { color: colors.textSecondary }]} numberOfLines={2}>
+                  {item}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null
+      }
     />
   )
 }
@@ -136,6 +159,22 @@ const styles = StyleSheet.create({
   },
   taskTime: {
     ...typeStyles.meta,
+  },
+  recentSection: {
+    borderBottomWidth: 2,
+    paddingBottom: spacing[3],
+    marginBottom: spacing[1],
+    gap: spacing[2],
+  },
+  recentTitle: {
+    ...typeStyles.sectionTitle,
+  },
+  recentItem: {
+    paddingVertical: spacing[2],
+    borderBottomWidth: 1,
+  },
+  recentText: {
+    ...typeStyles.bodySmall,
   },
   emptyContainer: {
     flex: 1,

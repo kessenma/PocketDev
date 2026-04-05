@@ -6,6 +6,7 @@ import ContainersScreen from '../screens/ContainersScreen'
 import PlanScreen from '../screens/PlanScreen'
 import ServerSetupScreen from '../screens/ServerSetupScreen'
 import TaskDetailScreen from '../screens/TaskDetailScreen'
+import NewTaskScreen from '../screens/NewTaskScreen'
 import ProjectsScreen from '../screens/ProjectsScreen'
 import MainTabs from './MainTabs'
 import { useConnectionStore } from '../stores/connection'
@@ -61,6 +62,11 @@ export default function RootNavigator() {
         name="Plan"
         component={PlanScreen}
         options={{ title: 'Plan' }}
+      />
+      <Stack.Screen
+        name="NewTask"
+        component={NewTaskScreen}
+        options={{ title: 'New Task' }}
       />
       <Stack.Screen
         name="Projects"

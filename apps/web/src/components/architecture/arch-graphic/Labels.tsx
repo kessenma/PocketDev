@@ -3,7 +3,7 @@ import { fontFamilyTokens } from '@pocketdev/shared/theme'
 export function Labels() {
   return (
     <g
-      fill="#71717a"
+      fill="#5c5549"
       style={{
         fontFamily: `${fontFamilyTokens.mono}, ui-monospace, monospace`,
       }}
@@ -13,11 +13,11 @@ export function Labels() {
       </text>
 
       <g fontSize="10">
-        <text x="144" y="56" textAnchor="middle">Hosted Web</text>
         <text x="100" y="228" textAnchor="middle">Mobile</text>
         <text x="185" y="288" textAnchor="middle">Console</text>
         <text x="316" y="230" textAnchor="middle">Agent</text>
-        <text x="458" y="220" textAnchor="middle">AI / Files</text>
+        <text x="474" y="220" textAnchor="middle">Files</text>
+        <text x="575" y="178" textAnchor="middle">AI Provider</text>
       </g>
     </g>
   )

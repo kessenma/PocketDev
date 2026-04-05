@@ -14,19 +14,19 @@ export function LayerShapes({ active }: { active: boolean }) {
       <motion.rect
         x="250"
         y="72"
-        width="240"
+        width="250"
         height="148"
         rx="18"
         fill="none"
-        stroke="#71717a"
+        stroke="#8d8476"
         strokeWidth="1.5"
         strokeDasharray="7 5"
-        opacity={0.55}
+        opacity={0.78}
         initial={reduceMotion ? false : { opacity: 0 }}
         animate={
           reduceMotion || !active
-            ? { opacity: 0.55, strokeDashoffset: 0 }
-            : { opacity: 0.55, strokeDashoffset: [0, -24] }
+            ? { opacity: 0.78, strokeDashoffset: 0 }
+            : { opacity: 0.78, strokeDashoffset: [0, -24] }
         }
         transition={
           reduceMotion || !active
@@ -34,25 +34,6 @@ export function LayerShapes({ active }: { active: boolean }) {
             : { opacity: { duration: 0.45 }, strokeDashoffset: { duration: 4, repeat: Infinity, ease: 'linear' } }
         }
       />
-
-      <motion.g
-        variants={fadeUp}
-        initial={reduceMotion ? false : 'hidden'}
-        animate="visible"
-        transition={reduceMotion ? undefined : { duration: 0.45, delay: 0.05, ease: 'easeOut' }}
-      >
-        <rect x="72" y="62" width="144" height="24" rx="8" fill={palette.bauhaus.yellow} />
-        <motion.rect
-          x="88"
-          y="69"
-          width="36"
-          height="8"
-          rx="3"
-          fill={palette.bauhaus.black}
-          animate={reduceMotion || !active ? { x: 88 } : { x: [88, 164, 88] }}
-          transition={reduceMotion || !active ? undefined : { duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </motion.g>
 
       <motion.g
         variants={fadeUp}
@@ -131,30 +112,58 @@ export function LayerShapes({ active }: { active: boolean }) {
         animate={{ opacity: 1, x: 0 }}
         transition={reduceMotion ? undefined : { duration: 0.5, delay: 0.36, ease: 'easeOut' }}
       >
-        <rect x="430" y="110" width="56" height="92" rx="8" fill={palette.bauhaus.black} />
-        <rect x="430" y="110" width="56" height="18" rx="8" fill={palette.bauhaus.yellow} />
+        <rect x="448" y="132" width="52" height="68" rx="8" fill={palette.bauhaus.black} />
+        <rect x="448" y="132" width="52" height="16" rx="8" fill={palette.bauhaus.yellow} />
         <motion.rect
-          x="444"
-          y="138"
+          x="460"
+          y="156"
           width="28"
-          height="28"
-          rx="4"
-          fill={palette.bauhaus.red}
-          animate={reduceMotion || !active ? { opacity: 1, scale: 1 } : { opacity: [1, 0.65, 1], scale: [1, 0.94, 1] }}
-          transition={reduceMotion || !active ? undefined : { duration: 2.1, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ transformOrigin: '458px 152px' }}
-        />
-        <motion.rect
-          x="444"
-          y="174"
-          width="20"
-          height="8"
+          height="10"
           rx="4"
           fill="rgba(255,255,255,0.92)"
+          animate={reduceMotion || !active ? { width: 28 } : { width: [28, 20, 28] }}
+          transition={reduceMotion || !active ? undefined : { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.rect
+          x="460"
+          y="174"
+          width="20"
+          height="10"
+          rx="4"
+          fill={palette.bauhaus.blue}
           animate={reduceMotion || !active ? { width: 20 } : { width: [20, 28, 20] }}
           transition={reduceMotion || !active ? undefined : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <rect x="468" y="174" width="8" height="8" rx="4" fill={palette.bauhaus.blue} />
+      </motion.g>
+
+      <motion.g
+        initial={reduceMotion ? false : { opacity: 0, x: 16, y: -6 }}
+        animate={{ opacity: 1, x: 0, y: 0 }}
+        transition={reduceMotion ? undefined : { duration: 0.5, delay: 0.46, ease: 'easeOut' }}
+      >
+        <rect x="552" y="92" width="46" height="72" rx="10" fill={palette.bauhaus.black} />
+        <rect x="552" y="92" width="46" height="18" rx="10" fill={palette.bauhaus.red} />
+        <motion.rect
+          x="565"
+          y="120"
+          width="20"
+          height="20"
+          rx="4"
+          fill={palette.bauhaus.yellow}
+          animate={reduceMotion || !active ? { opacity: 1, scale: 1 } : { opacity: [1, 0.65, 1], scale: [1, 0.94, 1] }}
+          transition={reduceMotion || !active ? undefined : { duration: 2.1, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ transformOrigin: '575px 130px' }}
+        />
+        <motion.rect
+          x="562"
+          y="146"
+          width="26"
+          height="8"
+          rx="4"
+          fill="rgba(255,255,255,0.92)"
+          animate={reduceMotion || !active ? { width: 26 } : { width: [26, 16, 26] }}
+          transition={reduceMotion || !active ? undefined : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+        />
       </motion.g>
     </g>
   )

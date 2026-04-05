@@ -28,10 +28,10 @@ export function WireProtocol() {
       <div className="mx-auto max-w-3xl">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground mb-2">
           <span style={architectureTextStyles.sectionEyebrow}>
-          Wire Protocol
+            Wire Protocol
           </span>
         </h2>
-        <p className="text-lg text-muted-foreground mb-10" style={architectureTextStyles.sectionLead}>
+        <p className="mb-10 text-lg text-muted-foreground" style={architectureTextStyles.sectionLead}>
           The protocol now covers more than task streaming. Plans, setup
           diagnostics, terminal sessions, container logs, and connection health
           all ride through the same typed message envelope from
@@ -40,14 +40,15 @@ export function WireProtocol() {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+            <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground" style={architectureTextStyles.sectionEyebrow}>
               Commands (client &rarr; agent)
             </h3>
             <div className="space-y-1.5">
               {commands.map((cmd) => (
                 <div
                   key={cmd}
-                  className="rounded-md bg-muted/40 px-3 py-1.5 font-mono text-xs text-foreground"
+                  className="rounded-md border px-3 py-1.5 font-mono text-xs text-foreground"
+                  style={architectureTextStyles.surface}
                 >
                   {cmd}
                 </div>
@@ -56,14 +57,15 @@ export function WireProtocol() {
           </div>
 
           <div>
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+            <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground" style={architectureTextStyles.sectionEyebrow}>
               Events (agent &rarr; client)
             </h3>
             <div className="space-y-1.5">
               {events.map((evt) => (
                 <div
                   key={evt}
-                  className="rounded-md bg-muted/40 px-3 py-1.5 font-mono text-xs text-foreground"
+                  className="rounded-md border px-3 py-1.5 font-mono text-xs text-foreground"
+                  style={architectureTextStyles.surface}
                 >
                   {evt}
                 </div>
@@ -72,7 +74,7 @@ export function WireProtocol() {
           </div>
         </div>
 
-        <div className="mt-8 rounded-lg border border-border bg-muted/30 p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+        <div className="mt-8 rounded-lg border p-4 font-mono text-xs leading-relaxed text-muted-foreground" style={{ ...architectureTextStyles.surface, ...architectureTextStyles.mono }}>
           <span className="text-foreground">{'{'}</span>{' '}
           type: <span className="text-blue-400">"plan.step_updated"</span>,
           id: <span className="text-emerald-400">"msg_01"</span>,

@@ -5,6 +5,7 @@ import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../../stores/setup'
 import SetupCheckItem from './SetupCheckItem'
 import DatabaseSetup from './DatabaseSetup'
+import OnDeviceModelSetup from './OnDeviceModelSetup'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import {
   getAiAssistantTools,
@@ -163,6 +164,8 @@ export default function SetupChecklist({
             dockerInstalled={dockerInstalled}
             onRefresh={onRefresh}
           />
+
+          <OnDeviceModelSetup />
         </>
       }
     />

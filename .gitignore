@@ -28,7 +28,7 @@ apps/mobile/ios/Pods/
 apps/mobile/android/build/
 apps/mobile/android/app/build/
 apps/mobile/android/.gradle/
-apps/mobile/vendor/bundle/
+apps/mobile/vendor/
 
 # Agent bundle (built artifact served by web app)
 apps/web/public/agent-bundle.tar.gz

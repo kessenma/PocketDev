@@ -33,10 +33,10 @@ export function TechStack() {
       <div className="mx-auto max-w-5xl">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground mb-2">
           <span style={architectureTextStyles.sectionEyebrow}>
-          Tech Stack
+            Tech Stack
           </span>
         </h2>
-        <p className="text-lg text-muted-foreground mb-10" style={architectureTextStyles.sectionLead}>
+        <p className="mb-10 text-lg text-muted-foreground" style={architectureTextStyles.sectionLead}>
           The stack is intentionally split by responsibility. The public website,
           the self-hosted runtime, and the two clients each have their own
           runtime needs, but they stay aligned through shared TypeScript
@@ -46,14 +46,15 @@ export function TechStack() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {layers.map((layer) => (
             <div key={layer.label}>
-              <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+              <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground" style={architectureTextStyles.sectionEyebrow}>
                 {layer.label}
               </h3>
               <ul className="space-y-1.5">
                 {layer.items.map((item) => (
                   <li
                     key={item}
-                    className="rounded-md bg-muted/40 px-3 py-1.5 text-xs text-foreground"
+                    className="rounded-md border px-3 py-1.5 text-xs text-foreground"
+                    style={architectureTextStyles.surface}
                   >
                     {item}
                   </li>

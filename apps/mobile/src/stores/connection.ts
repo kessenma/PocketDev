@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ConnectionStatus } from '../services/websocket'
 import { PocketDevWebSocket } from '../services/websocket'
-import { buildWsUrl, unpairFromServer } from '../services/api'
+import { buildWsUrl, unpairFromServer, setSecureMode } from '../services/api'
 import { getServer, clearAll, type StoredServer } from '../services/storage'
 import type { WsMessage } from '@pocketdev/shared/types'
 import { useTaskStore } from './tasks'
@@ -42,8 +42,11 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       return
     }
 
-    console.log('[connection] Connecting to:', { ip: server.ip, port: server.port, deviceId: server.deviceId })
+    console.log('[connection] Connecting to:', { ip: server.ip, port: server.port, secure: server.secure, deviceId: server.deviceId })
     existingWs?.disconnect()
+
+    // Set the module-level secure flag so all API/WS calls use the right protocol
+    setSecureMode(server.secure)
 
     const url = buildWsUrl(server.ip, server.port)
     const ws = new PocketDevWebSocket(

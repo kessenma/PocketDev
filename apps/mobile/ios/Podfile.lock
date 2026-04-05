@@ -78,6 +78,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - opencv-rne (4.11.0)
   - RCTDeprecation (0.83.0)
   - RCTRequired (0.83.0)
   - RCTSwiftUI (0.83.0)
@@ -1471,6 +1472,29 @@ PODS:
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
+  - react-native-executorch (0.8.0):
+    - hermes-engine
+    - opencv-rne (~> 4.11.0)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-get-random-values (1.11.0):
     - React-Core
   - react-native-safe-area-context (5.7.0):
@@ -2352,6 +2376,7 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
+  - react-native-executorch (from `../node_modules/react-native-executorch`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-webview (from `../node_modules/react-native-webview`)
@@ -2407,6 +2432,7 @@ SPEC REPOS:
     - iosMath
     - JWTDecode
     - MMKVCore
+    - opencv-rne
     - SwiftyRSA
 
 EXTERNAL SOURCES:
@@ -2493,6 +2519,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
+  react-native-executorch:
+    :path: "../node_modules/react-native-executorch"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
   react-native-safe-area-context:
@@ -2601,6 +2629,7 @@ SPEC CHECKSUMS:
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroMmkv: ca741ca3e53a3dfa9e2c9ad7082fca3de70a3afb
   NitroModules: 113b4a704e0d6a436d2c5600d5af41f847b0fdd1
+  opencv-rne: 2305807573b6e29c8c87e3416ab096d09047a7a0
   RCTDeprecation: dbbb85eae640e3b43cc16462d0476b00ca5959ae
   RCTRequired: 7047b18af29a76069818fd3fa0f4df423483abab
   RCTSwiftUI: 5928f7ca7e9e2f1a82d85d4c79ea3065137ad81c
@@ -2637,6 +2666,7 @@ SPEC CHECKSUMS:
   React-logger: 64d31a75111596bd023ae653c0eabf32be3c9302
   React-Mapbuffer: 7055b634a07b9f9e84ee5660ef52cf42658174b7
   React-microtasksnativemodule: 0154a544879e6afeadef9525b0cb17cacf4a93bd
+  react-native-executorch: 8470028d1b051774d90d593b19d0ec9647ef619c
   react-native-get-random-values: 21325b2244dfa6b58878f51f9aa42821e7ba3d06
   react-native-safe-area-context: 29044d05d61f2c60d0828c373bd0ebe17eed58d0
   react-native-webview: 28592896970bf53d9864e8db084a0ad11fd81582

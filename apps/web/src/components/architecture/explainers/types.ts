@@ -1,0 +1,20 @@
+import type { ReactNode } from 'react'
+
+export type ExplainerLegendItem = {
+  label: string
+  icon: ReactNode
+}
+
+export type ExplainerRenderState = {
+  active: boolean
+  progress: number
+}
+
+export type ExplainerCardProps = {
+  title: string
+  caption: string
+  legend?: ExplainerLegendItem[]
+  cardClassName?: string
+  stageMinHeight?: number
+  children: (state: ExplainerRenderState) => ReactNode
+}

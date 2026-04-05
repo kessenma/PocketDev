@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
 import { existsSync } from 'node:fs'
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join, extname, relative, resolve } from 'node:path'
 import {
   createAdmin,
@@ -147,7 +147,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   })
 
   // ─── Status (requires session) ────────────────────────
-  .get('/status', ({ request, set }) => {
+  .get('/status', async ({ request, set }) => {
     if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
@@ -159,12 +159,37 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       lastSeenAt: d.lastSeenAt,
     }))
 
+    // Detect if Caddy is running (HTTPS reverse proxy in front of agent)
+    let secure = false
+    let externalPort = PORT
+    try {
+      const proc = Bun.spawn(['systemctl', 'is-active', 'caddy'], { stdout: 'pipe', stderr: 'pipe' })
+      const output = await new Response(proc.stdout).text()
+      if (output.trim() === 'active') {
+        secure = true
+        externalPort = 443
+      }
+    } catch {
+      // systemctl not available — assume no Caddy
+    }
+
+    // Use domain from domain.txt if available
+    const dataDir = process.env.POCKETDEV_DATA_DIR ?? './data'
+    let serverHost = extractHostIp(request)
+    try {
+      const domain = (await readFile(join(dataDir, 'domain.txt'), 'utf-8')).trim()
+      if (domain) serverHost = domain
+    } catch {
+      // No domain file
+    }
+
     return {
       paired: hasDevices(),
       devices,
       passcode: getActivePasscode(),
-      serverIp: extractHostIp(request),
-      port: PORT,
+      serverIp: serverHost,
+      port: externalPort,
+      secure,
     }
   })
 
@@ -546,6 +571,97 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   }, {
     body: t.Object({
       target_url: t.String(),
+    }),
+  })
+
+  // ─── Domain / HTTPS settings (requires session) ──────────
+  .get('/settings/domain', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const dataDir = process.env.POCKETDEV_DATA_DIR ?? './data'
+    const domainFile = join(dataDir, 'domain.txt')
+    let domain: string | null = null
+
+    try {
+      const content = await readFile(domainFile, 'utf-8')
+      domain = content.trim() || null
+    } catch {
+      // No domain file = not configured yet
+    }
+
+    // Check if Caddy is running
+    let httpsEnabled = false
+    try {
+      const proc = Bun.spawn(['systemctl', 'is-active', 'caddy'], { stdout: 'pipe', stderr: 'pipe' })
+      const output = await new Response(proc.stdout).text()
+      httpsEnabled = output.trim() === 'active'
+    } catch {
+      // systemctl not available or caddy not installed
+    }
+
+    return {
+      domain,
+      httpsEnabled,
+      serverIp: extractHostIp(request),
+    }
+  })
+
+  .post('/settings/domain', async ({ request, body, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const domain = body.domain.trim()
+
+    // Basic domain validation (if provided)
+    if (domain && !/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/.test(domain)) {
+      set.status = 400
+      return { error: 'Invalid domain format' }
+    }
+
+    const dataDir = process.env.POCKETDEV_DATA_DIR ?? './data'
+    const port = Number(process.env.POCKETDEV_PORT ?? 4387)
+
+    // Write Caddyfile
+    let caddyConfig: string
+    if (domain) {
+      caddyConfig = `${domain} {\n  reverse_proxy localhost:${port}\n}\n`
+    } else {
+      caddyConfig = `:443 {\n  tls internal\n  reverse_proxy localhost:${port}\n}\n`
+    }
+
+    try {
+      // Write Caddyfile via sudo tee (install script sets up sudoers for this)
+      const teeProc = Bun.spawn(['sudo', 'tee', '/etc/caddy/Caddyfile'], {
+        stdin: new TextEncoder().encode(caddyConfig),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      })
+      await teeProc.exited
+
+      // Save domain to data dir
+      await writeFile(join(dataDir, 'domain.txt'), domain)
+
+      // Reload Caddy to pick up the new config
+      const reloadProc = Bun.spawn(['sudo', 'systemctl', 'reload', 'caddy'], { stdout: 'pipe', stderr: 'pipe' })
+      const reloadExit = await reloadProc.exited
+
+      if (reloadExit !== 0) {
+        const stderr = await new Response(reloadProc.stderr).text()
+        return { ok: false, error: `Caddy reload failed: ${stderr.trim()}` }
+      }
+
+      const host = domain || extractHostIp(request)
+      return { ok: true, url: `https://${host}/PocketDev/console` }
+    } catch (err) {
+      set.status = 500
+      return { error: err instanceof Error ? err.message : 'Failed to update domain config' }
+    }
+  }, {
+    body: t.Object({
+      domain: t.String(),
     }),
   })
 

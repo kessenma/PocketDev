@@ -13,19 +13,21 @@ interface Props {
   passcode: string | null
   serverIp: string
   port: number
+  secure?: boolean
   onPasscodeChanged: (code: string) => void
 }
 
-export function ConnectionWizard({ passcode, serverIp, port, onPasscodeChanged }: Props) {
+export function ConnectionWizard({ passcode, serverIp, port, secure = false, onPasscodeChanged }: Props) {
   const [customCode, setCustomCode] = useState('')
   const [loading, setLoading] = useState(false)
 
   const qrPayload = passcode
-    ? JSON.stringify({ host: serverIp, port, code: passcode })
+    ? JSON.stringify({ host: serverIp, port, code: passcode, secure })
     : null
 
+  const scheme = secure ? 'pocketdevs' : 'pocketdev'
   const connectionUrl = passcode
-    ? `pocketdev://${serverIp}:${port}/${passcode}`
+    ? `${scheme}://${serverIp}:${port}/${passcode}`
     : null
 
   async function handleSetPasscode(e: FormEvent) {

@@ -15,12 +15,12 @@ export function ArchGraphic({ className }: { className?: string }) {
       style={{
         borderRadius: `${borderRadius.xl}px`,
         padding: `${spacing[4]}px`,
-        background: `linear-gradient(180deg, ${palette.bauhaus.yellow}10 0%, rgba(255,255,255,0) 28%), radial-gradient(circle at 70% 30%, ${palette.bauhaus.blue}14 0%, rgba(255,255,255,0) 35%)`,
+        background: `linear-gradient(180deg, ${palette.bauhaus.yellow}0d 0%, rgba(255,255,255,0) 26%), radial-gradient(circle at 72% 32%, ${palette.bauhaus.blue}12 0%, rgba(255,255,255,0) 30%)`,
       }}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="32 36 500 268"
+        viewBox="32 36 590 268"
         className="w-full h-auto"
       >
         <FlowPaths active={isActive} />

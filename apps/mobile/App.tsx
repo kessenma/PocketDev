@@ -1,3 +1,8 @@
+import { initExecutorch } from 'react-native-executorch'
+import { BareResourceFetcher } from '@react-native-executorch/bare-resource-fetcher'
+
+initExecutorch({ resourceFetcher: BareResourceFetcher })
+
 import React, { useEffect } from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'

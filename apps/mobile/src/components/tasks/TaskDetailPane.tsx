@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { ShieldAlert } from 'lucide-react-native'
@@ -28,10 +28,12 @@ export default function TaskDetailPane({
   emptyBody = 'Choose a task to inspect logs, timing, and status without leaving the list.',
 }: Props) {
   const { colors } = useTheme()
-  const task = useTaskStore((s) => (taskId ? s.tasks.get(taskId) : null))
-  const logs = useTaskStore((s) => (taskId ? s.taskLogs.get(taskId) ?? [] : []))
+  const task = useTaskStore((s) => (taskId ? s.tasks.get(taskId) : undefined))
+  const logsRaw = useTaskStore((s) => (taskId ? s.taskLogs.get(taskId) : undefined))
+  const logs = useMemo(() => logsRaw ?? [], [logsRaw])
   const killTask = useTaskStore((s) => s.killTask)
-  const pendingPermissions = useTaskStore((s) => (taskId ? s.pendingPermissions.get(taskId) ?? [] : []))
+  const permissionsRaw = useTaskStore((s) => (taskId ? s.pendingPermissions.get(taskId) : undefined))
+  const pendingPermissions = useMemo(() => permissionsRaw ?? [], [permissionsRaw])
   const clearPermissions = useTaskStore((s) => s.clearPermissions)
   const startTask = useTaskStore((s) => s.startTask)
 

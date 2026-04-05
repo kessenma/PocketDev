@@ -1,21 +1,23 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
 import {
-  pathAgentToTools,
-  pathAgentToToolsLow,
+  pathAgentToFiles,
+  pathAgentToFilesLow,
+  pathAgentToProvider,
+  pathAgentToProviderLow,
   pathConsoleToAgent,
   pathMobileToAgent,
   pathMobileToAgentLow,
-  pathWebToAgent,
 } from './FlowPaths'
 
 const pulses = [
-  { d: pathWebToAgent, delay: 0.1, color: palette.bauhaus.yellow, reverse: false },
-  { d: pathMobileToAgent, delay: 0.35, color: palette.bauhaus.blue, reverse: false },
-  { d: pathMobileToAgentLow, delay: 0.55, color: palette.bauhaus.blue, reverse: true },
-  { d: pathConsoleToAgent, delay: 0.85, color: palette.bauhaus.red, reverse: false },
-  { d: pathAgentToTools, delay: 1.1, color: palette.bauhaus.red, reverse: false },
-  { d: pathAgentToToolsLow, delay: 1.35, color: palette.bauhaus.yellow, reverse: true },
+  { d: pathMobileToAgent, delay: 0.1, color: palette.bauhaus.blue, reverse: false },
+  { d: pathMobileToAgentLow, delay: 0.32, color: palette.bauhaus.blue, reverse: true },
+  { d: pathConsoleToAgent, delay: 0.55, color: palette.bauhaus.red, reverse: false },
+  { d: pathAgentToFiles, delay: 0.82, color: palette.bauhaus.yellow, reverse: false },
+  { d: pathAgentToFilesLow, delay: 1.04, color: palette.bauhaus.yellow, reverse: true },
+  { d: pathAgentToProvider, delay: 1.28, color: palette.bauhaus.red, reverse: false },
+  { d: pathAgentToProviderLow, delay: 1.52, color: palette.bauhaus.red, reverse: true },
 ]
 
 export function DataPulse({ active }: { active: boolean }) {

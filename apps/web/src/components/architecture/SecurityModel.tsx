@@ -35,10 +35,10 @@ export function SecurityModel() {
       <div className="mx-auto max-w-3xl">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground mb-2">
           <span style={architectureTextStyles.sectionEyebrow}>
-          Security Model
+            Security Model
           </span>
         </h2>
-        <p className="text-lg text-muted-foreground mb-10" style={architectureTextStyles.sectionLead}>
+        <p className="mb-10 text-lg text-muted-foreground" style={architectureTextStyles.sectionLead}>
           The security model is now split across three boundaries: the public
           website, the self-hosted agent, and the paired clients that talk to
           that agent. Each layer has a narrower role than before.
@@ -46,10 +46,10 @@ export function SecurityModel() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {principles.map((p) => (
-            <Card key={p.title} className="border-border bg-card/50">
+            <Card key={p.title} className="border bg-transparent shadow-none before:hidden after:hidden" style={architectureTextStyles.surface}>
               <CardHeader>
                 <CardTitle className="text-base" style={architectureTextStyles.cardTitle}>{p.title}</CardTitle>
-                <CardDescription>{p.description}</CardDescription>
+                <CardDescription style={architectureTextStyles.bodyText}>{p.description}</CardDescription>
               </CardHeader>
             </Card>
           ))}

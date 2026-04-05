@@ -13,6 +13,7 @@ import ServerWorkspace from '../components/server-actions/ServerWorkspace'
 import BauhausButton from '../components/shared/BauhausButton'
 import { BauhausPanel } from '../components/shared/BauhausPanel'
 import BauhausBadge from '../components/shared/BauhausBadge'
+import OnDeviceAISection from '../components/settings/OnDeviceAISection'
 import { typeStyles } from '../theme/typography'
 
 type Props = {
@@ -100,6 +101,8 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Server Health</Text>
           <ServerWorkspace />
         </BauhausPanel>
+
+        <OnDeviceAISection />
 
         <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>App</Text>

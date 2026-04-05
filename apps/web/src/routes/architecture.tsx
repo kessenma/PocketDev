@@ -1,8 +1,23 @@
+import type { ReactNode } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import {
+  SiAndroid,
+  SiAndroidHex,
+  SiApple,
+  SiAppleHex,
+  SiClaude,
+  SiClaudeHex,
+  SiGithubcopilot,
+  SiGithubcopilotHex,
+} from '@icons-pack/react-simple-icons'
 import { buttonVariants } from '#/components/ui/button'
+import { brandAssets } from '#/components/architecture/brand-assets'
+import { BrandAssetIcon } from '#/components/architecture/BrandAssetIcon'
 import { SystemOverview } from '#/components/architecture/SystemOverview'
 import { AgentEndpoints } from '#/components/architecture/AgentEndpoints'
+import { HowPocketDevWorks } from '#/components/architecture/HowPocketDevWorks'
 import { SecurityModel } from '#/components/architecture/SecurityModel'
+import { SetupReadiness } from '#/components/architecture/SetupReadiness'
 import { WireProtocol } from '#/components/architecture/WireProtocol'
 import { TechStack } from '#/components/architecture/TechStack'
 import { Footer } from '#/components/landing/Footer'
@@ -23,9 +38,9 @@ function ArchitecturePage() {
       style={{
         backgroundColor: architectureTokens.colors.paper,
         backgroundImage: `
-          radial-gradient(circle at top left, ${architectureTokens.colors.yellow}16 0, transparent 34%),
-          radial-gradient(circle at 82% 18%, ${architectureTokens.colors.blue}14 0, transparent 30%),
-          linear-gradient(180deg, ${architectureTokens.colors.panelAlt}80 0%, transparent 18%)
+          radial-gradient(circle at top left, ${architectureTokens.colors.yellow}12 0, transparent 26%),
+          radial-gradient(circle at 82% 18%, ${architectureTokens.colors.blue}10 0, transparent 24%),
+          linear-gradient(180deg, ${architectureTokens.colors.panelAlt}55 0%, transparent 18%)
         `,
       }}
     >
@@ -47,14 +62,38 @@ function ArchitecturePage() {
           className="mt-4 max-w-xl text-lg text-muted-foreground"
           style={architectureTextStyles.heroLead}
         >
-          A deeper look at how PocketDev spans the hosted web app, the
-          self-hosted agent, the built-in console, and the mobile client that
-          drives coding workflows from anywhere.
+          A deeper look at how PocketDev connects your devices to a self-hosted
+          agent, your files on the server, and the external AI providers that
+          power coding workflows from anywhere.
         </p>
         <ArchGraphic className="mt-12 w-full max-w-lg" />
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <IconPill
+            icon={<SiApple size={14} color={`#${SiAppleHex}`} />}
+            label="iOS"
+          />
+          <IconPill
+            icon={<SiAndroid size={14} color={`#${SiAndroidHex}`} />}
+            label="Android"
+          />
+          <IconPill
+            icon={<SiClaude size={14} color={`#${SiClaudeHex}`} />}
+            label="Claude"
+          />
+          <IconPill
+            icon={<BrandAssetIcon src={brandAssets.codexBlack} alt="Codex" />}
+            label="Codex"
+          />
+          <IconPill
+            icon={<SiGithubcopilot size={14} color={`#${SiGithubcopilotHex}`} />}
+            label="Copilot"
+          />
+        </div>
       </header>
 
       <SystemOverview />
+      <HowPocketDevWorks />
+      <SetupReadiness />
       <AgentEndpoints />
       <SecurityModel />
       <WireProtocol />
@@ -67,6 +106,21 @@ function ArchitecturePage() {
       </div>
 
       <Footer />
+    </div>
+  )
+}
+
+function IconPill({
+  icon,
+  label,
+}: {
+  icon: ReactNode
+  label: string
+}) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-transparent px-3 py-1.5 text-xs text-foreground/80">
+      <span className="shrink-0">{icon}</span>
+      <span>{label}</span>
     </div>
   )
 }

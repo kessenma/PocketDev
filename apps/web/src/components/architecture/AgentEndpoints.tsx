@@ -40,10 +40,10 @@ export function AgentEndpoints() {
       <div className="mx-auto max-w-3xl">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground mb-2">
           <span style={architectureTextStyles.sectionEyebrow}>
-          Agent API Surface
+            Agent API Surface
           </span>
         </h2>
-        <p className="text-lg text-muted-foreground mb-10" style={architectureTextStyles.sectionLead}>
+        <p className="mb-10 text-lg text-muted-foreground" style={architectureTextStyles.sectionLead}>
           The agent still owns a single-port interface, but it now exposes a
           much broader product surface: console auth, mobile APIs, realtime task
           streams, project management, and preview proxying under one namespace.
@@ -52,18 +52,22 @@ export function AgentEndpoints() {
         <div className="space-y-8">
           {groups.map((group) => (
             <div key={group.label}>
-              <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+              <h3
+                className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                style={architectureTextStyles.sectionEyebrow}
+              >
                 {group.label}
               </h3>
               <div className="space-y-2">
                 {group.endpoints.map((ep) => (
                   <div
                     key={ep.path}
-                    className="flex items-baseline gap-3 rounded-md border border-border bg-muted/30 px-4 py-2.5 font-mono text-sm"
+                    className="flex items-baseline gap-3 rounded-md border px-4 py-2.5 font-mono text-sm"
+                    style={architectureTextStyles.surface}
                   >
                     <MethodBadge method={ep.method} />
-                    <span className="text-foreground">{ep.path}</span>
-                    <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">
+                    <span className="text-foreground" style={architectureTextStyles.strongText}>{ep.path}</span>
+                    <span className="ml-auto hidden text-xs text-muted-foreground sm:inline" style={architectureTextStyles.bodyText}>
                       {ep.desc}
                     </span>
                   </div>

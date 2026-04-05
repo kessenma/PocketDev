@@ -5,6 +5,7 @@ import { Badge } from '#/components/ui/badge'
 import { ConnectionWizard } from '#/components/ConnectionWizard'
 import { DeviceList } from '#/components/DeviceList'
 import { SetupStatus } from '#/components/SetupStatus'
+import { DomainSettings } from '#/components/DomainSettings'
 import { ServerTerminal } from '#/components/ServerTerminal'
 import { DiagnosticsPanel } from '#/components/DiagnosticsPanel'
 import { RepoInspectorPanel } from '#/components/RepoInspectorPanel'
@@ -108,11 +109,16 @@ export function ConsolePage() {
               <SetupStatus />
             </div>
 
+            <div className="lg:col-span-12">
+              <DomainSettings />
+            </div>
+
             <div className="lg:col-span-7">
               <ConnectionWizard
                 passcode={status.passcode}
                 serverIp={status.serverIp}
                 port={status.port}
+                secure={status.secure}
                 onPasscodeChanged={handlePasscodeChanged}
               />
             </div>

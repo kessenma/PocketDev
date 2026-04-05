@@ -124,6 +124,9 @@ importers:
       '@react-native-clipboard/clipboard':
         specifier: ^1.16.3
         version: 1.16.3(react-native@0.83.0)(react@19.2.0)
+      '@react-native-executorch/bare-resource-fetcher':
+        specifier: link:vendor/react-native-executorch/packages/bare-resource-fetcher
+        version: link:vendor/react-native-executorch/packages/bare-resource-fetcher
       '@react-native-masked-view/masked-view':
         specifier: ^0.3.2
         version: 0.3.2(react-native@0.83.0)(react@19.2.0)
@@ -154,6 +157,9 @@ importers:
       react-native-enriched-markdown:
         specifier: ^0.4.1
         version: 0.4.1(react-native@0.83.0)(react@19.2.0)
+      react-native-executorch:
+        specifier: link:vendor/react-native-executorch/packages/react-native-executorch
+        version: link:vendor/react-native-executorch/packages/react-native-executorch
       react-native-gesture-handler:
         specifier: ^2.30.0
         version: 2.30.1(react-native@0.83.0)(react@19.2.0)
@@ -272,6 +278,9 @@ importers:
       '@fontsource-variable/geist':
         specifier: ^5.2.8
         version: 5.2.8
+      '@icons-pack/react-simple-icons':
+        specifier: ^13.13.0
+        version: 13.13.0(react@19.2.4)
       '@pocketdev/db':
         specifier: workspace:^
         version: link:../../packages/db
@@ -2765,6 +2774,15 @@ packages:
     resolution: {integrity: sha512-93zYdMES/c1D69yZiKDBj0V24vqNzB/koF26KPaagAfd3P/4gUlh3Dys5ogAK+Exi9QyzlD8x/08Zt7wIKcDcA==}
     deprecated: Use @eslint/object-schema instead
     dev: true
+
+  /@icons-pack/react-simple-icons@13.13.0(react@19.2.4):
+    resolution: {integrity: sha512-B5HhQMIpcSH4z8IZ8HFhD59CboHceKYMpPC9kAwGyKntvPdyJJv26DLu4Z1wAjcCLyrJhf11tMhiQGom9Rxb9g==}
+    engines: {node: '>=24', pnpm: '>=10'}
+    peerDependencies:
+      react: ^16.13 || ^17 || ^18 || ^19
+    dependencies:
+      react: 19.2.4
+    dev: false
 
   /@inquirer/ansi@1.0.2:
     resolution: {integrity: sha512-S8qNSZiYzFd0wAcyG5AXCvUHC5Sr7xpZ9wZ2py9XR88jUz8wooStVx5M6dRzczbBWjic9NP7+rY0Xi7qqK/aMQ==}

@@ -14,6 +14,7 @@ export interface QRScanResult {
   host: string
   port: number
   code: string
+  secure?: boolean
 }
 
 interface Props {
@@ -43,7 +44,7 @@ export default function QRScanner({ visible, onScan, onClose }: Props) {
           typeof data.code === 'string'
         ) {
           setScanned(true)
-          onScan({ host: data.host, port: data.port, code: data.code })
+          onScan({ host: data.host, port: data.port, code: data.code, secure: data.secure === true })
         }
       } catch {
         // Not a valid PocketDev QR code — ignore

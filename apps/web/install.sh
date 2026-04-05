@@ -8,6 +8,7 @@ DATA_DIR="/opt/pocketdev/data"
 BUNDLE_URL="https://pocketdev.run/agent/bundle"
 SERVICE_NAME="pocketdev-agent"
 PORT=4387
+CADDY_FILE="/etc/caddy/Caddyfile"
 
 # ─── Colors & helpers ─────────────────────────────────────────────
 RED='\033[0;31m'
@@ -29,7 +30,7 @@ echo -e "${BOLD}  PocketDev Installer v${POCKETDEV_VERSION}${NC}"
 echo -e "${BOLD}============================================${NC}"
 
 # ─── Pre-flight checks ───────────────────────────────────────────
-step "Step 0/4: Pre-flight checks"
+step "Step 0/5: Pre-flight checks"
 
 if [ "$(uname -s)" != "Linux" ]; then
   fail "PocketDev agent requires Linux. Detected: $(uname -s)"
@@ -54,7 +55,7 @@ fi
 ok "Linux $ARCH ($OS_TYPE)"
 
 # ─── Step 1: Install required packages ───────────────────────────
-step "Step 1/4: Installing required packages"
+step "Step 1/5: Installing required packages"
 
 APT_UPDATED=false
 
@@ -102,7 +103,7 @@ done
 ok "Required packages ready"
 
 # ─── Step 2: Install Bun runtime ─────────────────────────────────
-step "Step 2/4: Setting up Bun runtime"
+step "Step 2/5: Setting up Bun runtime"
 
 if ! command -v bun >/dev/null 2>&1; then
   info "Installing Bun..."
@@ -124,7 +125,7 @@ else
 fi
 
 # ─── Step 3: Download and install agent ──────────────────────────
-step "Step 3/4: Installing PocketDev agent"
+step "Step 3/5: Installing PocketDev agent"
 
 # Stop existing service if running
 if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
@@ -167,6 +168,7 @@ ExecStart=${BUN_PATH} run ${INSTALL_DIR}/index.js
 WorkingDirectory=${INSTALL_DIR}
 Environment=POCKETDEV_DATA_DIR=${DATA_DIR}
 Environment=POCKETDEV_PORT=${PORT}
+Environment=POCKETDEV_HOST=127.0.0.1
 Environment=POCKETDEV_PROJECT_DIR=${HOME}
 Environment=PATH=${BUN_PATH%/*}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=always
@@ -182,8 +184,106 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME" >/dev/null 2>&1
 ok "Systemd service created"
 
-# ─── Step 4: Start and verify ─────────────────────────────────────
-step "Step 4/4: Starting PocketDev agent"
+# ─── Step 4: Install and configure Caddy for HTTPS ───────────────
+step "Step 4/5: Setting up HTTPS (Caddy)"
+
+# Ask for optional domain
+echo ""
+echo -e "  ${CYAN}Do you have a domain pointing to this server?${NC}"
+echo -e "  Enter it now for a trusted HTTPS certificate (Let's Encrypt),"
+echo -e "  or leave blank for a self-signed certificate on the IP address."
+echo ""
+printf "  Domain (leave blank for IP-only): "
+read -r USER_DOMAIN </dev/tty || USER_DOMAIN=""
+USER_DOMAIN="$(echo "$USER_DOMAIN" | tr -d '[:space:]')"
+
+# Install Caddy
+if ! command -v caddy >/dev/null 2>&1; then
+  info "Installing Caddy..."
+  case "$OS_TYPE" in
+    ubuntu|debian|pop|linuxmint|zorin)
+      apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tail -1 || true
+      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
+      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+      apt-get update -qq 2>&1 | tail -1 || true
+      apt-get install -y -qq caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+      ;;
+    centos|fedora|rhel|rocky|almalinux|amzn)
+      dnf install -y 'dnf-command(copr)' 2>&1 | tail -1 || true
+      dnf copr enable -y @caddy/caddy 2>&1 | tail -1 || true
+      dnf install -y caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+      ;;
+    arch|manjaro)
+      pacman -Sy --noconfirm caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+      ;;
+    alpine)
+      apk add caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+      ;;
+    *)
+      warn "Unknown OS '$OS_TYPE' — trying apt-get for Caddy"
+      apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https 2>&1 | tail -1 || true
+      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg 2>/dev/null
+      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+      apt-get update -qq 2>&1 | tail -1 || true
+      apt-get install -y -qq caddy 2>&1 | tail -2 || { fail "Failed to install Caddy"; }
+      ;;
+  esac
+  if command -v caddy >/dev/null 2>&1; then
+    ok "Caddy installed ($(caddy version 2>/dev/null | head -1))"
+  else
+    fail "Caddy installation failed"
+  fi
+else
+  ok "Caddy already installed ($(caddy version 2>/dev/null | head -1))"
+fi
+
+# Write Caddyfile
+info "Writing HTTPS config..."
+mkdir -p "$(dirname "$CADDY_FILE")"
+
+if [ -n "$USER_DOMAIN" ]; then
+  cat > "$CADDY_FILE" <<CADDYEOF
+${USER_DOMAIN} {
+  reverse_proxy localhost:${PORT}
+}
+CADDYEOF
+  echo "$USER_DOMAIN" > "${DATA_DIR}/domain.txt"
+  ok "Configured HTTPS for domain: $USER_DOMAIN (Let's Encrypt)"
+else
+  cat > "$CADDY_FILE" <<CADDYEOF
+:443 {
+  tls internal
+  reverse_proxy localhost:${PORT}
+}
+CADDYEOF
+  echo "" > "${DATA_DIR}/domain.txt"
+  ok "Configured HTTPS with self-signed certificate (IP-only)"
+fi
+
+# Allow agent to update Caddy config later (from console UI)
+CADDY_BIN="$(which caddy)"
+cat > "/etc/sudoers.d/pocketdev-caddy" <<SUDOEOF
+# Allow PocketDev agent to update Caddy HTTPS config
+root ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload caddy
+root ALL=(ALL) NOPASSWD: /usr/bin/tee ${CADDY_FILE}
+SUDOEOF
+chmod 440 /etc/sudoers.d/pocketdev-caddy
+
+# Start Caddy
+systemctl enable caddy >/dev/null 2>&1
+systemctl restart caddy
+sleep 1
+
+if systemctl is-active --quiet caddy; then
+  ok "Caddy is running (HTTPS on port 443)"
+else
+  warn "Caddy failed to start. Showing recent logs:"
+  journalctl -u caddy --no-pager -n 10 2>/dev/null || true
+  warn "HTTPS may not be available. The agent will still work on http://localhost:${PORT}"
+fi
+
+# ─── Step 5: Start and verify ─────────────────────────────────────
+step "Step 5/5: Starting PocketDev agent"
 
 systemctl start "$SERVICE_NAME"
 sleep 2
@@ -201,6 +301,13 @@ ok "Agent is running on port $PORT"
 PUBLIC_IP="$(curl -4s --max-time 5 https://ifconfig.me 2>/dev/null || curl -4s --max-time 5 https://icanhazip.com 2>/dev/null || echo '<your-server-ip>')"
 PUBLIC_IP="$(echo "$PUBLIC_IP" | tr -d '\n')"
 
+# Build the display URL
+if [ -n "$USER_DOMAIN" ]; then
+  DISPLAY_HOST="$USER_DOMAIN"
+else
+  DISPLAY_HOST="$PUBLIC_IP"
+fi
+
 echo ""
 echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}  PocketDev installed successfully!${NC}"
@@ -208,15 +315,22 @@ echo -e "${GREEN}============================================${NC}"
 echo ""
 echo -e "  Open this URL in your browser to complete setup:"
 echo ""
-echo -e "    ${CYAN}http://${PUBLIC_IP}:${PORT}/PocketDev/setup${NC}"
+echo -e "    ${CYAN}https://${DISPLAY_HOST}/PocketDev/setup${NC}"
 echo ""
+if [ -z "$USER_DOMAIN" ]; then
+  echo -e "  ${YELLOW}Note:${NC} Using a self-signed certificate. Your browser will show"
+  echo "  a security warning — click 'Advanced' → 'Proceed' to continue."
+  echo ""
+fi
 echo "  Create your admin account, then pair your mobile device."
+echo "  You can add a custom domain later from the console settings."
 echo ""
-echo -e "  ${BOLD}Health:${NC}  http://${PUBLIC_IP}:${PORT}/PocketDev/health"
+echo -e "  ${BOLD}Health:${NC}  https://${DISPLAY_HOST}/PocketDev/health"
 echo ""
 echo "  Useful commands:"
-echo "    journalctl -u $SERVICE_NAME -f        # Stream logs"
-echo "    systemctl restart $SERVICE_NAME        # Restart"
-echo "    systemctl stop $SERVICE_NAME           # Stop"
-echo "    curl http://localhost:$PORT/PocketDev/health  # Health check"
+echo "    journalctl -u $SERVICE_NAME -f        # Stream agent logs"
+echo "    journalctl -u caddy -f                # Stream Caddy logs"
+echo "    systemctl restart $SERVICE_NAME        # Restart agent"
+echo "    systemctl restart caddy                # Restart Caddy"
+echo "    curl http://localhost:$PORT/PocketDev/health  # Health check (internal)"
 echo ""

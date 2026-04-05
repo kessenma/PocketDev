@@ -27,6 +27,7 @@ import { initSetup, getServerKeypair } from './services/setup.ts'
 import { getDb } from './db/index.ts'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
+const HOST = process.env.POCKETDEV_HOST ?? '0.0.0.0'
 
 if (process.env.POCKETDEV_DEV_MODE === '1') {
   console.log('⚠️  DEV MODE ENABLED - authentication disabled, auto-pairing active')
@@ -84,9 +85,9 @@ new Elysia()
     // Console SPA static files (must be last — catch-all)
     .use(consoleStaticRoutes)
   )
-  .listen(PORT)
+  .listen({ port: PORT, hostname: HOST })
 
-console.log(`🔧 PocketDev Agent running on port ${PORT}`)
+console.log(`🔧 PocketDev Agent running on ${HOST}:${PORT}`)
 
 if (process.env.POCKETDEV_DEV_MODE === '1' && setupCode) {
   console.log(`DEV MODE device ready: ${setupCode}`)
