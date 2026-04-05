@@ -1,51 +1,49 @@
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
 import {
+  pathAgentToTools,
+  pathAgentToToolsLow,
+  pathConsoleToAgent,
   pathMobileToAgent,
   pathMobileToAgentLow,
-  pathAgentToAI,
-  pathAgentToAILow,
+  pathWebToAgent,
 } from './FlowPaths'
 
-const DURATION = 2.0
-
-/**
- * Animated dashes that travel along the connection paths,
- * mirroring the hero graphic's SignalPulse style.
- *
- * Top paths flow forward (mobile→agent→AI),
- * bottom paths flow in reverse (AI→agent→mobile),
- * creating a continuous bidirectional loop.
- */
-
 const pulses = [
-  { d: pathMobileToAgent, delay: 0, color: palette.bauhaus.blue, reverse: false },
-  { d: pathMobileToAgentLow, delay: 0.3, color: palette.bauhaus.blue, reverse: true },
-  { d: pathAgentToAI, delay: 0.6, color: palette.bauhaus.red, reverse: false },
-  { d: pathAgentToAILow, delay: 0.9, color: palette.bauhaus.red, reverse: true },
+  { d: pathWebToAgent, delay: 0.1, color: palette.bauhaus.yellow, reverse: false },
+  { d: pathMobileToAgent, delay: 0.35, color: palette.bauhaus.blue, reverse: false },
+  { d: pathMobileToAgentLow, delay: 0.55, color: palette.bauhaus.blue, reverse: true },
+  { d: pathConsoleToAgent, delay: 0.85, color: palette.bauhaus.red, reverse: false },
+  { d: pathAgentToTools, delay: 1.1, color: palette.bauhaus.red, reverse: false },
+  { d: pathAgentToToolsLow, delay: 1.35, color: palette.bauhaus.yellow, reverse: true },
 ]
 
-export function DataPulse() {
+export function DataPulse({ active }: { active: boolean }) {
+  const reduceMotion = useReducedMotion()
+
+  if (reduceMotion || !active) {
+    return null
+  }
+
   return (
     <g>
-      {pulses.map(({ d, delay, color, reverse }, i) => (
+      {pulses.map(({ d, delay, color, reverse }) => (
         <motion.path
-          key={i}
+          key={`${d}-${color}`}
           d={d}
           fill="none"
           stroke={color}
-          strokeWidth="3"
+          strokeWidth="4"
           strokeLinecap="round"
           pathLength={1}
-          strokeDasharray="0.08 1"
-          initial={{ strokeDashoffset: reverse ? 0 : 1 }}
-          animate={{ strokeDashoffset: reverse ? 1 : 0 }}
+          strokeDasharray="0.09 1"
+          initial={{ strokeDashoffset: reverse ? 0 : 1, opacity: 0 }}
+          animate={{ strokeDashoffset: reverse ? 1 : 0, opacity: [0, 1, 1, 0] }}
           transition={{
-            duration: DURATION,
+            duration: 2.2,
             delay,
             repeat: Infinity,
-            repeatType: 'mirror',
-            repeatDelay: 0.5,
+            repeatDelay: 0.4,
             ease: 'easeInOut',
           }}
         />

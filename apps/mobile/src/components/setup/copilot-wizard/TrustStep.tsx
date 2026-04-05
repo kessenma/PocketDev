@@ -115,7 +115,7 @@ export default function TrustStep({ dispatch, trustSession }: Props) {
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {trusted
             ? 'GitHub Copilot can now run against this workspace path.'
-            : 'Copilot needs trusted access to the current workspace before PocketDev can launch it.'}
+            : 'Copilot needs tmux-backed trusted access to the current workspace before PocketDev can launch it.'}
         </Text>
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>

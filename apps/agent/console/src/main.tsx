@@ -2,12 +2,17 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { webFontStacks } from '@pocketdev/shared/theme'
 import './styles.css'
 import { SetupPage } from './pages/SetupPage'
 import { LoginPage } from './pages/LoginPage'
 import { ConsolePage } from './pages/ConsolePage'
 import { applyConsoleTheme } from './theme'
 
+document.documentElement.style.setProperty('--font-sans', webFontStacks.body)
+document.documentElement.style.setProperty('--font-display', webFontStacks.display)
+document.documentElement.style.setProperty('--font-heading', webFontStacks.display)
+document.documentElement.style.setProperty('--font-mono', webFontStacks.mono)
 applyConsoleTheme()
 
 createRoot(document.getElementById('root')!).render(

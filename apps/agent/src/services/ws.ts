@@ -5,7 +5,7 @@ import type {
   ContainerLogsFollowRequest,
   ContainerLogsStoppedEvent,
 } from '@pocketdev/shared/types'
-import { startTask, killTask, getTaskList } from './task-manager.ts'
+import { startTask, killTask, getTaskList, getProcess } from './task-manager.ts'
 import { authenticateRequest, parseDeviceIdFromAuthHeader } from './auth.ts'
 import { DockerServiceError, getContainerLogs, startContainerLogsFollow, type ContainerLogsFollower } from './docker.ts'
 import { checkAllPrerequisites } from './prerequisites.ts'
@@ -82,6 +82,13 @@ export const wsRoutes = new Elysia()
           case 'task.kill': {
             const { taskId } = msg.payload as { taskId: string }
             killTask(taskId)
+            break
+          }
+
+          case 'task.input': {
+            const { taskId, data } = msg.payload as { taskId: string; data: string }
+            const proc = getProcess(taskId)
+            if (proc) proc.sendInput(data)
             break
           }
 

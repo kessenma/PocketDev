@@ -3,8 +3,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Avenir Next", "Helvetica Neue", "Inter", sans-serif;
+  --font-sans: "Geist Variable", "Inter Variable", Inter, system-ui, sans-serif;
   --font-display: "Avenir Next Condensed", "Futura Condensed ExtraBold", "Arial Narrow", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
 }
 
 * {
@@ -96,5 +97,11 @@ body {
   }
   html {
     @apply font-sans;
+  }
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
   }
 }

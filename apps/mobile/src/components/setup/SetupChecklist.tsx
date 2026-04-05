@@ -13,6 +13,7 @@ import {
   getLanguageTools,
   getRequiredSetupTools,
   getServerSetupStatus,
+  getSupportingTools,
 } from './setup-tool-utils'
 
 interface Props {
@@ -65,6 +66,7 @@ export default function SetupChecklist({
   const required = getRequiredSetupTools(report)
   const aiAssistants = getAiAssistantTools(report)
   const languages = getLanguageTools(report)
+  const supportingTools = getSupportingTools(report)
   const dockerTool = report?.tools.find((t) => t.id === 'docker')
   const dockerInstalled = dockerTool?.status === 'installed'
   const codexBlockedReason = getCodexBlockedReason(report)
@@ -143,6 +145,18 @@ export default function SetupChecklist({
           <View style={styles.section}>
             {renderTools(languages)}
           </View>
+
+          {supportingTools.length ? (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Supporting Tools</Text>
+              <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+                Additional utilities PocketDev can use during setup and workspace tasks.
+              </Text>
+              <View style={styles.section}>
+                {renderTools(supportingTools)}
+              </View>
+            </>
+          ) : null}
 
           <DatabaseSetup
             databases={report?.databases ?? []}

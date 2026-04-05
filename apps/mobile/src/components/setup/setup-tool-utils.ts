@@ -58,6 +58,12 @@ export function getLanguageTools(report: PrerequisitesReport | null): ToolCheck[
     .filter((tool): tool is ToolCheck => !!tool)
 }
 
+export function getSupportingTools(report: PrerequisitesReport | null): ToolCheck[] {
+  if (!report) return []
+  const primaryIds = new Set(['git', 'github_cli', ...PACKAGE_MANAGER_TOOL_IDS, ...AI_ASSISTANT_TOOL_IDS, ...LANGUAGE_TOOL_IDS])
+  return report.tools.filter((tool) => !primaryIds.has(tool.id))
+}
+
 export function getServerSetupStatus(report: PrerequisitesReport | null) {
   const requiredReady = getRequiredSetupTools(report).every((tool) => isToolConfigured(tool))
   const aiReady = getAiAssistantTools(report).some((tool) => isToolConfigured(tool))

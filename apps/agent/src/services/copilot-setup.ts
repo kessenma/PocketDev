@@ -13,6 +13,7 @@ import type {
 const DATA_DIR = process.env.POCKETDEV_DATA_DIR ?? join(process.cwd(), 'data')
 const TRUST_MARKER_FILE = join(DATA_DIR, 'copilot-trust.json')
 const COPILOT_INSTALL_COMMAND = 'curl -fsSL https://gh.io/copilot-install | bash'
+const TMUX_APT_INSTALL_COMMAND = 'apt-get update -qq && apt-get install -y -qq tmux'
 const MAX_OUTPUT_LENGTH = 16_000
 const OUTPUT_EXCERPT_LENGTH = 1_500
 const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]/g
@@ -259,6 +260,84 @@ function syncPersistedCopilotStatus(status: CopilotSetupStatus) {
   }
 }
 
+async function detectPackageManager(): Promise<'apt-get' | 'dnf' | 'yum' | 'pacman' | 'apk' | null> {
+  const candidates = ['apt-get', 'dnf', 'yum', 'pacman', 'apk'] as const
+  for (const candidate of candidates) {
+    if (await which(candidate)) return candidate
+  }
+  return null
+}
+
+async function installTmuxIfNeeded(): Promise<{
+  success: boolean
+  installed: boolean
+  path: string | null
+  output: string | null
+  error: string | null
+}> {
+  const existingPath = await which('tmux')
+  if (existingPath) {
+    return {
+      success: true,
+      installed: true,
+      path: existingPath,
+      output: 'tmux already installed.',
+      error: null,
+    }
+  }
+
+  const packageManager = await detectPackageManager()
+  if (!packageManager) {
+    return {
+      success: false,
+      installed: false,
+      path: null,
+      output: null,
+      error: 'tmux is required for PocketDev Copilot setup, but no supported package manager was detected.',
+    }
+  }
+
+  let command: string
+  switch (packageManager) {
+    case 'apt-get':
+      command = TMUX_APT_INSTALL_COMMAND
+      break
+    case 'dnf':
+      command = 'dnf install -y tmux'
+      break
+    case 'yum':
+      command = 'yum install -y tmux'
+      break
+    case 'pacman':
+      command = 'pacman -Sy --noconfirm --needed tmux'
+      break
+    case 'apk':
+      command = 'apk add tmux'
+      break
+  }
+
+  const { stdout, stderr, exitCode } = await exec(command, 240_000)
+  const output = [stdout, stderr].filter(Boolean).join('\n').trim() || null
+  const path = await which('tmux')
+  if (exitCode !== 0 || !path) {
+    return {
+      success: false,
+      installed: false,
+      path: null,
+      output,
+      error: output ?? 'Failed to install tmux for GitHub Copilot setup.',
+    }
+  }
+
+  return {
+    success: true,
+    installed: true,
+    path,
+    output,
+    error: null,
+  }
+}
+
 function parseTrustState(session: InternalTrustSession) {
   const normalized = normalizeOutput(session.output)
   const prompt = derivePrompt(session.output)
@@ -433,7 +512,9 @@ async function finalizeTrustSession(sessionId: string) {
   const session = trustSessions.get(sessionId)
   if (!session) return
 
-  recordDebugEvent(sessionId, 'Terminal session exited; finalizing trust session')
+  recordDebugEvent(sessionId, 'Finalizing trust session')
+  // Kill the terminal/tmux session
+  try { session.terminal.kill() } catch { /* best-effort */ }
   refreshTrustSessionState(session)
   if (session.trusted) return
 
@@ -454,16 +535,6 @@ function disposeExistingTrustSessions() {
   trustSessions.clear()
 }
 
-async function waitForTrustBootstrap(sessionId: string, timeoutMs = 3000) {
-  const startedAt = Date.now()
-  while (Date.now() - startedAt < timeoutMs) {
-    const session = trustSessions.get(sessionId)
-    if (!session) return
-    if (session.output.trim().length > 0) return
-    await Bun.sleep(100)
-  }
-}
-
 function getTrustSessionOrThrow(sessionId: string) {
   const session = trustSessions.get(sessionId)
   if (!session) {
@@ -474,6 +545,7 @@ function getTrustSessionOrThrow(sessionId: string) {
 
 export async function checkCopilotStatus(): Promise<CopilotSetupStatus> {
   const path = await which('copilot')
+  const tmuxPath = await which('tmux')
   const ghStatus = await getGitHubAuthStatus()
   const trustConfigured = hasStoredTrust()
   const trustTarget = getWorkspaceTrustTarget()
@@ -483,6 +555,8 @@ export async function checkCopilotStatus(): Promise<CopilotSetupStatus> {
       installed: false,
       version: null,
       path: null,
+      tmux_installed: Boolean(tmuxPath),
+      tmux_path: tmuxPath,
       authenticated: ghStatus.authenticated,
       github_username: ghStatus.githubUsername,
       auth_output: ghStatus.output,
@@ -498,6 +572,8 @@ export async function checkCopilotStatus(): Promise<CopilotSetupStatus> {
     installed: true,
     version,
     path,
+    tmux_installed: Boolean(tmuxPath),
+    tmux_path: tmuxPath,
     authenticated: ghStatus.authenticated,
     github_username: ghStatus.githubUsername,
     auth_output: ghStatus.output,
@@ -510,8 +586,22 @@ export async function checkCopilotStatus(): Promise<CopilotSetupStatus> {
 }
 
 export async function installCopilot(): Promise<CopilotInstallResult> {
+  const tmuxResult = await installTmuxIfNeeded()
+  if (!tmuxResult.success) {
+    return {
+      success: false,
+      installed: false,
+      version: null,
+      path: null,
+      tmux_installed: false,
+      tmux_path: null,
+      output: tmuxResult.output,
+      error: tmuxResult.error,
+    }
+  }
+
   const { stdout, stderr, exitCode } = await exec(COPILOT_INSTALL_COMMAND, 240_000)
-  const output = [stdout, stderr].filter(Boolean).join('\n').trim() || null
+  const output = [tmuxResult.output, stdout, stderr].filter(Boolean).join('\n\n').trim() || null
 
   if (exitCode !== 0) {
     return {
@@ -519,6 +609,8 @@ export async function installCopilot(): Promise<CopilotInstallResult> {
       installed: false,
       version: null,
       path: null,
+      tmux_installed: true,
+      tmux_path: tmuxResult.path,
       output,
       error: output ?? 'Failed to install GitHub Copilot CLI.',
     }
@@ -530,6 +622,8 @@ export async function installCopilot(): Promise<CopilotInstallResult> {
     installed: status.installed,
     version: status.version,
     path: status.path,
+    tmux_installed: status.tmux_installed,
+    tmux_path: status.tmux_path,
     output,
     error: status.installed ? null : 'GitHub Copilot install completed but the binary was not detected.',
   }
@@ -539,35 +633,69 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
   disposeExistingTrustSessions()
 
   const copilotPath = await which('copilot')
+  const tmuxPath = await which('tmux')
   const ghStatus = await getGitHubAuthStatus()
-  recordDebugEvent(null, `Copilot trust preflight: copilotPath=${copilotPath ?? 'missing'} ghAuthenticated=${ghStatus.authenticated ? 'yes' : 'no'} ghUser=${ghStatus.githubUsername ?? 'none'}`)
+  recordDebugEvent(null, `Copilot trust preflight: copilotPath=${copilotPath ?? 'missing'} tmux=${tmuxPath ? 'yes' : 'no'} ghAuthenticated=${ghStatus.authenticated ? 'yes' : 'no'} ghUser=${ghStatus.githubUsername ?? 'none'}`)
 
-  let session: InternalTrustSession | null = null
+  if (!tmuxPath) {
+    return {
+      session_id: crypto.randomUUID(),
+      state: 'failed',
+      prompt: null,
+      output_excerpt: null,
+      trust_target: getWorkspaceTrustTarget(),
+      trusted: false,
+      completed: true,
+      error: 'tmux is required before PocketDev can configure GitHub Copilot trust.',
+    }
+  }
+  return startCopilotTrustViaTmux(copilotPath ?? 'copilot')
+}
+
+/** Use tmux as a real terminal emulator — handles all TUI queries natively. */
+async function startCopilotTrustViaTmux(copilotPath: string): Promise<CopilotTrustStartResult> {
   const sessionId = crypto.randomUUID()
-  recordDebugEvent(sessionId, `Starting Copilot trust flow in ${getWorkspaceTrustTarget()}`)
-  const terminal = createTerminalSession(
-    `copilot-trust-${sessionId}`,
-    (chunk) => {
-      if (!session) return
-      session.output = `${session.output}${chunk}`.slice(-MAX_OUTPUT_LENGTH)
-      recordDebugEvent(sessionId, `PTY output chunk received (${chunk.length} chars)`)
-      answerTerminalQueries(chunk, session.terminal, sessionId)
-      refreshTrustSessionState(session)
-    },
-    (exitCode) => {
-      recordDebugEvent(sessionId, `PTY exited with code ${exitCode}`)
-      void finalizeTrustSession(sessionId)
-    },
-    getWorkspaceTrustTarget(),
-  )
+  const tmuxSession = `copilot-trust-${sessionId.slice(0, 8)}`
+  const target = getWorkspaceTrustTarget()
+  recordDebugEvent(sessionId, `Starting Copilot trust via tmux in ${target}`)
 
-  session = {
+  // Kill any leftover tmux session with this prefix
+  await exec(`tmux kill-session -t ${tmuxSession} 2>/dev/null`)
+
+  // Launch copilot inside tmux (real terminal emulator)
+  const { exitCode: startExit } = await exec(
+    `cd ${shellEscape(target)} && tmux new-session -d -s ${tmuxSession} -x 100 -y 30 ${shellEscape(copilotPath)}`,
+  )
+  if (startExit !== 0) {
+    recordDebugEvent(sessionId, 'Failed to create tmux session')
+    return {
+      session_id: sessionId,
+      state: 'failed',
+      prompt: null,
+      output_excerpt: null,
+      trust_target: target,
+      trusted: false,
+      completed: true,
+      error: 'PocketDev could not start a tmux session for GitHub Copilot trust.',
+    }
+  }
+
+  // Create a dummy terminal for the session interface (not used for I/O)
+  const dummyTerminal: TerminalSession = {
+    id: tmuxSession,
+    proc: null as never,
+    send(_data: string) { /* tmux send-keys used instead */ },
+    resize() { /* tmux handles sizing */ },
+    kill() { void exec(`tmux kill-session -t ${tmuxSession} 2>/dev/null`) },
+  }
+
+  const session: InternalTrustSession = {
     id: sessionId,
-    terminal,
+    terminal: dummyTerminal,
     output: '',
     state: 'starting',
     prompt: null,
-    trustTarget: getWorkspaceTrustTarget(),
+    trustTarget: target,
     trusted: false,
     completed: false,
     error: null,
@@ -577,17 +705,70 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
     startedAt: Date.now(),
     updatedAt: Date.now(),
   }
-
   trustSessions.set(sessionId, session)
-  scheduleSessionTimeout(sessionId)
-  const launchCommand = `exec ${shellEscape(copilotPath ?? 'copilot')}`
-  recordDebugEvent(sessionId, `Sending \`${launchCommand}\` to PTY session`)
-  terminal.send(`${launchCommand}\n`)
 
-  await waitForTrustBootstrap(sessionId)
-  refreshTrustSessionState(session)
-  recordDebugEvent(sessionId, `Bootstrap complete: state=${session.state} prompt=${session.prompt ?? 'none'}`)
+  // Poll tmux pane content for trust prompt / ready patterns
+  pollTmuxSession(sessionId, tmuxSession)
+  scheduleSessionTimeout(sessionId)
+
+  // Wait briefly then return initial status
+  await Bun.sleep(2000)
   return toTrustStatus(session)
+}
+
+function pollTmuxSession(sessionId: string, tmuxSession: string) {
+  const poll = async () => {
+    const session = trustSessions.get(sessionId)
+    if (!session || session.completed || session.trusted) return
+
+    // Capture the visible screen content from tmux
+    const { stdout: paneContent, exitCode } = await exec(`tmux capture-pane -t ${tmuxSession} -p 2>/dev/null`)
+    if (exitCode !== 0) {
+      // tmux session may have died
+      recordDebugEvent(sessionId, 'tmux capture-pane failed; session may have exited')
+      void finalizeTrustSession(sessionId)
+      return
+    }
+
+    session.output = paneContent
+    session.uiReady = true
+    session.updatedAt = Date.now()
+    const derived = parseTrustState(session)
+    recordDebugEvent(sessionId, `tmux poll: state=${derived.state} trusted=${derived.trusted} excerpt=${paneContent.slice(0, 120).replace(/\n/g, ' ')}`)
+
+    // If copilot went straight to ready screen — trust already configured
+    if (derived.trusted) {
+      completeTrustSession(session)
+      void exec(`tmux kill-session -t ${tmuxSession} 2>/dev/null`)
+      return
+    }
+
+    // If trust prompt detected — select option 2 (remember)
+    if (derived.state === 'awaiting_trust' && !session.trustHandled) {
+      recordDebugEvent(sessionId, `tmux: Trust prompt detected; sending Down + Enter for option 2`)
+      session.trustHandled = true
+      session.trustTarget = derived.trustTarget
+      session.state = 'pending'
+      // Send arrow-down then Enter via tmux
+      await exec(`tmux send-keys -t ${tmuxSession} Down`)
+      await Bun.sleep(300)
+      await exec(`tmux send-keys -t ${tmuxSession} Enter`)
+
+      // Poll again after a short delay to check result
+      setTimeout(poll, 2000)
+      return
+    }
+
+    session.prompt = derived.prompt
+    session.trustTarget = derived.trustTarget
+    session.state = derived.state === 'failed' ? 'failed' : 'pending'
+
+    // Keep polling every 2 seconds
+    setTimeout(poll, 2000)
+  }
+
+  // Start first poll after 3 seconds (give copilot time to render)
+  setTimeout(poll, 3000)
 }
 
 export function getCopilotTrustStatus(sessionId: string): CopilotTrustSessionStatus {

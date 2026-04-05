@@ -12,9 +12,14 @@ function buildCommand(agentType: string, prompt: string, model: string | null, m
   switch (agentType) {
     case 'claude': {
       const claudePath = getToolPath('claude_cli') ?? 'claude'
-      const cmd = [claudePath, '--dangerously-skip-permissions']
+      const permissionMode = mode === 'plan' ? 'plan' : 'acceptEdits'
+      const cmd = [
+        claudePath,
+        '--output-format', 'stream-json',
+        '--permission-mode', permissionMode,
+        '--verbose',
+      ]
       if (model) cmd.push('--model', model)
-      if (mode === 'plan') cmd.push('--permission-mode', 'plan')
       cmd.push('-p', prompt)
       return cmd
     }

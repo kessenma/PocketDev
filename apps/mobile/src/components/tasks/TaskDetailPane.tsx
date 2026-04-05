@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { ShieldAlert } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
 import BauhausBadge from '../shared/BauhausBadge'
@@ -30,6 +31,9 @@ export default function TaskDetailPane({
   const task = useTaskStore((s) => (taskId ? s.tasks.get(taskId) : null))
   const logs = useTaskStore((s) => (taskId ? s.taskLogs.get(taskId) ?? [] : []))
   const killTask = useTaskStore((s) => s.killTask)
+  const pendingPermissions = useTaskStore((s) => (taskId ? s.pendingPermissions.get(taskId) ?? [] : []))
+  const clearPermissions = useTaskStore((s) => s.clearPermissions)
+  const startTask = useTaskStore((s) => s.startTask)
 
   const flatListRef = useRef<FlatList>(null)
   const [autoScroll, setAutoScroll] = useState(true)
@@ -82,6 +86,45 @@ export default function TaskDetailPane({
         <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
         <Text style={[styles.promptText, { color: colors.text }]}>{task.prompt}</Text>
       </View>
+
+      {pendingPermissions.length > 0 && (
+        <View style={[styles.permissionCard, { backgroundColor: colors.panelAlt, borderColor: '#f59e0b' }]}>
+          <View style={styles.permissionHeader}>
+            <ShieldAlert color="#f59e0b" size={18} strokeWidth={2.25} />
+            <Text style={[styles.permissionTitle, { color: colors.text }]}>Permissions Required</Text>
+          </View>
+          <Text style={[styles.permissionBody, { color: colors.textSecondary }]}>
+            Claude requested {pendingPermissions.length} tool{pendingPermissions.length > 1 ? 's' : ''} that need approval. The task exited — re-run with auto-approve to allow these tools.
+          </Text>
+          <ScrollView style={styles.permissionList} nestedScrollEnabled>
+            {pendingPermissions.map((denial, i) => (
+              <View key={`${denial.tool_use_id ?? i}`} style={[styles.permissionItem, { borderColor: colors.border }]}>
+                <Text style={[styles.permissionTool, { color: colors.text }]}>{denial.tool_name}</Text>
+                {denial.tool_input?.command ? (
+                  <Text style={[styles.permissionInput, { color: colors.textTertiary }]} numberOfLines={3}>
+                    {String(denial.tool_input.command)}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
+          </ScrollView>
+          <View style={styles.permissionActions}>
+            <BauhausButton
+              compact
+              onPress={() => {
+                if (!task) return
+                clearPermissions(task.id)
+                startTask(task.prompt, task.agent_type, task.working_directory, task.model, 'default')
+              }}
+            >
+              Re-run with Auto-Approve
+            </BauhausButton>
+            <BauhausButton compact variant="quiet" onPress={() => { if (taskId) clearPermissions(taskId) }}>
+              Dismiss
+            </BauhausButton>
+          </View>
+        </View>
+      )}
 
       <FlatList
         ref={flatListRef}
@@ -174,6 +217,45 @@ const styles = StyleSheet.create({
   },
   promptText: {
     ...typeStyles.body,
+  },
+  permissionCard: {
+    margin: spacing[4],
+    marginBottom: 0,
+    borderWidth: 2,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  permissionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  permissionTitle: {
+    ...typeStyles.bodyStrong,
+  },
+  permissionBody: {
+    ...typeStyles.bodySmall,
+  },
+  permissionList: {
+    maxHeight: 160,
+  },
+  permissionItem: {
+    paddingVertical: spacing[2],
+    borderBottomWidth: 1,
+    gap: spacing[1],
+  },
+  permissionTool: {
+    ...typeStyles.meta,
+    fontWeight: '700',
+  },
+  permissionInput: {
+    ...typeStyles.mono,
+    fontSize: 11,
+  },
+  permissionActions: {
+    flexDirection: 'row',
+    gap: spacing[2],
   },
   logList: {
     flex: 1,

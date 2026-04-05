@@ -1,27 +1,36 @@
+import { architectureTextStyles } from './theme'
+
 export function AgentEndpoints() {
   const groups = [
     {
-      label: 'Core',
+      label: 'Console and setup',
       endpoints: [
-        { method: 'GET', path: '/health', desc: 'Health check + pairing status' },
-        { method: 'POST', path: '/setup/pair', desc: 'One-time device pairing' },
-        { method: 'WS', path: '/ws', desc: 'Task commands + live event stream' },
-        { method: 'WS', path: '/ws/terminal', desc: 'Interactive PTY shell session' },
+        { method: 'GET', path: '/PocketDev/health', desc: 'Health check and first-boot status' },
+        { method: 'REST', path: '/PocketDev/api/console/*', desc: 'Admin auth, passcode, pairing status, diagnostics, and repo inspection' },
+        { method: 'REST', path: '/PocketDev/api/pair', desc: 'Mobile device pairing handshake' },
+        { method: 'APP', path: '/PocketDev/*', desc: 'Static catch-all that serves the console SPA' },
       ],
     },
     {
-      label: 'Files',
+      label: 'Realtime transport',
       endpoints: [
-        { method: 'GET', path: '/files/tree', desc: 'Directory listing (.gitignore-aware)' },
-        { method: 'GET', path: '/files/read', desc: 'Read file content (1 MB cap)' },
-        { method: 'PUT', path: '/files/write', desc: 'Write file content' },
-        { method: 'GET', path: '/files/search', desc: 'Ripgrep search across project' },
+        { method: 'WS', path: '/PocketDev/ws', desc: 'Task commands, plan events, file approvals, and server state streaming' },
+        { method: 'WS', path: '/PocketDev/ws/terminal', desc: 'Interactive PTY terminal session for mobile and console' },
       ],
     },
     {
-      label: 'Preview',
+      label: 'Device REST surface',
       endpoints: [
-        { method: 'ANY', path: '/preview/*', desc: 'Reverse proxy to local dev server' },
+        { method: 'REST', path: '/PocketDev/api/files/*', desc: 'Tree, read, search, and approval-oriented file workflows' },
+        { method: 'REST', path: '/PocketDev/api/git/*', desc: 'Changes, commits, branch actions, and push flows' },
+        { method: 'REST', path: '/PocketDev/api/projects/*', desc: 'Repository selection, cloning, and active project management' },
+        { method: 'REST', path: '/PocketDev/api/containers/*', desc: 'Container listing, lifecycle actions, and log access' },
+      ],
+    },
+    {
+      label: 'Preview and local tooling',
+      endpoints: [
+        { method: 'ANY', path: '/PocketDev/preview/*', desc: 'Reverse proxy to the active dev server running on the host' },
       ],
     },
   ]
@@ -30,11 +39,14 @@ export function AgentEndpoints() {
     <section className="px-6 py-16">
       <div className="mx-auto max-w-3xl">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground mb-2">
+          <span style={architectureTextStyles.sectionEyebrow}>
           Agent API Surface
+          </span>
         </h2>
-        <p className="text-lg text-muted-foreground mb-10">
-          Everything runs on a single port. REST for files, WebSockets for
-          real-time streaming, reverse proxy for dev server preview.
+        <p className="text-lg text-muted-foreground mb-10" style={architectureTextStyles.sectionLead}>
+          The agent still owns a single-port interface, but it now exposes a
+          much broader product surface: console auth, mobile APIs, realtime task
+          streams, project management, and preview proxying under one namespace.
         </p>
 
         <div className="space-y-8">
@@ -69,10 +81,12 @@ function MethodBadge({ method }: { method: string }) {
   const color =
     method === 'GET'
       ? 'text-emerald-400'
-      : method === 'POST' || method === 'PUT'
+      : method === 'POST' || method === 'PUT' || method === 'REST'
         ? 'text-blue-400'
-        : method === 'WS'
+      : method === 'WS'
           ? 'text-violet-400'
+        : method === 'APP'
+          ? 'text-amber-400'
           : 'text-muted-foreground'
 
   return <span className={`w-10 shrink-0 text-xs font-bold ${color}`}>{method}</span>

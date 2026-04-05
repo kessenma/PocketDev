@@ -1,4 +1,6 @@
+import type { CSSProperties } from 'react'
 import { HeadContent, Scripts, Outlet, createRootRoute } from '@tanstack/react-router'
+import { webFontStacks } from '@pocketdev/shared/theme'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -23,8 +25,15 @@ function RootComponent() {
 }
 
 function RootShell({ children }: { children: React.ReactNode }) {
+  const fontVars = {
+    '--font-sans': webFontStacks.body,
+    '--font-display': webFontStacks.display,
+    '--font-heading': webFontStacks.display,
+    '--font-mono': webFontStacks.mono,
+  } as CSSProperties
+
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" style={fontVars}>
       <head>
         <HeadContent />
       </head>

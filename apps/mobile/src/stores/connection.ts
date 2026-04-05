@@ -100,6 +100,12 @@ function handleWsMessage(message: WsMessage) {
         (message.payload as { status: string }).status as any,
       )
       break
+    case 'task.permission_request':
+      tasks.addPermissionRequest(
+        (message.payload as { taskId: string }).taskId,
+        (message.payload as { denials: Array<{ tool_name: string; tool_use_id?: string; tool_input?: Record<string, unknown> }> }).denials,
+      )
+      break
     case 'files.changed':
       // Phase 4 will handle file changes
       break

@@ -20,6 +20,7 @@ export type EventType =
   | 'task.output'
   | 'task.status_changed'
   | 'task.completed'
+  | 'task.permission_request'
   | 'container.logs.chunk'
   | 'container.logs.stopped'
   | 'files.changed'

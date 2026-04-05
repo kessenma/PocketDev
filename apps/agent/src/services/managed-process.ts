@@ -22,12 +22,25 @@ export class ManagedProcess {
     return this._status
   }
 
+  /** Write data to the process stdin (for interactive commands) */
+  sendInput(data: string) {
+    if (!this.proc || this._status !== 'running') return
+    const stdin = this.proc.stdin
+    if (!stdin || typeof stdin === 'number') return
+    try {
+      stdin.write(new TextEncoder().encode(data))
+    } catch (err) {
+      console.error(`Error writing stdin for task ${this.taskId}:`, err)
+    }
+  }
+
   /** Spawn the child process and start streaming output */
   start() {
     this.setStatus('running')
 
     this.proc = Bun.spawn(this.command, {
       cwd: this.cwd ?? undefined,
+      stdin: 'pipe',
       stdout: 'pipe',
       stderr: 'pipe',
       env: { ...process.env, FORCE_COLOR: '0' },
@@ -103,6 +116,21 @@ export class ManagedProcess {
           // Auto-detect dev server port from output
           const port = detectDevServerPort(line)
           if (port) setDevServerPort(port)
+
+          // Parse stream-json for permission denials
+          if (name === 'stdout') {
+            try {
+              const parsed = JSON.parse(line)
+              if (parsed.permission_denials?.length) {
+                broadcast(
+                  makeMessage('task.permission_request', {
+                    taskId: this.taskId,
+                    denials: parsed.permission_denials,
+                  }),
+                )
+              }
+            } catch { /* not JSON, ignore */ }
+          }
 
           insertTaskLog(this.taskId, name, line)
           broadcast(

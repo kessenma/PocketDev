@@ -257,6 +257,8 @@ export interface CopilotSetupStatus {
   installed: boolean
   version: string | null
   path: string | null
+  tmux_installed: boolean
+  tmux_path: string | null
   authenticated: boolean
   github_username: string | null
   auth_output: string | null
@@ -269,6 +271,8 @@ export interface CopilotInstallResult {
   installed: boolean
   version: string | null
   path: string | null
+  tmux_installed: boolean
+  tmux_path: string | null
   output: string | null
   error: string | null
 }

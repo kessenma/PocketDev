@@ -407,6 +407,27 @@ async function checkPython(): Promise<ToolCheck> {
   }
 }
 
+async function checkTmux(): Promise<ToolCheck> {
+  const path = await which('tmux')
+  if (!path) {
+    return {
+      id: 'tmux', name: 'tmux', status: 'missing', auth_status: 'not_applicable',
+      version: null, path: null, required: false,
+      install_command: 'sudo apt-get install -y tmux',
+      auth_command: null, details: {},
+    }
+  }
+
+  const version = await getVersion('tmux -V')
+  upsertToolPath('tmux', path, version)
+
+  return {
+    id: 'tmux', name: 'tmux', status: 'installed', auth_status: 'not_applicable',
+    version, path, required: false,
+    install_command: null, auth_command: null, details: {},
+  }
+}
+
 // ─── Database detection (Docker containers) ─────────────────────────────
 
 /** Known database Docker image prefixes */
@@ -500,6 +521,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkPnpm(),
     checkChromium(),
     checkPython(),
+    checkTmux(),
   ])
 
   // ready = git configured + node + npm + at least one AI CLI installed & authenticated

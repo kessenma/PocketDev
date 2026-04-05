@@ -89,10 +89,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       const newStatuses = { ...state.stepStatuses }
       newStatuses.detect = 'completed'
 
-      if (copilotStatus.installed) newStatuses.install = 'skipped'
+      if (copilotStatus.installed && copilotStatus.tmux_installed) newStatuses.install = 'skipped'
       if (copilotStatus.authenticated) newStatuses.authenticate = 'skipped'
       if (copilotStatus.trust_configured) newStatuses.trust = 'skipped'
-      if (copilotStatus.installed && copilotStatus.authenticated && copilotStatus.trust_configured) {
+      if (copilotStatus.installed && copilotStatus.tmux_installed && copilotStatus.authenticated && copilotStatus.trust_configured) {
         newStatuses.verify = 'skipped'
       }
 
@@ -198,7 +198,7 @@ export default function CopilotWizardSheet({ visible, onClose, onComplete }: Pro
           />
           <Text style={[styles.completedTitle, { color: colors.text }]}>GitHub Copilot is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your paired workspace can now launch Copilot with GitHub auth and trusted folder access.
+            Your paired workspace can now launch Copilot with tmux, GitHub auth, and trusted folder access.
           </Text>
           {state.copilotStatus?.version ? (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>

@@ -4,10 +4,17 @@ import type { TaskStatus, AgentType, TaskMode } from '@pocketdev/shared/schema'
 import { fetchTaskList } from '../services/api'
 import { useConnectionStore } from './connection'
 
+export interface PermissionDenial {
+  tool_name: string
+  tool_use_id?: string
+  tool_input?: Record<string, unknown>
+}
+
 interface TaskState {
   tasks: Map<string, Task>
   activeTaskId: string | null
   taskLogs: Map<string, string[]>
+  pendingPermissions: Map<string, PermissionDenial[]>
   setTasks: (tasks: Task[]) => void
   refreshFromServer: () => Promise<void>
   startTask: (
@@ -18,13 +25,17 @@ interface TaskState {
     mode?: TaskMode,
   ) => void
   killTask: (id: string) => void
+  sendInput: (taskId: string, data: string) => void
   appendLog: (taskId: string, line: string) => void
   updateTaskStatus: (taskId: string, status: TaskStatus) => void
+  addPermissionRequest: (taskId: string, denials: PermissionDenial[]) => void
+  clearPermissions: (taskId: string) => void
   setActiveTask: (id: string | null) => void
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: new Map(),
+  pendingPermissions: new Map(),
   activeTaskId: null,
   taskLogs: new Map(),
 
@@ -65,6 +76,13 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     ws.send('task.kill', { taskId: id })
   },
 
+  sendInput: (taskId: string, data: string) => {
+    const ws = useConnectionStore.getState().ws
+    if (!ws) return
+
+    ws.send('task.input', { taskId, data })
+  },
+
   appendLog: (taskId: string, line: string) => {
     set((state) => {
       const logs = new Map(state.taskLogs)
@@ -87,6 +105,23 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         void get().refreshFromServer().catch(() => {})
       }, 0)
       return state
+    })
+  },
+
+  addPermissionRequest: (taskId: string, denials: PermissionDenial[]) => {
+    set((state) => {
+      const pending = new Map(state.pendingPermissions)
+      const existing = pending.get(taskId) ?? []
+      pending.set(taskId, [...existing, ...denials])
+      return { pendingPermissions: pending }
+    })
+  },
+
+  clearPermissions: (taskId: string) => {
+    set((state) => {
+      const pending = new Map(state.pendingPermissions)
+      pending.delete(taskId)
+      return { pendingPermissions: pending }
     })
   },
 

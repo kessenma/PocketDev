@@ -24,6 +24,7 @@ export default function InstallStep({ dispatch }: Props) {
   const [status, setStatus] = useState<'idle' | 'installing' | 'success' | 'failed'>('idle')
   const [output, setOutput] = useState<string | null>(null)
   const [installPath, setInstallPath] = useState<string | null>(null)
+  const [tmuxPath, setTmuxPath] = useState<string | null>(null)
   const [version, setVersion] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,6 +37,7 @@ export default function InstallStep({ dispatch }: Props) {
       const result = await postInstallCopilot(server.ip, server.port)
       setOutput(result.output)
       setInstallPath(result.path)
+      setTmuxPath(result.tmux_path)
       setVersion(result.version)
 
       if (!result.success) {
@@ -68,7 +70,7 @@ export default function InstallStep({ dispatch }: Props) {
           />
           <Text style={[styles.title, { color: colors.text }]}>Enable GitHub Copilot CLI</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            PocketDev will run the official install script, then refresh Copilot for this workspace.
+            PocketDev will install `tmux` if needed, run the official Copilot installer, then refresh this workspace.
           </Text>
         </View>
 
@@ -83,7 +85,7 @@ export default function InstallStep({ dispatch }: Props) {
             </Text>
           </View>
           <Text style={[styles.commandHint, { color: colors.textTertiary }]}>
-            This runs the official GitHub Copilot CLI installer and then refreshes the saved tool state.
+            This step makes sure `tmux` is available first, then runs the official GitHub Copilot CLI installer.
           </Text>
         </View>
 
@@ -115,6 +117,9 @@ export default function InstallStep({ dispatch }: Props) {
 
           {version ? (
             <Text style={[styles.metaText, { color: colors.textSecondary }]}>Detected version: v{version}</Text>
+          ) : null}
+          {tmuxPath ? (
+            <Text style={[styles.metaText, { color: colors.textSecondary }]}>Detected tmux path: {tmuxPath}</Text>
           ) : null}
           {installPath ? (
             <Text style={[styles.metaText, { color: colors.textSecondary }]}>Detected tool path: {installPath}</Text>

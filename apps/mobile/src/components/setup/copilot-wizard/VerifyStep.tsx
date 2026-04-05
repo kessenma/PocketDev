@@ -33,7 +33,7 @@ export default function VerifyStep({ dispatch }: Props) {
       const result = await postVerifyCopilotSetup(server.ip, server.port)
       setStatus(result)
 
-      if (result.installed && result.authenticated && result.trust_configured) {
+      if (result.installed && result.tmux_installed && result.authenticated && result.trust_configured) {
         setState('success')
         setTimeout(() => {
           dispatch({ type: 'STEP_COMPLETE', step: 'verify', copilotStatus: result })
@@ -42,7 +42,7 @@ export default function VerifyStep({ dispatch }: Props) {
       }
 
       setState('failed')
-      setError('Copilot is still missing install, GitHub authentication, or workspace trust.')
+      setError('Copilot is still missing tmux, install, GitHub authentication, or workspace trust.')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Verification failed'
       setState('failed')
@@ -75,12 +75,13 @@ export default function VerifyStep({ dispatch }: Props) {
 
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {state === 'success'
-            ? 'Install, GitHub authentication, and workspace trust all passed.'
-            : 'Confirm that GitHub Copilot CLI is installed, authenticated, and trusted for this workspace.'}
+            ? 'tmux, Copilot install, GitHub authentication, and workspace trust all passed.'
+            : 'Confirm that tmux and GitHub Copilot CLI are installed, authenticated, and trusted for this workspace.'}
         </Text>
 
         {status ? (
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <DetailRow label="tmux" ok={status.tmux_installed} value={status.tmux_path ?? 'Missing'} colors={colors} />
             <DetailRow label="Install" ok={status.installed} value={status.version ? `v${status.version}` : 'Missing'} colors={colors} />
             <DetailRow label="GitHub" ok={status.authenticated} value={status.github_username ? `@${status.github_username}` : 'Not connected'} colors={colors} />
             <DetailRow label="Trust" ok={status.trust_configured} value={status.trust_target ?? 'Not trusted'} colors={colors} />

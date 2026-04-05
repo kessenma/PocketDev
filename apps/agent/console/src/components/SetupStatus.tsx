@@ -170,6 +170,12 @@ function toolIntentDetail(tool: ToolCheck): string | null {
       : 'Adds Python with pip and venv for language tooling.'
   }
 
+  if (tool.id === 'tmux') {
+    return tool.status === 'installed'
+      ? 'Available for GitHub Copilot trust and terminal session orchestration.'
+      : 'Needed by PocketDev when configuring GitHub Copilot trust.'
+  }
+
   return null
 }
 

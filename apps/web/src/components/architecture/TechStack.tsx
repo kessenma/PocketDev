@@ -1,35 +1,49 @@
+import { architectureTextStyles } from './theme'
+
 export function TechStack() {
   const layers = [
     {
+      label: 'Hosted Web',
+      items: ['TanStack Start', 'Vite', 'Postgres', '@pocketdev/db'],
+    },
+    {
+      label: 'Agent',
+      items: ['Bun runtime', 'Elysia', 'SQLite + Drizzle', 'PTY + process orchestration'],
+    },
+    {
+      label: 'Console',
+      items: ['Vite + React 19', 'react-router-dom', 'xterm.js', 'shadcn/ui + Tailwind 4'],
+    },
+    {
       label: 'Mobile',
-      items: ['React Native', 'Rock CLI + Re.Pack', 'Ed25519 (noble)', 'StyleSheet.create'],
-    },
-    {
-      label: 'Agent Server',
-      items: ['Bun runtime', 'Elysia', 'SQLite (bun:sqlite)', 'PTY via script(1)'],
-    },
-    {
-      label: 'Web',
-      items: ['TanStack Start', 'Vite', 'shadcn/ui', 'Tailwind CSS'],
+      items: ['React Native 0.83', 'Rock CLI + Re.Pack', 'Zustand', 'MMKV + Keychain'],
     },
     {
       label: 'Shared',
-      items: ['Zod schemas', 'TypeScript types', '@noble/ed25519', 'Drizzle ORM'],
+      items: ['Typed WS protocol', 'Zod schemas', 'Theme tokens', '@noble/ed25519'],
+    },
+    {
+      label: 'Tooling',
+      items: ['Claude / Codex / Copilot CLIs', 'ripgrep', 'git', 'local dev servers'],
     },
   ]
 
   return (
     <section className="px-6 py-16">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-5xl">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground mb-2">
+          <span style={architectureTextStyles.sectionEyebrow}>
           Tech Stack
+          </span>
         </h2>
-        <p className="text-lg text-muted-foreground mb-10">
-          Every layer is TypeScript. Types, schemas, and crypto utilities are
-          shared across mobile, agent, and web via a single monorepo package.
+        <p className="text-lg text-muted-foreground mb-10" style={architectureTextStyles.sectionLead}>
+          The stack is intentionally split by responsibility. The public website,
+          the self-hosted runtime, and the two clients each have their own
+          runtime needs, but they stay aligned through shared TypeScript
+          contracts in the monorepo.
         </p>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {layers.map((layer) => (
             <div key={layer.label}>
               <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
