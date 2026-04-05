@@ -52,29 +52,44 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
-    try {
-      const [authData, termData, codexData, claudeData, copilotData, githubData, projectsData] = await Promise.all([
-        fetchAuthDebug(),
-        fetchTerminalDebug(),
-        fetchCodexAuthDebug(),
-        fetchClaudeAuthDebug(),
-        fetchCopilotAuthDebug(),
-        fetchGitHubAuthDebug(),
-        fetchProjectsDebug(),
-      ])
-      setInfo(authData)
-      setTermLog(termData)
-      setCodexInfo(codexData)
-      setClaudeInfo(claudeData)
-      setCopilotInfo(copilotData)
-      setGitHubInfo(githubData)
-      setProjectsInfo(projectsData)
-      setLastUpdated(new Date().toISOString())
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to fetch')
-    } finally {
-      setLoading(false)
-    }
+    const results = await Promise.allSettled([
+      fetchAuthDebug(),
+      fetchTerminalDebug(),
+      fetchCodexAuthDebug(),
+      fetchClaudeAuthDebug(),
+      fetchCopilotAuthDebug(),
+      fetchGitHubAuthDebug(),
+      fetchProjectsDebug(),
+    ])
+
+    const failures: string[] = []
+
+    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult] = results
+
+    if (authResult.status === 'fulfilled') setInfo(authResult.value)
+    else failures.push(`auth: ${authResult.reason instanceof Error ? authResult.reason.message : 'failed'}`)
+
+    if (termResult.status === 'fulfilled') setTermLog(termResult.value)
+    else failures.push(`terminal: ${termResult.reason instanceof Error ? termResult.reason.message : 'failed'}`)
+
+    if (codexResult.status === 'fulfilled') setCodexInfo(codexResult.value)
+    else failures.push(`codex: ${codexResult.reason instanceof Error ? codexResult.reason.message : 'failed'}`)
+
+    if (claudeResult.status === 'fulfilled') setClaudeInfo(claudeResult.value)
+    else failures.push(`claude: ${claudeResult.reason instanceof Error ? claudeResult.reason.message : 'failed'}`)
+
+    if (copilotResult.status === 'fulfilled') setCopilotInfo(copilotResult.value)
+    else failures.push(`copilot: ${copilotResult.reason instanceof Error ? copilotResult.reason.message : 'failed'}`)
+
+    if (githubResult.status === 'fulfilled') setGitHubInfo(githubResult.value)
+    else failures.push(`github: ${githubResult.reason instanceof Error ? githubResult.reason.message : 'failed'}`)
+
+    if (projectsResult.status === 'fulfilled') setProjectsInfo(projectsResult.value)
+    else failures.push(`projects: ${projectsResult.reason instanceof Error ? projectsResult.reason.message : 'failed'}`)
+
+    setLastUpdated(new Date().toISOString())
+    setError(failures.length ? `Partial refresh failure: ${failures.join(' | ')}` : null)
+    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -510,6 +525,26 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                   ) : (
                     <div className="rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
                       No remembered Copilot trust markers yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+                <p className="text-sm font-medium">Recent Copilot Events</p>
+                <div className="mt-3 space-y-2">
+                  {copilotInfo?.events.length ? (
+                    copilotInfo.events.map((event, index) => (
+                      <div key={`${event.ts}-${index}`} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3">
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#f4f0e8]/38">
+                          {formatShortTime(event.ts)} {event.sessionId ? `· ${event.sessionId.slice(0, 8)}` : ''}
+                        </p>
+                        <p className="mt-2 break-words font-mono text-xs text-[#9df6cd]">{event.message}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                      No Copilot trust events captured yet.
                     </div>
                   )}
                 </div>

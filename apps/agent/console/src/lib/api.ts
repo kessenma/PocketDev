@@ -298,6 +298,11 @@ export interface CopilotAuthDebugInfo {
     updatedAt: string | null
   } | null
   trustMarkers: string[]
+  events: Array<{
+    ts: string
+    sessionId: string | null
+    message: string
+  }>
   liveStatusTarget: string
   liveStatus: {
     trustConfigured: boolean

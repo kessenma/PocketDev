@@ -39,6 +39,23 @@ interface InternalTrustSession {
 }
 
 const trustSessions = new Map<string, InternalTrustSession>()
+type CopilotDebugEvent = {
+  ts: string
+  sessionId: string | null
+  message: string
+}
+const copilotDebugEvents: CopilotDebugEvent[] = []
+
+function recordDebugEvent(sessionId: string | null, message: string) {
+  copilotDebugEvents.unshift({
+    ts: new Date().toISOString(),
+    sessionId,
+    message,
+  })
+  if (copilotDebugEvents.length > 60) {
+    copilotDebugEvents.length = 60
+  }
+}
 
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
@@ -221,6 +238,7 @@ function toTrustStatus(session: InternalTrustSession): CopilotTrustSessionStatus
 
 function completeTrustSession(session: InternalTrustSession) {
   if (session.completed) return
+  recordDebugEvent(session.id, `Trust completed for ${session.trustTarget ?? getWorkspaceTrustTarget()}`)
   session.trusted = true
   session.state = 'trusted'
   session.completed = true
@@ -239,6 +257,7 @@ function refreshTrustSessionState(session: InternalTrustSession) {
   const derived = parseTrustState(session)
 
   if (derived.state === 'awaiting_trust' && !session.trustHandled) {
+    recordDebugEvent(session.id, `Trust prompt detected for ${derived.trustTarget ?? 'unknown target'}; auto-selecting remember option`)
     session.trustHandled = true
     session.trustTarget = derived.trustTarget
     session.prompt = derived.prompt
@@ -265,6 +284,7 @@ async function finalizeTrustSession(sessionId: string) {
   const session = trustSessions.get(sessionId)
   if (!session) return
 
+  recordDebugEvent(sessionId, 'Terminal session exited; finalizing trust session')
   refreshTrustSessionState(session)
   if (session.trusted) return
 
@@ -274,6 +294,7 @@ async function finalizeTrustSession(sessionId: string) {
   session.completed = true
   session.state = status.trust_configured ? 'trusted' : 'failed'
   session.error = status.trust_configured ? null : (session.error ?? 'GitHub Copilot trust could not be verified.')
+  recordDebugEvent(sessionId, `Finalize result: state=${session.state} trusted=${session.trusted ? 'yes' : 'no'} error=${session.error ?? 'none'}`)
 }
 
 function disposeExistingTrustSessions() {
@@ -369,11 +390,13 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
 
   let session: InternalTrustSession | null = null
   const sessionId = crypto.randomUUID()
+  recordDebugEvent(sessionId, `Starting Copilot trust flow in ${getWorkspaceTrustTarget()}`)
   const terminal = createTerminalSession(
     `copilot-trust-${sessionId}`,
     (chunk) => {
       if (!session) return
       session.output = `${session.output}${chunk}`.slice(-MAX_OUTPUT_LENGTH)
+      recordDebugEvent(sessionId, `PTY output chunk received (${chunk.length} chars)`)
       refreshTrustSessionState(session)
     },
     () => {
@@ -398,15 +421,18 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
   }
 
   trustSessions.set(sessionId, session)
+  recordDebugEvent(sessionId, 'Sending `gh copilot` to PTY session')
   terminal.send('gh copilot\n')
 
   await waitForTrustBootstrap(sessionId)
   refreshTrustSessionState(session)
+  recordDebugEvent(sessionId, `Bootstrap complete: state=${session.state} prompt=${session.prompt ?? 'none'}`)
   return toTrustStatus(session)
 }
 
 export function getCopilotTrustStatus(sessionId: string): CopilotTrustSessionStatus {
   const session = getTrustSessionOrThrow(sessionId)
+  recordDebugEvent(sessionId, `Status requested: current state=${session.state}`)
   refreshTrustSessionState(session)
   return toTrustStatus(session)
 }
@@ -508,6 +534,7 @@ export function getCopilotAuthDebug() {
     sessions,
     persistedState: getToolRecord('copilot_cli'),
     trustMarkers: Object.keys(readTrustMarkers()).sort(),
+    events: copilotDebugEvents,
     liveStatusTarget: getWorkspaceTrustTarget(),
     liveStatus: {
       trustConfigured: hasStoredTrust(),

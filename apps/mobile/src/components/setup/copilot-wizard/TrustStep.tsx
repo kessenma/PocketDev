@@ -36,6 +36,11 @@ export default function TrustStep({ dispatch, trustSession }: Props) {
     }
   }, [dispatch])
 
+  const clearSession = useCallback(() => {
+    setSession(null)
+    dispatch({ type: 'SET_TRUST_SESSION', trustSession: null })
+  }, [dispatch])
+
   useEffect(() => {
     if (!server || !session?.session_id || session.completed) return
     const timer = setInterval(() => {
@@ -44,18 +49,8 @@ export default function TrustStep({ dispatch, trustSession }: Props) {
     return () => clearInterval(timer)
   }, [server, session?.completed, session?.session_id])
 
-  const refreshStatus = useCallback(async () => {
-    if (!server || !session?.session_id) return
-    try {
-      const next = await fetchCopilotTrustStatus(server.ip, server.port, session.session_id)
-      syncSession(next)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refresh trust status.')
-    }
-  }, [server, session?.session_id, syncSession])
-
   const handleStart = useCallback(async () => {
-    if (!server) return
+    if (!server || loading) return
     setLoading(true)
     setError(null)
     try {
@@ -68,7 +63,33 @@ export default function TrustStep({ dispatch, trustSession }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [dispatch, server, syncSession])
+  }, [dispatch, loading, server, syncSession])
+
+  const refreshStatus = useCallback(async () => {
+    if (!server || !session?.session_id) return
+    try {
+      const next = await fetchCopilotTrustStatus(server.ip, server.port, session.session_id)
+      syncSession(next)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to refresh trust status.'
+      if (/not found/i.test(message)) {
+        clearSession()
+        setError('The previous Copilot trust session expired. Starting a new one...')
+        return
+      }
+      setError(message)
+    }
+  }, [clearSession, server, session?.session_id, syncSession])
+
+  useEffect(() => {
+    if (!server || session?.session_id || loading) return
+    void handleStart()
+  }, [handleStart, loading, server, session?.session_id])
+
+  useEffect(() => {
+    if (!server || session?.session_id || loading === true || error !== 'The previous Copilot trust session expired. Starting a new one...') return
+    void handleStart()
+  }, [error, handleStart, loading, server, session?.session_id])
 
   const trusted = session?.trusted === true
   const waiting = !!session && !session.completed && !trusted
