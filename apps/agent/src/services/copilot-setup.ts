@@ -34,6 +34,7 @@ interface InternalTrustSession {
   completed: boolean
   error: string | null
   trustHandled: boolean
+  fallbackTrustAttempted: boolean
   startedAt: number
   updatedAt: number
 }
@@ -96,6 +97,12 @@ function getOutputExcerpt(output: string): string | null {
   const trimmed = normalizeOutput(output)
   if (!trimmed) return null
   return trimmed.slice(-OUTPUT_EXCERPT_LENGTH)
+}
+
+function getRawOutputExcerpt(output: string): string | null {
+  const trimmed = output.trim()
+  if (!trimmed) return null
+  return JSON.stringify(trimmed.slice(-OUTPUT_EXCERPT_LENGTH))
 }
 
 function derivePrompt(output: string): string | null {
@@ -284,6 +291,20 @@ function refreshTrustSessionState(session: InternalTrustSession) {
   session.state = session.completed && !session.trusted ? 'failed' : derived.state
 }
 
+function scheduleFallbackTrustAttempt(session: InternalTrustSession) {
+  if (session.fallbackTrustAttempted || session.completed || session.trusted) return
+
+  const sessionId = session.id
+  setTimeout(() => {
+    const latest = trustSessions.get(sessionId)
+    if (!latest || latest.completed || latest.trusted || latest.trustHandled || latest.fallbackTrustAttempted) return
+    latest.fallbackTrustAttempted = true
+    latest.updatedAt = Date.now()
+    recordDebugEvent(sessionId, 'No trust prompt parsed yet; sending fallback down+enter to Copilot TUI')
+    latest.terminal.send('\u001b[B\r')
+  }, 1800)
+}
+
 async function finalizeTrustSession(sessionId: string) {
   const session = trustSessions.get(sessionId)
   if (!session) return
@@ -425,6 +446,7 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
     completed: false,
     error: null,
     trustHandled: false,
+    fallbackTrustAttempted: false,
     startedAt: Date.now(),
     updatedAt: Date.now(),
   }
@@ -436,6 +458,7 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
 
   await waitForTrustBootstrap(sessionId)
   refreshTrustSessionState(session)
+  scheduleFallbackTrustAttempt(session)
   recordDebugEvent(sessionId, `Bootstrap complete: state=${session.state} prompt=${session.prompt ?? 'none'}`)
   return toTrustStatus(session)
 }
@@ -478,6 +501,7 @@ export async function verifyCopilotSetup(): Promise<CopilotSetupStatus> {
       completed: false,
       error: null,
       trustHandled: false,
+      fallbackTrustAttempted: false,
       startedAt: Date.now(),
       updatedAt: Date.now(),
     }
@@ -485,6 +509,7 @@ export async function verifyCopilotSetup(): Promise<CopilotSetupStatus> {
     terminal.send(`exec ${shellEscape(status.path ?? 'copilot')}\n`)
     await Bun.sleep(2000)
     refreshTrustSessionState(session)
+    scheduleFallbackTrustAttempt(session)
     if (session.trusted) {
       storeTrustedTarget(session.trustTarget ?? getWorkspaceTrustTarget())
     }
@@ -512,6 +537,7 @@ export const __test = {
       completed: false,
       error: null,
       trustHandled: false,
+      fallbackTrustAttempted: false,
       startedAt: 0,
       updatedAt: 0,
     }
@@ -534,10 +560,12 @@ export function getCopilotAuthDebug() {
       prompt: session.prompt,
       trustTarget: session.trustTarget,
       trustHandled: session.trustHandled,
+      fallbackTrustAttempted: session.fallbackTrustAttempted,
       error: session.error,
       startedAt: new Date(session.startedAt).toISOString(),
       updatedAt: new Date(session.updatedAt).toISOString(),
       outputExcerpt: getOutputExcerpt(session.output),
+      rawOutputExcerpt: getRawOutputExcerpt(session.output),
     }))
 
   return {

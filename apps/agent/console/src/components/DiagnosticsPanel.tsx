@@ -566,19 +566,28 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                           {session.trusted ? 'Trusted' : session.completed ? 'Completed' : 'Active'}
                         </Badge>
                       </div>
-                      <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
-                        <p>Trust handled: {session.trustHandled ? 'Yes' : 'No'}</p>
-                        <p>Trust target: {session.trustTarget ?? 'Unknown'}</p>
-                        <p>Prompt: {session.prompt ?? 'None'}</p>
-                        <p>Error: {session.error ?? 'None'}</p>
-                        <p>Updated: {new Date(session.updatedAt).toLocaleString()}</p>
-                      </div>
+                        <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
+                          <p>Trust handled: {session.trustHandled ? 'Yes' : 'No'}</p>
+                          <p>Fallback attempted: {session.fallbackTrustAttempted ? 'Yes' : 'No'}</p>
+                          <p>Trust target: {session.trustTarget ?? 'Unknown'}</p>
+                          <p>Prompt: {session.prompt ?? 'None'}</p>
+                          <p>Error: {session.error ?? 'None'}</p>
+                          <p>Updated: {new Date(session.updatedAt).toLocaleString()}</p>
+                        </div>
                       {session.outputExcerpt ? (
                         <div className="mt-3">
                           <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output Excerpt</p>
                           <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#9df6cd]">
                             {session.outputExcerpt}
                           </pre>
+                          {session.rawOutputExcerpt ? (
+                            <>
+                              <p className="mt-3 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Raw Output Excerpt</p>
+                              <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#f7c8ff]">
+                                {session.rawOutputExcerpt}
+                              </pre>
+                            </>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
