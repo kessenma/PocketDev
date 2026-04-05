@@ -4,7 +4,7 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchCopilotSetupStatus } from '../../../services/api'
-import GitHubSetupAnimation from '../../animations/GitHubSetupAnimation'
+import CopilotSetupAnimation from '../../animations/CopilotSetupAnimation'
 import { RefreshCw } from 'lucide-react-native'
 import type { CopilotSetupStatus } from '@pocketdev/shared/types'
 
@@ -64,7 +64,7 @@ export default function DetectStep({ dispatch }: Props) {
 
   return (
     <View style={styles.container}>
-      <GitHubSetupAnimation onComplete={() => setAnimationDone(true)} />
+      <CopilotSetupAnimation onComplete={() => setAnimationDone(true)} />
     </View>
   )
 }

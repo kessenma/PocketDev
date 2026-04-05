@@ -116,6 +116,10 @@ function normalizeTrustTarget(target: string) {
   return resolve(target)
 }
 
+function shellEscape(value: string) {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
 function readTrustMarkers(): Record<string, true> {
   try {
     if (!existsSync(TRUST_MARKER_FILE)) return {}
@@ -426,8 +430,9 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
   }
 
   trustSessions.set(sessionId, session)
-  recordDebugEvent(sessionId, `Sending \`${copilotPath ?? 'copilot'}\` to PTY session`)
-  terminal.send(`${copilotPath ?? 'copilot'}\n`)
+  const launchCommand = `exec ${shellEscape(copilotPath ?? 'copilot')}`
+  recordDebugEvent(sessionId, `Sending \`${launchCommand}\` to PTY session`)
+  terminal.send(`${launchCommand}\n`)
 
   await waitForTrustBootstrap(sessionId)
   refreshTrustSessionState(session)
@@ -477,7 +482,7 @@ export async function verifyCopilotSetup(): Promise<CopilotSetupStatus> {
       updatedAt: Date.now(),
     }
     trustSessions.set(sessionId, session)
-    terminal.send(`${status.path ?? 'copilot'}\n`)
+    terminal.send(`exec ${shellEscape(status.path ?? 'copilot')}\n`)
     await Bun.sleep(2000)
     refreshTrustSessionState(session)
     if (session.trusted) {
