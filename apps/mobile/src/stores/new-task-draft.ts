@@ -142,11 +142,25 @@ export const useNewTaskDraftStore = create<NewTaskDraftState>((set, get) => ({
       const capabilities = await fetchCapabilities(server.ip, server.port)
       const providers = mergeServerAvailability(capabilities)
 
-      set({
-        providers,
-        isLoadingCapabilities: false,
-        lastActionMessage: `Loaded provider availability from server.`,
-      })
+      // Auto-select first available provider if current selection is unavailable
+      const currentProviderId = get().selectedProviderId
+      const currentProvider = providers.find((p) => p.id === currentProviderId)
+      const currentAvailable = currentProvider?.availability === 'available'
+
+      if (!currentAvailable) {
+        const firstAvailable = providers.find((p) => p.availability === 'available')
+        if (firstAvailable) {
+          set({
+            providers,
+            isLoadingCapabilities: false,
+            selectedProviderId: firstAvailable.id,
+            selectedModelId: firstAvailable.models[0]?.id ?? get().selectedModelId,
+          })
+          return
+        }
+      }
+
+      set({ providers, isLoadingCapabilities: false })
     } catch {
       set({
         isLoadingCapabilities: false,

@@ -23,14 +23,24 @@ const COPILOT_UI_READY_PATTERN = /\u001b\]2;GitHub Copilot\u0007|\u001b\[\?1049h
 
 // Terminal query patterns that TUI apps send and expect responses for.
 // If we don't respond, the app may hang waiting for the terminal's reply.
+// Bubbletea (Copilot's TUI framework) sends several of these and blocks on DA1.
 const TERMINAL_QUERY_RESPONSES: Array<{ pattern: RegExp; response: string; label: string }> = [
+  // DA2 - Secondary Device Attributes (check before DA1 since DA1 pattern is a subset)
+  { pattern: /\u001b\[>c/, response: '\u001b[>0;0;0c', label: 'DA2 (secondary attrs)' },
+  // DA1 - Primary Device Attributes (critical — Bubbletea blocks on this)
+  { pattern: /\u001b\[(?!>)c/, response: '\u001b[?62;22c', label: 'DA1 (device attrs)' },
+  // DSR - Device Status Report / Cursor Position Report
+  { pattern: /\u001b\[6n/, response: '\u001b[1;1R', label: 'DSR (cursor position)' },
+  // XTVERSION - terminal version string
+  { pattern: /\u001b\[>q/, response: '\u001bP>|xterm-256color\u001b\\', label: 'XTVERSION' },
   // OSC 11 - background color query → reply with dark background
-  // Terminated by either ST (ESC \) or BEL (\x07)
   { pattern: /\u001b\]11;\?(?:\u001b\\|\u0007)/, response: '\u001b]11;rgb:0a0a/0a0a/0a0a\u001b\\', label: 'OSC 11 (bg color)' },
   // OSC 10 - foreground color query → reply with light foreground
   { pattern: /\u001b\]10;\?(?:\u001b\\|\u0007)/, response: '\u001b]10;rgb:f4f0/e8e8/d0d0\u001b\\', label: 'OSC 10 (fg color)' },
   // Kitty keyboard protocol query → reply with no flags
   { pattern: /\u001b\[\?u/, response: '\u001b[?0u', label: 'Kitty keyboard query' },
+  // Terminal size in chars (DTTERM)
+  { pattern: /\u001b\[18t/, response: '\u001b[8;24;80t', label: 'Terminal size query' },
 ]
 const TRUST_REMEMBERED_PATTERN = /has been added to trusted folders/i
 const READY_PATTERNS = [
@@ -144,10 +154,18 @@ function shellEscape(value: string) {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
+/** Track which queries have been answered per session to avoid double-responding. */
+const answeredQueries = new Map<string, Set<string>>()
+
 /** Respond to terminal queries that TUI apps expect answers for. */
 function answerTerminalQueries(chunk: string, terminal: TerminalSession, sessionId: string) {
+  if (!answeredQueries.has(sessionId)) answeredQueries.set(sessionId, new Set())
+  const answered = answeredQueries.get(sessionId)!
+
   for (const { pattern, response, label } of TERMINAL_QUERY_RESPONSES) {
+    if (answered.has(label)) continue
     if (pattern.test(chunk)) {
+      answered.add(label)
       recordDebugEvent(sessionId, `Responding to terminal query: ${label}`)
       terminal.send(response)
     }
@@ -389,7 +407,9 @@ function scheduleFallbackTrustAttempt(session: InternalTrustSession, attempt = 0
         }
       }, 300)
     } else {
-      recordDebugEvent(sessionId, `Fallback: TUI rendered but no trust prompt or ready pattern found; normalized excerpt: ${normalized.slice(-200)}`)
+      const rawExcerpt = JSON.stringify(latest.output.slice(-300))
+      recordDebugEvent(sessionId, `Fallback: TUI rendered but no trust prompt or ready pattern found; normalized: ${normalized.slice(-200)}`)
+      recordDebugEvent(sessionId, `Fallback: raw output tail: ${rawExcerpt}`)
     }
   }, delay)
 }
@@ -423,6 +443,7 @@ async function finalizeTrustSession(sessionId: string) {
 
 function disposeExistingTrustSessions() {
   for (const session of trustSessions.values()) {
+    answeredQueries.delete(session.id)
     session.terminal.kill()
   }
   trustSessions.clear()

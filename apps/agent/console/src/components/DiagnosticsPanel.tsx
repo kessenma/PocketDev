@@ -10,6 +10,8 @@ import {
   fetchGitHubAuthDebug,
   fetchProjectsDebug,
   fetchTerminalDebug,
+  fetchTasksDebug,
+  fetchSetupDebug,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
@@ -17,11 +19,17 @@ import {
   type GitHubAuthDebugInfo,
   type ProjectsDebugInfo,
   type TerminalDebugEntry,
+  type TasksDebugInfo,
+  type SetupDebugInfo,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
-import { Bug, Maximize2, RefreshCw, Smartphone, Terminal, Waves, KeyRound, Sparkles } from 'lucide-react'
+import { Bug, Maximize2, RefreshCw, Smartphone, Waves, KeyRound, Sparkles } from 'lucide-react'
+import { ClaudeDiagnosticsTab } from '#/components/diagnostics/ClaudeDiagnosticsTab'
+import { CodexDiagnosticsTab } from '#/components/diagnostics/CodexDiagnosticsTab'
+import { SetupDiagnosticsTab } from '#/components/diagnostics/SetupDiagnosticsTab'
+import { TasksDiagnosticsTab } from '#/components/diagnostics/TasksDiagnosticsTab'
 
-type DiagnosticsTab = 'terminal' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot'
+type DiagnosticsTab = 'terminal' | 'setup' | 'tasks' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -43,6 +51,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [copilotInfo, setCopilotInfo] = useState<CopilotAuthDebugInfo | null>(null)
   const [githubInfo, setGitHubInfo] = useState<GitHubAuthDebugInfo | null>(null)
   const [projectsInfo, setProjectsInfo] = useState<ProjectsDebugInfo | null>(null)
+  const [tasksInfo, setTasksInfo] = useState<TasksDebugInfo | null>(null)
+  const [setupInfo, setSetupInfo] = useState<SetupDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,11 +70,13 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
       fetchCopilotAuthDebug(),
       fetchGitHubAuthDebug(),
       fetchProjectsDebug(),
+      fetchTasksDebug(),
+      fetchSetupDebug(),
     ])
 
     const failures: string[] = []
 
-    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult] = results
+    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult] = results
 
     if (authResult.status === 'fulfilled') setInfo(authResult.value)
     else failures.push(`auth: ${authResult.reason instanceof Error ? authResult.reason.message : 'failed'}`)
@@ -86,6 +98,12 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
     if (projectsResult.status === 'fulfilled') setProjectsInfo(projectsResult.value)
     else failures.push(`projects: ${projectsResult.reason instanceof Error ? projectsResult.reason.message : 'failed'}`)
+
+    if (tasksResult.status === 'fulfilled') setTasksInfo(tasksResult.value)
+    else failures.push(`tasks: ${tasksResult.reason instanceof Error ? tasksResult.reason.message : 'failed'}`)
+
+    if (setupResult.status === 'fulfilled') setSetupInfo(setupResult.value)
+    else failures.push(`setup: ${setupResult.reason instanceof Error ? setupResult.reason.message : 'failed'}`)
 
     setLastUpdated(new Date().toISOString())
     setError(failures.length ? `Partial refresh failure: ${failures.join(' | ')}` : null)
@@ -144,6 +162,24 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return 'No GitHub auth activity yet.'
   }, [githubInfo])
 
+  const tasksSummary = useMemo(() => {
+    if (!tasksInfo) return 'No task data yet.'
+    const running = tasksInfo.tasks.filter((t) => t.status === 'running').length
+    if (running > 0) return `${running} running, ${tasksInfo.totalCount} total`
+    return `${tasksInfo.totalCount} task${tasksInfo.totalCount === 1 ? '' : 's'} recorded`
+  }, [tasksInfo])
+
+  const setupSummary = useMemo(() => {
+    if (!setupInfo) return 'No setup data yet.'
+    const { claude, codex } = setupInfo.providers
+    const parts: string[] = []
+    if (claude.authenticated) parts.push('Claude ready')
+    else if (claude.installed) parts.push('Claude (no auth)')
+    if (codex.authenticated) parts.push('Codex ready')
+    else if (codex.installed) parts.push('Codex (no auth)')
+    return parts.length ? parts.join(' · ') : 'No providers configured'
+  }, [setupInfo])
+
   const copilotSummary = useMemo(() => {
     if (!copilotInfo) return 'No Copilot trust diagnostics yet.'
     if (copilotInfo.activeSessionCount > 0) {
@@ -180,20 +216,23 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d] p-1">
-            {(['terminal', 'claude', 'codex', 'copilot', 'github', 'registry'] as const).map((tab) => (
-              <Button
-                key={tab}
-                size="sm"
-                variant={activeTab === tab ? 'secondary' : 'ghost'}
-                className={cn(
-                  'rounded-[0.7rem] px-3 text-[#f5eedf]',
-                  activeTab === tab ? 'bg-[#f0c419] text-black hover:bg-[#f0c419]/90' : 'hover:bg-[#2a241d]',
-                )}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab === 'terminal' ? 'Terminal' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : 'Registry'}
-              </Button>
-            ))}
+            {(['terminal', 'tasks', 'setup', 'claude', 'codex', 'copilot', 'github', 'registry'] as const).map((tab) => {
+              const label = tab === 'terminal' ? 'Terminal' : tab === 'tasks' ? 'Tasks' : tab === 'setup' ? 'Setup' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : 'Registry'
+              return (
+                <Button
+                  key={tab}
+                  size="sm"
+                  variant={activeTab === tab ? 'secondary' : 'ghost'}
+                  className={cn(
+                    'rounded-[0.7rem] px-3 text-[#f5eedf]',
+                    activeTab === tab ? 'bg-[#f0c419] text-black hover:bg-[#f0c419]/90' : 'hover:bg-[#2a241d]',
+                  )}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {label}
+                </Button>
+              )
+            })}
           </div>
           <Button
             variant={live ? 'secondary' : 'outline'}
@@ -216,15 +255,19 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
         <Badge variant="outline" className="border-[var(--border)] text-[#f5eedf]/70">
           {activeTab === 'terminal'
             ? logSummary
-            : activeTab === 'claude'
-              ? claudeSummary
-              : activeTab === 'codex'
-                ? codexSummary
-                : activeTab === 'copilot'
-                  ? copilotSummary
-                : activeTab === 'github'
-                  ? githubSummary
-                : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
+            : activeTab === 'tasks'
+              ? tasksSummary
+              : activeTab === 'setup'
+                ? setupSummary
+                : activeTab === 'claude'
+                  ? claudeSummary
+                  : activeTab === 'codex'
+                    ? codexSummary
+                    : activeTab === 'copilot'
+                      ? copilotSummary
+                      : activeTab === 'github'
+                        ? githubSummary
+                        : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
         </Badge>
         {lastUpdated ? (
           <span>Updated {formatShortTime(lastUpdated)}</span>
@@ -288,198 +331,14 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
               </div>
             </div>
           </div>
+        ) : activeTab === 'tasks' ? (
+          <TasksDiagnosticsTab tasksInfo={tasksInfo} />
+        ) : activeTab === 'setup' ? (
+          <SetupDiagnosticsTab setupInfo={setupInfo} />
         ) : activeTab === 'claude' ? (
-          <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
-            <div className="space-y-3">
-              <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[#f0c419]" />
-                  <p className="text-sm font-medium">Claude Auth State</p>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-[1.2rem] border border-white/8 bg-[#f0c419] p-4 text-black">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Active Sessions</p>
-                    <p className="mt-2 text-3xl font-semibold">{claudeInfo?.activeSessionCount ?? 0}</p>
-                  </div>
-                  <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Persisted CLI State</p>
-                    <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
-                      <p>Path: {claudeInfo?.persistedState?.path ?? 'Not stored'}</p>
-                      <p>Version: {claudeInfo?.persistedState?.version ?? 'Unknown'}</p>
-                      <p>Authenticated: {claudeInfo?.persistedState ? (claudeInfo.persistedState.authenticated ? 'Yes' : 'No') : 'Unknown'}</p>
-                      <p>Updated: {claudeInfo?.persistedState?.updatedAt ? new Date(claudeInfo.persistedState.updatedAt).toLocaleString() : 'Unknown'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
-              <p className="text-sm font-medium">Active Claude Sessions</p>
-              <div className="mt-3 space-y-3">
-                {claudeInfo?.sessions.length ? (
-                  claudeInfo.sessions.map((session) => (
-                    <div key={session.sessionId} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{session.state}</p>
-                          <p className="mt-1 break-all font-mono text-xs text-[#f4f0e8]/50">{session.sessionId}</p>
-                        </div>
-                        <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/75">
-                          {session.authenticated ? 'Authenticated' : session.completed ? 'Completed' : 'Active'}
-                        </Badge>
-                      </div>
-                      <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
-                        <p>Theme handled: {session.themeHandled ? 'Yes' : 'No'}</p>
-                        <p>Method handled: {session.methodHandled ? 'Yes' : 'No'}</p>
-                        <p>Prompt: {session.prompt ?? 'None'}</p>
-                        <p>Error: {session.error ?? 'None'}</p>
-                        <p>Updated: {new Date(session.updatedAt).toLocaleString()}</p>
-                        {session.authUrl ? (
-                          <p className="break-all font-mono text-[11px] text-[#9df6cd]">{session.authUrl}</p>
-                        ) : null}
-                      </div>
-                      {session.outputExcerpt ? (
-                        <div className="mt-3">
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output Excerpt</p>
-                          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#9df6cd]">
-                            {session.outputExcerpt}
-                          </pre>
-                        </div>
-                      ) : null}
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
-                    No active Claude auth sessions. Open the Claude wizard on the mobile app to start one.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <ClaudeDiagnosticsTab claudeInfo={claudeInfo} />
         ) : activeTab === 'codex' ? (
-          <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
-            <div className="space-y-3">
-              <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
-                <div className="flex items-center gap-2">
-                  <KeyRound className="h-4 w-4 text-[#f0c419]" />
-                  <p className="text-sm font-medium">Codex Auth State</p>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-[1.2rem] border border-white/8 bg-[#f0c419] p-4 text-black">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Active Sessions</p>
-                    <p className="mt-2 text-3xl font-semibold">{codexInfo?.activeSessionCount ?? 0}</p>
-                  </div>
-                  <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Persisted CLI State</p>
-                    <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
-                      <p>Path: {codexInfo?.persistedState?.path ?? 'Not stored'}</p>
-                      <p>Version: {codexInfo?.persistedState?.version ?? 'Unknown'}</p>
-                      <p>Authenticated: {codexInfo?.persistedState ? (codexInfo.persistedState.authenticated ? 'Yes' : 'No') : 'Unknown'}</p>
-                      <p>Updated: {codexInfo?.persistedState?.updatedAt ? new Date(codexInfo.persistedState.updatedAt).toLocaleString() : 'Unknown'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
-                <p className="text-sm font-medium">Last Callback Replay</p>
-                {codexInfo?.lastReplayDebug ? (
-                  <div className="mt-3 space-y-3">
-                    <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3">
-                      <p className="text-xs uppercase tracking-[0.22em] text-[#f4f0e8]/38">Result</p>
-                      <p className={cn('mt-2 font-medium', codexInfo.lastReplayDebug.success ? 'text-green-400' : 'text-red-400')}>
-                        {codexInfo.lastReplayDebug.success ? 'Replay succeeded' : 'Replay failed'}
-                      </p>
-                      <p className="mt-1 text-sm text-[#f4f0e8]/70">{codexInfo.lastReplayDebug.error ?? 'No error reported'}</p>
-                    </div>
-                    <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3">
-                      <p className="text-xs uppercase tracking-[0.22em] text-[#f4f0e8]/38">Input Callback URL</p>
-                      <p className="mt-2 break-all font-mono text-xs text-[#9df6cd]">{codexInfo.lastReplayDebug.inputCallbackUrl ?? 'None'}</p>
-                      <p className="mt-2 text-xs text-[#f4f0e8]/45">{new Date(codexInfo.lastReplayDebug.recordedAt).toLocaleString()}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-3 rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
-                    No callback replay attempts yet.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="grid min-h-0 gap-3">
-              <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
-                <div className="mb-3 flex items-center gap-2">
-                  <Waves className="h-4 w-4 text-[#f0c419]" />
-                  <p className="text-sm font-medium">Replay Attempts</p>
-                </div>
-                {codexInfo?.lastReplayDebug?.attempts.length ? (
-                  <div className="space-y-2">
-                    {codexInfo.lastReplayDebug.attempts.map((attempt, index) => (
-                      <div key={`${attempt}-${index}`} className="rounded-xl border border-white/8 bg-black/30 p-3 font-mono text-xs text-[#9df6cd]">
-                        {attempt}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
-                    No replay attempts captured yet.
-                  </div>
-                )}
-              </div>
-
-              <div className="grid min-h-0 gap-3 lg:grid-cols-2">
-                <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
-                  <p className="text-sm font-medium">Active Codex Sessions</p>
-                  <div className="mt-3 space-y-3">
-                    {codexInfo?.sessions.length ? (
-                      codexInfo.sessions.map((session) => (
-                        <div key={session.sessionId} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium">{session.state}</p>
-                              <p className="mt-1 break-all font-mono text-xs text-[#f4f0e8]/50">{session.sessionId}</p>
-                            </div>
-                            <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/75">
-                              {session.authenticated ? 'Authenticated' : session.completed ? 'Completed' : 'Active'}
-                            </Badge>
-                          </div>
-                          <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
-                            <p>Prompt: {session.prompt ?? 'None'}</p>
-                            <p>Error: {session.error ?? 'None'}</p>
-                            <p>Updated: {new Date(session.updatedAt).toLocaleString()}</p>
-                            {session.authUrl ? (
-                              <p className="break-all font-mono text-[11px] text-[#9df6cd]">{session.authUrl}</p>
-                            ) : null}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
-                        No active Codex auth sessions.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
-                  <p className="text-sm font-medium">Recent Codex Output</p>
-                  <div className="mt-3 space-y-3">
-                    <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
-                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Last Replay Prompt</p>
-                      <p className="mt-2 text-sm text-[#f4f0e8]/80">{codexInfo?.lastReplayDebug?.sessionPrompt ?? 'None'}</p>
-                    </div>
-                    <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
-                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output Excerpt</p>
-                      <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#9df6cd]">
-                        {codexInfo?.lastReplayDebug?.sessionOutputExcerpt ?? codexInfo?.sessions[0]?.outputExcerpt ?? 'No Codex output captured yet.'}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <CodexDiagnosticsTab codexInfo={codexInfo} />
         ) : activeTab === 'copilot' ? (
           <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
             <div className="space-y-3">

@@ -351,6 +351,75 @@ export async function fetchProjectsDebug(): Promise<ProjectsDebugInfo> {
   return res.json()
 }
 
+// ─── Tasks debug ────────────────────────────────────────
+
+export interface TaskDebugEntry {
+  id: string
+  prompt: string
+  agentType: string
+  model: string | null
+  status: string
+  workingDirectory: string | null
+  projectId: string | null
+  projectName: string | null
+  createdAt: string
+  startedAt: string | null
+  completedAt: string | null
+  exitCode: number | null
+}
+
+export interface TasksDebugInfo {
+  tasks: TaskDebugEntry[]
+  activeProcesses: Array<{
+    taskId: string
+    hasProcess: boolean
+    status: string | null
+  }>
+  totalCount: number
+}
+
+export async function fetchTasksDebug(): Promise<TasksDebugInfo> {
+  const res = await get('/debug/tasks')
+  if (!res.ok) throw new Error('Failed to fetch tasks debug')
+  return res.json()
+}
+
+// ─── Setup debug ────────────────────────────────────────
+
+export interface SetupProviderInfo {
+  installed: boolean
+  authenticated: boolean
+  version: string | null
+  path: string | null
+}
+
+export interface SetupDebugInfo {
+  prerequisites: {
+    os: string
+    arch: string
+    tools: Array<{
+      id: string
+      name: string
+      status: string
+      auth_status: string
+      version: string | null
+      path: string | null
+      required: boolean
+    }>
+    ready: boolean
+  }
+  providers: {
+    claude: SetupProviderInfo
+    codex: SetupProviderInfo
+  }
+}
+
+export async function fetchSetupDebug(): Promise<SetupDebugInfo> {
+  const res = await get('/debug/setup')
+  if (!res.ok) throw new Error('Failed to fetch setup debug')
+  return res.json()
+}
+
 export interface RepoSummary {
   repoName: string
   repoPath: string

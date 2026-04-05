@@ -8,6 +8,7 @@ import { useTaskStore } from './tasks'
 import { useContainerStore } from './containers'
 import { useSetupStore } from './setup'
 import { usePlanStore } from './plan'
+import { useNewTaskDraftStore } from './new-task-draft'
 
 interface ConnectionState {
   status: ConnectionStatus
@@ -50,6 +51,9 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       (status) => {
         console.log('[connection] WebSocket status:', status)
         set({ status })
+        if (status === 'connected') {
+          useNewTaskDraftStore.getState().loadCapabilities()
+        }
       },
       (message: WsMessage) => handleWsMessage(message),
     )
@@ -110,6 +114,7 @@ function handleWsMessage(message: WsMessage) {
         report: message.payload as any,
         loading: false,
       })
+      useNewTaskDraftStore.getState().loadCapabilities()
       break
     case 'plan.proposed':
       usePlanStore.getState().handlePlanProposed(message.payload as any)

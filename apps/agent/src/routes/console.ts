@@ -14,7 +14,7 @@ import {
   sessionCookieHeader,
 } from '../services/console-auth.ts'
 import { hasDevices } from '../services/setup.ts'
-import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName } from '../db/index.ts'
+import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName, getToolRecord } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
 import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
@@ -22,6 +22,7 @@ import { getClaudeAuthDebug } from '../services/claude-setup.ts'
 import { getCopilotAuthDebug } from '../services/copilot-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
 import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
+import { getTaskList, getProcess } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
@@ -314,6 +315,52 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return await getProjectsDebug()
+  })
+
+  // ─── Tasks debug (requires session) ────────────────────
+  .get('/debug/tasks', ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const tasks = getTaskList()
+    const activeProcesses = tasks
+      .filter((task) => task.status === 'running')
+      .map((task) => {
+        const proc = getProcess(task.id)
+        return { taskId: task.id, hasProcess: !!proc, status: proc?.status ?? null }
+      })
+
+    return { tasks, activeProcesses, totalCount: tasks.length }
+  })
+
+  // ─── Setup debug (requires session) ───────────────────
+  .get('/debug/setup', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const prerequisites = await checkAllPrerequisites()
+    const claudeRecord = getToolRecord('claude_cli')
+    const codexRecord = getToolRecord('codex_cli')
+
+    return {
+      prerequisites,
+      providers: {
+        claude: {
+          installed: !!claudeRecord?.path,
+          authenticated: !!claudeRecord?.authenticated,
+          version: claudeRecord?.version ?? null,
+          path: claudeRecord?.path ?? null,
+        },
+        codex: {
+          installed: !!codexRecord?.path,
+          authenticated: !!codexRecord?.authenticated,
+          version: codexRecord?.version ?? null,
+          path: codexRecord?.path ?? null,
+        },
+      },
+    }
   })
 
   // ─── Prerequisites (requires session) ─────────────────
