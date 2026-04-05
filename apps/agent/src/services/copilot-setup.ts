@@ -388,6 +388,10 @@ export async function installCopilot(): Promise<CopilotInstallResult> {
 export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
   disposeExistingTrustSessions()
 
+  const copilotPath = await which('copilot')
+  const ghStatus = await getGitHubAuthStatus()
+  recordDebugEvent(null, `Copilot trust preflight: copilotPath=${copilotPath ?? 'missing'} ghAuthenticated=${ghStatus.authenticated ? 'yes' : 'no'} ghUser=${ghStatus.githubUsername ?? 'none'}`)
+
   let session: InternalTrustSession | null = null
   const sessionId = crypto.randomUUID()
   recordDebugEvent(sessionId, `Starting Copilot trust flow in ${getWorkspaceTrustTarget()}`)
@@ -399,7 +403,8 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
       recordDebugEvent(sessionId, `PTY output chunk received (${chunk.length} chars)`)
       refreshTrustSessionState(session)
     },
-    () => {
+    (exitCode) => {
+      recordDebugEvent(sessionId, `PTY exited with code ${exitCode}`)
       void finalizeTrustSession(sessionId)
     },
     getWorkspaceTrustTarget(),
@@ -421,8 +426,8 @@ export async function startCopilotTrust(): Promise<CopilotTrustStartResult> {
   }
 
   trustSessions.set(sessionId, session)
-  recordDebugEvent(sessionId, 'Sending `gh copilot` to PTY session')
-  terminal.send('gh copilot\n')
+  recordDebugEvent(sessionId, `Sending \`${copilotPath ?? 'copilot'}\` to PTY session`)
+  terminal.send(`${copilotPath ?? 'copilot'}\n`)
 
   await waitForTrustBootstrap(sessionId)
   refreshTrustSessionState(session)
@@ -450,7 +455,8 @@ export async function verifyCopilotSetup(): Promise<CopilotSetupStatus> {
         session.output = `${session.output}${chunk}`.slice(-MAX_OUTPUT_LENGTH)
         refreshTrustSessionState(session)
       },
-      () => {
+      (exitCode) => {
+        recordDebugEvent(sessionId, `Verify PTY exited with code ${exitCode}`)
         void finalizeTrustSession(sessionId)
       },
       getWorkspaceTrustTarget(),
@@ -471,7 +477,7 @@ export async function verifyCopilotSetup(): Promise<CopilotSetupStatus> {
       updatedAt: Date.now(),
     }
     trustSessions.set(sessionId, session)
-    terminal.send('gh copilot\n')
+    terminal.send(`${status.path ?? 'copilot'}\n`)
     await Bun.sleep(2000)
     refreshTrustSessionState(session)
     if (session.trusted) {
