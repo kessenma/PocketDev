@@ -15,8 +15,8 @@ export type ExplainerCardProps = {
   caption: string
   legend?: ExplainerLegendItem[]
   cardClassName?: string
-  stageMinHeight?: number
-  stageHeight?: number
+  stageMinHeight?: number | string
+  stageHeight?: number | string
   stageBorderless?: boolean
   svgClassName?: string
   preserveAspectRatio?: string

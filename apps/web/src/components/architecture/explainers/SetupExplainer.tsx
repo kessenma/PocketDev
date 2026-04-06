@@ -30,7 +30,7 @@ type BrandStreamItem = {
 }
 
 const CIRCLE_CX = 160
-const CIRCLE_CY = 154
+const CIRCLE_CY = 160
 const CIRCLE_R = 42
 
 const STREAM_ITEMS: BrandStreamItem[] = [
@@ -47,12 +47,14 @@ const STREAM_ITEMS: BrandStreamItem[] = [
 export function SetupExplainer({
   active,
   progress,
+  timelineProgress,
 }: {
   active: boolean
   progress: number
+  timelineProgress?: number
 }) {
   const reduceMotion = useReducedMotion()
-  const scrollProgress = reduceMotion ? 1 : progress
+  const scrollProgress = reduceMotion ? 1 : (timelineProgress ?? progress)
   const funnelReveal = mapProgress(scrollProgress, 0.22, 0.46)
   const streamReveal = mapProgress(scrollProgress, 0.36, 0.9)
   const floatReveal = mapProgress(scrollProgress, 0.74, 1)
@@ -81,7 +83,7 @@ export function SetupExplainer({
         transition={{ duration: 0.22, ease: 'linear' }}
       />
       <motion.path
-        d="M 82 34 L 148 106 L 148 124"
+        d="M 82 34 L 148 94 L 148 100"
         fill="none"
         stroke={palette.bauhaus.black}
         strokeWidth="4"
@@ -92,7 +94,7 @@ export function SetupExplainer({
         transition={{ duration: 0.22, ease: 'linear' }}
       />
       <motion.path
-        d="M 238 34 L 172 106 L 172 124"
+        d="M 238 34 L 172 94 L 172 100"
         fill="none"
         stroke={palette.bauhaus.black}
         strokeWidth="4"

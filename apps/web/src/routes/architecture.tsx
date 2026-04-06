@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import {
   SiAndroid,
@@ -25,6 +26,7 @@ import { ArchGraphic } from '#/components/architecture/arch-graphic'
 import {
   architectureTextStyles,
   architectureTokens,
+  blendHexColors,
 } from '#/components/architecture/theme'
 
 export const Route = createFileRoute('/architecture')({
@@ -32,6 +34,17 @@ export const Route = createFileRoute('/architecture')({
 })
 
 function ArchitecturePage() {
+  const [remoteAiTakeoverProgress, setRemoteAiTakeoverProgress] = useState(0)
+  const lowerPageStyle: CSSProperties & Record<string, string | number> = {
+    '--architecture-paper': blendHexColors('#f7f1e3', architectureTokens.colors.blue, remoteAiTakeoverProgress),
+    '--architecture-panel-alt': blendHexColors('#efe5cb', architectureTokens.colors.blue, Math.min(1, remoteAiTakeoverProgress * 1.12)),
+    '--architecture-text': blendHexColors('#201d18', '#ffffff', remoteAiTakeoverProgress),
+    '--architecture-text-secondary': blendHexColors('#5c5549', '#dbeafe', remoteAiTakeoverProgress),
+    '--architecture-border': blendHexColors('#b7aa91', '#93c5fd', remoteAiTakeoverProgress),
+    '--architecture-surface': `rgba(255,255,255, ${0.02 + remoteAiTakeoverProgress * 0.06})`,
+    backgroundColor: blendHexColors('#f7f1e3', architectureTokens.colors.blue, remoteAiTakeoverProgress),
+  }
+
   return (
     <div
       className="min-h-screen"
@@ -92,20 +105,23 @@ function ArchitecturePage() {
       </header>
 
       <SystemOverview />
-      <HowPocketDevWorks />
-      <SetupReadiness />
-      <AgentEndpoints />
-      <SecurityModel />
-      <WireProtocol />
-      <TechStack />
+      <HowPocketDevWorks onRemoteAiTakeoverChange={setRemoteAiTakeoverProgress} />
 
-      <div className="flex justify-center px-6 py-12">
-        <a href="/" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
-          Back to home
-        </a>
+      <div style={lowerPageStyle}>
+        <SetupReadiness />
+        <AgentEndpoints />
+        <SecurityModel />
+        <WireProtocol />
+        <TechStack />
+
+        <div className="flex justify-center px-6 py-12">
+          <a href="/" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+            Back to home
+          </a>
+        </div>
+
+        <Footer />
       </div>
-
-      <Footer />
     </div>
   )
 }

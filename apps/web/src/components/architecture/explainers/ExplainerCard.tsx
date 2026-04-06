@@ -27,7 +27,7 @@ export function ExplainerCard({
   return (
     <article
       ref={ref}
-      className={['rounded-[1.5rem] border p-4 sm:p-5', cardClassName].filter(Boolean).join(' ')}
+      className={['rounded-[1.5rem] p-4 sm:p-5', cardClassName].filter(Boolean).join(' ')}
       style={architectureTextStyles.surface}
     >
       <div

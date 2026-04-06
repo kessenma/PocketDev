@@ -12,6 +12,14 @@ function px(value: number) {
   return `${value}px`
 }
 
+const architectureBaseColors = {
+  paper: '#f7f1e3',
+  panelAlt: '#efe5cb',
+  text: '#201d18',
+  textSecondary: '#5c5549',
+  border: '#b7aa91',
+} as const
+
 function textStyle(style: { fontSize: number; lineHeight: number; letterSpacing?: number }) {
   return {
     fontSize: px(style.fontSize),
@@ -32,16 +40,36 @@ export const architectureTokens = {
     red: palette.bauhaus.red,
     yellow: palette.bauhaus.yellow,
     black: palette.bauhaus.black,
-    paper: '#f7f1e3',
-    panel: 'rgba(255,255,255,0)',
-    panelAlt: '#efe5cb',
-    text: '#201d18',
-    textSecondary: '#5c5549',
-    border: '#b7aa91',
+    paper: `var(--architecture-paper, ${architectureBaseColors.paper})`,
+    panel: 'var(--architecture-surface, rgba(255,255,255,0))',
+    panelAlt: `var(--architecture-panel-alt, ${architectureBaseColors.panelAlt})`,
+    text: `var(--architecture-text, ${architectureBaseColors.text})`,
+    textSecondary: `var(--architecture-text-secondary, ${architectureBaseColors.textSecondary})`,
+    border: `var(--architecture-border, ${architectureBaseColors.border})`,
   },
   spacing,
   borderRadius,
 } as const
+
+export function blendHexColors(from: string, to: string, progress: number) {
+  const clamped = Math.max(0, Math.min(1, progress))
+  const fromValue = Number.parseInt(from.slice(1), 16)
+  const toValue = Number.parseInt(to.slice(1), 16)
+  const fromRgb = {
+    r: (fromValue >> 16) & 0xff,
+    g: (fromValue >> 8) & 0xff,
+    b: fromValue & 0xff,
+  }
+  const toRgb = {
+    r: (toValue >> 16) & 0xff,
+    g: (toValue >> 8) & 0xff,
+    b: toValue & 0xff,
+  }
+  const mix = (start: number, end: number) =>
+    Math.round(start + (end - start) * clamped)
+
+  return `rgb(${mix(fromRgb.r, toRgb.r)}, ${mix(fromRgb.g, toRgb.g)}, ${mix(fromRgb.b, toRgb.b)})`
+}
 
 export const architectureTextStyles = {
   heroTitle: {
@@ -81,7 +109,7 @@ export const architectureTextStyles = {
   } satisfies CSSProperties,
   surface: {
     borderColor: architectureTokens.colors.border,
-    backgroundColor: 'transparent',
+    backgroundColor: architectureTokens.colors.panel,
   } satisfies CSSProperties,
   mono: {
     fontFamily: architectureFonts.mono,

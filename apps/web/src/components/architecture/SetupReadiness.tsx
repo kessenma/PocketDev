@@ -44,7 +44,7 @@ const groups = [
 
 export function SetupReadiness() {
   return (
-    <section className="px-6 py-16">
+    <section className="px-6 pt-0 pb-16">
       <div className="mx-auto max-w-5xl">
         <div
           className="rounded-[1.5rem] border px-5 py-5 sm:px-6"

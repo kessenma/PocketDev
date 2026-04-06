@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { ChevronDown, ChevronUp, FileCode2, FolderOpen, Pin, Search, X } from 'lucide-react-native'
+import { ChevronDown, ChevronUp, FileCode2, FolderOpen, Pin, Search, Trash2, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TreeEntry } from '@pocketdev/shared/types'
 import type { AgentType, TaskMode } from '@pocketdev/shared/schema'
@@ -21,6 +21,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { addRecentPrompt } from '../../services/storage'
 import { listDirectory, searchFiles, fetchFileTree } from '../../services/api'
 import AISuggestions from './AISuggestions'
+import FindFilesButton from './FindFilesButton'
 import { useOnDeviceAIStore } from '../../stores/on-device-ai'
 import { useNewTaskDraftStore } from '../../stores/new-task-draft'
 import { useTaskStore } from '../../stores/tasks'
@@ -65,6 +66,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
   const startTask = useTaskStore((state) => state.startTask)
   const selectedContextPaths = useFilesStore((state) => state.selectedContextPaths)
   const toggleContextPath = useFilesStore((state) => state.toggleContextPath)
+  const clearContextPaths = useFilesStore((state) => state.clearContextPaths)
   const rootLabel = useFilesStore((state) => state.rootLabel)
   const rootPath = useFilesStore((state) => state.rootPath)
   const currentPath = useFilesStore((state) => state.currentPath)
@@ -118,20 +120,57 @@ export default function NewTaskForm({ onSubmitted }: Props) {
   }, [aiModelStatus, aiLoadModel])
 
   React.useEffect(() => {
-    if (aiModelStatus !== 'ready' || !server || !rootPath) return
-    fetchFileTree(server.ip, server.port, '.', 3)
-      .then((res) => aiBuildIndex(rootPath, res.tree))
-      .catch(() => {})
-  }, [aiModelStatus, server, rootPath, aiBuildIndex])
+    console.log('[FindFiles] Index effect — modelStatus:', aiModelStatus, 'server:', !!server)
+    if (aiModelStatus !== 'ready' || !server) return
+    console.log('[FindFiles] Fetching file tree for indexing...')
+    fetchFileTree(server.ip, server.port, '.', 6)
+      .then((res) => {
+        console.log('[FindFiles] File tree fetched →', res.tree.length, 'top-level entries, base:', res.base)
+        aiBuildIndex(res.base || '.', res.tree)
+      })
+      .catch((e) => console.error('[FindFiles] fetchFileTree failed:', e))
+  }, [aiModelStatus, server, aiBuildIndex])
 
-  // --- On-device AI: debounced suggestion on prompt change ---
-  React.useEffect(() => {
-    if (aiModelStatus !== 'ready') return
-    const timer = setTimeout(() => {
-      aiSuggest(prompt)
-    }, 600)
-    return () => clearTimeout(timer)
-  }, [prompt, aiModelStatus, aiSuggest])
+  // --- On-device AI: manual trigger ---
+  const [aiSearching, setAiSearching] = React.useState(false)
+  const [aiNoResults, setAiNoResults] = React.useState(false)
+
+  async function handleFindRelatedFiles() {
+    const fileIndex = useOnDeviceAIStore.getState().fileIndex
+    console.log('[FindFiles] Button pressed')
+    console.log('[FindFiles] modelStatus:', aiModelStatus)
+    console.log('[FindFiles] prompt:', prompt.trim().substring(0, 80))
+    console.log('[FindFiles] fileIndex:', fileIndex ? `${fileIndex.paths.length} files indexed for ${fileIndex.rootPath}` : 'null')
+    if (aiModelStatus !== 'ready' || !prompt.trim()) {
+      console.log('[FindFiles] Aborting — model not ready or prompt empty')
+      return
+    }
+    setAiSearching(true)
+    setAiNoResults(false)
+    try {
+      // Build index on-demand if it's missing
+      if (!fileIndex && server) {
+        console.log('[FindFiles] Index missing — building on-demand...')
+        const res = await fetchFileTree(server.ip, server.port, '.', 6)
+        console.log('[FindFiles] File tree fetched →', res.tree.length, 'top-level entries, base:', res.base)
+        await aiBuildIndex(res.base || '.', res.tree)
+      }
+
+      console.log('[FindFiles] Running suggest...')
+      await aiSuggest(prompt)
+      const { suggestions, restSuggestions } = useOnDeviceAIStore.getState()
+      console.log('[FindFiles] Results:', suggestions.length, 'top,', restSuggestions.length, 'rest')
+      suggestions.forEach((s) => console.log(`  [FindFiles] top  ${s.score.toFixed(3)} → ${s.path}`))
+      restSuggestions.slice(0, 5).forEach((s) => console.log(`  [FindFiles] rest ${s.score.toFixed(3)} → ${s.path}`))
+      if (suggestions.length === 0 && restSuggestions.length === 0) {
+        setAiNoResults(true)
+      }
+    } catch (e) {
+      console.error('[FindFiles] Error:', e)
+    } finally {
+      setAiSearching(false)
+    }
+  }
 
   const contextPaths = React.useMemo(() => {
     const merged = [...selectedContextPaths]
@@ -231,7 +270,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
           <TextInput
             style={[styles.promptInput, { backgroundColor: colors.panelAlt, color: colors.text, borderColor: colors.border }]}
             value={prompt}
-            onChangeText={setPrompt}
+            onChangeText={(text) => { setPrompt(text); setAiNoResults(false) }}
             placeholder="What should the agent do?"
             placeholderTextColor={colors.textTertiary}
             multiline
@@ -258,22 +297,37 @@ export default function NewTaskForm({ onSubmitted }: Props) {
         </BauhausPanel>
 
         {/* ── AI File Suggestions ── */}
+        {aiModelStatus === 'ready' && prompt.trim().length > 0 ? (
+          <FindFilesButton searching={aiSearching} onPress={handleFindRelatedFiles} />
+        ) : null}
         <AISuggestions />
+        {aiNoResults ? (
+          <Text style={[styles.aiNoResults, { color: colors.textTertiary }]}>
+            No closely related files found for this prompt.
+          </Text>
+        ) : null}
 
         {/* ── File Context Picker ── */}
         <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
-          <TouchableOpacity
-            style={styles.pickerHeader}
-            activeOpacity={0.7}
-            onPress={() => setPickerExpanded((prev) => !prev)}
-          >
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              File Context{contextPaths.length > 0 ? ` (${contextPaths.length})` : ''}
-            </Text>
-            {pickerExpanded
-              ? <ChevronUp color={colors.textSecondary} size={18} strokeWidth={2.2} />
-              : <ChevronDown color={colors.textSecondary} size={18} strokeWidth={2.2} />}
-          </TouchableOpacity>
+          <View style={styles.pickerHeader}>
+            <TouchableOpacity
+              style={styles.pickerHeaderTap}
+              activeOpacity={0.7}
+              onPress={() => setPickerExpanded((prev) => !prev)}
+            >
+              <Text style={[styles.label, { color: colors.textSecondary }]}>
+                File Context{contextPaths.length > 0 ? ` (${contextPaths.length})` : ''}
+              </Text>
+              {pickerExpanded
+                ? <ChevronUp color={colors.textSecondary} size={18} strokeWidth={2.2} />
+                : <ChevronDown color={colors.textSecondary} size={18} strokeWidth={2.2} />}
+            </TouchableOpacity>
+            {contextPaths.length > 0 ? (
+              <TouchableOpacity onPress={clearContextPaths} activeOpacity={0.7} hitSlop={8}>
+                <Trash2 color={colors.textTertiary} size={16} strokeWidth={2.2} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
           {contextPaths.length > 0 ? (
             <View style={styles.chipRow}>
@@ -582,6 +636,11 @@ const styles = StyleSheet.create({
     minHeight: 120,
     maxHeight: 360,
   },
+  aiNoResults: {
+    ...typeStyles.bodySmall,
+    textAlign: 'center',
+    marginTop: -spacing[2],
+  },
   recentItem: {
     paddingVertical: spacing[3],
     borderBottomWidth: 2,
@@ -596,6 +655,12 @@ const styles = StyleSheet.create({
 
   // ── File Picker ──
   pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pickerHeaderTap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
