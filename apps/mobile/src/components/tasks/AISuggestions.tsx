@@ -64,7 +64,7 @@ function getExtColor(ext: string): string {
 function renderExtIcon(ext: string, size: number, color: string) {
   const info = EXT_ICONS[ext]
   if (!info) return null
-  if ('mdi' in info) return <MaterialDesignIcons name={info.mdi} size={size} color={color} />
+  if ('mdi' in info) return <MaterialDesignIcons name={info.mdi as any} size={size} color={color} />
   if (info.lucide === 'image') return <ImageIcon color={color} size={size} strokeWidth={2.2} />
   if (info.lucide === 'apple') return <MaterialDesignIcons name="apple" size={size} color={color} />
   return null

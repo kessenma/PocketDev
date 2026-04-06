@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { Terminal } from 'lucide-react-native'
+import React, { useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ChevronDown, ChevronUp, Terminal, Wrench } from 'lucide-react-native'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useScriptsStore } from '../../stores/scripts'
+import { useTaskStore } from '../../stores/tasks'
 import { usePreviewStore } from '../../stores/preview'
-import { categorizeScripts, groupByCategory, CATEGORY_LABELS } from './model'
-import type { ScriptCategory } from './model'
+import { categorizeScripts, groupByCategory, getSuggestedActions, CATEGORY_LABELS } from './model'
+import type { CategorizedScript, ScriptCategory } from './model'
 import PackageSelector from './PackageSelector'
 import ScriptCard from './ScriptCard'
 
@@ -19,9 +20,19 @@ export default function ScriptsWorkspace() {
   const runningScripts = useScriptsStore((s) => s.runningScripts)
   const fetchScripts = useScriptsStore((s) => s.fetchScripts)
   const runScript = useScriptsStore((s) => s.runScript)
+  const runCommand = useScriptsStore((s) => s.runCommand)
   const stopScript = useScriptsStore((s) => s.stopScript)
+  const dismissScript = useScriptsStore((s) => s.dismissScript)
   const selectPackage = useScriptsStore((s) => s.selectPackage)
   const openPreview = usePreviewStore((s) => s.openPreview)
+  const taskLogs = useTaskStore((s) => s.taskLogs)
+  const [suggestedOpen, setSuggestedOpen] = useState(false)
+  const emptyLines: string[] = []
+
+  function getOutputLines(taskId: string | undefined): string[] {
+    if (!taskId) return emptyLines
+    return taskLogs.get(taskId) ?? emptyLines
+  }
 
   useEffect(() => {
     void fetchScripts()
@@ -32,6 +43,11 @@ export default function ScriptsWorkspace() {
   const grouped = useMemo(() => {
     if (!selectedPkg) return new Map()
     return groupByCategory(categorizeScripts(selectedPkg.scripts))
+  }, [selectedPkg])
+
+  const suggestedActions = useMemo(() => {
+    if (!selectedPkg) return []
+    return getSuggestedActions(selectedPkg.packageManager)
   }, [selectedPkg])
 
   if (isLoading && packages.length === 0) {
@@ -89,7 +105,7 @@ export default function ScriptsWorkspace() {
             {CATEGORY_LABELS[category as ScriptCategory]}
           </Text>
           <View style={styles.scriptList}>
-            {scripts.map((script) => {
+            {scripts.map((script: CategorizedScript) => {
               const key = `${selectedPkg!.path}:${script.name}`
               const running = runningScripts.get(key)
               return (
@@ -97,10 +113,12 @@ export default function ScriptsWorkspace() {
                   key={script.name}
                   name={script.name}
                   command={script.command}
-                  isRunning={!!running}
+                  status={running?.status ?? null}
                   detectedPort={running?.detectedPort ?? null}
+                  outputLines={getOutputLines(running?.taskId)}
                   onRun={() => runScript(selectedPkg!.path, script.name)}
                   onStop={() => stopScript(key)}
+                  onDismiss={() => dismissScript(key)}
                   onPreview={(port) => openPreview(`http://localhost:${port}`)}
                 />
               )
@@ -108,6 +126,49 @@ export default function ScriptsWorkspace() {
           </View>
         </View>
       ))}
+
+      {selectedPkg && suggestedActions.length > 0 && (
+        <View style={[styles.suggestedSection, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => setSuggestedOpen((v) => !v)}
+            style={styles.suggestedToggle}
+          >
+            <View style={styles.suggestedToggleLeft}>
+              <Wrench color={colors.textTertiary} size={14} strokeWidth={2.25} />
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
+                Suggested Actions
+              </Text>
+            </View>
+            {suggestedOpen
+              ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
+              : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
+          </TouchableOpacity>
+
+          {suggestedOpen && (
+            <View style={styles.scriptList}>
+              {suggestedActions.map((action) => {
+                const key = `${selectedPkg.path}:${action.id}`
+                const running = runningScripts.get(key)
+                return (
+                  <ScriptCard
+                    key={action.id}
+                    name={action.label}
+                    command={action.resolvedCommand}
+                    status={running?.status ?? null}
+                    detectedPort={running?.detectedPort ?? null}
+                    outputLines={getOutputLines(running?.taskId)}
+                    onRun={() => runCommand(selectedPkg.path, action.id, action.resolvedCommand)}
+                    onStop={() => stopScript(key)}
+                    onDismiss={() => dismissScript(key)}
+                    onPreview={(port) => openPreview(`http://localhost:${port}`)}
+                  />
+                )
+              })}
+            </View>
+          )}
+        </View>
+      )}
     </ScrollView>
   )
 }
@@ -161,6 +222,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   scriptList: {
+    gap: spacing[2],
+  },
+  suggestedSection: {
+    borderTopWidth: 1,
+    paddingTop: spacing[3],
+    gap: spacing[3],
+  },
+  suggestedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  suggestedToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing[2],
   },
 })

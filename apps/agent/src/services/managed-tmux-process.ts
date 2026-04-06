@@ -9,6 +9,8 @@ const TRUST_PROMPT_PATTERN = /do you trust (?:the files in this folder|the conte
 
 /** Patterns indicating Copilot TUI is at its idle prompt, ready for input. */
 const READY_PATTERNS = [
+  /describe a task to get started/i,
+  /type @ to mention files/i,
   /what (?:would you like|can i help|do you want)/i,
   /ask copilot/i,
   /type a message/i,
@@ -25,6 +27,8 @@ function normalizeOutput(text: string): string {
     .replace(ANSI_RE, '')
     .replace(/\r/g, '\n')
     .replace(CONTROL_RE, ' ')
+    // Strip block/cursor characters that change with TUI cursor blink
+    .replace(/[█▘▝▗▖▐▌▀▄░▒▓]/g, ' ')
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{2,}/g, '\n')
     .trim()

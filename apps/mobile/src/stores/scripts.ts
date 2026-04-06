@@ -5,11 +5,14 @@ import { useConnectionStore } from './connection'
 import { useTaskStore } from './tasks'
 import { useFilesStore } from './files'
 
+export type ScriptRunStatus = 'starting' | 'running' | 'completed' | 'failed'
+
 export interface RunningScript {
   taskId: string
   scriptName: string
   packagePath: string
   detectedPort: number | null
+  status: ScriptRunStatus
 }
 
 interface ScriptsState {
@@ -21,7 +24,9 @@ interface ScriptsState {
 
   fetchScripts: () => Promise<void>
   runScript: (packagePath: string, scriptName: string) => void
+  runCommand: (packagePath: string, label: string, command: string) => void
   stopScript: (key: string) => void
+  dismissScript: (key: string) => void
   selectPackage: (index: number) => void
   handleTaskOutput: (taskId: string, line: string) => void
   handleTaskStatusChange: (taskId: string, status: string) => void
@@ -86,15 +91,34 @@ export const useScriptsStore = create<ScriptsState>((set, get) => ({
 
     useTaskStore.getState().startTask(command, 'shell', cwd)
 
-    // Track it — we'll pick up the taskId from the next task.status_changed event
-    // For now, use a temporary marker; the connection store wiring will match by command
     const key = scriptKey(packagePath, scriptName)
     const next = new Map(runningScripts)
     next.set(key, {
-      taskId: '', // will be filled when we detect the task
+      taskId: '',
       scriptName,
       packagePath,
       detectedPort: null,
+      status: 'starting',
+    })
+    set({ runningScripts: next })
+  },
+
+  runCommand: (packagePath: string, label: string, command: string) => {
+    const { runningScripts } = get()
+    const rootPath = useFilesStore.getState().rootPath
+    if (!rootPath) return
+
+    const cwd = packagePath === '.' ? rootPath : `${rootPath}/${packagePath}`
+    useTaskStore.getState().startTask(command, 'shell', cwd)
+
+    const key = scriptKey(packagePath, label)
+    const next = new Map(runningScripts)
+    next.set(key, {
+      taskId: '',
+      scriptName: label,
+      packagePath,
+      detectedPort: null,
+      status: 'starting',
     })
     set({ runningScripts: next })
   },
@@ -105,6 +129,13 @@ export const useScriptsStore = create<ScriptsState>((set, get) => ({
     if (!running?.taskId) return
 
     useTaskStore.getState().killTask(running.taskId)
+  },
+
+  dismissScript: (key: string) => {
+    const { runningScripts } = get()
+    const next = new Map(runningScripts)
+    next.delete(key)
+    set({ runningScripts: next })
   },
 
   selectPackage: (index: number) => set({ selectedPackageIndex: index }),
@@ -126,30 +157,38 @@ export const useScriptsStore = create<ScriptsState>((set, get) => ({
 
   handleTaskStatusChange: (taskId: string, status: string) => {
     const { runningScripts } = get()
+    const next = new Map(runningScripts)
+    let changed = false
 
-    // If a new task appeared and we have an entry with no taskId, assign it
-    if (status === 'running') {
-      for (const [key, entry] of runningScripts) {
-        if (!entry.taskId) {
-          const next = new Map(runningScripts)
-          next.set(key, { ...entry, taskId })
-          set({ runningScripts: next })
-          return
+    // First: try to find an entry that already has this taskId
+    for (const [key, entry] of next) {
+      if (entry.taskId === taskId) {
+        const mappedStatus: ScriptRunStatus =
+          status === 'completed' ? 'completed'
+            : status === 'failed' || status === 'killed' ? 'failed'
+              : 'running'
+        next.set(key, { ...entry, status: mappedStatus })
+        changed = true
+        break
+      }
+    }
+
+    // Second: if no match found, assign taskId to the first 'starting' entry
+    if (!changed) {
+      for (const [key, entry] of next) {
+        if (entry.status === 'starting' && !entry.taskId) {
+          const mappedStatus: ScriptRunStatus =
+            status === 'completed' ? 'completed'
+              : status === 'failed' || status === 'killed' ? 'failed'
+                : 'running'
+          next.set(key, { ...entry, taskId, status: mappedStatus })
+          changed = true
+          break
         }
       }
     }
 
-    // Remove completed/failed tasks from running scripts
-    if (status === 'completed' || status === 'failed' || status === 'killed') {
-      for (const [key, entry] of runningScripts) {
-        if (entry.taskId === taskId) {
-          const next = new Map(runningScripts)
-          next.delete(key)
-          set({ runningScripts: next })
-          return
-        }
-      }
-    }
+    if (changed) set({ runningScripts: next })
   },
 
   resetForProjectChange: () => set({

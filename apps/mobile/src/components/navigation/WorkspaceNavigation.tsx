@@ -1,9 +1,10 @@
 import React from 'react'
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
+import { useScriptsStore } from '../../stores/scripts'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
 import type { MainTabParamList } from '../../navigation/types'
 import {
@@ -53,6 +54,14 @@ export default function WorkspaceNavigation({
     ]).start()
     setWorkspaceNavExpanded(expanded)
   }, [expanded, labelOpacity, width])
+
+  const runningCount = useScriptsStore((s) => {
+    let count = 0
+    for (const entry of s.runningScripts.values()) {
+      if (entry.status === 'starting' || entry.status === 'running') count++
+    }
+    return count
+  })
 
   const statusColor =
     status === 'connected'
@@ -128,19 +137,26 @@ export default function WorkspaceNavigation({
                 },
               ]}
             >
-              <View
-                style={[
-                  styles.iconBox,
-                  {
-                    backgroundColor: isFocused ? colors.primary : colors.panelAlt,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                {renderTabIcon(route.name as keyof MainTabParamList, {
-                  color: isFocused ? colors.primaryText : colors.textSecondary,
-                  size: 18,
-                })}
+              <View style={styles.iconBoxWrapper}>
+                <View
+                  style={[
+                    styles.iconBox,
+                    {
+                      backgroundColor: isFocused ? colors.primary : colors.panelAlt,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  {renderTabIcon(route.name as keyof MainTabParamList, {
+                    color: isFocused ? colors.primaryText : colors.textSecondary,
+                    size: 18,
+                  })}
+                </View>
+                {route.name === 'Code' && runningCount > 0 && (
+                  <View style={[styles.badge, { backgroundColor: '#22c55e' }]}>
+                    <Text style={styles.badgeText}>{runningCount}</Text>
+                  </View>
+                )}
               </View>
 
               {expanded ? (
@@ -210,6 +226,9 @@ const styles = StyleSheet.create({
     gap: spacing[3],
     paddingHorizontal: spacing[3],
   },
+  iconBoxWrapper: {
+    position: 'relative',
+  },
   iconBox: {
     width: 36,
     height: 36,
@@ -217,6 +236,22 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
   },
   tabLabel: {
     ...typeStyles.labelStrong,

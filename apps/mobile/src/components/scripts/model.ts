@@ -48,3 +48,46 @@ export function groupByCategory(scripts: CategorizedScript[]): Map<ScriptCategor
   }
   return groups
 }
+
+// ─── Suggested Actions ──────────────────────────────────
+
+export interface SuggestedAction {
+  id: string
+  label: string
+  description: string
+  command: (pm: string) => string
+}
+
+const SUGGESTED_ACTIONS: SuggestedAction[] = [
+  {
+    id: 'install',
+    label: 'Install',
+    description: 'Install all dependencies from the lockfile',
+    command: (pm) => `${pm} install`,
+  },
+  {
+    id: 'clean-install',
+    label: 'Clean Install',
+    description: 'Remove node_modules and reinstall from scratch',
+    command: (pm) => `rm -rf node_modules && ${pm} install`,
+  },
+  {
+    id: 'outdated',
+    label: 'Outdated',
+    description: 'Check for outdated dependencies',
+    command: (pm) => `${pm} outdated`,
+  },
+  {
+    id: 'audit',
+    label: 'Audit',
+    description: 'Check for known security vulnerabilities',
+    command: (pm) => pm === 'pnpm' ? 'pnpm audit' : pm === 'yarn' ? 'yarn audit' : `${pm} audit`,
+  },
+]
+
+export function getSuggestedActions(packageManager: string): Array<SuggestedAction & { resolvedCommand: string }> {
+  return SUGGESTED_ACTIONS.map((action) => ({
+    ...action,
+    resolvedCommand: action.command(packageManager),
+  }))
+}

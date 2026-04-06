@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Text, View, StyleSheet } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
@@ -7,9 +7,11 @@ import TasksScreen from '../screens/TasksScreen'
 import CodeScreen from '../screens/CodeScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import { useConnectionStore } from '../stores/connection'
+import { useScriptsStore } from '../stores/scripts'
 import type { MainTabParamList } from './types'
 import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import WorkspaceNavigation from '../components/navigation/WorkspaceNavigation'
+import RunningScriptsSheet from '../components/scripts/RunningScriptsSheet'
 import { renderTabIcon } from './tab-icons'
 import { typeStyles } from '../theme/typography'
 
@@ -46,8 +48,21 @@ function renderStatusDot() {
 export default function MainTabs() {
   const { colors } = useTheme()
   const { isTabletDevice } = useAdaptiveLayout()
+  const runningCount = useScriptsStore((s) => {
+    let count = 0
+    for (const entry of s.runningScripts.values()) {
+      if (entry.status === 'starting' || entry.status === 'running') count++
+    }
+    return count
+  })
+  const [scriptsSheetVisible, setScriptsSheetVisible] = useState(false)
 
   return (
+    <>
+    <RunningScriptsSheet
+      visible={scriptsSheetVisible}
+      onClose={() => setScriptsSheetVisible(false)}
+    />
     <Tab.Navigator
       tabBar={isTabletDevice ? renderWorkspaceTabBar : undefined}
       screenOptions={{
@@ -84,6 +99,13 @@ export default function MainTabs() {
         options={{
           title: 'Code',
           tabBarIcon: ({ color, size }) => renderTabIcon('Code', { color, size }),
+          tabBarBadge: runningCount > 0 ? runningCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#22c55e' },
+        }}
+        listeners={{
+          tabLongPress: () => {
+            if (runningCount > 0) setScriptsSheetVisible(true)
+          },
         }}
       />
       <Tab.Screen
@@ -97,6 +119,7 @@ export default function MainTabs() {
         }}
       />
     </Tab.Navigator>
+    </>
   )
 }
 
