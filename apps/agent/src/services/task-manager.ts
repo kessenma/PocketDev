@@ -1,9 +1,10 @@
 import { insertTask, getRecentTasks, getToolPath, getProject } from '../db/index.ts'
 import { ManagedProcess } from './managed-process.ts'
+import { ManagedTmuxProcess } from './managed-tmux-process.ts'
 import { getActiveProjectId } from './projects.ts'
 
 /** Active processes keyed by task ID */
-const processes = new Map<string, ManagedProcess>()
+const processes = new Map<string, ManagedProcess | ManagedTmuxProcess>()
 
 type TaskMode = 'default' | 'plan'
 
@@ -52,13 +53,20 @@ export function startTask(
   const cwd = workingDirectory ?? project?.absolutePath ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
   insertTask(taskId, prompt, agentType, mode, cwd, project?.id ?? null, project?.name ?? null, model)
 
-  const command = buildCommand(agentType, prompt, model, mode)
-  console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
-  console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
-  const proc = new ManagedProcess({ taskId, command, cwd, mode, agentType })
-  processes.set(taskId, proc)
-
-  proc.start()
+  if (agentType === 'copilot') {
+    console.log(`[task-manager] Starting copilot tmux task ${taskId}`)
+    console.log(`[task-manager]   cwd=${cwd} mode=${mode} agent=${agentType}`)
+    const proc = new ManagedTmuxProcess({ taskId, prompt, cwd, mode })
+    processes.set(taskId, proc)
+    proc.start()
+  } else {
+    const command = buildCommand(agentType, prompt, model, mode)
+    console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
+    console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
+    const proc = new ManagedProcess({ taskId, command, cwd, mode, agentType })
+    processes.set(taskId, proc)
+    proc.start()
+  }
 
   return taskId
 }
@@ -77,6 +85,6 @@ export function getTaskList() {
 }
 
 /** Get a specific active process */
-export function getProcess(taskId: string): ManagedProcess | undefined {
+export function getProcess(taskId: string): ManagedProcess | ManagedTmuxProcess | undefined {
   return processes.get(taskId)
 }

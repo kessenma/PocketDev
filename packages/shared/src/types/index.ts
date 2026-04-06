@@ -68,6 +68,9 @@ export type {
   PkgInstallResult,
   PkgWizardStep,
   PkgWizardStepStatus,
+  DockerSetupStatus,
+  DockerWizardStep,
+  DockerWizardStepStatus,
 } from './setup.js'
 export type {
   PlanStepKind,
@@ -133,6 +136,10 @@ export type {
   CreateProjectBranchRequest,
   ProjectMutationResult,
 } from './projects.js'
+export type {
+  ScriptPackageInfo,
+  ScriptsResponse,
+} from './scripts.js'
 export type {
   ContainerStatus,
   ContainerLogsDirection,

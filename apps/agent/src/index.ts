@@ -17,10 +17,12 @@ import { copilotSetupRoutes } from './routes/copilot-setup.ts'
 import { codexSetupRoutes } from './routes/codex-setup.ts'
 import { pkgSetupRoutes } from './routes/pkg-setup.ts'
 import { pythonSetupRoutes } from './routes/python-setup.ts'
+import { dockerSetupRoutes } from './routes/docker-setup.ts'
 import { serverActionsRoutes } from './routes/server-actions.ts'
 import { planRoutes } from './routes/plans.ts'
 import { taskRoutes } from './routes/tasks.ts'
 import { projectRoutes } from './routes/projects.ts'
+import { scriptRoutes } from './routes/scripts.ts'
 import { screenshotRoutes } from './services/preview-screenshot.ts'
 import { consoleRoutes, consoleStaticRoutes } from './routes/console.ts'
 import { passkeyRoutes } from './routes/passkey.ts'
@@ -72,10 +74,12 @@ new Elysia()
       .use(codexSetupRoutes)
       .use(pkgSetupRoutes)
       .use(pythonSetupRoutes)
+      .use(dockerSetupRoutes)
       .use(serverActionsRoutes)
       .use(planRoutes)
       .use(taskRoutes)
       .use(projectRoutes)
+      .use(scriptRoutes)
       .use(fileRoutes)
     )
     // WebSocket routes

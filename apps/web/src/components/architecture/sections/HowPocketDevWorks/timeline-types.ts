@@ -1,0 +1,39 @@
+import type { ReactNode } from 'react'
+import type { ExplainerStageProps } from './explainers/types'
+
+export type SceneRenderProps = {
+  /** 0–1 progress through this scene's active scroll range */
+  progress: number
+  /** True when the scene is in its scroll range */
+  active: boolean
+  /** Whether the viewport is >= 1024px */
+  isDesktopLayout: boolean
+  /** Raw 0–1 overall scroll progress */
+  railProgress: number
+}
+
+export type SceneConfig = {
+  id: string
+  kind: 'explainer' | 'takeover'
+  /** Relative scroll budget — higher = more scroll time. Default 1. */
+  weight?: number
+  /** Fraction of the scroll budget that is hold (stationary) vs slide. Default 0.6. */
+  holdRatio?: number
+  /** Extra classes on the panel wrapper div */
+  panelClassName?: string
+  /** ExplainerStage props — required when kind='explainer' */
+  explainer?: Omit<ExplainerStageProps, 'children'>
+  /** Takeover scenes in reduced-motion: wrap in full-width container */
+  reducedMotionFullBleed?: boolean
+  /** The scene content */
+  render: (props: SceneRenderProps) => ReactNode
+}
+
+export type SceneRange = {
+  /** Scroll progress where this scene starts */
+  start: number
+  /** Scroll progress where this scene ends */
+  end: number
+  /** Scroll progress where the hold phase ends and sliding begins */
+  holdEnd: number
+}

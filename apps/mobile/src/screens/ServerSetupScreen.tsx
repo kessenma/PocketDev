@@ -12,6 +12,8 @@ import CopilotWizardSheet from '../components/setup/CopilotWizardSheet'
 import CodexWizardSheet from '../components/setup/CodexWizardSheet'
 import PythonWizardSheet from '../components/setup/PythonWizardSheet'
 import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
+import DockerWizardSheet from '../components/setup/DockerWizardSheet'
+import DockerSetupAnimation from '../components/animations/DockerSetupAnimation'
 import PackageInstallAnimation from '../components/animations/PackageInstallAnimation'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
@@ -50,6 +52,8 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showCopilotWizard, setShowCopilotWizard] = useState(false)
   const [showPkgWizard, setShowPkgWizard] = useState(false)
   const [showPkgAnimation, setShowPkgAnimation] = useState(false)
+  const [showDockerWizard, setShowDockerWizard] = useState(false)
+  const [showDockerAnimation, setShowDockerAnimation] = useState(false)
   const [showPythonWizard, setShowPythonWizard] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
@@ -156,6 +160,21 @@ export default function ServerSetupScreen({ navigation }: Props) {
 
   const handlePkgAnimationComplete = useCallback(() => {
     setShowPkgAnimation(false)
+  }, [])
+
+  const handleDockerWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening Docker wizard')
+    setShowDockerWizard(true)
+  }, [])
+
+  const handleDockerWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] Docker wizard complete')
+    setShowDockerWizard(false)
+    setShowDockerAnimation(true)
+  }, [])
+
+  const handleDockerAnimationComplete = useCallback(() => {
+    setShowDockerAnimation(false)
   }, [])
 
   const handlePythonWizard = useCallback(() => {
@@ -288,6 +307,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onBlockedCopilotWizard={handleBlockedCopilotWizard}
           onPkgWizard={handlePkgWizard}
           onPythonWizard={handlePythonWizard}
+          onDockerWizard={handleDockerWizard}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
             { useNativeDriver: false },
@@ -366,6 +386,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onClose={() => setShowPythonWizard(false)}
           onComplete={handlePythonWizardComplete}
         />
+
+        <DockerWizardSheet
+          visible={showDockerWizard}
+          onClose={() => setShowDockerWizard(false)}
+          onComplete={handleDockerWizardComplete}
+        />
       </View>
       {showConnected && <ConnectedAnimation onComplete={handleConnectedComplete} />}
       {showGitHubAnimation && (
@@ -373,6 +399,9 @@ export default function ServerSetupScreen({ navigation }: Props) {
       )}
       {showPkgAnimation && (
         <PackageInstallAnimation onComplete={handlePkgAnimationComplete} />
+      )}
+      {showDockerAnimation && (
+        <DockerSetupAnimation onComplete={handleDockerAnimationComplete} />
       )}
     </AnimatedGradientBackground>
   )

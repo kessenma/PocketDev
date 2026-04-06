@@ -12,6 +12,7 @@ function toAvailability(row: ToolPathRow | undefined): ProviderAvailability {
 function buildProviders(): ServerProvider[] {
   const claude = getToolRecord('claude_cli')
   const codex = getToolRecord('codex_cli')
+  const copilot = getToolRecord('copilot_cli')
 
   return [
     {
@@ -25,6 +26,12 @@ function buildProviders(): ServerProvider[] {
       label: 'Codex',
       availability: toAvailability(codex),
       version: codex?.version ?? null,
+    },
+    {
+      id: 'copilot',
+      label: 'GitHub Copilot',
+      availability: toAvailability(copilot),
+      version: copilot?.version ?? null,
     },
   ]
 }

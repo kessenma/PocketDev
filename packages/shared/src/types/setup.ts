@@ -343,3 +343,18 @@ export interface PkgInstallResult {
 
 export type PkgWizardStep = 'detect' | 'review' | 'install' | 'verify'
 export type PkgWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
+// ─── Docker wizard types ─────────────────────────────────────────
+
+export interface DockerSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  daemon_running: boolean
+  has_compose: boolean
+  compose_version: string | null
+  user_in_docker_group: boolean
+}
+
+export type DockerWizardStep = 'detect' | 'install' | 'start-daemon' | 'add-user-group' | 'verify'
+export type DockerWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'

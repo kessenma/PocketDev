@@ -53,6 +53,8 @@ import type {
   PkgManagerStatus,
   PkgInstallTool,
   PkgInstallResult,
+  DockerSetupStatus,
+  ScriptsResponse,
 } from '@pocketdev/shared/types'
 
 // Module-level HTTPS flag — set once when connection is established
@@ -469,6 +471,16 @@ export async function runServerAction(ip: string, port: number, actionId: string
   return response.json() as Promise<ServerActionResult>
 }
 
+// ─── Scripts ────────────────────────────────────────────
+
+export async function fetchScripts(ip: string, port: number): Promise<ScriptsResponse> {
+  const response = await fetch(apiUrl(ip, port, '/scripts/'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch scripts (${response.status})`)
+  return response.json() as Promise<ScriptsResponse>
+}
+
 // ─── Plans ───────────────────────────────────────────────
 
 export async function fetchActivePlan(ip: string, port: number): Promise<PlanEntry | null> {
@@ -858,4 +870,23 @@ export async function postInstallPkgTool(
   })
   if (!response.ok) throw new Error(`Failed to install ${tool} (${response.status})`)
   return response.json() as Promise<PkgInstallResult>
+}
+
+// ─── Docker Setup ──────────────────────────────────────────────────
+
+export async function fetchDockerSetupStatus(ip: string, port: number): Promise<DockerSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/docker-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Docker status (${response.status})`)
+  return response.json() as Promise<DockerSetupStatus>
+}
+
+export async function postVerifyDocker(ip: string, port: number): Promise<DockerSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/docker-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify Docker (${response.status})`)
+  return response.json() as Promise<DockerSetupStatus>
 }

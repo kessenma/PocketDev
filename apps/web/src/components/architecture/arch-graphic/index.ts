@@ -1,1 +1,0 @@
-export { ArchGraphic } from './ArchGraphic'

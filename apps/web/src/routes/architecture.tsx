@@ -12,37 +12,39 @@ import {
   SiGithubcopilotHex,
 } from '@icons-pack/react-simple-icons'
 import { buttonVariants } from '#/components/ui/button'
-import { brandAssets } from '#/components/architecture/brand-assets'
-import { BrandAssetIcon } from '#/components/architecture/BrandAssetIcon'
-import { SystemOverview } from '#/components/architecture/SystemOverview'
-import { AgentEndpoints } from '#/components/architecture/AgentEndpoints'
-import { HowPocketDevWorks } from '#/components/architecture/HowPocketDevWorks'
-import { SecurityModel } from '#/components/architecture/SecurityModel'
-import { SetupReadiness } from '#/components/architecture/SetupReadiness'
-import { WireProtocol } from '#/components/architecture/WireProtocol'
-import { TechStack } from '#/components/architecture/TechStack'
+import { ArchitectureHeroAnimation } from '#/components/architecture/animations/ArchitectureHeroAnimation'
+import {
+  AgentEndpointsSection,
+  HowPocketDevWorksSection,
+  SecurityModelSection,
+  SetupReadinessSection,
+  SystemOverviewSection,
+  TechStackSection,
+  WireProtocolSection,
+} from '#/components/architecture/sections'
+import { brandAssets } from '#/components/architecture/shared/brand-assets'
+import { BrandAssetIcon } from '#/components/architecture/shared/BrandAssetIcon'
 import { Footer } from '#/components/landing/Footer'
-import { ArchGraphic } from '#/components/architecture/arch-graphic'
 import {
   architectureTextStyles,
   architectureTokens,
   blendHexColors,
-} from '#/components/architecture/theme'
+} from '#/components/architecture/shared/theme'
 
 export const Route = createFileRoute('/architecture')({
   component: ArchitecturePage,
 })
 
 function ArchitecturePage() {
-  const [remoteAiTakeoverProgress, setRemoteAiTakeoverProgress] = useState(0)
+  const [lowerPageTakeoverProgress, setLowerPageTakeoverProgress] = useState(0)
   const lowerPageStyle: CSSProperties & Record<string, string | number> = {
-    '--architecture-paper': blendHexColors('#f7f1e3', architectureTokens.colors.blue, remoteAiTakeoverProgress),
-    '--architecture-panel-alt': blendHexColors('#efe5cb', architectureTokens.colors.blue, Math.min(1, remoteAiTakeoverProgress * 1.12)),
-    '--architecture-text': blendHexColors('#201d18', '#ffffff', remoteAiTakeoverProgress),
-    '--architecture-text-secondary': blendHexColors('#5c5549', '#dbeafe', remoteAiTakeoverProgress),
-    '--architecture-border': blendHexColors('#b7aa91', '#93c5fd', remoteAiTakeoverProgress),
-    '--architecture-surface': `rgba(255,255,255, ${0.02 + remoteAiTakeoverProgress * 0.06})`,
-    backgroundColor: blendHexColors('#f7f1e3', architectureTokens.colors.blue, remoteAiTakeoverProgress),
+    '--architecture-paper': blendHexColors('#f7f1e3', architectureTokens.colors.blue, lowerPageTakeoverProgress),
+    '--architecture-panel-alt': blendHexColors('#efe5cb', architectureTokens.colors.blue, Math.min(1, lowerPageTakeoverProgress * 1.12)),
+    '--architecture-text': blendHexColors('#201d18', '#ffffff', lowerPageTakeoverProgress),
+    '--architecture-text-secondary': blendHexColors('#5c5549', '#dbeafe', lowerPageTakeoverProgress),
+    '--architecture-border': blendHexColors('#b7aa91', '#93c5fd', lowerPageTakeoverProgress),
+    '--architecture-surface': `rgba(255,255,255, ${0.02 + lowerPageTakeoverProgress * 0.06})`,
+    backgroundColor: blendHexColors('#f7f1e3', architectureTokens.colors.blue, lowerPageTakeoverProgress),
   }
 
   return (
@@ -79,7 +81,7 @@ function ArchitecturePage() {
           agent, your files on the server, and the external AI providers that
           power coding workflows from anywhere.
         </p>
-        <ArchGraphic className="mt-12 w-full max-w-lg" />
+        <ArchitectureHeroAnimation className="mt-12 w-full max-w-lg" />
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <IconPill
             icon={<SiApple size={14} color={`#${SiAppleHex}`} />}
@@ -104,15 +106,15 @@ function ArchitecturePage() {
         </div>
       </header>
 
-      <SystemOverview />
-      <HowPocketDevWorks onRemoteAiTakeoverChange={setRemoteAiTakeoverProgress} />
+      <SystemOverviewSection />
+      <HowPocketDevWorksSection onLowerPageTakeoverChange={setLowerPageTakeoverProgress} />
 
       <div style={lowerPageStyle}>
-        <SetupReadiness />
-        <AgentEndpoints />
-        <SecurityModel />
-        <WireProtocol />
-        <TechStack />
+        <SetupReadinessSection />
+        <AgentEndpointsSection />
+        <SecurityModelSection />
+        <WireProtocolSection />
+        <TechStackSection />
 
         <div className="flex justify-center px-6 py-12">
           <a href="/" className={buttonVariants({ variant: 'outline', size: 'lg' })}>

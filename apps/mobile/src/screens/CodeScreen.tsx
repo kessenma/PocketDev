@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useTheme } from '../contexts/ThemeContext'
 import { FileWorkspace } from '../components/files'
 import { GitWorkspace } from '../components/git'
+import { ScriptsWorkspace } from '../components/scripts'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import ProjectContextBanner from '../components/projects/ProjectContextBanner'
 import ServerSegmentedControl from '../components/server-actions/ServerSegmentedControl'
@@ -25,6 +26,7 @@ type Props = {
 const VIEW_OPTIONS = [
   { value: 'files', label: 'Files' },
   { value: 'git', label: 'Git' },
+  { value: 'scripts', label: 'Scripts' },
 ] as const
 
 export default function CodeScreen({ navigation }: Props) {
@@ -33,7 +35,7 @@ export default function CodeScreen({ navigation }: Props) {
   const refreshGit = useGitStore((state) => state.refresh)
   const refreshProjects = useProjectsStore((state) => state.refresh)
   const currentBranch = useGitStore((state) => state.branches.find((b) => b.current)?.name ?? 'No branch')
-  const [activeView, setActiveView] = React.useState<'files' | 'git'>('files')
+  const [activeView, setActiveView] = React.useState<'files' | 'git' | 'scripts'>('files')
 
   React.useEffect(() => {
     void Promise.allSettled([
@@ -59,8 +61,10 @@ export default function CodeScreen({ navigation }: Props) {
             onOpenProjects={() => navigation.navigate('Projects')}
             currentBranch={currentBranch}
           />
-        ) : (
+        ) : activeView === 'git' ? (
           <GitWorkspace />
+        ) : (
+          <ScriptsWorkspace />
         )}
       </View>
     </AdaptiveShell>

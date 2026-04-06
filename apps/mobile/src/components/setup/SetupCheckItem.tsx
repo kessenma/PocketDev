@@ -38,6 +38,7 @@ interface Props {
   onBlockedCopilotWizard?: (tool: ToolCheck) => void
   onPkgWizard?: (tool: ToolCheck) => void
   onPythonWizard?: (tool: ToolCheck) => void
+  onDockerWizard?: (tool: ToolCheck) => void
   disabledReason?: string | null
 }
 
@@ -85,6 +86,7 @@ export default function SetupCheckItem({
   onBlockedCopilotWizard,
   onPkgWizard,
   onPythonWizard,
+  onDockerWizard,
   disabledReason,
 }: Props) {
   const { colors, isDark } = useTheme()
@@ -122,7 +124,11 @@ export default function SetupCheckItem({
   const pythonNeedsAction = isPython && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showPythonWizard = isPython && !!onPythonWizard
 
-  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython
+  const isDocker = tool.id === 'docker'
+  const dockerNeedsAction = isDocker && (tool.status === 'missing' || tool.status === 'misconfigured')
+  const showDockerWizard = isDocker && !!onDockerWizard
+
+  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython || isDocker
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -301,6 +307,20 @@ export default function SetupCheckItem({
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
               {pythonNeedsAction ? 'Enable Python' : 'Open Python'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {showDockerWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onDockerWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>
+              {dockerNeedsAction ? 'Enable Docker' : 'Open Docker'}
             </Text>
           </TouchableOpacity>
         </View>

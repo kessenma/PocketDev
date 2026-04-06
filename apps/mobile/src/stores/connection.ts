@@ -9,6 +9,7 @@ import { useContainerStore } from './containers'
 import { useSetupStore } from './setup'
 import { usePlanStore } from './plan'
 import { useNewTaskDraftStore } from './new-task-draft'
+import { useScriptsStore } from './scripts'
 
 interface ConnectionState {
   status: ConnectionStatus
@@ -89,20 +90,21 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 function handleWsMessage(message: WsMessage) {
   const tasks = useTaskStore.getState()
   const containers = useContainerStore.getState()
+  const scripts = useScriptsStore.getState()
 
   switch (message.type) {
-    case 'task.output':
-      tasks.appendLog(
-        (message.payload as { task_id: string }).task_id,
-        (message.payload as { data: string }).data,
-      )
+    case 'task.output': {
+      const { task_id, data } = message.payload as { task_id: string; data: string }
+      tasks.appendLog(task_id, data)
+      scripts.handleTaskOutput(task_id, data)
       break
-    case 'task.status_changed':
-      tasks.updateTaskStatus(
-        (message.payload as { task_id: string }).task_id,
-        (message.payload as { status: string }).status as any,
-      )
+    }
+    case 'task.status_changed': {
+      const { task_id, status } = message.payload as { task_id: string; status: string }
+      tasks.updateTaskStatus(task_id, status as any)
+      scripts.handleTaskStatusChange(task_id, status)
       break
+    }
     case 'task.permission_request':
       tasks.addPermissionRequest(
         (message.payload as { taskId: string }).taskId,

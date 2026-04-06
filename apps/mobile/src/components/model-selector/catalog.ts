@@ -104,6 +104,21 @@ export const MODEL_PROVIDERS: ModelProvider[] = [
       },
     ],
   },
+  {
+    id: 'copilot',
+    label: 'GitHub Copilot',
+    summary: 'GitHub Copilot coding agent running as a TUI session via tmux.',
+    models: [
+      {
+        id: 'copilot-default',
+        cliModelId: 'default',
+        name: 'GitHub Copilot',
+        headline: 'GitHub\'s AI coding agent',
+        description: 'Runs as a TUI inside tmux. Model selection is managed by GitHub.',
+        contextWindow: 'Managed by GitHub',
+      },
+    ],
+  },
 ]
 
 export function getProviderById(providerId: ModelProviderId): ModelProvider {

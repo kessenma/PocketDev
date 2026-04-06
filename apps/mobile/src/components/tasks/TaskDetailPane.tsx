@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { ShieldAlert } from 'lucide-react-native'
+import { Info, ShieldAlert } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
 import BauhausBadge from '../shared/BauhausBadge'
@@ -125,6 +125,15 @@ export default function TaskDetailPane({
               Dismiss
             </BauhausButton>
           </View>
+        </View>
+      )}
+
+      {task.agent_type === 'copilot' && (
+        <View style={[styles.copilotBanner, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
+          <Info color={colors.textTertiary} size={16} strokeWidth={2.25} />
+          <Text style={[styles.copilotBannerText, { color: colors.textSecondary }]}>
+            Copilot runs as a TUI session in tmux. Task completion is auto-detected when the agent returns to idle.
+          </Text>
         </View>
       )}
 
@@ -258,6 +267,20 @@ const styles = StyleSheet.create({
   permissionActions: {
     flexDirection: 'row',
     gap: spacing[2],
+  },
+  copilotBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[2],
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[3],
+  },
+  copilotBannerText: {
+    ...typeStyles.bodySmall,
+    flex: 1,
   },
   logList: {
     flex: 1,

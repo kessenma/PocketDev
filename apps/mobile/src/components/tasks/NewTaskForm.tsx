@@ -50,6 +50,7 @@ type Props = {
 const PROVIDER_LOGOS: Record<string, { light: ReturnType<typeof require>; dark: ReturnType<typeof require> }> = {
   claude: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
   codex: { light: Assets.codexBlack, dark: Assets.codexWhite },
+  copilot: { light: Assets.githubCopilotBlack, dark: Assets.githubCopilotWhite },
 }
 
 export default function NewTaskForm({ onSubmitted }: Props) {
@@ -543,6 +544,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
 function providerToAgentType(providerId: string): AgentType {
   if (providerId === 'codex') return 'codex'
   if (providerId === 'claude') return 'claude'
+  if (providerId === 'copilot') return 'copilot'
   return 'codex'
 }
 

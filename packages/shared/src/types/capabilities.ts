@@ -1,6 +1,6 @@
 export type ProviderAvailability = 'available' | 'installed_no_auth' | 'not_installed'
 
-export type ServerProviderId = 'claude' | 'codex'
+export type ServerProviderId = 'claude' | 'codex' | 'copilot'
 
 export interface ServerProvider {
   id: ServerProviderId

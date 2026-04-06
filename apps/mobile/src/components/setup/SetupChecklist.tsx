@@ -28,6 +28,7 @@ interface Props {
   onBlockedCopilotWizard: (tool: ToolCheck) => void
   onPkgWizard: (tool: ToolCheck) => void
   onPythonWizard: (tool: ToolCheck) => void
+  onDockerWizard: (tool: ToolCheck) => void
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
 }
 
@@ -42,6 +43,7 @@ export default function SetupChecklist({
   onBlockedCopilotWizard,
   onPkgWizard,
   onPythonWizard,
+  onDockerWizard,
   onScroll,
 }: Props) {
   const { colors } = useTheme()
@@ -89,6 +91,7 @@ export default function SetupChecklist({
         onBlockedCopilotWizard={onBlockedCopilotWizard}
         onPkgWizard={onPkgWizard}
         onPythonWizard={onPythonWizard}
+        onDockerWizard={onDockerWizard}
         disabledReason={
           tool.id === 'codex_cli'
             ? codexBlockedReason
