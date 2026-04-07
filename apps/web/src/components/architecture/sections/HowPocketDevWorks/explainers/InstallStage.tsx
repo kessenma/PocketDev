@@ -29,7 +29,7 @@ export function InstallStage({
   const sceneProgress = reduceMotion ? 1 : progress
   const shellReveal = mapProgress(sceneProgress, 0.04, 0.24)
   const tapProgress = mapProgress(sceneProgress, 0.3, 0.58)
-  const birthProgress = mapProgress(sceneProgress, 0.62, 0.9)
+  const birthProgress = mapProgress(sceneProgress, 0.35, 0.7)
   const settled = birthProgress > 0.96
   const tapX = 296
   const tapY = 106
