@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { View } from 'react-native'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { useTheme } from '../contexts/ThemeContext'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
@@ -13,15 +13,9 @@ export default function NewTaskScreen({ navigation }: Props) {
 
   return (
     <AdaptiveShell style={{ backgroundColor: colors.background }} maxWidth={960}>
-      <View style={styles.container}>
+      <View style={{ flex: 1 }}>
         <NewTaskForm onSubmitted={() => navigation.goBack()} />
       </View>
     </AdaptiveShell>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-})
