@@ -437,6 +437,25 @@ export async function fetchSetupDebug(): Promise<SetupDebugInfo> {
   return res.json()
 }
 
+// ─── Python debug ──────────────────────────────────────
+
+export interface PythonDebugInfo {
+  installed: boolean
+  version: string | null
+  path: string | null
+  pip_installed: boolean
+  pip_version: string | null
+  pip_path: string | null
+  venv_available: boolean
+  ppa_added: boolean
+}
+
+export async function fetchPythonDebug(): Promise<PythonDebugInfo> {
+  const res = await get('/debug/python')
+  if (!res.ok) throw new Error('Failed to fetch Python debug')
+  return res.json()
+}
+
 export interface RepoSummary {
   repoName: string
   repoPath: string

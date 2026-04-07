@@ -1,6 +1,6 @@
 import { useId, useEffect, useState } from 'react'
 import { palette } from '@pocketdev/shared/theme'
-import { architectureTokens } from '../../shared/theme'
+import { architectureTokens } from '../../../shared/theme'
 
 const PROMPT_TEXT = 'why login is getting a 500 error?'
 const SUGGESTED_FILES = [
@@ -334,7 +334,7 @@ function TaskFlowCopy({
         letterSpacing="0.22em"
         opacity="0.86"
       >
-        ON-DEVICE AI FILE CONTEXT
+        FROM PHONE TO SERVER
       </text>
 
       {/* Title */}

@@ -1,3 +1,11 @@
+/**
+ * SVG text rendered in this component:
+ *
+ * Server ready.
+ * Repos cloned.
+ * Now...
+ * Code from anywhere, on any device.
+ */
 export function TextGroup({
   color,
   centerX,
@@ -25,7 +33,7 @@ export function TextGroup({
         letterSpacing="0.22em"
         opacity="0.68"
       >
-        Once the server is setup,
+        Server ready.
       </text>
       <text
         x={baseX + (isDesktop ? 40 : 20)}
@@ -34,7 +42,7 @@ export function TextGroup({
         fontSize={isDesktop ? 20 : 16}
         opacity="0.76"
       >
-        the repos are cloned,
+        Repos cloned.
       </text>
       <text
         x={baseX + (isDesktop ? 80 : 40)}
@@ -43,7 +51,7 @@ export function TextGroup({
         fontSize={isDesktop ? 22 : 17}
         opacity="0.84"
       >
-        then
+        Now...
       </text>
       <text
         x={baseX}
@@ -53,9 +61,8 @@ export function TextGroup({
         fontWeight="700"
         letterSpacing="-0.03em"
       >
-        <tspan x={baseX} dy="0">PocketDev&apos;s can expand</tspan>
-        <tspan x={baseX} dy={headingLineHeight}>their capabilities</tspan>
-        <tspan x={baseX} dy={headingLineHeight}>beyond the laptop.</tspan>
+        <tspan x={baseX} dy="0">Code from anywhere,</tspan>
+        <tspan x={baseX} dy={headingLineHeight}>on any device.</tspan>
       </text>
     </g>
   )

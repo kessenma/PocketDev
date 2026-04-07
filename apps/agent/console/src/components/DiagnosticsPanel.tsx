@@ -12,6 +12,7 @@ import {
   fetchTerminalDebug,
   fetchTasksDebug,
   fetchSetupDebug,
+  fetchPythonDebug,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
@@ -21,6 +22,7 @@ import {
   type TerminalDebugEntry,
   type TasksDebugInfo,
   type SetupDebugInfo,
+  type PythonDebugInfo,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Bug, Maximize2, RefreshCw, Smartphone, Waves, KeyRound, Sparkles } from 'lucide-react'
@@ -28,8 +30,9 @@ import { ClaudeDiagnosticsTab } from '#/components/diagnostics/ClaudeDiagnostics
 import { CodexDiagnosticsTab } from '#/components/diagnostics/CodexDiagnosticsTab'
 import { SetupDiagnosticsTab } from '#/components/diagnostics/SetupDiagnosticsTab'
 import { TasksDiagnosticsTab } from '#/components/diagnostics/TasksDiagnosticsTab'
+import { LanguagesDiagnosticsTab } from '#/components/diagnostics/LanguagesDiagnosticsTab'
 
-type DiagnosticsTab = 'terminal' | 'setup' | 'tasks' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot'
+type DiagnosticsTab = 'terminal' | 'setup' | 'tasks' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot' | 'languages'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -53,6 +56,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [projectsInfo, setProjectsInfo] = useState<ProjectsDebugInfo | null>(null)
   const [tasksInfo, setTasksInfo] = useState<TasksDebugInfo | null>(null)
   const [setupInfo, setSetupInfo] = useState<SetupDebugInfo | null>(null)
+  const [pythonInfo, setPythonInfo] = useState<PythonDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,11 +76,12 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
       fetchProjectsDebug(),
       fetchTasksDebug(),
       fetchSetupDebug(),
+      fetchPythonDebug(),
     ])
 
     const failures: string[] = []
 
-    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult] = results
+    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult] = results
 
     if (authResult.status === 'fulfilled') setInfo(authResult.value)
     else failures.push(`auth: ${authResult.reason instanceof Error ? authResult.reason.message : 'failed'}`)
@@ -104,6 +109,9 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
     if (setupResult.status === 'fulfilled') setSetupInfo(setupResult.value)
     else failures.push(`setup: ${setupResult.reason instanceof Error ? setupResult.reason.message : 'failed'}`)
+
+    if (pythonResult.status === 'fulfilled') setPythonInfo(pythonResult.value)
+    else failures.push(`python: ${pythonResult.reason instanceof Error ? pythonResult.reason.message : 'failed'}`)
 
     setLastUpdated(new Date().toISOString())
     setError(failures.length ? `Partial refresh failure: ${failures.join(' | ')}` : null)
@@ -180,6 +188,14 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return parts.length ? parts.join(' · ') : 'No providers configured'
   }, [setupInfo])
 
+  const languagesSummary = useMemo(() => {
+    if (!pythonInfo) return 'No language data yet.'
+    if (pythonInfo.installed) {
+      return `Python ${pythonInfo.version}${pythonInfo.pip_installed ? ' + pip' : ''}`
+    }
+    return 'Python not installed'
+  }, [pythonInfo])
+
   const copilotSummary = useMemo(() => {
     if (!copilotInfo) return 'No Copilot trust diagnostics yet.'
     if (copilotInfo.activeSessionCount > 0) {
@@ -216,8 +232,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d] p-1">
-            {(['terminal', 'tasks', 'setup', 'claude', 'codex', 'copilot', 'github', 'registry'] as const).map((tab) => {
-              const label = tab === 'terminal' ? 'Terminal' : tab === 'tasks' ? 'Tasks' : tab === 'setup' ? 'Setup' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : 'Registry'
+            {(['terminal', 'tasks', 'setup', 'languages', 'claude', 'codex', 'copilot', 'github', 'registry'] as const).map((tab) => {
+              const label = tab === 'terminal' ? 'Terminal' : tab === 'tasks' ? 'Tasks' : tab === 'setup' ? 'Setup' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : 'Registry'
               return (
                 <Button
                   key={tab}
@@ -259,7 +275,9 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
               ? tasksSummary
               : activeTab === 'setup'
                 ? setupSummary
-                : activeTab === 'claude'
+                : activeTab === 'languages'
+                  ? languagesSummary
+                  : activeTab === 'claude'
                   ? claudeSummary
                   : activeTab === 'codex'
                     ? codexSummary
@@ -335,6 +353,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
           <TasksDiagnosticsTab tasksInfo={tasksInfo} onRefresh={refresh} />
         ) : activeTab === 'setup' ? (
           <SetupDiagnosticsTab setupInfo={setupInfo} />
+        ) : activeTab === 'languages' ? (
+          <LanguagesDiagnosticsTab pythonInfo={pythonInfo} />
         ) : activeTab === 'claude' ? (
           <ClaudeDiagnosticsTab claudeInfo={claudeInfo} />
         ) : activeTab === 'codex' ? (

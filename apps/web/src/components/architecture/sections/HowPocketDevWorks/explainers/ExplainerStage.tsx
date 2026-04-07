@@ -90,28 +90,18 @@ export function ExplainerStage({
 }
 
 export function ExplainerBackdrop({ hideFrame = false }: { hideFrame?: boolean }) {
+  if (hideFrame) return null
   return (
-    <>
-      {hideFrame ? null : (
-        <rect
-          x="12"
-          y="12"
-          width="296"
-          height="176"
-          rx="22"
-          fill="none"
-          stroke={architectureTokens.colors.border}
-          strokeOpacity="0.6"
-          strokeWidth="1.5"
-        />
-      )}
-      <circle
-        cx="252"
-        cy="56"
-        r="44"
-        fill={architectureTokens.colors.yellow}
-        fillOpacity="0.08"
-      />
-    </>
+    <rect
+      x="12"
+      y="12"
+      width="296"
+      height="176"
+      rx="22"
+      fill="none"
+      stroke={architectureTokens.colors.border}
+      strokeOpacity="0.6"
+      strokeWidth="1.5"
+    />
   )
 }

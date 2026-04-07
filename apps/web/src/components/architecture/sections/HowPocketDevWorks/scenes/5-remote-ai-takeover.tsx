@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { architectureTokens } from '../../../shared/theme'
-import { RemoteAiStage } from '../explainers/RemoteAiStage'
+import { RemoteAiStage } from '../explainers/5-RemoteAiStage'
 import { TextGroup } from '../shared/TextGroup'
 import { BauhausLaptop } from '../shared/BauhausLaptop'
 import type { SceneConfig } from '../timeline-types'
@@ -13,7 +13,7 @@ export function RemoteAiTakeoverScene({
   isDesktopLayout: boolean
 }) {
   const clipId = useId()
-  const eased = takeoverProgress * takeoverProgress * takeoverProgress
+  const eased = takeoverProgress * takeoverProgress
 
   const vbW = isDesktopLayout ? 1200 : 750
   const vbH = 1200
@@ -24,7 +24,7 @@ export function RemoteAiTakeoverScene({
   const textBottomY = textCenterY + (isDesktopLayout ? 132 : 84)
   const circleCenterY = textBottomY + (isDesktopLayout ? 120 : 90)
 
-  const maxRadius = Math.sqrt(vbW * vbW + vbH * vbH) / 2 + 100
+  const maxRadius = Math.sqrt(vbW * vbW + vbH * vbH) / 2 + 400
   const circleRadius = 60 + eased * maxRadius
   const isFilled = circleRadius >= maxRadius * 0.85
 
@@ -75,8 +75,8 @@ export function RemoteAiTakeoverScene({
 export const remoteAiScene: SceneConfig = {
   id: 'remote-ai',
   kind: 'takeover',
-  weight: 3,
-  holdRatio: 0.75,
+  weight: 4,
+  holdRatio: 0.85,
   panelClassName: 'overflow-visible',
   reducedMotionFullBleed: true,
   render: ({ progress, isDesktopLayout }) => (

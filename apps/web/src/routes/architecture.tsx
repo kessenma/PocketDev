@@ -13,6 +13,7 @@ import {
 } from '@icons-pack/react-simple-icons'
 import { buttonVariants } from '#/components/ui/button'
 import { ArchitectureHeroAnimation } from '#/components/architecture/animations/ArchitectureHeroAnimation'
+import { PocketHeroSvg } from '#/components/architecture/animations/PocketHeroSvg'
 import {
   AgentEndpointsSection,
   HowPocketDevWorksSection,
@@ -81,6 +82,7 @@ function ArchitecturePage() {
           agent, your files on the server, and the external AI providers that
           power coding workflows from anywhere.
         </p>
+        <PocketHeroSvg className="mt-12 w-48 sm:w-56" />
         <ArchitectureHeroAnimation className="mt-12 w-full max-w-lg" />
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <IconPill

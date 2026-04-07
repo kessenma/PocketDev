@@ -1,13 +1,16 @@
+import type { ReactNode } from 'react'
 import { palette } from '@pocketdev/shared/theme'
 
 export function BauhausLaptop({
   cx,
   cy,
   scale = 1,
+  children,
 }: {
   cx: number
   cy: number
   scale?: number
+  children?: ReactNode
 }) {
   const w = 180
   const h = 120
@@ -34,12 +37,16 @@ export function BauhausLaptop({
         rx={4}
         fill="rgba(255,255,255,0.08)"
       />
-      {/* Code lines on screen */}
-      <rect x={-w / 2 + 18} y={-h - baseH / 2 + 22} width={60} height={4} rx={2} fill="rgba(255,255,255,0.5)" />
-      <rect x={-w / 2 + 18} y={-h - baseH / 2 + 32} width={90} height={4} rx={2} fill="rgba(255,255,255,0.3)" />
-      <rect x={-w / 2 + 18} y={-h - baseH / 2 + 42} width={45} height={4} rx={2} fill="rgba(255,255,255,0.4)" />
-      <rect x={-w / 2 + 18} y={-h - baseH / 2 + 52} width={72} height={4} rx={2} fill="rgba(255,255,255,0.25)" />
-      <rect x={-w / 2 + 18} y={-h - baseH / 2 + 62} width={54} height={4} rx={2} fill="rgba(255,255,255,0.35)" />
+      {/* Screen content */}
+      {children ?? (
+        <>
+          <rect x={-w / 2 + 18} y={-h - baseH / 2 + 22} width={60} height={4} rx={2} fill="rgba(255,255,255,0.5)" />
+          <rect x={-w / 2 + 18} y={-h - baseH / 2 + 32} width={90} height={4} rx={2} fill="rgba(255,255,255,0.3)" />
+          <rect x={-w / 2 + 18} y={-h - baseH / 2 + 42} width={45} height={4} rx={2} fill="rgba(255,255,255,0.4)" />
+          <rect x={-w / 2 + 18} y={-h - baseH / 2 + 52} width={72} height={4} rx={2} fill="rgba(255,255,255,0.25)" />
+          <rect x={-w / 2 + 18} y={-h - baseH / 2 + 62} width={54} height={4} rx={2} fill="rgba(255,255,255,0.35)" />
+        </>
+      )}
 
       {/* Keyboard base */}
       <rect

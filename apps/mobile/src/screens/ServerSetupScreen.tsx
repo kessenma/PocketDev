@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image } from 'react-native'
 import { useTheme } from '../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale, palette } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../stores/setup'
@@ -21,8 +21,10 @@ import type { ToolCheck } from '@pocketdev/shared/types'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import ConnectedAnimation from '../components/animations/ConnectedAnimation'
 import GitHubSetupAnimation from '../components/animations/GitHubSetupAnimation'
-import { ArrowRight, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
-import { getCodexBlockedReason, getCopilotBlockedReason, getServerSetupStatus } from '../components/setup/setup-tool-utils'
+import Dialogue from '../components/shared/Dialogue'
+import { ArrowRight, Check, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
+import { Assets } from '../../assets'
+import { getCodexBlockedReason, getCopilotBlockedReason, getServerSetupStatus, getSetupProgress } from '../components/setup/setup-tool-utils'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ServerSetup'>
@@ -35,6 +37,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const codexBlockedReason = getCodexBlockedReason(report)
   const copilotBlockedReason = getCopilotBlockedReason(report)
   const setupStatus = getServerSetupStatus(report)
+  const setupProgress = getSetupProgress(report)
   const scrollY = React.useRef(new Animated.Value(0)).current
 
   const [installTool, setInstallTool] = useState<ToolCheck | null>(null)
@@ -55,6 +58,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showDockerWizard, setShowDockerWizard] = useState(false)
   const [showDockerAnimation, setShowDockerAnimation] = useState(false)
   const [showPythonWizard, setShowPythonWizard] = useState(false)
+  const [showMissingDialogue, setShowMissingDialogue] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
     navigation.replace('Main')
@@ -249,6 +253,25 @@ export default function ServerSetupScreen({ navigation }: Props) {
     extrapolate: 'clamp',
   })
 
+  const logosHeight = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [36, 0],
+    extrapolate: 'clamp',
+  })
+
+  const logosOpacity = scrollY.interpolate({
+    inputRange: [0, 50],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  })
+
+  const STEP_LOGO_MAP: Record<string, { light: any; dark: any }> = {
+    git: { light: Assets.gitBlack, dark: Assets.gitWhite },
+    npm: { light: Assets.npmBlack, dark: Assets.npmWhite },
+    ai: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
+    python: { light: Assets.pythonBlack, dark: Assets.pythonWhite },
+  }
+
   return (
     <AnimatedGradientBackground colors={colors} isDark={isDark} variant="setup">
       <View style={styles.container}>
@@ -294,6 +317,53 @@ export default function ServerSetupScreen({ navigation }: Props) {
               <Text style={[styles.statusBlockValue, { color: '#ffffff' }]}>Guided Setup</Text>
             </View>
           </Animated.View>
+
+          {/* Progress bar with logos */}
+          <View style={styles.progressSection}>
+            <Animated.View style={[styles.progressLogos, { height: logosHeight, opacity: logosOpacity }]}>
+              {setupProgress.steps.map((step) => {
+                const asset = STEP_LOGO_MAP[step.id]
+                return (
+                  <View key={step.id} style={styles.progressStep}>
+                    <View style={[
+                      styles.progressIcon,
+                      {
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(26,26,26,0.05)',
+                        borderColor: step.done ? bauhaus.yellow : colors.border,
+                      },
+                    ]}>
+                      {asset ? (
+                        <Image
+                          source={isDark ? asset.dark : asset.light}
+                          style={[styles.progressLogoImg, !step.done && styles.progressLogoInactive]}
+                          resizeMode="contain"
+                        />
+                      ) : null}
+                      {step.done && (
+                        <View style={[styles.progressBadge, { backgroundColor: bauhaus.yellow }]}>
+                          <Check color={bauhaus.black} size={8} strokeWidth={3.5} />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.progressLabel, { color: step.done ? colors.text : colors.textTertiary }]}>
+                      {step.label}
+                    </Text>
+                  </View>
+                )
+              })}
+            </Animated.View>
+            <View style={styles.progressBarTrack}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    backgroundColor: setupProgress.fraction === 1 ? bauhaus.yellow : bauhaus.blue,
+                    width: `${Math.max(setupProgress.fraction * 100, 2)}%`,
+                  },
+                ]}
+              />
+            </View>
+          </View>
         </View>
 
         <SetupChecklist
@@ -320,8 +390,13 @@ export default function ServerSetupScreen({ navigation }: Props) {
               styles.continueButton,
               { backgroundColor: setupStatus.ready ? bauhaus.red : colors.border },
             ]}
-            onPress={() => setShowConnected(true)}
-            disabled={!setupStatus.ready}
+            onPress={() => {
+              if (!setupStatus.ready) {
+                setShowMissingDialogue(true)
+                return
+              }
+              setShowConnected(true)
+            }}
             activeOpacity={0.7}
           >
             <View style={styles.continueContent}>
@@ -391,6 +466,14 @@ export default function ServerSetupScreen({ navigation }: Props) {
           visible={showDockerWizard}
           onClose={() => setShowDockerWizard(false)}
           onComplete={handleDockerWizardComplete}
+        />
+
+        <Dialogue
+          visible={showMissingDialogue}
+          variant="alert"
+          title="Setup incomplete"
+          description={`The following tools still need to be configured:\n\n${setupStatus.missing.map((m) => `•  ${m}`).join('\n')}`}
+          onClose={() => setShowMissingDialogue(false)}
         />
       </View>
       {showConnected && <ConnectedAnimation onComplete={handleConnectedComplete} />}
@@ -497,6 +580,59 @@ const styles = StyleSheet.create({
   statusBlockValue: {
     ...typographyScale.base,
     fontWeight: '700',
+  },
+  progressSection: {
+    marginTop: spacing[3],
+    gap: spacing[2],
+  },
+  progressLogos: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    overflow: 'hidden',
+  },
+  progressStep: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  progressIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressLogoImg: {
+    width: 16,
+    height: 16,
+  },
+  progressLogoInactive: {
+    opacity: 0.4,
+  },
+  progressBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressLabel: {
+    ...typographyScale.xs,
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  progressBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.15)',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   footer: {
     paddingHorizontal: spacing[6],

@@ -27,7 +27,6 @@ export function InstallStage({
 }) {
   const reduceMotion = useReducedMotion()
   const sceneProgress = reduceMotion ? 1 : progress
-  const shellReveal = mapProgress(sceneProgress, 0.04, 0.24)
   const tapProgress = mapProgress(sceneProgress, 0.3, 0.58)
   const birthProgress = mapProgress(sceneProgress, 0.35, 0.7)
   const settled = birthProgress > 0.96
@@ -37,26 +36,12 @@ export function InstallStage({
   const agentY = 42
   const agentScale = mix(0, 1, birthProgress)
   const agentOpacity = birthProgress
-  const takeoverScale = mix(0.18, 7.8, birthProgress)
 
   return (
     <>
       <ExplainerBackdrop hideFrame />
 
-      <motion.circle
-        cx={agentX}
-        cy={agentY}
-        r="28"
-        fill={palette.bauhaus.blue}
-        animate={{
-          opacity: birthProgress * 0.18,
-          scale: takeoverScale,
-        }}
-        transition={{ duration: 0.28, ease: 'easeOut' }}
-        style={{ transformOrigin: `${agentX}px ${agentY}px` }}
-      />
-
-      <motion.rect
+      <rect
         x="22"
         y="58"
         width="264"
@@ -65,56 +50,23 @@ export function InstallStage({
         fill="rgba(255,255,255,0.22)"
         stroke={architectureTokens.colors.border}
         strokeWidth="1.5"
-        animate={{
-          opacity: shellReveal,
-          scale: tapProgress > 0.72 ? [1, 0.985, 1] : 1,
-        }}
-        transition={
-          tapProgress > 0.72 && !reduceMotion
-            ? { duration: EXPLAINER_TIMINGS.short, repeat: Infinity, repeatDelay: 1.2, ease: 'easeInOut' }
-            : { duration: 0.22, ease: 'easeOut' }
-        }
-        style={{ transformOrigin: '154px 99px' }}
       />
-      <motion.circle
-        cx="56"
-        cy="78"
-        r="4"
-        fill={palette.bauhaus.red}
-        animate={{ opacity: shellReveal }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
-      />
-      <motion.circle
-        cx="70"
-        cy="78"
-        r="4"
-        fill={palette.bauhaus.yellow}
-        animate={{ opacity: shellReveal }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
-      />
-      <motion.circle
-        cx="84"
-        cy="78"
-        r="4"
-        fill={palette.bauhaus.blue}
-        animate={{ opacity: shellReveal }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
-      />
+      <circle cx="56" cy="78" r="4" fill={palette.bauhaus.red} />
+      <circle cx="70" cy="78" r="4" fill={palette.bauhaus.yellow} />
+      <circle cx="84" cy="78" r="4" fill={palette.bauhaus.blue} />
 
-      <motion.text
+      <text
         x="154"
         y="106"
         textAnchor="middle"
         fontFamily={architectureFonts.mono}
         fontSize="8.3"
         fill={architectureTokens.colors.text}
-        animate={{ opacity: shellReveal }}
-        transition={{ duration: 0.24, ease: 'easeOut' }}
       >
         {SCRIPT}
-      </motion.text>
+      </text>
 
-      <motion.text
+      <text
         x="160"
         y="164"
         textAnchor="middle"
@@ -122,11 +74,9 @@ export function InstallStage({
         fontSize="10"
         letterSpacing="0.12em"
         fill={architectureTokens.colors.textSecondary}
-        animate={{ opacity: shellReveal }}
-        transition={{ duration: 0.24, ease: 'easeOut' }}
       >
         SELF-HOSTED UBUNTU SERVER
-      </motion.text>
+      </text>
 
       <motion.circle
         cx={tapX}
@@ -216,15 +166,6 @@ export function InstallStage({
             ? { duration: EXPLAINER_TIMINGS.long, repeat: Infinity, ease: 'easeInOut' }
             : { duration: 0.24, ease: 'easeOut' }
         }
-        style={{ transformOrigin: `${agentX}px ${agentY}px` }}
-      />
-      <motion.circle
-        cx={agentX}
-        cy={agentY}
-        r="30"
-        fill={palette.bauhaus.blue}
-        animate={{ opacity: birthProgress * 0.14, scale: agentScale }}
-        transition={{ duration: 0.24, ease: 'easeOut' }}
         style={{ transformOrigin: `${agentX}px ${agentY}px` }}
       />
     </>

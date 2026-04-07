@@ -6,7 +6,8 @@ import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
 import { Package, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
 
-const INSTALL_COMMAND = 'python3.13 -m ensurepip --upgrade'
+const INSTALL_COMMAND = 'python3.13 -m ensurepip --upgrade 2>&1 || curl -sS https://bootstrap.pypa.io/get-pip.py | python3.13'
+const DISPLAY_COMMAND = 'python3.13 -m ensurepip || get-pip.py'
 const DONE_MARKER = '__PIP_DONE__'
 
 type WizardAction =
@@ -29,7 +30,7 @@ export default function InstallPipStep({ dispatch }: Props) {
     sendCommand, submitSudoPassword, cancelSudoPrompt,
   } = useTerminalCommand({
     persistent: true,
-    errorPatterns: [/^error:/im, /ModuleNotFoundError/im, /permission denied/im],
+    errorPatterns: [/^error:/im, /^ERROR:/m, /ModuleNotFoundError/im, /No module named/im, /permission denied/im, /Could not install/im, /PIP_FAILED/],
     onOutput: (_chunk, fullOutput) => {
       if (fullOutput.includes(DONE_MARKER)) {
         setSuccess(true)
@@ -63,7 +64,7 @@ export default function InstallPipStep({ dispatch }: Props) {
 
       <Text style={[styles.title, { color: colors.text }]}>Install pip</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Set up pip, Python's package installer, using the built-in ensurepip module.
+        Set up pip, Python's package installer.
       </Text>
 
       {/* Info card — before starting */}
@@ -71,10 +72,10 @@ export default function InstallPipStep({ dispatch }: Props) {
         <>
           <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              pip is Python's standard package manager. The ensurepip module bootstraps pip directly from Python without needing an external download.
+              pip is Python's standard package manager. This step bootstraps pip using ensurepip or, if unavailable, the official get-pip.py installer.
             </Text>
             <Text style={[styles.commandText, { color: colors.textTertiary }]}>
-              $ {INSTALL_COMMAND}
+              $ {DISPLAY_COMMAND}
             </Text>
           </View>
 
@@ -95,7 +96,7 @@ export default function InstallPipStep({ dispatch }: Props) {
           {!success && !hasError && (
             <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
               <Text style={[styles.statusText, { color: colors.primary }]}>
-                Installing pip via ensurepip...
+                Installing pip...
               </Text>
             </View>
           )}

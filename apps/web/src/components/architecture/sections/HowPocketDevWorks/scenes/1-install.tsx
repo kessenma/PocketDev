@@ -1,4 +1,4 @@
-import { InstallStage } from '../explainers/InstallStage'
+import { InstallStage } from '../explainers/1-InstallStage'
 import type { SceneConfig } from '../timeline-types'
 
 export const installScene: SceneConfig = {
@@ -7,9 +7,9 @@ export const installScene: SceneConfig = {
   weight: 1.5,
   holdRatio: 0.5,
   explainer: {
-    title: 'Install The PocketDev Agent',
+    title: 'Install the agent on your server',
     caption:
-      'To get started, install the PocketDev agent on your self-hosted Linux Ubuntu server, then wake the runtime with a single tap.',
+      'Run one command on any Ubuntu server. PocketDev installs itself and starts the agent — ready to pair in under a minute.',
     cardClassName: 'w-full max-w-6xl',
     stageMinHeight: 540,
     stageHeight: '86vh',

@@ -69,12 +69,53 @@ export function getServerSetupStatus(report: PrerequisitesReport | null) {
   const aiReady = getAiAssistantTools(report).some((tool) => isToolConfigured(tool))
   const languageReady = getLanguageTools(report).every((tool) => isToolConfigured(tool))
 
+  const missing: string[] = []
+  if (!requiredReady) {
+    const tools = getRequiredSetupTools(report).filter((t) => !isToolConfigured(t))
+    tools.forEach((t) => missing.push(t.name))
+  }
+  if (!aiReady) missing.push('At least one AI assistant (Claude, Codex, or Copilot)')
+  if (!languageReady) {
+    const tools = getLanguageTools(report).filter((t) => !isToolConfigured(t))
+    tools.forEach((t) => missing.push(t.name))
+  }
+
   return {
     requiredReady,
     aiReady,
     languageReady,
     ready: requiredReady && aiReady && languageReady,
+    missing,
   }
+}
+
+export type SetupProgressStep = {
+  id: string
+  label: string
+  done: boolean
+}
+
+export function getSetupProgress(report: PrerequisitesReport | null): {
+  steps: SetupProgressStep[]
+  completed: number
+  total: number
+  fraction: number
+} {
+  const gitTool = getToolById(report, 'git')
+  const pkgTool = getPackageManagerTool(report)
+  const aiTools = getAiAssistantTools(report)
+  const langTools = getLanguageTools(report)
+
+  const steps: SetupProgressStep[] = [
+    { id: 'git', label: 'Git', done: isToolConfigured(gitTool) },
+    { id: 'npm', label: 'Packages', done: isToolConfigured(pkgTool) },
+    { id: 'ai', label: 'AI', done: aiTools.some((t) => isToolConfigured(t)) },
+    ...langTools.map((t) => ({ id: t.id, label: t.name, done: isToolConfigured(t) })),
+  ]
+
+  const completed = steps.filter((s) => s.done).length
+  const total = steps.length
+  return { steps, completed, total, fraction: total > 0 ? completed / total : 0 }
 }
 
 export function getCodexBlockedReason(report: PrerequisitesReport | null): string | null {

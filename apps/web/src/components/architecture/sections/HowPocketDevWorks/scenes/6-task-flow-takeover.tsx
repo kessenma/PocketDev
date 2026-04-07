@@ -1,4 +1,4 @@
-import { TaskFlowTakeoverScene } from '../TaskFlowTakeoverScene'
+import { TaskFlowTakeoverScene } from '../explainers/6-TaskFlowTakeoverScene'
 import type { SceneConfig } from '../timeline-types'
 
 export const taskFlowScene: SceneConfig = {

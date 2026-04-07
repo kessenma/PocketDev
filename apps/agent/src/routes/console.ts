@@ -22,6 +22,7 @@ import { getClaudeAuthDebug } from '../services/claude-setup.ts'
 import { getCopilotAuthDebug } from '../services/copilot-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
 import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
+import { checkPythonStatus } from '../services/python-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
@@ -415,6 +416,15 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
         },
       },
     }
+  })
+
+  // ─── Python debug (requires session) ──────────────────
+  .get('/debug/python', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    return checkPythonStatus()
   })
 
   // ─── Prerequisites (requires session) ─────────────────
