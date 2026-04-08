@@ -61,9 +61,12 @@ COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
 COPY package.json ./
 RUN cd apps/agent && bun build src/index.ts --outdir dist --target bun
 # Stage the tarball contents
+COPY apps/web/install.sh /tmp/install.sh
 RUN mkdir -p /tmp/bundle/pocketdev-agent \
     && cp apps/agent/dist/index.js /tmp/bundle/pocketdev-agent/ \
-    && cp -r apps/agent/drizzle /tmp/bundle/pocketdev-agent/drizzle
+    && cp -r apps/agent/drizzle /tmp/bundle/pocketdev-agent/drizzle \
+    && AGENT_VERSION=$(grep -oP 'POCKETDEV_VERSION="\K[^"]+' /tmp/install.sh) \
+    && echo "{\"version\":\"$AGENT_VERSION\"}" > /tmp/bundle/pocketdev-agent/version.json
 COPY --from=console-build /app/apps/agent/console/dist /tmp/bundle/pocketdev-agent/console
 RUN tar -czf /tmp/agent-bundle.tar.gz -C /tmp/bundle pocketdev-agent
 

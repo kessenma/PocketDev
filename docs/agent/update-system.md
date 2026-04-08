@@ -33,7 +33,17 @@ Each build also archives a copy to `apps/web/public/agent-versions/{version}.tar
 | `apps/web/src/server/agent-version.ts` | Serves `/agent/version` (JSON) and `/agent/bundle/{version}` (tarball) |
 | `apps/agent/src/routes/console.ts` | `GET /health` includes version/update; `POST /update` triggers upgrade |
 | `apps/agent/console/src/components/UpdateBanner.tsx` | Console UI banner with update + rollback controls |
-| `scripts/build-agent-bundle.sh` | Generates `version.json` + archives versioned bundles |
+| `scripts/build-agent-bundle.sh` | Generates `version.json` + archives versioned bundles (local builds) |
+| `apps/web/Dockerfile` | `agent-build` stage — bundles agent tarball for Docker/Coolify deploys |
+
+## Bundle Build: Two Paths
+
+The agent tarball is built in two places — both **must** include `version.json`:
+
+1. **Local/CI** — `scripts/build-agent-bundle.sh` extracts `POCKETDEV_VERSION` from `apps/web/install.sh` and writes `version.json` into the staging directory.
+2. **Docker (Coolify deploy)** — The `agent-build` stage in `apps/web/Dockerfile` does the same extraction inline. This is the path used in production when Coolify builds from git webhooks.
+
+If `version.json` is missing from the bundle, the installed agent reports its version as `"dev"`, and the update banner gets stuck in a loop (always showing an update available but never resolving after install).
 
 ## Update Flow
 
