@@ -54,3 +54,12 @@ export async function checkGoStatus(): Promise<GoSetupStatus> {
 export async function verifyGo(): Promise<GoSetupStatus> {
   return checkGoStatus()
 }
+
+/** Returns the shell command to install Go via apt, safe for non-interactive use. */
+export function getGoInstallCommand(): string {
+  return [
+    'export DEBIAN_FRONTEND=noninteractive',
+    'apt-get update -q',
+    'apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" golang-go',
+  ].join(' && ')
+}

@@ -4,15 +4,14 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import { useConnectionStore } from '../../../stores/connection'
-import { fetchGoSetupStatus } from '../../../services/api'
+import { fetchGoSetupStatus, fetchGoInstallCommand } from '../../../services/api'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
 import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight, Check } from 'lucide-react-native'
 import CopyButton from '../../shared/CopyButton'
 import type { GoSetupStatus } from '@pocketdev/shared/types'
 
-const INSTALL_CMD = 'sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" golang-go'
-const DISPLAY_CMD = 'sudo apt-get install -y golang-go'
+const DISPLAY_CMD = 'apt-get install -y golang-go'
 const DONE_MARKER = '__GO_INSTALL_DONE__'
 
 type WizardAction =
@@ -28,18 +27,23 @@ export default function InstallGoStep({ dispatch }: Props) {
   const server = useConnectionStore((s) => s.server)
   const [checking, setChecking] = useState(true)
   const [existingGo, setExistingGo] = useState<GoSetupStatus | null>(null)
+  const [installCmd, setInstallCmd] = useState<string | null>(null)
   const [started, setStarted] = useState(false)
   const [success, setSuccess] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
 
-  // Pre-check: is Go already installed?
+  // Pre-check: is Go already installed? + fetch install command from server
   useEffect(() => {
     if (!server) { setChecking(false); return }
-    fetchGoSetupStatus(server.ip, server.port)
-      .then((status) => { if (status.installed) setExistingGo(status) })
-      .catch(() => {})
-      .finally(() => setChecking(false))
+    Promise.all([
+      fetchGoSetupStatus(server.ip, server.port)
+        .then((status) => { if (status.installed) setExistingGo(status) })
+        .catch(() => {}),
+      fetchGoInstallCommand(server.ip, server.port)
+        .then(setInstallCmd)
+        .catch(() => {}),
+    ]).finally(() => setChecking(false))
   }, [server])
 
   const {
@@ -58,7 +62,8 @@ export default function InstallGoStep({ dispatch }: Props) {
 
   function handleStart() {
     setStarted(true)
-    const fullCmd = `cd ~ && ( ${INSTALL_CMD} ) && echo ${DONE_MARKER} || echo GO_INSTALL_FAILED`
+    const cmd = installCmd ?? 'apt-get update -q && apt-get install -y golang-go'
+    const fullCmd = `cd ~ && ( ${cmd} ) && echo ${DONE_MARKER} || echo GO_INSTALL_FAILED`
     sendCommand(fullCmd)
   }
 

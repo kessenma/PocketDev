@@ -867,6 +867,15 @@ export async function fetchGoSetupStatus(ip: string, port: number): Promise<GoSe
   return response.json() as Promise<GoSetupStatus>
 }
 
+export async function fetchGoInstallCommand(ip: string, port: number): Promise<string> {
+  const response = await fetch(apiUrl(ip, port, '/go-setup/install-command'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Go install command (${response.status})`)
+  const data = await response.json() as { command: string }
+  return data.command
+}
+
 export async function postVerifyGo(ip: string, port: number): Promise<GoSetupStatus> {
   const response = await fetch(apiUrl(ip, port, '/go-setup/verify'), {
     method: 'POST',
