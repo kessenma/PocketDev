@@ -6,6 +6,7 @@ import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
 import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
+import CopyButton from '../../shared/CopyButton'
 
 const INSTALL_COMMANDS = [
   'sudo apt update',
@@ -73,9 +74,9 @@ export default function InstallPythonStep({ dispatch }: Props) {
         />
       </View>
 
-      <Text style={[styles.title, { color: colors.text }]}>Install Python 3.13</Text>
+      <Text style={[styles.title, { color: colors.text }]}>Install Python</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Install the latest Python 3.13 from the deadsnakes PPA.
+        Install Python 3 on your server.
       </Text>
 
       {/* Info card — before starting */}
@@ -83,7 +84,7 @@ export default function InstallPythonStep({ dispatch }: Props) {
         <>
           <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              This will install the Python 3.13 interpreter on your server. The binary will be available as{' '}
+              This will install the Python 3 interpreter on your server. The binary will be available as{' '}
               <Text style={styles.mono}>python3</Text>.
             </Text>
             <View style={styles.commandList}>
@@ -101,7 +102,7 @@ export default function InstallPythonStep({ dispatch }: Props) {
             activeOpacity={0.7}
           >
             <Download color={colors.primaryText} size={18} strokeWidth={2.25} />
-            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Install Python 3.13</Text>
+            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Install Python</Text>
           </TouchableOpacity>
         </>
       )}
@@ -112,7 +113,7 @@ export default function InstallPythonStep({ dispatch }: Props) {
           {!success && !hasError && (
             <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
               <Text style={[styles.statusText, { color: colors.primary }]}>
-                Installing Python 3.13...
+                Installing Python...
               </Text>
             </View>
           )}
@@ -121,7 +122,7 @@ export default function InstallPythonStep({ dispatch }: Props) {
             <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: '#22c55e' }]}>
               <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
               <Text style={[styles.statusText, { color: '#22c55e' }]}>
-                Python 3.13 installed
+                Python installed
               </Text>
             </View>
           )}
@@ -149,15 +150,18 @@ export default function InstallPythonStep({ dispatch }: Props) {
           </TouchableOpacity>
 
           {showOutput && (
-            <ScrollView
-              ref={scrollRef}
-              style={[styles.outputBox, { backgroundColor: colors.background }]}
-              nestedScrollEnabled
-            >
-              <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                {output || 'Waiting for output...'}
-              </Text>
-            </ScrollView>
+            <>
+              <ScrollView
+                ref={scrollRef}
+                style={[styles.outputBox, { backgroundColor: colors.background }]}
+                nestedScrollEnabled
+              >
+                <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
+                  {output || 'Waiting for output...'}
+                </Text>
+              </ScrollView>
+              {output ? <CopyButton value={output} label="Copy output" /> : null}
+            </>
           )}
 
           {success && (

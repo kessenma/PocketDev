@@ -1,10 +1,38 @@
+import { useState } from 'react'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import type { PythonDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
-import { Code } from 'lucide-react'
+import { Code, Copy, Check } from 'lucide-react'
 
 interface Props {
   pythonInfo: PythonDebugInfo | null
+}
+
+function CopyableCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    navigator.clipboard.writeText(command)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <code className="min-w-0 flex-1 break-all rounded-lg border border-white/8 bg-black/40 px-3 py-2 font-mono text-xs text-[#9df6cd]">
+        $ {command}
+      </code>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 shrink-0 p-0 text-[#f4f0e8]/50 hover:text-[#f4f0e8]"
+        onClick={handleCopy}
+      >
+        {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+      </Button>
+    </div>
+  )
 }
 
 export function LanguagesDiagnosticsTab({ pythonInfo }: Props) {
@@ -111,6 +139,33 @@ export function LanguagesDiagnosticsTab({ pythonInfo }: Props) {
                   </Badge>
                 </div>
               </div>
+
+              {/* Install commands for missing components */}
+              {(!pythonInfo.installed || !pythonInfo.pip_installed || !pythonInfo.venv_available) && (
+                <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Install Commands</p>
+                  <div className="mt-3 space-y-2">
+                    {!pythonInfo.installed && (
+                      <>
+                        <p className="text-xs text-[#f4f0e8]/60">Install Python:</p>
+                        <CopyableCommand command="sudo apt update && sudo apt install -y python3" />
+                      </>
+                    )}
+                    {pythonInfo.installed && !pythonInfo.pip_installed && (
+                      <>
+                        <p className="text-xs text-[#f4f0e8]/60">Install pip:</p>
+                        <CopyableCommand command={`${pythonInfo.binary ?? 'python3'} -m ensurepip --upgrade || curl -sS https://bootstrap.pypa.io/get-pip.py | ${pythonInfo.binary ?? 'python3'} - --break-system-packages`} />
+                      </>
+                    )}
+                    {pythonInfo.installed && !pythonInfo.venv_available && (
+                      <>
+                        <p className="text-xs text-[#f4f0e8]/60">Install venv:</p>
+                        <CopyableCommand command={`sudo apt install -y ${pythonInfo.binary ?? 'python3'}-venv`} />
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">

@@ -5,6 +5,7 @@ import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
 import { Package, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
+import CopyButton from '../../shared/CopyButton'
 
 const DONE_MARKER = '__PIP_DONE__'
 
@@ -18,7 +19,7 @@ interface Props {
 }
 
 export default function InstallPipStep({ dispatch, pythonBin }: Props) {
-  const INSTALL_COMMAND = `${pythonBin} -m ensurepip --upgrade 2>&1 || curl -sS https://bootstrap.pypa.io/get-pip.py | ${pythonBin}`
+  const INSTALL_COMMAND = `${pythonBin} -m ensurepip --upgrade 2>&1 || curl -sS https://bootstrap.pypa.io/get-pip.py | ${pythonBin} - --break-system-packages`
   const DISPLAY_COMMAND = `${pythonBin} -m ensurepip || get-pip.py`
   const { colors } = useTheme()
   const [started, setStarted] = useState(false)
@@ -31,7 +32,7 @@ export default function InstallPipStep({ dispatch, pythonBin }: Props) {
     sendCommand, submitSudoPassword, cancelSudoPrompt,
   } = useTerminalCommand({
     persistent: true,
-    errorPatterns: [/^error:/im, /^ERROR:/m, /ModuleNotFoundError/im, /No module named/im, /permission denied/im, /Could not install/im, /PIP_FAILED/],
+    errorPatterns: [/permission denied/im, /Could not install/im, /PIP_FAILED/],
     onOutput: (chunk, _fullOutput) => {
       if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
         setSuccess(true)
@@ -134,15 +135,18 @@ export default function InstallPipStep({ dispatch, pythonBin }: Props) {
           </TouchableOpacity>
 
           {showOutput && (
-            <ScrollView
-              ref={scrollRef}
-              style={[styles.outputBox, { backgroundColor: colors.background }]}
-              nestedScrollEnabled
-            >
-              <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                {output || 'Waiting for output...'}
-              </Text>
-            </ScrollView>
+            <>
+              <ScrollView
+                ref={scrollRef}
+                style={[styles.outputBox, { backgroundColor: colors.background }]}
+                nestedScrollEnabled
+              >
+                <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
+                  {output || 'Waiting for output...'}
+                </Text>
+              </ScrollView>
+              {output ? <CopyButton value={output} label="Copy output" /> : null}
+            </>
           )}
 
           {success && (
