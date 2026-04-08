@@ -250,7 +250,6 @@ export function HeroScene({ progress, vpSize, isDesktopLayout, hideLaptop }: Pro
     ? `translate(${panX}, ${panY}) translate(${zoomOriginX}, ${zoomOriginY}) scale(${cameraScale}) translate(${-zoomOriginX}, ${-zoomOriginY})`
     : undefined
   // Content cross-fade: install command fades in as we zoom
-  const installContentOpacity = mapProgress(laptopZoom, 0.15, 0.6)
   const abstractContentOpacity = 1 - mapProgress(laptopZoom, 0.0, 0.4)
   // Reverse draw for connection lines during zoom
   const bundlesReverseDraw = mapProgress(laptopZoom, 0.0, 0.6)
