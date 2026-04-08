@@ -57,10 +57,12 @@ const FUNNEL_REST = [
 export function SetupTakeoverScene({
   progress,
   isDesktopLayout,
+  hideBlueCircle = false,
 }: {
   progress: number
   active?: boolean
   isDesktopLayout: boolean
+  hideBlueCircle?: boolean
 }) {
   const reduceMotion = useReducedMotion()
   const scrollProgress = reduceMotion ? 1 : progress
@@ -76,12 +78,19 @@ export function SetupTakeoverScene({
 
   const viewBox = `0 0 ${vpSize.w} ${vpSize.h}`
 
-  // Animation progress segments
-  const funnelReveal = mapProgress(scrollProgress, 0.08, 0.35)
-  const streamReveal = mapProgress(scrollProgress, 0.38, 0.82)
-  const floatReveal = mapProgress(scrollProgress, 0.72, 0.82)
+  // Animation progress segments — circle starts at its funnel position immediately
+  // (the overlay handles the entry transition from the Connect scene)
+  const funnelReveal = mapProgress(scrollProgress, 0.0, 0.28)
+  const streamReveal = mapProgress(scrollProgress, 0.30, 0.62)
+  const floatReveal = mapProgress(scrollProgress, 0.52, 0.62)
+  const absorbP = mapProgress(scrollProgress, 0.62, 0.74)
   const collectedCount = Math.floor(streamReveal * STREAM_ITEMS.length)
-  const circleScale = 1 + collectedCount * 0.04
+  const circleScale = absorbP > 0
+    ? mix(1 + collectedCount * 0.04, 1, absorbP)
+    : 1 + collectedCount * 0.04
+
+  const circleEntryY = CIRCLE_CY
+  const circleEntryR = CIRCLE_R
 
   // Scale and center the animation
   const scale = Math.min(vpSize.w, vpSize.h) / 320
@@ -154,7 +163,7 @@ export function SetupTakeoverScene({
       <g transform={`translate(${animCenterX - 160 * scale} ${animCenterY - 100 * scale}) scale(${scale})`}>
         <defs>
           <clipPath id="setup-funnel-circle-clip">
-            <circle cx={CIRCLE_CX} cy={CIRCLE_CY} r={CIRCLE_R - 1} />
+            <circle cx={CIRCLE_CX} cy={circleEntryY} r={circleEntryR - 1} />
           </clipPath>
         </defs>
 
@@ -183,24 +192,38 @@ export function SetupTakeoverScene({
         />
 
         {/* Yellow glow */}
-        <motion.circle
-          cx={CIRCLE_CX}
-          cy={CIRCLE_CY}
-          r={CIRCLE_R + 28}
-          fill={palette.bauhaus.yellow}
-          animate={{ opacity: floatReveal * 0.12 }}
-          transition={{ duration: 0.24, ease: 'easeOut' }}
-        />
-        {/* Main circle */}
-        <motion.circle
-          cx={CIRCLE_CX}
-          cy={CIRCLE_CY}
-          r={CIRCLE_R}
-          fill={palette.bauhaus.blue}
-          animate={{ scale: circleScale, opacity: 0.96 }}
-          transition={{ duration: 0.24, ease: 'easeOut' }}
-          style={{ transformOrigin: `${CIRCLE_CX}px ${CIRCLE_CY}px` }}
-        />
+        {!hideBlueCircle && (
+          <motion.circle
+            cx={CIRCLE_CX}
+            cy={circleEntryY}
+            r={circleEntryR + 28}
+            fill={palette.bauhaus.yellow}
+            animate={{ opacity: floatReveal * 0.12 }}
+            transition={{ duration: 0.24, ease: 'easeOut' }}
+          />
+        )}
+        {/* Absorb glow — radial pulse when icons get eaten */}
+        {!hideBlueCircle && absorbP > 0 && absorbP < 1 && (
+          <circle
+            cx={CIRCLE_CX}
+            cy={circleEntryY}
+            r={circleEntryR * circleScale + mix(0, 30, absorbP)}
+            fill={palette.bauhaus.blue}
+            opacity={mix(0.25, 0, absorbP)}
+          />
+        )}
+        {/* Main circle — scales as icons collect, shrinks back during absorb */}
+        {!hideBlueCircle && (
+          <motion.circle
+            cx={CIRCLE_CX}
+            cy={circleEntryY}
+            r={circleEntryR}
+            fill={palette.bauhaus.blue}
+            animate={{ scale: circleScale, opacity: 0.96 }}
+            transition={{ duration: 0.24, ease: 'easeOut' }}
+            style={{ transformOrigin: `${CIRCLE_CX}px ${circleEntryY}px` }}
+          />
+        )}
 
         {/* Icons */}
         {STREAM_ITEMS.map((item, index) => {
@@ -221,10 +244,19 @@ export function SetupTakeoverScene({
           const exitX = CIRCLE_CX - item.size / 2
           const exitY = 97 - item.size / 2
 
+          // Absorb: stagger so icons don't all disappear at once
+          const absorbStagger = index * 0.06
+          const iconAbsorb = clamp((absorbP - absorbStagger) / (1 - absorbStagger), 0, 1)
+          const absorbTargetX = CIRCLE_CX - item.size / 2
+          const absorbTargetY = CIRCLE_CY - item.size / 2
+
           let tx: number, ty: number
           if (reduceMotion) {
             tx = orbitX
             ty = orbitY
+          } else if (iconAbsorb > 0 && isOrbiting) {
+            tx = mix(orbitX, absorbTargetX, iconAbsorb)
+            ty = mix(orbitY, absorbTargetY, iconAbsorb)
           } else if (enter < 1) {
             tx = mix(item.startX, restX, enter)
             ty = mix(item.startY, restY, enter)
@@ -241,11 +273,15 @@ export function SetupTakeoverScene({
             tx = restX
             ty = restY
           }
-          const iconScale = funnel > 0 || drop > 0 ? mix(1, 0.85, clamp(funnel + drop, 0, 1)) : isOrbiting || reduceMotion ? 0.85 : 1
-          const opacity = local > 0 ? 1 : 0
+          const iconScale = iconAbsorb > 0
+            ? mix(0.85, 0.3, iconAbsorb)
+            : funnel > 0 || drop > 0 ? mix(1, 0.85, clamp(funnel + drop, 0, 1)) : isOrbiting || reduceMotion ? 0.85 : 1
+          const opacity = iconAbsorb > 0
+            ? mix(1, 0, iconAbsorb)
+            : local > 0 ? 1 : 0
 
-          // Wobble only while settled in funnel, not once orbiting
-          const showWobble = isSettled && !reduceMotion
+          // Wobble only while settled in funnel, not once orbiting or absorbing
+          const showWobble = isSettled && !reduceMotion && iconAbsorb === 0
           const wobbleX = 3 + (index % 3) * 1.5
           const wobbleY = 2 + (index % 2) * 2
           const wobbleRot = 5 + (index % 3) * 3

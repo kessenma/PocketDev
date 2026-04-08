@@ -1,0 +1,465 @@
+/**
+ * Persistent overlay that renders shared assets (laptop, blue circle) in
+ * viewport-space above the sliding ScrollTimeline track.
+ *
+ * - Scene 0→1: Laptop + blue circle bridge ConsoleSetup → Connect slide.
+ * - Scene 1→2: Blue circle (only) bridges Connect → Setup slide.
+ */
+import { palette } from '@pocketdev/shared/theme'
+import { architectureFonts } from '../../../shared/theme'
+import { BauhausLaptop } from './BauhausLaptop'
+import type { SceneRange } from '../timeline-types'
+
+function mix(a: number, b: number, t: number) {
+  return a + (b - a) * t
+}
+
+function clamp(v: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, v))
+}
+
+function easeOut(t: number) {
+  return 1 - (1 - t) * (1 - t)
+}
+
+// ---------------------------------------------------------------------------
+// ViewBox → viewport mapping for explainer stages
+// ---------------------------------------------------------------------------
+
+type Pose = { cx: number; cy: number; scale: number }
+
+function explainerToViewport(
+  vbX: number,
+  vbY: number,
+  viewBox: { w: number; h: number },
+  vpW: number,
+  vpH: number,
+): { x: number; y: number; vbScale: number } {
+  const panelPad = 24
+  const articlePad = vpW >= 640 ? 20 : 16
+  const innerPad = vpW >= 640 ? 16 : 12
+  const cardW = Math.min(vpW - panelPad * 2, 1152)
+  const stageW = cardW - (articlePad + innerPad) * 2
+  const stageH = Math.max(540, vpH * 0.86)
+
+  const vbScale = Math.min(stageW / viewBox.w, stageH / viewBox.h)
+  const renderedW = viewBox.w * vbScale
+  const renderedH = viewBox.h * vbScale
+
+  const titleAreaH = 100
+  const cardH = (articlePad + innerPad) * 2 + stageH + titleAreaH
+  const cardTop = (vpH - cardH) / 2
+  const stageTop = cardTop + articlePad + innerPad
+  const stageLeft = (vpW - stageW) / 2
+
+  const svgOffsetX = (stageW - renderedW) / 2
+  const svgOffsetY = (stageH - renderedH) / 2
+
+  return {
+    x: stageLeft + svgOffsetX + vbX * vbScale,
+    y: stageTop + svgOffsetY + vbY * vbScale,
+    vbScale,
+  }
+}
+
+function explainerPose(
+  vbCx: number,
+  vbCy: number,
+  laptopScale: number,
+  viewBox: { w: number; h: number },
+  vpW: number,
+  vpH: number,
+): Pose {
+  const { x, y, vbScale } = explainerToViewport(vbCx, vbCy, viewBox, vpW, vpH)
+  return { cx: x, cy: y, scale: laptopScale * vbScale }
+}
+
+// ---------------------------------------------------------------------------
+// Laptop poses (scene 0→1)
+// ---------------------------------------------------------------------------
+
+const CONSOLE_VB = { w: 420, h: 320 }
+
+function consoleEndLaptopPose(vpW: number, vpH: number): Pose {
+  return explainerPose(210, 200, 1.42, CONSOLE_VB, vpW, vpH)
+}
+
+function connectLaptopPose(vpW: number, vpH: number, isDesktop: boolean): Pose {
+  const animScale = Math.min(vpW, vpH) / 320
+  const laptopLocalCx = isDesktop ? -50 : 0
+  const laptopLocalCy = isDesktop ? 0 : -40
+  const laptopScale = isDesktop ? 0.62 : 0.56
+  return {
+    cx: vpW / 2 + laptopLocalCx * animScale,
+    cy: vpH * 0.42 + laptopLocalCy * animScale,
+    scale: laptopScale * animScale,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blue circle poses (scene 0→1)
+// ---------------------------------------------------------------------------
+
+type CirclePose = { cx: number; cy: number; r: number }
+
+/** Circle at right side of laptop where the scene leaves it at hold end */
+function consoleCircleEndPose(vpW: number, vpH: number): CirclePose {
+  // Matches scene's end state: laptop-local (120, -65) at laptopScale=1.42
+  const laptopCx = 210
+  const laptopCy = 200
+  const laptopScale = 1.42
+  const cx = laptopCx + 120 * laptopScale
+  const cy = laptopCy + (-65) * laptopScale
+  const r = 28 * laptopScale // matches scene's final circleR=28
+  const { x, y, vbScale } = explainerToViewport(cx, cy, CONSOLE_VB, vpW, vpH)
+  return { cx: x, cy: y, r: r * vbScale }
+}
+
+/** Circle at start of Connect scene (near laptop top-right) */
+function connectCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const animScale = Math.min(vpW, vpH) / 320
+  const laptopLocalCx = isDesktop ? -50 : 0
+  const laptopLocalCy = isDesktop ? 0 : -40
+  const laptopScale = isDesktop ? 0.62 : 0.56
+  const animCenterX = vpW / 2
+  const animCenterY = vpH * 0.42
+  // Circle starts at laptop top-right
+  const bcx = laptopLocalCx + 70 * laptopScale
+  const bcy = laptopLocalCy - 100 * laptopScale
+  return {
+    cx: animCenterX + bcx * animScale,
+    cy: animCenterY + bcy * animScale,
+    r: 26 * animScale,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blue circle poses (scene 1→2)
+// ---------------------------------------------------------------------------
+
+/** Circle at end of Connect scene — to the right of the phone */
+function connectCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const animScale = Math.min(vpW, vpH) / 320
+  const phoneLocalCx = isDesktop ? 80 : 0
+  const phoneLocalCy = isDesktop ? -6 : 50
+  const phoneW = 52
+  const animCenterX = vpW / 2
+  const animCenterY = vpH * (isDesktop ? 0.42 : 0.40)
+  // Matches ConnectStage's final circle position: right of the phone, vertically centered
+  const phoneRightX = phoneLocalCx + phoneW / 2 + 20
+  return {
+    cx: animCenterX + phoneRightX * animScale,
+    cy: animCenterY + phoneLocalCy * animScale,
+    r: 30 * animScale,
+  }
+}
+
+/** Circle at start of Setup scene — at funnel position (CIRCLE_CX=160, CIRCLE_CY=160) */
+function setupCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const animScale = Math.min(vpW, vpH) / 320
+  const animCenterX = vpW / 2
+  const animCenterY = vpH * (isDesktop ? 0.42 : 0.40)
+  // Setup scene uses: translate(animCenterX - 160*scale, animCenterY - 100*scale) scale(scale)
+  // Circle at (160, 160) in that coordinate system:
+  // viewport cx = (animCenterX - 160*scale) + 160*scale = animCenterX
+  // viewport cy = (animCenterY - 100*scale) + 160*scale = animCenterY + 60*scale
+  return {
+    cx: animCenterX,
+    cy: animCenterY + 60 * animScale,
+    r: 52 * animScale,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blue circle poses (scene 2→3)
+// ---------------------------------------------------------------------------
+
+/** Circle at end of Setup scene — at funnel position (160, 160), back to base size after absorb */
+function setupCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const animScale = Math.min(vpW, vpH) / 320
+  const animCenterX = vpW / 2
+  const animCenterY = vpH * (isDesktop ? 0.42 : 0.40)
+  return {
+    cx: animCenterX,
+    cy: animCenterY + 60 * animScale,
+    r: 52 * animScale, // CIRCLE_R — circleScale returns to 1 after absorb
+  }
+}
+
+/** Circle at start of RepoClone scene — at (160, 184) r=42 */
+function repoCloneCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const animScale = Math.min(vpW, vpH) / 320
+  const animCenterX = vpW / 2
+  const animCenterY = vpH * (isDesktop ? 0.42 : 0.40)
+  // RepoClone uses same transform: translate(animCenterX - 160*scale, animCenterY - 100*scale) scale(scale)
+  // Circle at (160, 184):
+  // viewport cx = animCenterX
+  // viewport cy = animCenterY + (184 - 100)*scale = animCenterY + 84*scale
+  return {
+    cx: animCenterX,
+    cy: animCenterY + 84 * animScale,
+    r: 42 * animScale,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blue circle poses (scene 3→4)
+// ---------------------------------------------------------------------------
+
+/** Circle at end of RepoClone — same position as start, circle doesn't move */
+function repoCloneCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  return repoCloneCircleStartPose(vpW, vpH, isDesktop)
+}
+
+/**
+ * Circle at start of RemoteAi scene — left of the phone.
+ * RemoteAi uses viewBox (1200×1200 or 750×1200) with xMidYMid slice,
+ * so we need to map its viewBox coords to viewport pixels.
+ */
+function remoteAiCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const vbW = isDesktop ? 1200 : 750
+  const vbH = 1200
+  // xMidYMid slice: scale = max(scaleX, scaleY)
+  const scaleX = vpW / vbW
+  const scaleY = vpH / vbH
+  const s = Math.max(scaleX, scaleY)
+  const offsetX = (vpW - vbW * s) / 2
+  const offsetY = (vpH - vbH * s) / 2
+
+  const centerX = vbW / 2
+  const textCenterY = vbH * 0.38
+  const textBottomY = textCenterY + (isDesktop ? 132 : 84)
+  const circleCenterY = textBottomY + (isDesktop ? 120 : 90)
+
+  // Circle starts left of phone
+  const circleStartX = centerX - (isDesktop ? 100 : 70)
+
+  return {
+    cx: circleStartX * s + offsetX,
+    cy: circleCenterY * s + offsetY,
+    r: 60 * s,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+const LAPTOP_SCENE_INDICES = [0, 1] as const
+
+export function PersistentTransitionOverlay({
+  railProgress,
+  ranges,
+  vpSize,
+  isDesktopLayout,
+}: {
+  railProgress: number
+  ranges: SceneRange[]
+  vpSize: { w: number; h: number }
+  isDesktopLayout: boolean
+}) {
+  const range0 = ranges[0]
+  const range1 = ranges[1]
+  const range2 = ranges[2]
+  if (!range0) return null
+
+  // --- Scene 0→1 slide transition ---
+  const inSlide0 = railProgress > range0.holdEnd && railProgress <= range0.end
+  const slideP0 = inSlide0
+    ? clamp((railProgress - range0.holdEnd) / (range0.end - range0.holdEnd), 0, 1)
+    : 0
+  const slideEased0 = easeOut(slideP0)
+
+  // Blue circle (scene 0→1)
+  let circlePose: CirclePose | null = null
+  if (inSlide0) {
+    const from = consoleCircleEndPose(vpSize.w, vpSize.h)
+    const to = connectCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    circlePose = {
+      cx: mix(from.cx, to.cx, slideEased0),
+      cy: mix(from.cy, to.cy, slideEased0),
+      r: mix(from.r, to.r, slideEased0),
+    }
+  }
+
+  // Laptop (scene 0→1)
+  let laptopPose: Pose | null = null
+  if (inSlide0) {
+    const from = consoleEndLaptopPose(vpSize.w, vpSize.h)
+    const to = connectLaptopPose(vpSize.w, vpSize.h, isDesktopLayout)
+    laptopPose = {
+      cx: mix(from.cx, to.cx, slideEased0),
+      cy: mix(from.cy, to.cy, slideEased0),
+      scale: mix(from.scale, to.scale, slideEased0),
+    }
+  }
+
+  // --- Scene 1→2 slide transition (circle only, no laptop) ---
+  const inSlide1 = range1 && railProgress > range1.holdEnd && railProgress <= range1.end
+  const slideP1 = inSlide1
+    ? clamp((railProgress - range1.holdEnd) / (range1.end - range1.holdEnd), 0, 1)
+    : 0
+
+  if (inSlide1) {
+    const from = connectCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = setupCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    circlePose = {
+      cx: mix(from.cx, to.cx, slideP1),
+      cy: mix(from.cy, to.cy, slideP1),
+      r: mix(from.r, to.r, slideP1),
+    }
+  }
+
+  // --- Scene 2→3 slide transition (circle only) ---
+  const inSlide2 = range2 && railProgress > range2.holdEnd && railProgress <= range2.end
+  const slideP2 = inSlide2
+    ? clamp((railProgress - range2.holdEnd) / (range2.end - range2.holdEnd), 0, 1)
+    : 0
+
+  if (inSlide2) {
+    const from = setupCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = repoCloneCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    circlePose = {
+      cx: mix(from.cx, to.cx, slideP2),
+      cy: mix(from.cy, to.cy, slideP2),
+      r: mix(from.r, to.r, slideP2),
+    }
+  }
+
+  // --- Scene 3→4 slide transition (circle only) ---
+  const range3 = ranges[3]
+  const inSlide3 = range3 && railProgress > range3.holdEnd && railProgress <= range3.end
+  const slideP3 = inSlide3
+    ? clamp((railProgress - range3.holdEnd) / (range3.end - range3.holdEnd), 0, 1)
+    : 0
+
+  if (inSlide3) {
+    const from = repoCloneCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = remoteAiCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    circlePose = {
+      cx: mix(from.cx, to.cx, slideP3),
+      cy: mix(from.cy, to.cy, slideP3),
+      r: mix(from.r, to.r, slideP3),
+    }
+  }
+
+  // Nothing to render
+  if (!circlePose && !laptopPose) return null
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={`0 0 ${vpSize.w} ${vpSize.h}`}
+      className="absolute inset-0 block h-full w-full"
+      style={{ pointerEvents: 'none' }}
+      aria-hidden="true"
+    >
+      {/* Circle renders BEFORE laptop so it paints behind it */}
+      {circlePose && (
+        <circle
+          cx={circlePose.cx}
+          cy={circlePose.cy}
+          r={Math.max(circlePose.r, 0.1)}
+          fill={palette.bauhaus.blue}
+          opacity={0.96}
+        />
+      )}
+      {laptopPose && (
+        <BauhausLaptop cx={laptopPose.cx} cy={laptopPose.cy} scale={laptopPose.scale}>
+          {/* Traffic light dots */}
+          <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
+          <circle cx={-63} cy={-112} r={3} fill={palette.bauhaus.yellow} />
+          <circle cx={-52} cy={-112} r={3} fill={palette.bauhaus.blue} />
+
+          {/* Dashboard chrome — matches ConsoleSetupStage end / ConnectStage start */}
+          <rect x={-78} y={-112} width={156} height={18} rx={4} fill="rgba(255,255,255,0.06)" />
+          <rect x={-72} y={-109} width={12} height={12} rx={3} fill={palette.bauhaus.yellow} />
+          <rect x={-56} y={-108} width={40} height={3} rx={1.5} fill="rgba(255,255,255,0.5)" />
+          <rect x={-56} y={-103} width={24} height={2.5} rx={1} fill="rgba(255,255,255,0.25)" />
+          <rect x={20} y={-108} width={18} height={6} rx={3} fill={palette.bauhaus.yellow} opacity={0.7} />
+          <rect x={42} y={-108} width={14} height={6} rx={3} fill={palette.bauhaus.blue} opacity={0.5} />
+
+          {/* Left card — Pairing */}
+          <rect x={-78} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+          <text x={-70} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Pairing</text>
+
+          {/* Right card — Devices */}
+          <rect x={2} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+          <text x={10} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Devices</text>
+          {[0, 1, 2].map((i) => (
+            <g key={`device-${i}`}>
+              <rect x={10} y={-70 + i * 16} width={58} height={12} rx={4} fill="rgba(255,255,255,0.04)" />
+              <circle cx={18} cy={-64 + i * 16} r={3} fill={i === 0 ? palette.bauhaus.blue : 'rgba(255,255,255,0.15)'} />
+              <rect x={24} y={-66 + i * 16} width={i === 0 ? 30 : 20 + i * 4} height={3} rx={1.5} fill={i === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)'} />
+            </g>
+          ))}
+
+          {/* Console label */}
+          <text x={0} y={-17} textAnchor="middle" fontFamily={architectureFonts.body} fontSize="5" letterSpacing="0.16em" fill="rgba(255,255,255,0.5)">
+            SERVER CONTROL BOARD
+          </text>
+        </BauhausLaptop>
+      )}
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Utility for scenes to know when to hide their own assets
+// ---------------------------------------------------------------------------
+
+export function shouldHideLaptop(
+  sceneIndex: number,
+  railProgress: number,
+  ranges: SceneRange[],
+): boolean {
+  if (!LAPTOP_SCENE_INDICES.includes(sceneIndex as 0 | 1)) return false
+
+  const range0 = ranges[0]
+
+  // Scene 0 (ConsoleSetup): hide during slide-out
+  if (sceneIndex === 0) {
+    return railProgress > range0.holdEnd && railProgress <= range0.end
+  }
+
+  // Scene 1 (Connect): hide while scene 0 is sliding out
+  if (sceneIndex === 1) {
+    return railProgress > range0.holdEnd && railProgress <= range0.end
+  }
+
+  return false
+}
+
+/** True when the overlay is rendering the blue circle — scene should hide its own */
+export function shouldHideBlueCircle(
+  sceneIndex: number,
+  railProgress: number,
+  ranges: SceneRange[],
+): boolean {
+  const range0 = ranges[0]
+  const range1 = ranges[1]
+  const range2 = ranges[2]
+  const range3 = ranges[3]
+
+  // Scene 0→1 slide: scenes 0 and 1 hide their circles
+  if (sceneIndex === 0 || sceneIndex === 1) {
+    if (railProgress > range0.holdEnd && railProgress <= range0.end) return true
+  }
+
+  // Scene 1→2 slide: scenes 1 and 2 hide their circles
+  if (range1 && (sceneIndex === 1 || sceneIndex === 2)) {
+    if (railProgress > range1.holdEnd && railProgress <= range1.end) return true
+  }
+
+  // Scene 2→3 slide: scenes 2 and 3 hide their circles
+  if (range2 && (sceneIndex === 2 || sceneIndex === 3)) {
+    if (railProgress > range2.holdEnd && railProgress <= range2.end) return true
+  }
+
+  // Scene 3→4 slide: scenes 3 and 4 hide their circles
+  if (range3 && (sceneIndex === 3 || sceneIndex === 4)) {
+    if (railProgress > range3.holdEnd && railProgress <= range3.end) return true
+  }
+
+  return false
+}

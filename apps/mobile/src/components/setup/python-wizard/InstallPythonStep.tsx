@@ -9,7 +9,7 @@ import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } 
 
 const INSTALL_COMMANDS = [
   'sudo apt update',
-  'sudo apt install -y python3.13',
+  'sudo apt install -y python3',
 ]
 
 const DONE_MARKER = '__PYINSTALL_DONE__'
@@ -35,9 +35,9 @@ export default function InstallPythonStep({ dispatch }: Props) {
   } = useTerminalCommand({
     persistent: true,
     errorPatterns: [/^E: /m, /Unable to locate package/im],
-    onOutput: (chunk, fullOutput) => {
+    onOutput: (chunk, _fullOutput) => {
       console.log('[python-install] output chunk:', JSON.stringify(chunk.slice(0, 120)))
-      if (fullOutput.includes(DONE_MARKER)) {
+      if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
         console.log('[python-install] Done marker detected!')
         setSuccess(true)
       }
@@ -84,7 +84,7 @@ export default function InstallPythonStep({ dispatch }: Props) {
           <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
               This will install the Python 3.13 interpreter on your server. The binary will be available as{' '}
-              <Text style={styles.mono}>python3.13</Text>.
+              <Text style={styles.mono}>python3</Text>.
             </Text>
             <View style={styles.commandList}>
               {INSTALL_COMMANDS.map((cmd, i) => (

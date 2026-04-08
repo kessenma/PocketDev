@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "assets"
   ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -27,6 +28,10 @@
     "./crypto": {
       "types": "./dist/crypto/index.d.ts",
       "import": "./dist/crypto/index.js"
+    },
+    "./assets": {
+      "types": "./dist/assets/index.d.ts",
+      "import": "./dist/assets/index.js"
     }
   },
   "scripts": {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   motion,
   useMotionValueEvent,
@@ -9,22 +9,37 @@ import {
 import type { SceneConfig } from './timeline-types'
 import { buildTrackKeyframes, computeSceneRanges, sceneProgress } from './timeline-utils'
 import { ExplainerStage } from './explainers/ExplainerStage'
+import { PersistentTransitionOverlay, shouldHideLaptop, shouldHideBlueCircle } from './shared/PersistentTransitionOverlay'
 
 export function ScrollTimeline({
   scenes,
   sectionHeight = '1000vh',
   onRailProgress,
+  externalSectionRef,
   children: headerContent,
 }: {
   scenes: SceneConfig[]
   sectionHeight?: string
   onRailProgress?: (progress: number) => void
+  externalSectionRef?: React.RefObject<HTMLElement | null>
   children?: React.ReactNode
 }) {
   const reduceMotion = useReducedMotion()
+  // Stable ref object for useScroll; callback ref below keeps it + externalSectionRef in sync
   const sectionRef = useRef<HTMLElement | null>(null)
+  const setSectionNode = useCallback(
+    (node: HTMLElement | null) => {
+      sectionRef.current = node
+      if (externalSectionRef) {
+        ;(externalSectionRef as { current: HTMLElement | null }).current = node
+      }
+    },
+    [externalSectionRef],
+  )
   const [railProgress, setRailProgress] = useState(0)
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
+  const [vpSize, setVpSize] = useState({ w: 1280, h: 800 })
+  const [stickyActive, setStickyActive] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -33,6 +48,33 @@ export function ScrollTimeline({
     syncLayout()
     mediaQuery.addEventListener('change', syncLayout)
     return () => mediaQuery.removeEventListener('change', syncLayout)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const sync = () => setVpSize({ w: window.innerWidth, h: window.innerHeight })
+    sync()
+    window.addEventListener('resize', sync)
+    return () => window.removeEventListener('resize', sync)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const syncSticky = () => {
+      const section = sectionRef.current
+      if (!section) return
+      const rect = section.getBoundingClientRect()
+      setStickyActive(rect.top <= 0)
+    }
+
+    syncSticky()
+    window.addEventListener('scroll', syncSticky, { passive: true })
+    window.addEventListener('resize', syncSticky)
+    return () => {
+      window.removeEventListener('scroll', syncSticky)
+      window.removeEventListener('resize', syncSticky)
+    }
   }, [])
 
   const ranges = useMemo(() => computeSceneRanges(scenes), [scenes])
@@ -52,23 +94,41 @@ export function ScrollTimeline({
   const trackWidth = `${scenes.length * 100}vw`
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative px-6 pt-16 pb-0"
-      style={{ height: reduceMotion ? 'auto' : sectionHeight }}
-    >
-      {/* Section header (passed as children) */}
-      {headerContent}
+    <>
+      {/* Section header lives outside the scroll-tracked section so it doesn't
+          consume scroll budget — railProgress=0 now aligns with the sticky
+          animation track actually entering the viewport. */}
+      <div className="px-6 pt-16 pb-0">
+        {headerContent}
+      </div>
 
-      {reduceMotion ? (
-        <ReducedMotionLayout
-          scenes={scenes}
-          ranges={ranges}
-          railProgress={railProgress}
-          isDesktopLayout={isDesktopLayout}
-        />
-      ) : (
-        <div className="sticky top-0 h-screen overflow-hidden -mx-6">
+      <section
+        ref={setSectionNode}
+        className="relative"
+        style={{ height: reduceMotion ? 'auto' : sectionHeight }}
+      >
+        {reduceMotion ? (
+          <ReducedMotionLayout
+            scenes={scenes}
+            ranges={ranges}
+            railProgress={railProgress}
+            isDesktopLayout={isDesktopLayout}
+          />
+        ) : (
+          <div
+            className="sticky top-0 h-screen overflow-hidden"
+            style={{ opacity: stickyActive ? 1 : 0 }}
+          >
+          {/* Persistent asset overlay — sits above the sliding track so shared
+              elements (laptop, circle) stay visually fixed during panel slides */}
+          <div className="pointer-events-none absolute inset-0 z-10">
+            <PersistentTransitionOverlay
+              railProgress={railProgress}
+              ranges={ranges}
+              vpSize={vpSize}
+              isDesktopLayout={isDesktopLayout}
+            />
+          </div>
           <div className="flex h-screen w-screen items-center overflow-hidden">
             <motion.div
               className="flex h-full flex-row flex-nowrap items-center"
@@ -84,6 +144,8 @@ export function ScrollTimeline({
                   active,
                   isDesktopLayout,
                   railProgress,
+                  hideLaptop: shouldHideLaptop(i, railProgress, ranges),
+                  hideBlueCircle: shouldHideBlueCircle(i, railProgress, ranges),
                 }
 
                 if (scene.kind === 'explainer' && scene.explainer) {
@@ -117,6 +179,7 @@ export function ScrollTimeline({
         </div>
       )}
     </section>
+    </>
   )
 }
 

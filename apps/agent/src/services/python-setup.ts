@@ -19,15 +19,17 @@ async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; 
 }
 
 export async function checkPythonStatus(): Promise<PythonSetupStatus> {
-  // Check for python3.13 first, fall back to python3
+  // Check for python binaries in order of preference: python3.13, python3, python
   const { stdout: path13, exitCode: which13 } = await exec('which python3.13')
   const { stdout: path3, exitCode: which3 } = await exec('which python3')
+  const { stdout: pathPy, exitCode: whichPy } = await exec('which python')
 
   const hasPython13 = which13 === 0 && !!path13
   const hasPython3 = which3 === 0 && !!path3
+  const hasPython = whichPy === 0 && !!pathPy
 
-  const pythonBin = hasPython13 ? 'python3.13' : hasPython3 ? 'python3' : null
-  const pythonPath = hasPython13 ? path13.split('\n')[0] : hasPython3 ? path3.split('\n')[0] : null
+  const pythonBin = hasPython13 ? 'python3.13' : hasPython3 ? 'python3' : hasPython ? 'python' : null
+  const pythonPath = hasPython13 ? path13.split('\n')[0] : hasPython3 ? path3.split('\n')[0] : hasPython ? pathPy.split('\n')[0] : null
 
   if (!pythonBin) {
     // Check if deadsnakes PPA is already added
@@ -36,6 +38,7 @@ export async function checkPythonStatus(): Promise<PythonSetupStatus> {
       installed: false,
       version: null,
       path: null,
+      binary: null,
       pip_installed: false,
       pip_version: null,
       pip_path: null,
@@ -49,7 +52,7 @@ export async function checkPythonStatus(): Promise<PythonSetupStatus> {
   const versionMatch = versionOut.match(/(\d+\.\d+[\.\d]*)/)
   const version = versionMatch ? versionMatch[1] : null
 
-  // Check pip — try python3.13 -m pip first, then pip3, then pip
+  // Check pip — try detected binary -m pip first, then pip3, then pip
   let pipPath: string | null = null
   let pipVersion: string | null = null
 
@@ -69,8 +72,7 @@ export async function checkPythonStatus(): Promise<PythonSetupStatus> {
   }
 
   // Check venv availability
-  const venvBin = hasPython13 ? 'python3.13' : 'python3'
-  const { exitCode: venvExit } = await exec(`${venvBin} -m venv --help 2>&1`)
+  const { exitCode: venvExit } = await exec(`${pythonBin} -m venv --help 2>&1`)
   const venvAvailable = venvExit === 0
 
   // Check if deadsnakes PPA is added
@@ -80,6 +82,7 @@ export async function checkPythonStatus(): Promise<PythonSetupStatus> {
     installed: true,
     version,
     path: pythonPath,
+    binary: pythonBin,
     pip_installed: !!pipPath,
     pip_version: pipVersion,
     pip_path: pipPath,

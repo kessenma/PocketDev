@@ -121,13 +121,14 @@ export function TaskFlowTakeoverScene({
           rx={phone.radius}
           fill={palette.bauhaus.black}
         />
+        {/* Earpiece — matches BauhausPhone proportions (33% width, top-center) */}
         <rect
-          x={phone.x + phone.width * 0.34}
-          y={phone.y + Math.round(14 * fs)}
-          width={phone.width * 0.32}
-          height={Math.round(20 * fs)}
-          rx={Math.round(10 * fs)}
-          fill="rgba(255,255,255,0.08)"
+          x={phone.x + phone.width * 0.335}
+          y={phone.y + Math.round(8 * fs)}
+          width={phone.width * 0.33}
+          height={Math.round(5 * fs)}
+          rx={Math.round(2.5 * fs)}
+          fill="rgba(255,255,255,0.15)"
         />
 
         <g clipPath={`url(#${clipId})`}>

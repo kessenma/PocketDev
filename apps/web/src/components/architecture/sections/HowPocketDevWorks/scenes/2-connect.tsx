@@ -7,12 +7,14 @@ export const connectScene: SceneConfig = {
   weight: 3,
   holdRatio: 0.8,
   reducedMotionFullBleed: true,
-  render: ({ progress, active, isDesktopLayout }) => (
+  render: ({ progress, active, isDesktopLayout, hideLaptop, hideBlueCircle }) => (
     <div className="relative z-10 h-full w-full">
       <ConnectTakeoverScene
         progress={progress}
         active={active}
         isDesktopLayout={isDesktopLayout}
+        hideLaptop={hideLaptop}
+        hideBlueCircle={hideBlueCircle}
       />
     </div>
   ),

@@ -17,7 +17,10 @@
     "db:generate": "pnpm --filter @pocketdev/db exec drizzle-kit generate",
     "db:migrate": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit migrate",
     "db:push": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit push",
-    "db:studio": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit studio"
+    "db:studio": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit studio",
+    "icons:generate": "pnpm --filter @pocketdev/app-icon generate",
+    "icons:distribute": "pnpm --filter @pocketdev/app-icon distribute",
+    "icons": "pnpm --filter @pocketdev/app-icon icons"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

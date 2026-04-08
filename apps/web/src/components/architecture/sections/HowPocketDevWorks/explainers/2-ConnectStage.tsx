@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
-import { architectureTokens } from '../../../shared/theme'
+import { architectureTokens, architectureFonts } from '../../../shared/theme'
 import { BauhausLaptop } from '../shared/BauhausLaptop'
+import { BauhausPhone } from '../shared/BauhausPhone'
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
@@ -35,9 +36,9 @@ const QR_CELLS: QRCell[] = QR_GRID.flatMap((row, r) =>
 const CELL_SIZE = 7
 const GRID_COLS = 6
 const GRID_W = GRID_COLS * CELL_SIZE
-// Grid origin in laptop-local coords (centered in screen inner area)
-const GRID_ORIGIN_X = -GRID_W / 2
-const GRID_ORIGIN_Y = -117 + (104 - GRID_W) / 2
+// Grid origin in laptop-local coords — inside the Pairing card of the dashboard
+const GRID_ORIGIN_X = -62
+const GRID_ORIGIN_Y = -68
 
 // Deterministic scatter angles — cells fly in from edges of the viewport
 const SCATTER_ANGLES = QR_CELLS.map((cell) => {
@@ -47,10 +48,14 @@ const SCATTER_ANGLES = QR_CELLS.map((cell) => {
 export function ConnectTakeoverScene({
   progress,
   isDesktopLayout,
+  hideLaptop = false,
+  hideBlueCircle = false,
 }: {
   progress: number
   active?: boolean
   isDesktopLayout: boolean
+  hideLaptop?: boolean
+  hideBlueCircle?: boolean
 }) {
   const reduceMotion = useReducedMotion()
   const p = reduceMotion ? 1 : progress
@@ -71,11 +76,11 @@ export function ConnectTakeoverScene({
   const animCenterX = vpSize.w / 2
   const animCenterY = vpSize.h * (isDesktopLayout ? 0.42 : 0.40)
 
-  // Timeline
+  // Timeline — everything must settle before holdRatio (0.8) so the overlay handoff aligns
   const assembleP = mapProgress(p, 0.0, 0.30)
   const scanP = mapProgress(p, 0.35, 0.50)
-  const flyP = mapProgress(p, 0.52, 0.72)
-  const connectedP = mapProgress(p, 0.72, 0.85)
+  const flyP = mapProgress(p, 0.52, 0.68)
+  const connectedP = mapProgress(p, 0.58, 0.76)
   const screenOn = connectedP > 0.5
   const showQrOnScreen = flyP === 0
   const settled = connectedP >= 1
@@ -171,22 +176,25 @@ export function ConnectTakeoverScene({
 
       {/* Animation group — scaled and centered */}
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>
-        {/* Blue circle — starts top-right of laptop, moves behind phone on pair */}
-        {(() => {
+        {/* Blue circle — starts top-right of laptop, moves to right of phone.
+            Hidden during slide-out (overlay handles it) */}
+        {!hideLaptop && !hideBlueCircle && (() => {
           const laptopTopRightX = laptopLocalCx + 70 * laptopScale
           const laptopTopY = laptopLocalCy - 100 * laptopScale
-          const phoneBehindX = phoneLocalCx
-          const phoneBehindY = phoneLocalCy - 10
+          // End: to the right of the phone, vertically centered
+          const phoneRightX = phoneLocalCx + phoneW / 2 + 20
+          const phoneRightY = phoneLocalCy
           const moveP = clamp((connectedP - 0.2) / 0.8, 0, 1)
-          const bcx = mix(laptopTopRightX, phoneBehindX, moveP)
-          const bcy = mix(laptopTopY, phoneBehindY, moveP)
-          const br = mix(34, 42, moveP)
+          const bcx = mix(laptopTopRightX, phoneRightX, moveP)
+          const bcy = mix(laptopTopY, phoneRightY, moveP)
+          const br = mix(26, 30, moveP)
           return (
             <motion.circle
               cx={bcx}
               cy={bcy}
               r={br}
               fill={palette.bauhaus.blue}
+              opacity={0.96}
               animate={
                 settled && !reduceMotion
                   ? {
@@ -206,7 +214,39 @@ export function ConnectTakeoverScene({
         })()}
 
         {/* Laptop with QR grid */}
+        <g opacity={hideLaptop ? 0 : 1}>
         <BauhausLaptop cx={laptopLocalCx} cy={laptopLocalCy} scale={laptopScale}>
+          {/* Traffic light dots */}
+          <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
+          <circle cx={-63} cy={-112} r={3} fill={palette.bauhaus.yellow} />
+          <circle cx={-52} cy={-112} r={3} fill={palette.bauhaus.blue} />
+
+          {/* ─── Dashboard chrome (matches ConsoleSetupStage end state) ─── */}
+          {/* Header bar */}
+          <rect x={-78} y={-112} width={156} height={18} rx={4} fill="rgba(255,255,255,0.06)" />
+          <rect x={-72} y={-109} width={12} height={12} rx={3} fill={palette.bauhaus.yellow} />
+          <rect x={-56} y={-108} width={40} height={3} rx={1.5} fill="rgba(255,255,255,0.5)" />
+          <rect x={-56} y={-103} width={24} height={2.5} rx={1} fill="rgba(255,255,255,0.25)" />
+          <rect x={20} y={-108} width={18} height={6} rx={3} fill={palette.bauhaus.yellow} opacity={0.7} />
+          <rect x={42} y={-108} width={14} height={6} rx={3} fill={palette.bauhaus.blue} opacity={0.5} />
+
+          {/* Left card — Pairing (QR assembles here) */}
+          <rect
+            x={-78} y={-88} width={74} height={66} rx={6}
+            fill="rgba(255,255,255,0.05)"
+            stroke="rgba(255,255,255,0.15)"
+            strokeWidth="0.6"
+          />
+          <text
+            x={-70} y={-78}
+            fontFamily="var(--font-sans), sans-serif"
+            fontSize="4.5" fontWeight="600"
+            fill="rgba(255,255,255,0.6)"
+          >
+            Pairing
+          </text>
+
+          {/* QR cells — assemble into the Pairing card */}
           {showQrOnScreen && (
             <>
               {QR_CELLS.map((cell, i) => {
@@ -247,7 +287,43 @@ export function ConnectTakeoverScene({
               )}
             </>
           )}
+
+          {/* Right card — Devices */}
+          <rect
+            x={2} y={-88} width={74} height={66} rx={6}
+            fill="rgba(255,255,255,0.05)"
+            stroke="rgba(255,255,255,0.15)"
+            strokeWidth="0.6"
+          />
+          <text
+            x={10} y={-78}
+            fontFamily="var(--font-sans), sans-serif"
+            fontSize="4.5" fontWeight="600"
+            fill="rgba(255,255,255,0.6)"
+          >
+            Devices
+          </text>
+          {[0, 1, 2].map((i) => (
+            <g key={`device-${i}`}>
+              <rect x={10} y={-70 + i * 16} width={58} height={12} rx={4} fill="rgba(255,255,255,0.04)" />
+              <circle cx={18} cy={-64 + i * 16} r={3} fill={i === 0 ? palette.bauhaus.blue : 'rgba(255,255,255,0.15)'} />
+              <rect x={24} y={-66 + i * 16} width={i === 0 ? 30 : 20 + i * 4} height={3} rx={1.5} fill={i === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)'} />
+            </g>
+          ))}
+
+          {/* Console label */}
+          <text
+            x={0} y={-17}
+            textAnchor="middle"
+            fontFamily={architectureFonts.body}
+            fontSize="5"
+            letterSpacing="0.16em"
+            fill="rgba(255,255,255,0.5)"
+          >
+            SERVER CONTROL BOARD
+          </text>
         </BauhausLaptop>
+        </g>
 
         {/* Flying squares (local coords, outside laptop transform) */}
         {flyP > 0 && flyP < 1 &&
@@ -282,24 +358,15 @@ export function ConnectTakeoverScene({
             )
           })}
 
-        {/* Phone body */}
-        <rect
-          x={phoneLocalX}
-          y={phoneLocalY}
-          width={phoneW}
-          height={phoneH}
-          rx={16}
-          fill={palette.bauhaus.black}
-        />
-        {/* Notch */}
-        <rect
-          x={phoneLocalCx - 10}
-          y={phoneLocalY + 7}
-          width={20}
-          height={4}
-          rx={2}
-          fill="rgba(255,255,255,0.84)"
-        />
+        {/* Phone — BauhausPhone scaled to match original 52×96 dimensions */}
+        <BauhausPhone
+          cx={phoneLocalCx}
+          cy={phoneLocalCy}
+          scale={phoneW / 60}
+        >
+          {/* Suppress default content — animated overlays rendered outside */}
+          <></>
+        </BauhausPhone>
 
         {/* Phone screen — white with red button when connected */}
         <motion.rect
@@ -346,14 +413,6 @@ export function ConnectTakeoverScene({
         >
           Pair
         </motion.text>
-
-        {/* Home button hint */}
-        <circle
-          cx={phoneLocalCx}
-          cy={phoneLocalY + phoneH - 9}
-          r={3}
-          fill="rgba(255,255,255,0.4)"
-        />
 
         {/* Labels */}
         <text

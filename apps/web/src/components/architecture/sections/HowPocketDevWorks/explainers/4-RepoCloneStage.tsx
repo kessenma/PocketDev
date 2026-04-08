@@ -185,10 +185,12 @@ export function RepoCloneTakeoverScene({
   progress,
   active,
   isDesktopLayout,
+  hideBlueCircle = false,
 }: {
   progress: number
   active: boolean
   isDesktopLayout: boolean
+  hideBlueCircle?: boolean
 }) {
   const reduceMotion = useReducedMotion()
   const scrollProgress = reduceMotion ? 1 : progress
@@ -204,12 +206,16 @@ export function RepoCloneTakeoverScene({
 
   const viewBox = `0 0 ${vpSize.w} ${vpSize.h}`
 
-  // Animation progress segments
-  const leftFall = mapProgress(scrollProgress, 0.04, 0.32)
-  const rightFall = mapProgress(scrollProgress, 0.12, 0.42)
-  const connectProgress = mapProgress(scrollProgress, 0.3, 0.58)
-  const morphProgress = mapProgress(scrollProgress, 0.42, 0.76)
+  // Animation progress segments — circle starts at its position immediately
+  // (the overlay handles the entry transition from the Setup scene)
+  const leftFall = mapProgress(scrollProgress, 0.0, 0.28)
+  const rightFall = mapProgress(scrollProgress, 0.08, 0.38)
+  const connectProgress = mapProgress(scrollProgress, 0.26, 0.54)
+  const morphProgress = mapProgress(scrollProgress, 0.38, 0.72)
   const animate = active && !reduceMotion && morphProgress > 0.96
+
+  const circleEntryY = 184
+  const circleEntryR = 42
 
   // Scale the shapes relative to viewport
   const scale = Math.min(vpSize.w, vpSize.h) / 320
@@ -332,23 +338,25 @@ export function RepoCloneTakeoverScene({
 
       {/* Animation — scaled and centered */}
       <g transform={`translate(${animCenterX - 160 * scale} ${animCenterY - 100 * scale}) scale(${scale})`}>
-        <motion.circle
-          cx="160"
-          cy="184"
-          r="42"
-          fill={palette.bauhaus.blue}
-          animate={
-            animate
-              ? { scale: [1, 1.04, 1], opacity: [0.95, 1, 0.95] }
-              : { scale: 1, opacity: 0.96 }
-          }
-          transition={
-            animate
-              ? { duration: EXPLAINER_TIMINGS.long, repeat: Infinity, ease: 'easeInOut' }
-              : undefined
-          }
-          style={{ transformOrigin: '160px 184px' }}
-        />
+        {!hideBlueCircle && (
+          <motion.circle
+            cx="160"
+            cy={circleEntryY}
+            r={circleEntryR}
+            fill={palette.bauhaus.blue}
+            animate={
+              animate
+                ? { scale: [1, 1.04, 1], opacity: [0.95, 1, 0.95] }
+                : { scale: 1, opacity: 0.96 }
+            }
+            transition={
+              animate
+                ? { duration: EXPLAINER_TIMINGS.long, repeat: Infinity, ease: 'easeInOut' }
+                : undefined
+            }
+            style={{ transformOrigin: `160px ${circleEntryY}px` }}
+          />
+        )}
 
         <motion.path
           d="M 160 148 C 180 112, 208 82, 244 42"
@@ -392,37 +400,6 @@ export function RepoCloneTakeoverScene({
           morphProgress={morphProgress}
         />
 
-        {[0, 1, 2].map((particle) => {
-          const px = 148 + particle * 10
-          const py = 178 + (particle % 2) * 8
-          return (
-            <motion.circle
-              key={`repo-glow-${particle}`}
-              cx={px}
-              cy={py}
-              r={particle === 1 ? 2 : 1.5}
-              fill={particle === 1 ? palette.bauhaus.yellow : 'rgba(255,255,255,0.7)'}
-              animate={
-                animate
-                  ? {
-                      cx: [px, px + 6, px - 4, px],
-                      cy: [py, py - 5, py + 4, py],
-                      opacity: [0.18, 0.72, 0.34, 0.18],
-                    }
-                  : { opacity: morphProgress * 0.35 }
-              }
-              transition={
-                animate
-                  ? {
-                      duration: EXPLAINER_TIMINGS.long + particle * 0.18,
-                      repeat: Infinity,
-                      ease: 'easeInOut',
-                    }
-                  : undefined
-              }
-            />
-          )
-        })}
       </g>
     </svg>
   )

@@ -1,0 +1,15 @@
+{
+  "name": "@pocketdev/app-icon",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "tsx scripts/generate.ts",
+    "distribute": "tsx scripts/distribute.ts",
+    "icons": "tsx scripts/generate.ts && tsx scripts/distribute.ts"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.0",
+    "png-to-ico": "^2.1.8",
+    "tsx": "^4.0.0"
+  }
+}

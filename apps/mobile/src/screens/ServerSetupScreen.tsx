@@ -589,6 +589,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     overflow: 'hidden',
+    paddingTop: 6,
+    paddingHorizontal: 6,
   },
   progressStep: {
     alignItems: 'center',

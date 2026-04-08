@@ -10,6 +10,10 @@ export type SceneRenderProps = {
   isDesktopLayout: boolean
   /** Raw 0–1 overall scroll progress */
   railProgress: number
+  /** True when the persistent overlay is rendering the laptop — scene should hide its own */
+  hideLaptop?: boolean
+  /** True when the persistent overlay is rendering the blue circle — scene should hide its own */
+  hideBlueCircle?: boolean
 }
 
 export type SceneConfig = {

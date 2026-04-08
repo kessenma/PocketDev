@@ -30,6 +30,11 @@ export function LanguagesDiagnosticsTab({ pythonInfo }: Props) {
                 pythonInfo?.installed ? '' : 'text-red-400')}>
                 {pythonInfo?.installed ? `v${pythonInfo.version}` : 'Not Found'}
               </p>
+              {pythonInfo?.binary && (
+                <p className={cn('mt-1 font-mono text-xs', pythonInfo.installed ? 'text-black/60' : 'text-[#f4f0e8]/50')}>
+                  {pythonInfo.binary}
+                </p>
+              )}
             </div>
             <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">pip</p>

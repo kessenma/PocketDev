@@ -6,8 +6,6 @@ import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
 import { Package, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
 
-const INSTALL_COMMAND = 'python3.13 -m ensurepip --upgrade 2>&1 || curl -sS https://bootstrap.pypa.io/get-pip.py | python3.13'
-const DISPLAY_COMMAND = 'python3.13 -m ensurepip || get-pip.py'
 const DONE_MARKER = '__PIP_DONE__'
 
 type WizardAction =
@@ -16,9 +14,12 @@ type WizardAction =
 
 interface Props {
   dispatch: (action: WizardAction) => void
+  pythonBin: string
 }
 
-export default function InstallPipStep({ dispatch }: Props) {
+export default function InstallPipStep({ dispatch, pythonBin }: Props) {
+  const INSTALL_COMMAND = `${pythonBin} -m ensurepip --upgrade 2>&1 || curl -sS https://bootstrap.pypa.io/get-pip.py | ${pythonBin}`
+  const DISPLAY_COMMAND = `${pythonBin} -m ensurepip || get-pip.py`
   const { colors } = useTheme()
   const [started, setStarted] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -31,8 +32,8 @@ export default function InstallPipStep({ dispatch }: Props) {
   } = useTerminalCommand({
     persistent: true,
     errorPatterns: [/^error:/im, /^ERROR:/m, /ModuleNotFoundError/im, /No module named/im, /permission denied/im, /Could not install/im, /PIP_FAILED/],
-    onOutput: (_chunk, fullOutput) => {
-      if (fullOutput.includes(DONE_MARKER)) {
+    onOutput: (chunk, _fullOutput) => {
+      if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
         setSuccess(true)
       }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)

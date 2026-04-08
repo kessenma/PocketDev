@@ -370,27 +370,27 @@ async function checkDocker(): Promise<ToolCheck> {
 }
 
 async function checkPython(): Promise<ToolCheck> {
-  // Prefer python3.13, fall back to python3
-  const path = (await which('python3.13')) ?? (await which('python3'))
+  // Prefer python3.13, fall back to python3, then python
+  const path = (await which('python3.13')) ?? (await which('python3')) ?? (await which('python'))
   if (!path) {
     return {
       id: 'python', name: 'Python', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo apt install python3.13',
+      install_command: 'sudo apt install python3',
       auth_command: null, details: {},
     }
   }
 
-  const bin = path.includes('python3.13') ? 'python3.13' : 'python3'
-  const version = await getVersion(`${bin} --version`)
+  const basename = path.split('/').pop() ?? 'python3'
+  const version = await getVersion(`${basename} --version`)
 
   // Check pip via module
-  const { stdout: pipOut, exitCode: pipExit } = await exec(`${bin} -m pip --version 2>&1`)
+  const { stdout: pipOut, exitCode: pipExit } = await exec(`${basename} -m pip --version 2>&1`)
   const pipInstalled = pipExit === 0
   const pipVersion = pipInstalled ? (pipOut.match(/pip (\d+\.\d+[\.\d]*)/))?.[1] ?? null : null
 
   // Check venv
-  const { exitCode: venvExit } = await exec(`${bin} -m venv --help 2>&1`)
+  const { exitCode: venvExit } = await exec(`${basename} -m venv --help 2>&1`)
   const venvAvailable = venvExit === 0
 
   upsertToolPath('python', path, version)
@@ -401,9 +401,9 @@ async function checkPython(): Promise<ToolCheck> {
   return {
     id: 'python', name: 'Python', status, auth_status: 'not_applicable',
     version, path, required: false,
-    install_command: fullyConfigured ? null : `sudo apt install ${bin.replace('python', 'python')}-venv`,
+    install_command: fullyConfigured ? null : `sudo apt install ${basename}-venv`,
     auth_command: null,
-    details: { pip_version: pipVersion, venv_available: venvAvailable ? 'true' : 'false' },
+    details: { pip_version: pipVersion, venv_available: venvAvailable ? 'true' : 'false', binary: basename },
   }
 }
 

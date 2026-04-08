@@ -193,7 +193,7 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
           />
           <Text style={[styles.completedTitle, { color: colors.text }]}>Python is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Python 3.13 with pip and venv are installed on your server.
+            Python{state.pythonStatus?.version ? ` ${state.pythonStatus.version}` : ''} with pip and venv are installed on your server.
           </Text>
           {state.pythonStatus?.version && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
@@ -217,9 +217,9 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
       case 'install':
         return <InstallPythonStep dispatch={dispatch} />
       case 'install-venv':
-        return <InstallVenvStep dispatch={dispatch} />
+        return <InstallVenvStep dispatch={dispatch} pythonBin={state.pythonStatus?.binary ?? 'python3'} />
       case 'install-pip':
-        return <InstallPipStep dispatch={dispatch} />
+        return <InstallPipStep dispatch={dispatch} pythonBin={state.pythonStatus?.binary ?? 'python3'} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:

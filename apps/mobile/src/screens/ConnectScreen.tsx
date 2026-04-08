@@ -14,7 +14,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { fetchPrerequisites, pairWithServer } from '../services/api'
 import { useConnectionStore } from '../stores/connection'
 import { useSetupStore } from '../stores/setup'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { palette, spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
@@ -23,7 +23,7 @@ import SplitViewLayout from '../components/layout/SplitViewLayout'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
 import QRScanner, { type QRScanResult } from '../components/QRScanner'
-import { ArrowRight, Link, ScanLine, Server, Sparkles, Unplug } from 'lucide-react-native'
+import { ArrowRight, Link, ScanLine, Server, Unplug } from 'lucide-react-native'
 import PairingAnimation from '../components/animations/PairingAnimation'
 import type { PrerequisitesReport } from '@pocketdev/shared/types'
 
@@ -98,11 +98,6 @@ export default function ConnectScreen({ navigation }: Props) {
   const inputStyle = {
     backgroundColor: isDark ? 'rgba(23, 23, 23, 0.7)' : 'rgba(250, 250, 250, 0.92)',
   }
-  const titleIconBadgeStyle = {
-    backgroundColor: isDark ? 'rgba(59, 130, 246, 0.16)' : 'rgba(37, 99, 235, 0.1)',
-    borderColor: isDark ? 'rgba(96, 165, 250, 0.26)' : 'rgba(37, 99, 235, 0.16)',
-  }
-
   async function handleConnect() {
     if (!parsed) return
     setError(null)
@@ -270,14 +265,15 @@ export default function ConnectScreen({ navigation }: Props) {
               contentContainerStyle={styles.phoneConnectContent}
               keyboardShouldPersistTaps="handled"
             >
-              <View
-                style={[styles.titleIconBadge, titleIconBadgeStyle]}
-              >
-                <Server color={colors.primary} size={24} strokeWidth={2.1} />
+              <View style={styles.bauhausDots}>
+                <View style={[styles.bauhausDot, { backgroundColor: palette.bauhaus.red }]} />
+                <View style={[styles.bauhausDot, { backgroundColor: palette.bauhaus.yellow }]} />
+                <View style={[styles.bauhausDot, { backgroundColor: palette.bauhaus.blue }]} />
               </View>
+              <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>PAIR WORKSPACE</Text>
               <Text style={[styles.title, { color: colors.text }]}>PocketDev</Text>
               <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-                Pair with your coding workspace
+                Connect to your self-hosted coding agent
               </Text>
               {form}
             </ScrollView>
@@ -286,13 +282,15 @@ export default function ConnectScreen({ navigation }: Props) {
               leading={
                 <LiquidGlassCard style={styles.heroCard}>
                   <View style={styles.heroCardContent}>
-                    <View style={styles.heroEyebrowRow}>
-                      <Sparkles color={colors.textTertiary} size={14} strokeWidth={2.25} />
-                      <Text style={[styles.heroEyebrow, { color: colors.textTertiary }]}>paired workspace</Text>
+                    <View style={styles.bauhausDots}>
+                      <View style={[styles.bauhausDotLg, { backgroundColor: palette.bauhaus.red }]} />
+                      <View style={[styles.bauhausDotLg, { backgroundColor: palette.bauhaus.yellow }]} />
+                      <View style={[styles.bauhausDotLg, { backgroundColor: palette.bauhaus.blue }]} />
                     </View>
-                    <Text style={[styles.heroTitle, { color: colors.text }]}>Pair once. Keep your coding workspace in sync.</Text>
+                    <Text style={[styles.heroEyebrow, { color: colors.textTertiary }]}>SELF-HOSTED AGENT</Text>
+                    <Text style={[styles.heroTitle, { color: colors.text }]}>From pocket to production.</Text>
                     <Text style={[styles.heroBody, { color: colors.textSecondary }]}>
-                      Open tasks, review changes, and follow agent progress from a larger touch workspace after pairing.
+                      Pair once, then open tasks, review changes, and follow agent progress from anywhere.
                     </Text>
                   </View>
                 </LiquidGlassCard>
@@ -328,15 +326,29 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center' as const,
   },
-  titleIconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 1,
+  bauhausDots: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
+    gap: spacing[3],
     marginBottom: spacing[4],
+  },
+  bauhausDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  bauhausDotLg: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  eyebrow: {
+    ...typographyScale.xs,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 1.3,
+    marginBottom: spacing[1],
   },
   title: {
     ...typographyScale['4xl'],
@@ -440,13 +452,9 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     ...typographyScale.xs,
-    textTransform: 'uppercase',
     fontWeight: '700',
-  },
-  heroEyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
+    letterSpacing: 1.3,
+    marginTop: spacing[2],
   },
   heroTitle: {
     ...typographyScale['3xl'],

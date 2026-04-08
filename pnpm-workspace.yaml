@@ -2,3 +2,4 @@ packages:
   - 'apps/*'
   - 'apps/agent/console'
   - 'packages/*'
+  - 'packages/shared/app-icon'

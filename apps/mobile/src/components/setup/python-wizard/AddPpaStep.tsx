@@ -37,8 +37,8 @@ export default function AddPpaStep({ dispatch }: Props) {
   } = useTerminalCommand({
     persistent: true,
     errorPatterns: [FAIL_PATTERN],
-    onOutput: (chunk, fullOutput) => {
-      if (fullOutput.includes(DONE_MARKER)) {
+    onOutput: (chunk, _fullOutput) => {
+      if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
         setSuccess(true)
       }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)

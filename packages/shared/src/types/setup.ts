@@ -306,6 +306,8 @@ export interface PythonSetupStatus {
   installed: boolean
   version: string | null
   path: string | null
+  /** The command name to invoke python (e.g. "python3", "python3.13", "python") */
+  binary: string | null
   pip_installed: boolean
   pip_version: string | null
   pip_path: string | null

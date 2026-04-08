@@ -6,7 +6,6 @@ import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
 import { FolderOpen, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
 
-const INSTALL_COMMAND = 'sudo apt install -y python3.13-venv'
 const DONE_MARKER = '__VENV_DONE__'
 
 type WizardAction =
@@ -15,9 +14,11 @@ type WizardAction =
 
 interface Props {
   dispatch: (action: WizardAction) => void
+  pythonBin: string
 }
 
-export default function InstallVenvStep({ dispatch }: Props) {
+export default function InstallVenvStep({ dispatch, pythonBin }: Props) {
+  const INSTALL_COMMAND = `sudo apt install -y ${pythonBin}-venv`
   const { colors } = useTheme()
   const [started, setStarted] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -30,8 +31,8 @@ export default function InstallVenvStep({ dispatch }: Props) {
   } = useTerminalCommand({
     persistent: true,
     errorPatterns: [/^E: /m, /Unable to locate package/im],
-    onOutput: (_chunk, fullOutput) => {
-      if (fullOutput.includes(DONE_MARKER)) {
+    onOutput: (chunk, _fullOutput) => {
+      if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
         setSuccess(true)
       }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
@@ -95,7 +96,7 @@ export default function InstallVenvStep({ dispatch }: Props) {
           {!success && !hasError && (
             <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
               <Text style={[styles.statusText, { color: colors.primary }]}>
-                Installing python3.13-venv...
+                Installing {pythonBin}-venv...
               </Text>
             </View>
           )}

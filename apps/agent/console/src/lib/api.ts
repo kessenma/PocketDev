@@ -443,6 +443,7 @@ export interface PythonDebugInfo {
   installed: boolean
   version: string | null
   path: string | null
+  binary: string | null
   pip_installed: boolean
   pip_version: string | null
   pip_path: string | null

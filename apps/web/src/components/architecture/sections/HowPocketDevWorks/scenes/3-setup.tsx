@@ -7,12 +7,13 @@ export const setupScene: SceneConfig = {
   weight: 3,
   holdRatio: 0.75,
   reducedMotionFullBleed: true,
-  render: ({ progress, active, isDesktopLayout }) => (
+  render: ({ progress, active, isDesktopLayout, hideBlueCircle }) => (
     <div className="relative z-10 h-full w-full">
       <SetupTakeoverScene
         progress={progress}
         active={active}
         isDesktopLayout={isDesktopLayout}
+        hideBlueCircle={hideBlueCircle}
       />
     </div>
   ),

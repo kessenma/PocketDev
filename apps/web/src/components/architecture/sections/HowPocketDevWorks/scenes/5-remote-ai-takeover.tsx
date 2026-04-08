@@ -5,15 +5,24 @@ import { TextGroup } from '../shared/TextGroup'
 import { BauhausLaptop } from '../shared/BauhausLaptop'
 import type { SceneConfig } from '../timeline-types'
 
+function clamp(v: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, v))
+}
+
+function mix(a: number, b: number, t: number) {
+  return a + (b - a) * t
+}
+
 export function RemoteAiTakeoverScene({
   takeoverProgress,
   isDesktopLayout,
+  hideBlueCircle = false,
 }: {
   takeoverProgress: number
   isDesktopLayout: boolean
+  hideBlueCircle?: boolean
 }) {
   const clipId = useId()
-  const eased = takeoverProgress * takeoverProgress
 
   const vbW = isDesktopLayout ? 1200 : 750
   const vbH = 1200
@@ -23,6 +32,14 @@ export function RemoteAiTakeoverScene({
 
   const textBottomY = textCenterY + (isDesktopLayout ? 132 : 84)
   const circleCenterY = textBottomY + (isDesktopLayout ? 120 : 90)
+
+  // Circle starts left of the phone, shifts to center, then expands
+  const shiftP = clamp(takeoverProgress / 0.08, 0, 1)
+  const expandP = clamp((takeoverProgress - 0.08) / 0.92, 0, 1)
+  const eased = expandP * expandP
+
+  const circleStartX = centerX - (isDesktopLayout ? 100 : 70)
+  const circleCx = mix(circleStartX, centerX, shiftP)
 
   const maxRadius = Math.sqrt(vbW * vbW + vbH * vbH) / 2 + 400
   const circleRadius = 60 + eased * maxRadius
@@ -45,7 +62,7 @@ export function RemoteAiTakeoverScene({
 
       <defs>
         <clipPath id={clipId}>
-          <circle cx={centerX} cy={circleCenterY} r={circleRadius} />
+          <circle cx={circleCx} cy={circleCenterY} r={circleRadius} />
         </clipPath>
       </defs>
 
@@ -55,12 +72,16 @@ export function RemoteAiTakeoverScene({
         scale={isDesktopLayout ? 1.1 : 0.8}
       />
 
-      <circle cx={centerX} cy={circleCenterY} r={circleRadius} fill={architectureTokens.colors.blue} />
+      {!hideBlueCircle && (
+        <circle cx={circleCx} cy={circleCenterY} r={circleRadius} fill={architectureTokens.colors.blue} />
+      )}
 
       <TextGroup color={architectureTokens.colors.text} centerX={centerX} centerY={textCenterY} isDesktop={isDesktopLayout} />
-      <g clipPath={`url(#${clipId})`}>
-        <TextGroup color="#ffffff" centerX={centerX} centerY={textCenterY} isDesktop={isDesktopLayout} />
-      </g>
+      {!hideBlueCircle && (
+        <g clipPath={`url(#${clipId})`}>
+          <TextGroup color="#ffffff" centerX={centerX} centerY={textCenterY} isDesktop={isDesktopLayout} />
+        </g>
+      )}
 
       <RemoteAiStage
         active={takeoverProgress > 0}
@@ -79,10 +100,10 @@ export const remoteAiScene: SceneConfig = {
   holdRatio: 0.85,
   panelClassName: 'overflow-visible',
   reducedMotionFullBleed: true,
-  render: ({ progress, isDesktopLayout }) => (
+  render: ({ progress, isDesktopLayout, hideBlueCircle }) => (
     <>
       <div className="relative z-10 h-full w-full">
-        <RemoteAiTakeoverScene takeoverProgress={progress} isDesktopLayout={isDesktopLayout} />
+        <RemoteAiTakeoverScene takeoverProgress={progress} isDesktopLayout={isDesktopLayout} hideBlueCircle={hideBlueCircle} />
       </div>
       {/* Extend blue fill rightward so no gap shows before the next panel */}
       <div

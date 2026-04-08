@@ -1,0 +1,1 @@
+export { HeroScrollSequence } from './HeroScrollSequence'
