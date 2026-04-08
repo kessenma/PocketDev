@@ -10,6 +10,7 @@ import GitWizardSheet from '../components/setup/GitWizardSheet'
 import ClaudeWizardSheet from '../components/setup/ClaudeWizardSheet'
 import CopilotWizardSheet from '../components/setup/CopilotWizardSheet'
 import CodexWizardSheet from '../components/setup/CodexWizardSheet'
+import OpenCodeWizardSheet from '../components/setup/OpenCodeWizardSheet'
 import PythonWizardSheet from '../components/setup/PythonWizardSheet'
 import RustWizardSheet from '../components/setup/RustWizardSheet'
 import GoWizardSheet from '../components/setup/GoWizardSheet'
@@ -58,6 +59,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showClaudeWizard, setShowClaudeWizard] = useState(false)
   const [showCodexWizard, setShowCodexWizard] = useState(false)
   const [showCopilotWizard, setShowCopilotWizard] = useState(false)
+  const [showOpenCodeWizard, setShowOpenCodeWizard] = useState(false)
   const [showPkgWizard, setShowPkgWizard] = useState(false)
   const [showPkgAnimation, setShowPkgAnimation] = useState(false)
   const [showDockerWizard, setShowDockerWizard] = useState(false)
@@ -137,6 +139,16 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const handleCopilotWizardComplete = useCallback(() => {
     console.log('[ServerSetup] Copilot wizard complete')
     setShowCopilotWizard(false)
+  }, [])
+
+  const handleOpenCodeWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening OpenCode wizard')
+    setShowOpenCodeWizard(true)
+  }, [])
+
+  const handleOpenCodeWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] OpenCode wizard complete')
+    setShowOpenCodeWizard(false)
   }, [])
 
   const handlePkgWizard = useCallback(() => {
@@ -428,6 +440,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onBlockedCodexWizard={handleBlockedCodexWizard}
           onCopilotWizard={handleCopilotWizard}
           onBlockedCopilotWizard={handleBlockedCopilotWizard}
+          onOpenCodeWizard={handleOpenCodeWizard}
           onPkgWizard={handlePkgWizard}
           onPythonWizard={handlePythonWizard}
           onRustWizard={handleRustWizard}
@@ -504,6 +517,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           visible={showCopilotWizard}
           onClose={() => setShowCopilotWizard(false)}
           onComplete={handleCopilotWizardComplete}
+        />
+
+        <OpenCodeWizardSheet
+          visible={showOpenCodeWizard}
+          onClose={() => setShowOpenCodeWizard(false)}
+          onComplete={handleOpenCodeWizardComplete}
         />
 
         <PackageManagerWizardSheet

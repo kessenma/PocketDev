@@ -28,6 +28,7 @@ function authColor(auth: string): string {
 export function SetupDiagnosticsTab({ setupInfo }: Props) {
   const claude = setupInfo?.providers.claude
   const codex = setupInfo?.providers.codex
+  const opencode = setupInfo?.providers.opencode
 
   return (
     <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
@@ -60,6 +61,19 @@ export function SetupDiagnosticsTab({ setupInfo }: Props) {
                 <p>Authenticated: {codex?.authenticated ? 'Yes' : 'No'}</p>
                 <p>Version: {codex?.version ?? 'Unknown'}</p>
                 <p>Path: {codex?.path ?? 'Not found'}</p>
+              </div>
+            </div>
+            <div className={cn(
+              'rounded-[1.2rem] border border-white/8 p-4',
+              opencode?.verified ? 'bg-[#f0c419] text-black' : 'bg-white/6',
+            )}>
+              <p className={cn('text-[0.68rem] font-semibold uppercase tracking-[0.26em]', opencode?.verified ? 'text-black/55' : 'text-[#f4f0e8]/45')}>OpenCode CLI</p>
+              <div className={cn('mt-2 space-y-1 text-sm', opencode?.verified ? 'text-black/80' : 'text-[#f4f0e8]/80')}>
+                <p>Installed: {opencode?.installed ? 'Yes' : 'No'}</p>
+                <p>Verified: {opencode?.verified ? 'Yes' : 'No'}</p>
+                <p>Version: {opencode?.version ?? 'Unknown'}</p>
+                <p>Path: {opencode?.path ?? 'Not found'}</p>
+                <p>Verify output: {opencode?.verifyOutput ?? 'None'}</p>
               </div>
             </div>
           </div>

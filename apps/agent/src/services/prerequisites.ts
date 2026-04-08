@@ -9,6 +9,7 @@ import {
   checkPnpm as checkPkgPnpm,
 } from './pkg-setup.ts'
 import { checkCopilotStatus } from './copilot-setup.ts'
+import { checkOpenCodeStatus } from './opencode-setup.ts'
 
 /** Run commands in a shell that can see standard system-wide tool locations. */
 async function exec(cmd: string): Promise<{ stdout: string; exitCode: number }> {
@@ -258,6 +259,32 @@ async function checkCopilotCli(): Promise<ToolCheck> {
       auth_output: status.auth_output,
       trust_configured: status.trust_configured ? 'true' : 'false',
       trust_target: status.trust_target,
+    },
+  }
+}
+
+async function checkOpenCodeCli(): Promise<ToolCheck> {
+  const status = await checkOpenCodeStatus()
+  const toolStatus: ToolStatus = status.installed ? (status.verified ? 'installed' : 'misconfigured') : 'missing'
+
+  if (!status.installed) {
+    return {
+      id: 'opencode_cli', name: 'OpenCode CLI', status: 'missing', auth_status: 'not_applicable',
+      version: null, path: null, required: false,
+      install_command: 'curl -fsSL https://opencode.ai/install | bash',
+      auth_command: null,
+      details: {},
+    }
+  }
+
+  return {
+    id: 'opencode_cli', name: 'OpenCode CLI', status: toolStatus, auth_status: 'not_applicable',
+    version: status.version, path: status.path, required: false,
+    install_command: null,
+    auth_command: null,
+    details: {
+      verified: status.verified ? 'true' : 'false',
+      verify_output: status.verify_output,
     },
   }
 }
@@ -615,6 +642,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkClaudeCli(),
     checkCodexCli(),
     checkCopilotCli(),
+    checkOpenCodeCli(),
     checkDocker(),
     checkBun(),
     checkPnpm(),
@@ -626,7 +654,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkTmux(),
   ])
 
-  // ready = git configured + node + npm + at least one AI CLI installed & authenticated
+  // ready = git configured + node + npm + at least one AI runtime available
   const gitReady =
     tools[0].status === 'installed' && tools[0].auth_status === 'authenticated'
   const githubCliReady =
@@ -637,7 +665,8 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     tools[4].status === 'installed' && tools[4].auth_status === 'authenticated'
   const codexReady =
     tools[5].status === 'installed' && tools[5].auth_status === 'authenticated'
-  const aiReady = claudeReady || codexReady
+  const openCodeReady = tools[7].status === 'installed'
+  const aiReady = claudeReady || codexReady || openCodeReady
 
   const ready = gitReady && githubCliReady && nodeReady && npmReady && aiReady
 

@@ -18,6 +18,7 @@ const toolAssetMap: Record<string, { light: ImageSourcePropType; dark: ImageSour
   claude_cli: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
   codex_cli: { light: Assets.codexBlack, dark: Assets.codexWhite },
   copilot_cli: { light: Assets.githubBlack, dark: Assets.githubWhite },
+  opencode_cli: { light: Assets.opencodeBlack, dark: Assets.opencodeWhite },
   rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
   go: { light: Assets.goBlack, dark: Assets.goWhite },
   typescript: { light: Assets.typescriptBlack, dark: Assets.typescriptWhite },
@@ -38,6 +39,7 @@ interface Props {
   onBlockedCodexWizard?: (tool: ToolCheck) => void
   onCopilotWizard?: (tool: ToolCheck) => void
   onBlockedCopilotWizard?: (tool: ToolCheck) => void
+  onOpenCodeWizard?: (tool: ToolCheck) => void
   onPkgWizard?: (tool: ToolCheck) => void
   onPythonWizard?: (tool: ToolCheck) => void
   onRustWizard?: (tool: ToolCheck) => void
@@ -89,6 +91,7 @@ export default function SetupCheckItem({
   onBlockedCodexWizard,
   onCopilotWizard,
   onBlockedCopilotWizard,
+  onOpenCodeWizard,
   onPkgWizard,
   onPythonWizard,
   onRustWizard,
@@ -123,6 +126,10 @@ export default function SetupCheckItem({
   const showCopilotWizard = isCopilot && !!onCopilotWizard
   const copilotBlocked = showCopilotWizard && copilotNeedsAction && !!disabledReason
 
+  const isOpenCode = tool.id === 'opencode_cli'
+  const openCodeNeedsAction = isOpenCode && tool.status !== 'installed'
+  const showOpenCodeWizard = isOpenCode && !!onOpenCodeWizard
+
   // Package managers get a bulk wizard
   const isPkgManager = tool.id === 'node' || tool.id === 'npm' || tool.id === 'nvm' || tool.id === 'pnpm' || tool.id === 'bun'
   const pkgNeedsAction = isPkgManager && tool.status === 'missing'
@@ -148,7 +155,7 @@ export default function SetupCheckItem({
   const dockerNeedsAction = isDocker && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showDockerWizard = isDocker && !!onDockerWizard
 
-  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython || isRust || isGo || isTypeScript || isDocker
+  const hasWizard = isGit || isClaude || isCodex || isCopilot || isOpenCode || isPkgManager || isPython || isRust || isGo || isTypeScript || isDocker
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -315,6 +322,20 @@ export default function SetupCheckItem({
               )}
             </>
           )}
+        </View>
+      )}
+
+      {showOpenCodeWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onOpenCodeWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>
+              {openCodeNeedsAction ? 'Enable OpenCode' : 'Open OpenCode'}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 

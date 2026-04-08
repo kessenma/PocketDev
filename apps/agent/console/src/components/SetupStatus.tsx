@@ -9,7 +9,7 @@ import { Wrench, RefreshCw, Check, X, Rows3, LayoutGrid, Blocks } from 'lucide-r
 type LayoutMode = 'list' | 'grid' | 'bauhaus'
 
 const PACKAGE_MANAGER_TOOL_IDS = ['node', 'npm', 'pnpm', 'bun'] as const
-const AI_ASSISTANT_TOOL_IDS = ['claude_cli', 'codex_cli', 'copilot_cli'] as const
+const AI_ASSISTANT_TOOL_IDS = ['claude_cli', 'codex_cli', 'copilot_cli', 'opencode_cli'] as const
 const LANGUAGE_TOOL_IDS = ['python', 'rust', 'go', 'typescript'] as const
 
 function getToolById(report: PrerequisitesReport | null, toolId: string): ToolCheck | undefined {
@@ -128,7 +128,7 @@ function statusLabel(tool: ToolCheck): string {
 }
 
 function toolIntentDetail(tool: ToolCheck): string | null {
-  const serverWideIds = new Set(['node', 'npm', 'pnpm', 'bun', 'claude_cli', 'codex_cli', 'copilot_cli'])
+  const serverWideIds = new Set(['node', 'npm', 'pnpm', 'bun', 'claude_cli', 'codex_cli', 'copilot_cli', 'opencode_cli'])
 
   if (tool.name === 'Package Managers') {
     return 'Installs the shared Node.js, npm, pnpm, and Bun toolchain for workspace tasks.'
@@ -153,10 +153,10 @@ function toolIntentDetail(tool: ToolCheck): string | null {
       : 'Available across the server for package workflows.'
   }
 
-  if (tool.id === 'claude_cli' || tool.id === 'codex_cli') {
+  if (tool.id === 'claude_cli' || tool.id === 'codex_cli' || tool.id === 'opencode_cli') {
     return tool.status === 'missing'
       ? 'Installs as a server-wide AI CLI.'
-      : 'Available across the server for agent task launches.'
+      : 'Available across the server for runtime checks and agent launches.'
   }
 
   if (tool.id === 'copilot_cli') {
@@ -485,7 +485,7 @@ export function SetupStatus() {
 
             <Section
               title="AI Assistant"
-              hint="Choose at least one: Claude, Codex, or GitHub Copilot."
+              hint="Choose at least one: Claude, Codex, GitHub Copilot, or OpenCode."
               tools={aiTools}
               layoutMode={layoutMode}
             />

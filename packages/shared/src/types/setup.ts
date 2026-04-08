@@ -300,6 +300,28 @@ export interface CopilotTrustStartResult extends CopilotTrustSessionStatus {}
 export type CopilotWizardStep = 'detect' | 'install' | 'authenticate' | 'trust' | 'verify'
 export type CopilotWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
+// ─── OpenCode wizard types ─────────────────────────────────────────
+
+export interface OpenCodeSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  verified: boolean
+  verify_output: string | null
+}
+
+export interface OpenCodeInstallResult {
+  success: boolean
+  installed: boolean
+  version: string | null
+  path: string | null
+  output: string | null
+  error: string | null
+}
+
+export type OpenCodeWizardStep = 'detect' | 'review' | 'install' | 'verify'
+export type OpenCodeWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
 // ─── Python wizard types ──────────────────────────────────────────
 
 export interface PythonSetupStatus {

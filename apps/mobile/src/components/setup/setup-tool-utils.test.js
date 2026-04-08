@@ -1,4 +1,4 @@
-const { getCodexBlockedReason, getCopilotBlockedReason } = require('./setup-tool-utils')
+const { getCodexBlockedReason, getCopilotBlockedReason, getServerSetupStatus } = require('./setup-tool-utils')
 
 describe('getCodexBlockedReason', () => {
   it('blocks Codex setup when npm is missing', () => {
@@ -60,5 +60,19 @@ describe('getCopilotBlockedReason', () => {
     }
 
     expect(getCopilotBlockedReason(report)).toBeNull()
+  })
+})
+
+describe('getServerSetupStatus', () => {
+  it('treats OpenCode as a valid AI runtime when installed', () => {
+    const report = {
+      tools: [
+        { id: 'git', name: 'Git', status: 'installed', auth_status: 'authenticated', required: true },
+        { id: 'npm', name: 'npm', status: 'installed', auth_status: 'not_applicable', required: true },
+        { id: 'opencode_cli', name: 'OpenCode CLI', status: 'installed', auth_status: 'not_applicable', required: false },
+      ],
+    }
+
+    expect(getServerSetupStatus(report).aiReady).toBe(true)
   })
 })

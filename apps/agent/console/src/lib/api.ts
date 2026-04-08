@@ -418,6 +418,8 @@ export interface SetupProviderInfo {
   authenticated: boolean
   version: string | null
   path: string | null
+  verified?: boolean
+  verifyOutput?: string | null
 }
 
 export interface SetupDebugInfo {
@@ -438,6 +440,7 @@ export interface SetupDebugInfo {
   providers: {
     claude: SetupProviderInfo
     codex: SetupProviderInfo
+    opencode: SetupProviderInfo
   }
 }
 

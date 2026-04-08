@@ -29,7 +29,7 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
       const cmd = [codexPath]
       if (model) cmd.push('--model', model)
       if (mode === 'plan') cmd.push('-c', 'collaboration_mode="plan"')
-      cmd.push('--prompt', prompt)
+      cmd.push(prompt)
       return cmd
     }
     case 'copilot': {

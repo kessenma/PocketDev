@@ -98,7 +98,9 @@ export default function TaskDetailPane({
 
       <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
         <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
-        <Text style={[styles.promptText, { color: colors.text }]}>{task.prompt}</Text>
+        <Text style={[styles.promptText, { color: colors.text }]} numberOfLines={3}>
+          {extractUserRequest(task.prompt)}
+        </Text>
       </View>
 
       {pendingPermissions.length > 0 && (
@@ -183,6 +185,14 @@ export default function TaskDetailPane({
   )
 }
 
+/** Extract the user's actual request from the full PocketDev task prompt */
+function extractUserRequest(prompt: string): string {
+  const marker = 'User request:\n'
+  const idx = prompt.indexOf(marker)
+  if (idx !== -1) return prompt.slice(idx + marker.length).trim()
+  return prompt
+}
+
 function formatElapsed(startedAt: string, completedAt: string | null): string {
   const start = new Date(startedAt).getTime()
   const end = completedAt ? new Date(completedAt).getTime() : Date.now()
@@ -249,14 +259,16 @@ const styles = StyleSheet.create({
     marginLeft: spacing[2],
   },
   promptCard: {
-    margin: spacing[4],
-    borderWidth: 2,
+    marginHorizontal: spacing[3],
+    marginVertical: spacing[2],
+    borderWidth: 1,
     borderRadius: borderRadius.lg,
-    padding: spacing[4],
+    padding: spacing[3],
     gap: spacing[1],
   },
   promptLabel: {
-    ...typeStyles.sectionTitle,
+    ...typeStyles.meta,
+    fontWeight: '700',
   },
   promptText: {
     ...typeStyles.body,

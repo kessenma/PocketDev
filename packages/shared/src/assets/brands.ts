@@ -27,6 +27,8 @@ export const BrandAssets = {
   nodeWhite: require('../../assets/brands/node-white.png'),
   npmBlack: require('../../assets/brands/npm-black.png'),
   npmWhite: require('../../assets/brands/npm-white.png'),
+  opencodeBlack: require('../../assets/brands/opencode-black.png'),
+  opencodeWhite: require('../../assets/brands/opencode-white.png'),
   nvmBlack: require('../../assets/brands/nvm-black.png'),
   nvmWhite: require('../../assets/brands/nvm-white.png'),
   pnpmBlack: require('../../assets/brands/pnpm-black.png'),

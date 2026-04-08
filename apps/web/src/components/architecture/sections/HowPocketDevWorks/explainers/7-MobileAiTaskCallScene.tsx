@@ -48,6 +48,8 @@ export function MobileAiTaskCallScene({
   const faceReveal = easeOut(segmentProgress(progress, 0.22, 0.46))
   const streamReveal = easeOut(segmentProgress(progress, 0.42, 0.64))
   const cardFlow = segmentProgress(progress, 0.5, 1)
+  const spiralSpin = segmentProgress(progress, 0.32, 1)
+  const spiralRotation = spiralSpin * 720
 
   const face = {
     x: isDesktopLayout ? vpSize.w * 0.34 : vpSize.w * 0.5,
@@ -148,14 +150,9 @@ export function MobileAiTaskCallScene({
           scale={face.scale}
           pulseColor={faceReveal < 0.72 ? palette.bauhaus.yellow : palette.bauhaus.blue}
           fillColor="#ffffff"
+          spiralRotation={spiralRotation}
         />
       </g>
-
-      <FaceGuideStrokes
-        progress={faceReveal}
-        face={face}
-        isDesktopLayout={isDesktopLayout}
-      />
 
       <BraidedThought
         progress={braidReveal}
@@ -227,6 +224,59 @@ export function MobileAiTaskCallScene({
   )
 }
 
+function braidStrandPath(
+  spine: Point[],
+  strandIndex: number,
+  strandCount: number,
+  amplitude: number,
+  frequency: number,
+): string {
+  // Sample points along the polyline spine, offset perpendicular with a sine wave
+  // Each strand has a phase offset so they weave over/under each other
+  const phase = (strandIndex / strandCount) * Math.PI * 2
+  const samples = 64
+  const pts: Point[] = []
+
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples
+    // Find position along spine
+    const totalLen = spine.length - 1
+    const seg = Math.min(Math.floor(t * totalLen), totalLen - 1)
+    const localT = t * totalLen - seg
+    const px = spine[seg].x + (spine[seg + 1].x - spine[seg].x) * localT
+    const py = spine[seg].y + (spine[seg + 1].y - spine[seg].y) * localT
+
+    // Tangent direction
+    const dx = spine[seg + 1].x - spine[seg].x
+    const dy = spine[seg + 1].y - spine[seg].y
+    const len = Math.sqrt(dx * dx + dy * dy) || 1
+    // Normal (perpendicular)
+    const nx = -dy / len
+    const ny = dx / len
+
+    // Taper amplitude at start and end for clean convergence
+    const taper = Math.sin(t * Math.PI)
+    const wave = Math.sin(t * Math.PI * 2 * frequency + phase) * amplitude * taper
+
+    pts.push({ x: px + nx * wave, y: py + ny * wave })
+  }
+
+  // Build smooth path using cubic bezier through points (Catmull-Rom to Bezier)
+  let d = `M ${pts[0].x} ${pts[0].y}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[Math.min(pts.length - 1, i + 2)]
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1.y + (p2.y - p0.y) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2.y - (p3.y - p1.y) / 6
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`
+  }
+  return d
+}
+
 function BraidedThought({
   progress,
   face,
@@ -238,119 +288,58 @@ function BraidedThought({
   vpSize: { w: number; h: number }
   isDesktopLayout: boolean
 }) {
-  const strokeWidth = isDesktopLayout ? 12 : 8
   const start = {
-    x: isDesktopLayout ? -vpSize.w * 0.14 : -vpSize.w * 0.18,
-    y: isDesktopLayout ? vpSize.h * 0.72 : vpSize.h * 0.68,
+    x: isDesktopLayout ? -vpSize.w * 0.12 : -vpSize.w * 0.16,
+    y: isDesktopLayout ? vpSize.h * 0.74 : vpSize.h * 0.7,
   }
-  const enter = {
-    x: face.x - (isDesktopLayout ? 108 : 68),
-    y: face.y + (isDesktopLayout ? 8 : 10),
+  const mid1 = {
+    x: vpSize.w * 0.08,
+    y: isDesktopLayout ? vpSize.h * 0.88 : vpSize.h * 0.84,
+  }
+  const mid2 = {
+    x: vpSize.w * 0.16,
+    y: isDesktopLayout ? vpSize.h * 0.82 : vpSize.h * 0.78,
+  }
+  const mid3 = {
+    x: face.x - (isDesktopLayout ? 210 : 118),
+    y: face.y + (isDesktopLayout ? 118 : 74),
   }
   const faceIn = {
     x: face.x - (isDesktopLayout ? 10 : 8),
     y: face.y + (isDesktopLayout ? 4 : 2),
   }
-  const thoughtPath = `M ${start.x} ${start.y} C ${vpSize.w * 0.12} ${vpSize.h * 0.9}, ${face.x - (isDesktopLayout ? 230 : 130)} ${face.y + (isDesktopLayout ? 132 : 84)}, ${face.x - (isDesktopLayout ? 176 : 100)} ${face.y + (isDesktopLayout ? 28 : 18)} S ${face.x - (isDesktopLayout ? 136 : 80)} ${face.y - (isDesktopLayout ? 46 : 28)}, ${enter.x} ${enter.y}`
+
+  const spine = [start, mid1, mid2, mid3, faceIn]
   const strandReveal = easeOut(segmentProgress(progress, 0, 0.76))
-  const connectorReveal = easeOut(segmentProgress(progress, 0.44, 1))
+
+  const amplitude = isDesktopLayout ? 18 : 12
+  const frequency = isDesktopLayout ? 3.5 : 3
+  const baseWidth = isDesktopLayout ? 3.2 : 2.2
+
+  const strands = [
+    { color: '#dbeafe', opacity: 0.88, width: baseWidth * 1.1, speed: 0.98 },
+    { color: palette.bauhaus.yellow, opacity: 0.78, width: baseWidth, speed: 0.92 },
+    { color: palette.bauhaus.red, opacity: 0.72, width: baseWidth * 0.95, speed: 0.86 },
+    { color: '#93c5fd', opacity: 0.65, width: baseWidth * 0.85, speed: 0.80 },
+    { color: palette.bauhaus.yellow, opacity: 0.6, width: baseWidth * 0.8, speed: 0.74 },
+  ] as const
 
   return (
     <g>
-      <path
-        d={thoughtPath}
-        fill="none"
-        stroke="#dbeafe"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        pathLength={1}
-        strokeDasharray="1"
-        strokeDashoffset={1 - strandReveal}
-        opacity="0.92"
-      />
-      <path
-        d={thoughtPath}
-        fill="none"
-        stroke={palette.bauhaus.yellow}
-        strokeWidth={isDesktopLayout ? 3.5 : 2.5}
-        strokeLinecap="round"
-        pathLength={1}
-        strokeDasharray="0.14 1"
-        strokeDashoffset={1 - strandReveal * 0.92}
-        opacity="0.9"
-      />
-      <path
-        d={thoughtPath}
-        fill="none"
-        stroke={palette.bauhaus.red}
-        strokeWidth={isDesktopLayout ? 3.5 : 2.5}
-        strokeLinecap="round"
-        pathLength={1}
-        strokeDasharray="0.1 1"
-        strokeDashoffset={1.16 - strandReveal}
-        opacity="0.84"
-      />
-
-      <path
-        d={`M ${enter.x} ${enter.y} C ${enter.x + vpSize.w * 0.03} ${enter.y - (isDesktopLayout ? 8 : 6)}, ${face.x - (isDesktopLayout ? 36 : 24)} ${face.y - (isDesktopLayout ? 8 : 4)}, ${faceIn.x} ${faceIn.y}`}
-        fill="none"
-        stroke="#dbeafe"
-        strokeWidth={isDesktopLayout ? 10 : 6}
-        strokeLinecap="round"
-        pathLength={1}
-        strokeDasharray="1"
-        strokeDashoffset={1 - connectorReveal}
-        opacity="0.92"
-      />
-    </g>
-  )
-}
-
-function FaceGuideStrokes({
-  progress,
-  face,
-  isDesktopLayout,
-}: {
-  progress: number
-  face: { x: number; y: number; scale: number }
-  isDesktopLayout: boolean
-}) {
-  const strokeWidth = isDesktopLayout ? 7 : 5
-  const curves = [
-    {
-      d: `M ${face.x - 150} ${face.y - 150} C ${face.x - 88} ${face.y - 182}, ${face.x - 42} ${face.y - 160}, ${face.x + 8} ${face.y - 112}`,
-      color: palette.bauhaus.yellow,
-      delay: 0,
-    },
-    {
-      d: `M ${face.x - 122} ${face.y - 6} C ${face.x - 82} ${face.y - 36}, ${face.x - 38} ${face.y - 22}, ${face.x + 12} ${face.y + 18}`,
-      color: palette.bauhaus.red,
-      delay: 0.12,
-    },
-    {
-      d: `M ${face.x - 102} ${face.y + 154} C ${face.x - 44} ${face.y + 108}, ${face.x + 16} ${face.y + 88}, ${face.x + 74} ${face.y + 128}`,
-      color: palette.bauhaus.blue,
-      delay: 0.22,
-    },
-  ]
-
-  return (
-    <g opacity={0.82}>
-      {curves.map((curve) => {
-        const local = easeOut(segmentProgress(progress, curve.delay, Math.min(1, curve.delay + 0.42)))
-        if (local <= 0) return null
+      {strands.map((strand, i) => {
+        const d = braidStrandPath(spine, i, strands.length, amplitude, frequency)
         return (
           <path
-            key={curve.d}
-            d={curve.d}
+            key={`strand-${i}`}
+            d={d}
             fill="none"
-            stroke={curve.color}
-            strokeWidth={strokeWidth}
+            stroke={strand.color}
+            strokeWidth={strand.width}
             strokeLinecap="round"
             pathLength={1}
             strokeDasharray="1"
-            strokeDashoffset={1 - local}
-            opacity={0.9}
+            strokeDashoffset={1 - strandReveal * strand.speed}
+            opacity={strand.opacity}
           />
         )
       })}
@@ -549,6 +538,19 @@ function cubicPoint(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Poin
     3 * mt * t * t * p2.y +
     t * t * t * p3.y
   return { x, y }
+}
+
+function cubicAngle(p0: Point, p1: Point, p2: Point, p3: Point, t: number) {
+  const mt = 1 - t
+  const dx =
+    3 * mt * mt * (p1.x - p0.x) +
+    6 * mt * t * (p2.x - p1.x) +
+    3 * t * t * (p3.x - p2.x)
+  const dy =
+    3 * mt * mt * (p1.y - p0.y) +
+    6 * mt * t * (p2.y - p1.y) +
+    3 * t * t * (p3.y - p2.y)
+  return (Math.atan2(dy, dx) * 180) / Math.PI
 }
 
 function segmentProgress(value: number, start: number, end: number) {

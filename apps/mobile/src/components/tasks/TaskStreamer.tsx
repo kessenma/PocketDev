@@ -18,6 +18,10 @@ import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
 
+type StreamItem =
+  | { kind: 'activity'; data: TaskActivity }
+  | { kind: 'log'; data: string }
+
 type Props = {
   taskId: string
 }
@@ -25,16 +29,29 @@ type Props = {
 export default function TaskStreamer({ taskId }: Props) {
   const { colors } = useTheme()
   const activitiesRaw = useTaskStore((s) => s.taskActivities.get(taskId))
-  const activities = useMemo(() => activitiesRaw ?? [], [activitiesRaw])
+  const logsRaw = useTaskStore((s) => s.taskLogs.get(taskId))
 
-  const flatListRef = useRef<FlatList>(null)
+  // Merge activities + fallback logs into a single stream.
+  // When activities exist, show them. When they don't (non-stream-json agents), show raw logs.
+  const items: StreamItem[] = useMemo(() => {
+    const activities = activitiesRaw ?? []
+    const logs = logsRaw ?? []
+
+    if (activities.length > 0) {
+      return activities.map((a) => ({ kind: 'activity' as const, data: a }))
+    }
+    // Fallback: render raw logs as stream items
+    return logs.map((l) => ({ kind: 'log' as const, data: l }))
+  }, [activitiesRaw, logsRaw])
+
+  const flatListRef = useRef<FlatList<StreamItem>>(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
   useEffect(() => {
-    if (autoScroll && activities.length > 0) {
+    if (autoScroll && items.length > 0) {
       flatListRef.current?.scrollToEnd({ animated: false })
     }
-  }, [activities.length, autoScroll])
+  }, [items.length, autoScroll])
 
   function handleScroll(event: any) {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent
@@ -51,9 +68,13 @@ export default function TaskStreamer({ taskId }: Props) {
     <View style={styles.container}>
       <FlatList
         ref={flatListRef}
-        data={activities}
+        data={items}
         keyExtractor={(_, i) => String(i)}
-        renderItem={({ item }) => <ActivityRow activity={item} />}
+        renderItem={({ item }) =>
+          item.kind === 'activity'
+            ? <ActivityRow activity={item.data} />
+            : <LogLine line={item.data} />
+        }
         style={styles.list}
         contentContainerStyle={styles.listContent}
         onScroll={handleScroll}
@@ -73,6 +94,13 @@ export default function TaskStreamer({ taskId }: Props) {
         </View>
       )}
     </View>
+  )
+}
+
+function LogLine({ line }: { line: string }) {
+  const { colors } = useTheme()
+  return (
+    <Text style={[styles.logLine, { color: colors.text }]}>{line}</Text>
   )
 }
 
@@ -201,6 +229,11 @@ const styles = StyleSheet.create({
     ...typeStyles.bodySmall,
     paddingVertical: spacing[4],
     paddingHorizontal: spacing[1],
+  },
+  logLine: {
+    ...typeStyles.mono,
+    paddingVertical: 1,
+    maxWidth: 900,
   },
   row: {
     flexDirection: 'row',

@@ -26,6 +26,7 @@ import { checkPythonStatus } from '../services/python-setup.ts'
 import { checkRustStatus } from '../services/rust-setup.ts'
 import { checkGoStatus } from '../services/go-setup.ts'
 import { checkTypeScriptStatus } from '../services/typescript-setup.ts'
+import { checkOpenCodeStatus } from '../services/opencode-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
@@ -401,7 +402,10 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       return { error: 'Unauthorized' }
     }
 
-    const prerequisites = await checkAllPrerequisites()
+    const [prerequisites, opencodeStatus] = await Promise.all([
+      checkAllPrerequisites(),
+      checkOpenCodeStatus(),
+    ])
     const claudeRecord = getToolRecord('claude_cli')
     const codexRecord = getToolRecord('codex_cli')
 
@@ -419,6 +423,14 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
           authenticated: !!codexRecord?.authenticated,
           version: codexRecord?.version ?? null,
           path: codexRecord?.path ?? null,
+        },
+        opencode: {
+          installed: opencodeStatus.installed,
+          authenticated: opencodeStatus.verified,
+          verified: opencodeStatus.verified,
+          version: opencodeStatus.version,
+          path: opencodeStatus.path,
+          verifyOutput: opencodeStatus.verify_output,
         },
       },
     }

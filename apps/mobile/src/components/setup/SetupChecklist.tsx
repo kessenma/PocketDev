@@ -26,6 +26,7 @@ interface Props {
   onBlockedCodexWizard: (tool: ToolCheck) => void
   onCopilotWizard: (tool: ToolCheck) => void
   onBlockedCopilotWizard: (tool: ToolCheck) => void
+  onOpenCodeWizard: (tool: ToolCheck) => void
   onPkgWizard: (tool: ToolCheck) => void
   onPythonWizard: (tool: ToolCheck) => void
   onRustWizard: (tool: ToolCheck) => void
@@ -44,6 +45,7 @@ export default function SetupChecklist({
   onBlockedCodexWizard,
   onCopilotWizard,
   onBlockedCopilotWizard,
+  onOpenCodeWizard,
   onPkgWizard,
   onPythonWizard,
   onRustWizard,
@@ -95,6 +97,7 @@ export default function SetupChecklist({
         onBlockedCodexWizard={onBlockedCodexWizard}
         onCopilotWizard={onCopilotWizard}
         onBlockedCopilotWizard={onBlockedCopilotWizard}
+        onOpenCodeWizard={onOpenCodeWizard}
         onPkgWizard={onPkgWizard}
         onPythonWizard={onPythonWizard}
         onRustWizard={onRustWizard}
@@ -145,7 +148,7 @@ export default function SetupChecklist({
 
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Assistant</Text>
           <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-            Choose at least one: Claude, Codex, or GitHub Copilot.
+            Choose at least one: Claude, Codex, GitHub Copilot, or OpenCode.
           </Text>
           <View style={styles.section}>
             {renderTools(aiAssistants)}

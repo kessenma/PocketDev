@@ -48,6 +48,8 @@ import type {
   CopilotInstallResult,
   CopilotTrustStartResult,
   CopilotTrustSessionStatus,
+  OpenCodeSetupStatus,
+  OpenCodeInstallResult,
   BrowserSessionCreateResult,
   PythonSetupStatus,
   RustSetupStatus,
@@ -769,6 +771,34 @@ export async function postVerifyCodexAuth(ip: string, port: number): Promise<Cod
   })
   if (!response.ok) throw new Error(`Failed to verify Codex auth (${response.status})`)
   return response.json() as Promise<CodexSetupStatus>
+}
+
+// ─── OpenCode CLI Setup ────────────────────────────────────────────
+
+export async function fetchOpenCodeSetupStatus(ip: string, port: number): Promise<OpenCodeSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/opencode-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch OpenCode status (${response.status})`)
+  return response.json() as Promise<OpenCodeSetupStatus>
+}
+
+export async function postInstallOpenCode(ip: string, port: number): Promise<OpenCodeInstallResult> {
+  const response = await fetch(apiUrl(ip, port, '/opencode-setup/install'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to install OpenCode CLI (${response.status})`)
+  return response.json() as Promise<OpenCodeInstallResult>
+}
+
+export async function postVerifyOpenCode(ip: string, port: number): Promise<OpenCodeSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/opencode-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify OpenCode CLI (${response.status})`)
+  return response.json() as Promise<OpenCodeSetupStatus>
 }
 
 // ─── GitHub Copilot CLI Setup ──────────────────────────────────────

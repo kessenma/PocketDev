@@ -16,15 +16,17 @@ function spiralPath(cx: number, cy: number, turns: number, maxR: number, steps =
   return points.join(' ')
 }
 
-function BrainSpiral({ cx, cy, color }: { cx: number; cy: number; color: string }) {
+function BrainSpiral({ cx, cy, color, rotation = 0 }: { cx: number; cy: number; color: string; rotation?: number }) {
   return (
-    <path
-      d={spiralPath(cx, cy, 3.5, 50)}
-      fill="none"
-      stroke={color}
-      strokeWidth={6}
-      strokeLinecap="round"
-    />
+    <g transform={`rotate(${rotation} ${cx} ${cy})`}>
+      <path
+        d={spiralPath(cx, cy, 3.5, 50)}
+        fill="none"
+        stroke={color}
+        strokeWidth={6}
+        strokeLinecap="round"
+      />
+    </g>
   )
 }
 
@@ -38,6 +40,7 @@ export function BauhausFace({
   scale = 1,
   pulseColor,
   fillColor = palette.bauhaus.black,
+  spiralRotation = 0,
 }: {
   cx: number
   cy: number
@@ -45,6 +48,8 @@ export function BauhausFace({
   /** If set, renders a pulsing circle in the "brain" area */
   pulseColor?: string
   fillColor?: string
+  /** Rotation angle (degrees) applied to the brain spiral */
+  spiralRotation?: number
 }) {
   // The original viewBox is 0 0 1000 1000.
   // We center it and scale so that at scale=1 it's roughly 50×50.
@@ -116,7 +121,7 @@ export function BauhausFace({
           ── To reposition, adjust spiralCx / spiralCy below (in the 0–1000 viewbox). ──
         */}
         {pulseColor && (
-          <BrainSpiral cx={650} cy={250} color={pulseColor} />
+          <BrainSpiral cx={650} cy={250} color={pulseColor} rotation={spiralRotation} />
         )}
       </g>
     </g>

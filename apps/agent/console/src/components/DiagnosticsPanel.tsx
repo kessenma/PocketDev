@@ -193,12 +193,14 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
   const setupSummary = useMemo(() => {
     if (!setupInfo) return 'No setup data yet.'
-    const { claude, codex } = setupInfo.providers
+    const { claude, codex, opencode } = setupInfo.providers
     const parts: string[] = []
     if (claude.authenticated) parts.push('Claude ready')
     else if (claude.installed) parts.push('Claude (no auth)')
     if (codex.authenticated) parts.push('Codex ready')
     else if (codex.installed) parts.push('Codex (no auth)')
+    if (opencode.verified) parts.push('OpenCode ready')
+    else if (opencode.installed) parts.push('OpenCode installed')
     return parts.length ? parts.join(' · ') : 'No providers configured'
   }, [setupInfo])
 
