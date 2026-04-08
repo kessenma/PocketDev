@@ -19,6 +19,7 @@ const toolAssetMap: Record<string, { light: ImageSourcePropType; dark: ImageSour
   codex_cli: { light: Assets.codexBlack, dark: Assets.codexWhite },
   copilot_cli: { light: Assets.githubBlack, dark: Assets.githubWhite },
   rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
+  go: { light: Assets.goBlack, dark: Assets.goWhite },
   java: { light: Assets.javaBlack, dark: Assets.javaWhite },
   cpp: { light: Assets.cppBlack, dark: Assets.cppWhite },
   postgresql: { light: Assets.postgresqlBlack, dark: Assets.postgresqlWhite },
@@ -39,6 +40,7 @@ interface Props {
   onPkgWizard?: (tool: ToolCheck) => void
   onPythonWizard?: (tool: ToolCheck) => void
   onRustWizard?: (tool: ToolCheck) => void
+  onGoWizard?: (tool: ToolCheck) => void
   onDockerWizard?: (tool: ToolCheck) => void
   disabledReason?: string | null
 }
@@ -88,6 +90,7 @@ export default function SetupCheckItem({
   onPkgWizard,
   onPythonWizard,
   onRustWizard,
+  onGoWizard,
   onDockerWizard,
   disabledReason,
 }: Props) {
@@ -130,11 +133,15 @@ export default function SetupCheckItem({
   const rustNeedsAction = isRust && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showRustWizard = isRust && !!onRustWizard
 
+  const isGo = tool.id === 'go'
+  const goNeedsAction = isGo && (tool.status === 'missing' || tool.status === 'misconfigured')
+  const showGoWizard = isGo && !!onGoWizard
+
   const isDocker = tool.id === 'docker'
   const dockerNeedsAction = isDocker && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showDockerWizard = isDocker && !!onDockerWizard
 
-  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython || isRust || isDocker
+  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython || isRust || isGo || isDocker
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -327,6 +334,20 @@ export default function SetupCheckItem({
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
               {rustNeedsAction ? 'Enable Rust' : 'Open Rust'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {showGoWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onGoWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>
+              {goNeedsAction ? 'Enable Go' : 'Open Go'}
             </Text>
           </TouchableOpacity>
         </View>

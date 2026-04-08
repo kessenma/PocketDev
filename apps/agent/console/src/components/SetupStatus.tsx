@@ -10,7 +10,7 @@ type LayoutMode = 'list' | 'grid' | 'bauhaus'
 
 const PACKAGE_MANAGER_TOOL_IDS = ['node', 'npm', 'pnpm', 'bun'] as const
 const AI_ASSISTANT_TOOL_IDS = ['claude_cli', 'codex_cli', 'copilot_cli'] as const
-const LANGUAGE_TOOL_IDS = ['python', 'rust'] as const
+const LANGUAGE_TOOL_IDS = ['python', 'rust', 'go'] as const
 
 function getToolById(report: PrerequisitesReport | null, toolId: string): ToolCheck | undefined {
   return report?.tools.find((tool) => tool.id === toolId)
@@ -175,6 +175,12 @@ function toolIntentDetail(tool: ToolCheck): string | null {
     return tool.status === 'installed'
       ? 'Rust toolchain with Cargo is available for workspace tasks.'
       : 'Adds Rust with rustc and Cargo for language tooling.'
+  }
+
+  if (tool.id === 'go') {
+    return tool.status === 'installed'
+      ? 'Go runtime is available for workspace tasks.'
+      : 'Adds the Go toolchain for language support.'
   }
 
   if (tool.id === 'tmux') {
@@ -480,7 +486,7 @@ export function SetupStatus() {
 
             <Section
               title="Language"
-              hint="Set up Python and Rust for workspace language support."
+              hint="Set up Python, Rust, and Go for workspace language support."
               tools={languageTools}
               layoutMode={layoutMode}
             />

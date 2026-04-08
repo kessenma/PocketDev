@@ -448,6 +448,34 @@ async function checkRust(): Promise<ToolCheck> {
   }
 }
 
+async function checkGo(): Promise<ToolCheck> {
+  const path = await which('go')
+  if (!path) {
+    return {
+      id: 'go', name: 'Go', status: 'missing', auth_status: 'not_applicable',
+      version: null, path: null, required: false,
+      install_command: 'sudo apt install -y golang-go',
+      auth_command: null, details: {},
+    }
+  }
+
+  const { stdout: versionOut } = await exec('go version')
+  const versionMatch = versionOut.match(/go(\d+\.\d+[\.\d]*)/)
+  const version = versionMatch ? versionMatch[1] : null
+
+  const { stdout: gopath } = await exec('go env GOPATH 2>/dev/null')
+  const { stdout: goroot } = await exec('go env GOROOT 2>/dev/null')
+
+  upsertToolPath('go', path, version)
+
+  return {
+    id: 'go', name: 'Go', status: 'installed', auth_status: 'not_applicable',
+    version, path, required: false,
+    install_command: null, auth_command: null,
+    details: { gopath: gopath || null, goroot: goroot || null },
+  }
+}
+
 async function checkTmux(): Promise<ToolCheck> {
   const path = await which('tmux')
   if (!path) {
@@ -563,6 +591,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkChromium(),
     checkPython(),
     checkRust(),
+    checkGo(),
     checkTmux(),
   ])
 

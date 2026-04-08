@@ -49,7 +49,7 @@ export default function AddPpaStep({ dispatch }: Props) {
     setStarted(true)
     // Chain all commands and add a done marker
     const chainedCmd = PPA_COMMANDS.join(' && ')
-    sendCommand(`( ${chainedCmd} ) && echo ${DONE_MARKER} || echo PPA_FAILED`)
+    sendCommand(`cd / && ( ${chainedCmd} ) && echo ${DONE_MARKER} || echo PPA_FAILED`)
   }
 
   function handleContinue() {

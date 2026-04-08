@@ -49,7 +49,7 @@ export default function InstallPythonStep({ dispatch }: Props) {
   function handleStart() {
     setStarted(true)
     const chainedCmd = INSTALL_COMMANDS.join(' && ')
-    const fullCmd = `( ${chainedCmd} ) && echo ${DONE_MARKER} || echo PYINSTALL_FAILED`
+    const fullCmd = `cd / && ( ${chainedCmd} ) && echo ${DONE_MARKER} || echo PYINSTALL_FAILED`
     console.log('[python-install] Sending:', fullCmd.slice(0, 100))
     sendCommand(fullCmd)
   }

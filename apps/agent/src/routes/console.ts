@@ -24,10 +24,11 @@ import { getGitHubAuthDebug } from '../services/git-setup.ts'
 import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
 import { checkPythonStatus } from '../services/python-setup.ts'
 import { checkRustStatus } from '../services/rust-setup.ts'
+import { checkGoStatus } from '../services/go-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
-import { getAgentVersion, checkForUpdate } from '../services/version.ts'
+import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/version.ts'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
@@ -440,6 +441,15 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     return checkRustStatus()
   })
 
+  // ─── Go debug (requires session) ──────────────────────
+  .get('/debug/go', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    return checkGoStatus()
+  })
+
   // ─── Prerequisites (requires session) ─────────────────
   .get('/prerequisites', async ({ request, set }) => {
     if (!requireConsoleSession(request, set)) {
@@ -734,7 +744,10 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
         // Clean up temp file
         Bun.spawn(['rm', '-f', tmpFile])
 
-        // Restart the service (this will kill us)
+        // Clear cached version so the new version.json is read
+        clearVersionCache()
+
+        // Restart the service (this will kill us in production)
         Bun.spawn(['systemctl', 'restart', serviceName], { stdout: 'pipe', stderr: 'pipe' })
       }, 500)
 

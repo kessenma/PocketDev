@@ -19,7 +19,7 @@ interface Props {
 }
 
 export default function InstallPipStep({ dispatch, pythonBin }: Props) {
-  const INSTALL_COMMAND = `${pythonBin} -m ensurepip --upgrade 2>&1 || curl -sS https://bootstrap.pypa.io/get-pip.py | ${pythonBin} - --break-system-packages`
+  const INSTALL_COMMAND = `${pythonBin} -m ensurepip --upgrade 2>&1 || (curl -sS -o /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && ${pythonBin} /tmp/get-pip.py --break-system-packages)`
   const DISPLAY_COMMAND = `${pythonBin} -m ensurepip || get-pip.py`
   const { colors } = useTheme()
   const [started, setStarted] = useState(false)
@@ -43,7 +43,7 @@ export default function InstallPipStep({ dispatch, pythonBin }: Props) {
 
   function handleStart() {
     setStarted(true)
-    sendCommand(`( ${INSTALL_COMMAND} ) && echo ${DONE_MARKER} || echo PIP_FAILED`)
+    sendCommand(`cd / && ( ${INSTALL_COMMAND} ) && echo ${DONE_MARKER} || echo PIP_FAILED`)
   }
 
   function handleContinue() {

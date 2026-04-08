@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import type { PythonDebugInfo, RustDebugInfo } from '#/lib/api'
+import type { PythonDebugInfo, RustDebugInfo, GoDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Code, Copy, Check } from 'lucide-react'
 
 interface Props {
   pythonInfo: PythonDebugInfo | null
   rustInfo: RustDebugInfo | null
+  goInfo: GoDebugInfo | null
 }
 
 function CopyableCommand({ command }: { command: string }) {
@@ -36,7 +37,7 @@ function CopyableCommand({ command }: { command: string }) {
   )
 }
 
-export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo }: Props) {
+export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo }: Props) {
   return (
     <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
       {/* Left sidebar: status summaries */}
@@ -126,6 +127,41 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Go status */}
+        <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+          <div className="flex items-center gap-2">
+            <Code className="h-4 w-4 text-[#00ADD8]" />
+            <p className="text-sm font-medium">Go Runtime</p>
+          </div>
+          <div className="mt-4 space-y-3">
+            <div className={cn(
+              'rounded-[1.2rem] border border-white/8 p-4',
+              goInfo?.installed ? 'bg-[#00ADD8] text-white' : 'bg-white/6',
+            )}>
+              <p className={cn('text-[0.68rem] font-semibold uppercase tracking-[0.26em]',
+                goInfo?.installed ? 'text-white/65' : 'text-[#f4f0e8]/45')}>
+                Status
+              </p>
+              <p className={cn('mt-2 text-3xl font-semibold',
+                goInfo?.installed ? '' : 'text-red-400')}>
+                {goInfo?.installed ? `v${goInfo.version}` : 'Not Found'}
+              </p>
+              {goInfo?.path && (
+                <p className={cn('mt-1 font-mono text-xs', goInfo.installed ? 'text-white/70' : 'text-[#f4f0e8]/50')}>
+                  {goInfo.path}
+                </p>
+              )}
+            </div>
+            <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Environment</p>
+              <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                <p>GOPATH: {goInfo?.gopath ?? 'Not set'}</p>
+                <p>GOROOT: {goInfo?.goroot ?? 'Not set'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Right main: detailed tool rows */}
@@ -198,7 +234,7 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo }: Props) {
                     {pythonInfo.installed && !pythonInfo.pip_installed && (
                       <>
                         <p className="text-xs text-[#f4f0e8]/60">Install pip:</p>
-                        <CopyableCommand command={`${pythonInfo.binary ?? 'python3'} -m ensurepip --upgrade || curl -sS https://bootstrap.pypa.io/get-pip.py | ${pythonInfo.binary ?? 'python3'} - --break-system-packages`} />
+                        <CopyableCommand command={`${pythonInfo.binary ?? 'python3'} -m ensurepip --upgrade || (curl -sS -o /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py && ${pythonInfo.binary ?? 'python3'} /tmp/get-pip.py --break-system-packages)`} />
                       </>
                     )}
                     {pythonInfo.installed && !pythonInfo.venv_available && (
@@ -285,6 +321,62 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo }: Props) {
           ) : (
             <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
               No Rust data. Refresh to load.
+            </div>
+          )}
+        </div>
+
+        {/* Go details */}
+        <p className="mt-5 text-sm font-medium">Go Installation Details</p>
+        <div className="mt-3 space-y-2">
+          {goInfo ? (
+            <>
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Go Binary</p>
+                    <p className="mt-1 font-mono text-xs text-[#f4f0e8]/50">{goInfo.path ?? 'Not found'}</p>
+                  </div>
+                  <Badge variant="outline" className={cn('border-white/10',
+                    goInfo.installed ? 'text-green-400' : 'text-red-400')}>
+                    {goInfo.installed ? 'installed' : 'missing'}
+                  </Badge>
+                </div>
+                {goInfo.version && (
+                  <div className="mt-2 text-xs text-[#f4f0e8]/60">
+                    <span>v{goInfo.version}</span>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">GOPATH</p>
+                    <p className="mt-1 font-mono text-xs text-[#f4f0e8]/50">{goInfo.gopath ?? 'Not set'}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">GOROOT</p>
+                    <p className="mt-1 font-mono text-xs text-[#f4f0e8]/50">{goInfo.goroot ?? 'Not set'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {!goInfo.installed && (
+                <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Install Commands</p>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs text-[#f4f0e8]/60">Install Go:</p>
+                    <CopyableCommand command="sudo apt install -y golang-go" />
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+              No Go data. Refresh to load.
             </div>
           )}
         </div>

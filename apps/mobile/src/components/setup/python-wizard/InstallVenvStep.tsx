@@ -41,7 +41,7 @@ export default function InstallVenvStep({ dispatch, pythonBin }: Props) {
 
   function handleStart() {
     setStarted(true)
-    sendCommand(`( ${INSTALL_COMMAND} ) && echo ${DONE_MARKER} || echo VENV_FAILED`)
+    sendCommand(`cd / && ( ${INSTALL_COMMAND} ) && echo ${DONE_MARKER} || echo VENV_FAILED`)
   }
 
   function handleContinue() {

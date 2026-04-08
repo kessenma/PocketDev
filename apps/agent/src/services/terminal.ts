@@ -27,13 +27,16 @@ export function createTerminalSession(
     ? ['script', '-q', '-c', shellCommand, '/dev/null']
     : ['script', '-q', '/dev/null', shellCommand]
 
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
+
   const proc = Bun.spawn(cmd, {
-    cwd: cwd ?? process.env.HOME ?? '/',
+    cwd: cwd ?? home,
     stdin: 'pipe',
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
       ...process.env,
+      HOME: home,
       SHELL: shell,
       TERM: 'xterm-256color',
       COLUMNS: '80',

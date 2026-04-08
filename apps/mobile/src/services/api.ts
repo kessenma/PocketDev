@@ -51,6 +51,7 @@ import type {
   BrowserSessionCreateResult,
   PythonSetupStatus,
   RustSetupStatus,
+  GoSetupStatus,
   PkgManagerStatus,
   PkgInstallTool,
   PkgInstallResult,
@@ -854,6 +855,25 @@ export async function postVerifyRust(ip: string, port: number): Promise<RustSetu
   })
   if (!response.ok) throw new Error(`Failed to verify Rust (${response.status})`)
   return response.json() as Promise<RustSetupStatus>
+}
+
+// ─── Go Setup ──────────────────────────────────────────────────────
+
+export async function fetchGoSetupStatus(ip: string, port: number): Promise<GoSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/go-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Go status (${response.status})`)
+  return response.json() as Promise<GoSetupStatus>
+}
+
+export async function postVerifyGo(ip: string, port: number): Promise<GoSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/go-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify Go (${response.status})`)
+  return response.json() as Promise<GoSetupStatus>
 }
 
 // ─── Package Manager Setup ──────────────────────────────────────────

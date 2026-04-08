@@ -8,19 +8,18 @@ import { Assets } from '../../../../assets'
 import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
 import CopyButton from '../../shared/CopyButton'
 
-const INSTALL_CMD = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
-const SOURCE_CMD = '( [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env" ) || true'
-const DONE_MARKER = '__RUSTUP_DONE__'
+const INSTALL_CMD = 'sudo apt update && sudo apt install -y golang-go'
+const DONE_MARKER = '__GO_INSTALL_DONE__'
 
 type WizardAction =
-  | { type: 'STEP_COMPLETE'; step: 'install-rustup' }
-  | { type: 'STEP_FAILED'; step: 'install-rustup'; error: string }
+  | { type: 'STEP_COMPLETE'; step: 'install' }
+  | { type: 'STEP_FAILED'; step: 'install'; error: string }
 
 interface Props {
   dispatch: (action: WizardAction) => void
 }
 
-export default function InstallRustupStep({ dispatch }: Props) {
+export default function InstallGoStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
   const [started, setStarted] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -32,7 +31,7 @@ export default function InstallRustupStep({ dispatch }: Props) {
     sendCommand, submitSudoPassword, cancelSudoPrompt,
   } = useTerminalCommand({
     persistent: true,
-    errorPatterns: [/RUSTUP_FAILED/, /curl:.*error/im],
+    errorPatterns: [/error:/im, /failed to/im, /E: Unable to/im],
     onOutput: (chunk) => {
       if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
         setSuccess(true)
@@ -43,12 +42,12 @@ export default function InstallRustupStep({ dispatch }: Props) {
 
   function handleStart() {
     setStarted(true)
-    const fullCmd = `cd / && ( ${INSTALL_CMD} && ${SOURCE_CMD} ) && echo ${DONE_MARKER} || echo RUSTUP_FAILED`
+    const fullCmd = `cd / && ( ${INSTALL_CMD} ) && echo ${DONE_MARKER} || echo GO_INSTALL_FAILED`
     sendCommand(fullCmd)
   }
 
   function handleContinue() {
-    dispatch({ type: 'STEP_COMPLETE', step: 'install-rustup' })
+    dispatch({ type: 'STEP_COMPLETE', step: 'install' })
   }
 
   function handleRetry() {
@@ -60,23 +59,22 @@ export default function InstallRustupStep({ dispatch }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.iconRow}>
         <Image
-          source={isDark ? Assets.rustWhite : Assets.rustBlack}
+          source={isDark ? Assets.goWhite : Assets.goBlack}
           style={styles.headerLogo}
           resizeMode="contain"
         />
       </View>
 
-      <Text style={[styles.title, { color: colors.text }]}>Install Rust</Text>
+      <Text style={[styles.title, { color: colors.text }]}>Install Go</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Install Rust via rustup, the official Rust toolchain installer.
+        Install the Go programming language from the system package manager.
       </Text>
 
       {!started && (
         <>
           <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              This will install <Text style={styles.mono}>rustc</Text>, <Text style={styles.mono}>cargo</Text>, and{' '}
-              <Text style={styles.mono}>rustup</Text> to <Text style={styles.mono}>~/.cargo/bin</Text>.
+              This will install the <Text style={styles.mono}>go</Text> toolchain via apt.
             </Text>
             <View style={styles.commandList}>
               <Text style={[styles.commandText, { color: colors.textTertiary }]}>
@@ -91,7 +89,7 @@ export default function InstallRustupStep({ dispatch }: Props) {
             activeOpacity={0.7}
           >
             <Download color={colors.primaryText} size={18} strokeWidth={2.25} />
-            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Install Rust</Text>
+            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Install Go</Text>
           </TouchableOpacity>
         </>
       )}
@@ -101,7 +99,7 @@ export default function InstallRustupStep({ dispatch }: Props) {
           {!success && !hasError && (
             <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
               <Text style={[styles.statusText, { color: colors.primary }]}>
-                Installing Rust...
+                Installing Go...
               </Text>
             </View>
           )}
@@ -110,7 +108,7 @@ export default function InstallRustupStep({ dispatch }: Props) {
             <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: '#22c55e' }]}>
               <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
               <Text style={[styles.statusText, { color: '#22c55e' }]}>
-                Rust installed
+                Go installed
               </Text>
             </View>
           )}

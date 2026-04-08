@@ -12,6 +12,7 @@ import CopilotWizardSheet from '../components/setup/CopilotWizardSheet'
 import CodexWizardSheet from '../components/setup/CodexWizardSheet'
 import PythonWizardSheet from '../components/setup/PythonWizardSheet'
 import RustWizardSheet from '../components/setup/RustWizardSheet'
+import GoWizardSheet from '../components/setup/GoWizardSheet'
 import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
 import DockerWizardSheet from '../components/setup/DockerWizardSheet'
 import DockerSetupAnimation from '../components/animations/DockerSetupAnimation'
@@ -62,6 +63,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showPythonWizard, setShowPythonWizard] = useState(false)
   const [showRustWizard, setShowRustWizard] = useState(false)
   const [showRustAnimation, setShowRustAnimation] = useState(false)
+  const [showGoWizard, setShowGoWizard] = useState(false)
   const [showMissingDialogue, setShowMissingDialogue] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
@@ -210,6 +212,16 @@ export default function ServerSetupScreen({ navigation }: Props) {
     setShowRustAnimation(false)
   }, [])
 
+  const handleGoWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening Go wizard')
+    setShowGoWizard(true)
+  }, [])
+
+  const handleGoWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] Go wizard complete')
+    setShowGoWizard(false)
+  }, [])
+
   const handleInstall = useCallback((tool: ToolCheck) => {
     setInstallTool(tool)
     setInstallCommand(tool.install_command)
@@ -290,6 +302,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
     ai: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
     python: { light: Assets.pythonBlack, dark: Assets.pythonWhite },
     rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
+    go: { light: Assets.goBlack, dark: Assets.goWhite },
   }
 
   return (
@@ -398,6 +411,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onPkgWizard={handlePkgWizard}
           onPythonWizard={handlePythonWizard}
           onRustWizard={handleRustWizard}
+          onGoWizard={handleGoWizard}
           onDockerWizard={handleDockerWizard}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -487,6 +501,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           visible={showRustWizard}
           onClose={() => setShowRustWizard(false)}
           onComplete={handleRustWizardComplete}
+        />
+
+        <GoWizardSheet
+          visible={showGoWizard}
+          onClose={() => setShowGoWizard(false)}
+          onComplete={handleGoWizardComplete}
         />
 
         <DockerWizardSheet

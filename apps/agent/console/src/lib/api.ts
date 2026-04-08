@@ -486,6 +486,22 @@ export async function fetchRustDebug(): Promise<RustDebugInfo> {
   return res.json()
 }
 
+// ─── Go debug ──────────────────────────────────────────
+
+export interface GoDebugInfo {
+  installed: boolean
+  version: string | null
+  path: string | null
+  gopath: string | null
+  goroot: string | null
+}
+
+export async function fetchGoDebug(): Promise<GoDebugInfo> {
+  const res = await get('/debug/go')
+  if (!res.ok) throw new Error('Failed to fetch Go debug')
+  return res.json()
+}
+
 export interface RepoSummary {
   repoName: string
   repoPath: string

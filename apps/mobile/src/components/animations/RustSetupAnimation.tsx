@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Dimensions, Image, StyleSheet } from 'react-native'
+import { Dimensions, Image, StyleSheet, View } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Assets } from '../../../assets'
 import { palette } from '@pocketdev/shared/theme'
@@ -20,44 +20,40 @@ const BAUHAUS = palette.bauhaus
 const RUST_BG = palette.brand.rust
 
 // Timing
-const ROW_STAGGER = 120
-const CELL_STAGGER = 60
-const SLIDE_DURATION = 380
-const COLOR_POP_DURATION = 200
-const COLOR_POP_DELAY = 140
+const ROW_STAGGER = 130
+const CELL_STAGGER = 65
+const SLIDE_DURATION = 400
+const FACE_POP_DELAY = 120
+const FACE_POP_DURATION = 220
 const HOLD_DURATION = 1100
 const COMPRESS_DURATION = 600
 const FINAL_FADE_DURATION = 220
 const ICON_FADE_IN = 340
 
-// Grid layout — 4 columns × 5 rows of parallelogram cells
-const COLS = 4
-const ROWS = 5
-const CELL_W = SCREEN_WIDTH * 0.17
-const CELL_H = CELL_W * 0.72
-const SKEW_X = -12
-const GAP_X = CELL_W * 0.18
-const GAP_Y = CELL_H * 0.22
+// Grid — 3 columns × 4 rows of isometric blocks
+const COLS = 3
+const ROWS = 4
 
-// Color square sits inset inside each parallelogram
-const SQUARE_SIZE = CELL_W * 0.48
+// Each block is an isometric cube: colored top face + black shadow faces
+const FACE_SIZE = SCREEN_WIDTH * 0.18 // colored square face
+const DEPTH = FACE_SIZE * 0.45 // depth of the 3D extrusion
+const SKEW_ANGLE = 45 // degrees for the parallelogram shadow faces
 
-// Colors for the inset squares — weighted toward red/black for Rust
-const CELL_COLORS = [
-  BAUHAUS.red, BAUHAUS.yellow, BAUHAUS.blue,
-  BAUHAUS.black, BAUHAUS.red, BAUHAUS.blue,
-  BAUHAUS.yellow, BAUHAUS.red, BAUHAUS.black,
-  BAUHAUS.red, BAUHAUS.blue, BAUHAUS.yellow,
+const GAP_X = FACE_SIZE * 0.35
+const GAP_Y = FACE_SIZE * 0.3
+
+const GRID_W = COLS * (FACE_SIZE + DEPTH * 0.5) + (COLS - 1) * GAP_X
+const GRID_H = ROWS * (FACE_SIZE + DEPTH * 0.5) + (ROWS - 1) * GAP_Y
+
+// Colors for faces — red/black heavy for Rust, cycling through bauhaus
+const FACE_COLORS = [
   BAUHAUS.blue, BAUHAUS.red, BAUHAUS.red,
-  BAUHAUS.black, BAUHAUS.yellow, BAUHAUS.red,
-  BAUHAUS.red, BAUHAUS.blue,
+  BAUHAUS.red, BAUHAUS.yellow, BAUHAUS.blue,
+  BAUHAUS.yellow, BAUHAUS.red, BAUHAUS.red,
+  BAUHAUS.red, BAUHAUS.blue, BAUHAUS.yellow,
 ]
 
-// Total grid dimensions for centering
-const GRID_W = COLS * CELL_W + (COLS - 1) * GAP_X
-const GRID_H = ROWS * CELL_H + (ROWS - 1) * GAP_Y
-
-type CellConfig = {
+type BlockConfig = {
   id: string
   row: number
   col: number
@@ -65,23 +61,27 @@ type CellConfig = {
   y: number
   color: string
   slideFromX: number
+  slideFromY: number
 }
 
-const CELLS: CellConfig[] = []
+const BLOCKS: BlockConfig[] = []
 for (let r = 0; r < ROWS; r++) {
   for (let c = 0; c < COLS; c++) {
-    const x = c * (CELL_W + GAP_X) - GRID_W / 2 + CELL_W / 2
-    const y = r * (CELL_H + GAP_Y) - GRID_H / 2 + CELL_H / 2
-    // Alternate slide direction per row
-    const slideFromX = r % 2 === 0 ? -SCREEN_WIDTH * 0.7 : SCREEN_WIDTH * 0.7
-    CELLS.push({
-      id: `cell-${r}-${c}`,
+    const blockW = FACE_SIZE + DEPTH * 0.5
+    const blockH = FACE_SIZE + DEPTH * 0.5
+    const x = c * (blockW + GAP_X) - GRID_W / 2 + blockW / 2
+    const y = r * (blockH + GAP_Y) - GRID_H / 2 + blockH / 2
+    // Slide in from alternating diagonal directions
+    const fromDir = (r + c) % 2 === 0 ? -1 : 1
+    BLOCKS.push({
+      id: `block-${r}-${c}`,
       row: r,
       col: c,
       x,
       y,
-      color: CELL_COLORS[(r * COLS + c) % CELL_COLORS.length],
-      slideFromX,
+      color: FACE_COLORS[(r * COLS + c) % FACE_COLORS.length],
+      slideFromX: fromDir * SCREEN_WIDTH * 0.6,
+      slideFromY: -SCREEN_HEIGHT * 0.4,
     })
   }
 }
@@ -104,7 +104,7 @@ export default function RustSetupAnimation({ onComplete }: Props) {
 
     const lastRowDelay = (ROWS - 1) * ROW_STAGGER
     const lastCellDelay = (COLS - 1) * CELL_STAGGER
-    const gridBuilt = lastRowDelay + lastCellDelay + SLIDE_DURATION + COLOR_POP_DELAY + COLOR_POP_DURATION + 200
+    const gridBuilt = lastRowDelay + lastCellDelay + SLIDE_DURATION + FACE_POP_DELAY + FACE_POP_DURATION + 200
 
     iconOpacity.value = withDelay(
       gridBuilt * 0.55,
@@ -148,10 +148,10 @@ export default function RustSetupAnimation({ onComplete }: Props) {
 
   return (
     <Animated.View style={[styles.overlay, { backgroundColor: bgColor }, overlayStyle]}>
-      {CELLS.map((cell) => (
-        <LatticeCell
-          key={cell.id}
-          config={cell}
+      {BLOCKS.map((block) => (
+        <IsometricBlock
+          key={block.id}
+          config={block}
           isDark={isDark}
           compressProgress={compressProgress}
           fadeProgress={fadeProgress}
@@ -165,98 +165,120 @@ export default function RustSetupAnimation({ onComplete }: Props) {
   )
 }
 
-function LatticeCell({
+function IsometricBlock({
   config,
   isDark,
   compressProgress,
   fadeProgress,
 }: {
-  config: CellConfig
+  config: BlockConfig
   isDark: boolean
   compressProgress: SharedValue<number>
   fadeProgress: SharedValue<number>
 }) {
-  const girderX = useSharedValue(config.slideFromX)
-  const girderOpacity = useSharedValue(0)
-  const squareScale = useSharedValue(0)
-  const squareOpacity = useSharedValue(0)
+  const blockX = useSharedValue(config.slideFromX)
+  const blockY = useSharedValue(config.slideFromY)
+  const blockOpacity = useSharedValue(0)
+  const faceScale = useSharedValue(0)
+  const faceOpacity = useSharedValue(0)
 
   useEffect(() => {
     const delay = config.row * ROW_STAGGER + config.col * CELL_STAGGER
 
-    girderOpacity.value = withDelay(
+    // Shadow block slides in with hard stop
+    blockOpacity.value = withDelay(
       delay,
-      withTiming(isDark ? 0.7 : 0.85, { duration: SLIDE_DURATION * 0.3, easing: Easing.out(Easing.cubic) }),
+      withTiming(1, { duration: SLIDE_DURATION * 0.3, easing: Easing.out(Easing.cubic) }),
     )
-    girderX.value = withDelay(
+    blockX.value = withDelay(
       delay,
       withTiming(config.x, { duration: SLIDE_DURATION, easing: Easing.out(Easing.quad) }),
     )
-
-    const popDelay = delay + SLIDE_DURATION - 80 + COLOR_POP_DELAY
-    squareOpacity.value = withDelay(
-      popDelay,
-      withTiming(0.92, { duration: COLOR_POP_DURATION, easing: Easing.out(Easing.cubic) }),
+    blockY.value = withDelay(
+      delay,
+      withTiming(config.y, { duration: SLIDE_DURATION, easing: Easing.out(Easing.quad) }),
     )
-    squareScale.value = withDelay(
+
+    // Colored face pops in after block lands
+    const popDelay = delay + SLIDE_DURATION - 60 + FACE_POP_DELAY
+    faceOpacity.value = withDelay(
       popDelay,
-      withTiming(1, { duration: COLOR_POP_DURATION, easing: Easing.out(Easing.quad) }),
+      withTiming(1, { duration: FACE_POP_DURATION, easing: Easing.out(Easing.cubic) }),
     )
-  }, [config, isDark, girderX, girderOpacity, squareScale, squareOpacity])
+    faceScale.value = withDelay(
+      popDelay,
+      withTiming(1, { duration: FACE_POP_DURATION, easing: Easing.out(Easing.quad) }),
+    )
+  }, [config, isDark, blockX, blockY, blockOpacity, faceScale, faceOpacity])
 
-  const girderColor = isDark ? 'rgba(255,255,255,0.12)' : BAUHAUS.black
+  // Shadow color — creates depth
+  const shadowColor = isDark ? 'rgba(255,255,255,0.1)' : BAUHAUS.black
+  const shadowColorLight = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(26,26,26,0.7)'
 
-  const girderStyle = useAnimatedStyle(() => ({
-    opacity: girderOpacity.value * (1 - fadeProgress.value),
+  // The entire block (shadow + face) moves as one unit
+  const containerStyle = useAnimatedStyle(() => ({
+    opacity: blockOpacity.value * (1 - fadeProgress.value),
     transform: [
-      { translateX: interpolate(compressProgress.value, [0, 1], [girderX.value, 0]) },
-      { translateY: interpolate(compressProgress.value, [0, 1], [config.y, 0]) },
-      { skewX: `${SKEW_X}deg` },
-      { scale: interpolate(compressProgress.value, [0, 1], [1, 0.15]) },
+      { translateX: interpolate(compressProgress.value, [0, 1], [blockX.value, 0]) },
+      { translateY: interpolate(compressProgress.value, [0, 1], [blockY.value, 0]) },
+      { scale: interpolate(compressProgress.value, [0, 1], [1, 0.12]) },
     ],
   }))
 
-  const squareStyle = useAnimatedStyle(() => ({
-    opacity: squareOpacity.value * (1 - fadeProgress.value),
+  // Face pops in separately
+  const faceStyle = useAnimatedStyle(() => ({
+    opacity: faceOpacity.value,
     transform: [
-      { translateX: interpolate(compressProgress.value, [0, 1], [girderX.value, 0]) },
-      { translateY: interpolate(compressProgress.value, [0, 1], [config.y, 0]) },
-      { skewX: `${SKEW_X}deg` },
-      { scale: interpolate(compressProgress.value, [0, 1], [squareScale.value, 0.1]) },
+      { scale: faceScale.value },
     ],
   }))
 
   return (
-    <>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.girder,
-          {
-            width: CELL_W,
-            height: CELL_H,
-            backgroundColor: girderColor,
-            marginLeft: -CELL_W / 2,
-            marginTop: -CELL_H / 2,
-          },
-          girderStyle,
-        ]}
-      />
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.square,
-          {
-            width: SQUARE_SIZE,
-            height: SQUARE_SIZE,
-            backgroundColor: config.color,
-            marginLeft: -SQUARE_SIZE / 2,
-            marginTop: -SQUARE_SIZE / 2,
-          },
-          squareStyle,
-        ]}
-      />
-    </>
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.blockContainer,
+        {
+          width: FACE_SIZE + DEPTH * 0.7,
+          height: FACE_SIZE + DEPTH * 0.7,
+          marginLeft: -(FACE_SIZE + DEPTH * 0.7) / 2,
+          marginTop: -(FACE_SIZE + DEPTH * 0.7) / 2,
+        },
+        containerStyle,
+      ]}
+    >
+      {/* Bottom shadow face — parallelogram below the colored face */}
+      <View style={{
+        position: 'absolute',
+        left: DEPTH * 0.35,
+        top: FACE_SIZE,
+        width: FACE_SIZE,
+        height: DEPTH * 0.7,
+        backgroundColor: shadowColor,
+        transform: [{ skewX: `${-SKEW_ANGLE}deg` }],
+      }} />
+
+      {/* Right shadow face — parallelogram to the right of the colored face */}
+      <View style={{
+        position: 'absolute',
+        left: FACE_SIZE,
+        top: DEPTH * 0.35,
+        width: DEPTH * 0.7,
+        height: FACE_SIZE,
+        backgroundColor: shadowColorLight,
+        transform: [{ skewY: `${-SKEW_ANGLE}deg` }],
+      }} />
+
+      {/* Top colored face — the main visible square */}
+      <Animated.View style={[{
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: FACE_SIZE,
+        height: FACE_SIZE,
+        backgroundColor: config.color,
+      }, faceStyle]} />
+    </Animated.View>
   )
 }
 
@@ -278,12 +300,7 @@ const styles = StyleSheet.create({
     width: ICON_SIZE,
     height: ICON_SIZE,
   },
-  girder: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-  },
-  square: {
+  blockContainer: {
     position: 'absolute',
     left: '50%',
     top: '50%',

@@ -334,6 +334,19 @@ export interface RustSetupStatus {
 export type RustWizardStep = 'detect' | 'install-rustup' | 'verify'
 export type RustWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
+// ─── Go wizard types ──────────────────────────────────────────
+
+export interface GoSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  gopath: string | null
+  goroot: string | null
+}
+
+export type GoWizardStep = 'detect' | 'install' | 'verify'
+export type GoWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
 // ─── Package Manager wizard types ──────────────────────────────────
 
 export interface PkgToolInfo {
