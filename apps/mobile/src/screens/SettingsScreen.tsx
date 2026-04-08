@@ -1,15 +1,17 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import { useConnectionStore } from '../stores/connection'
 import { useServerActionsStore } from '../stores/server-actions'
+import { browserSessionUrl } from '../services/api'
 import type { CompositeNavigationProp } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { MainTabParamList, RootStackParamList } from '../navigation/types'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import ServerWorkspace from '../components/server-actions/ServerWorkspace'
+import ServerWebBrowserSheet from '../components/browser/ServerWebBrowserSheet'
 import BauhausButton from '../components/shared/BauhausButton'
 import { BauhausPanel } from '../components/shared/BauhausPanel'
 import BauhausBadge from '../components/shared/BauhausBadge'
@@ -29,6 +31,11 @@ export default function SettingsScreen({ navigation }: Props) {
   const status = useConnectionStore((s) => s.status)
   const unpair = useConnectionStore((s) => s.unpair)
   const refreshServer = useServerActionsStore((s) => s.refresh)
+  const [consoleOpen, setConsoleOpen] = useState(false)
+
+  const consoleUrl = server
+    ? browserSessionUrl(server.ip, server.port, '/PocketDev/')
+    : ''
 
   React.useEffect(() => {
     refreshServer()
@@ -83,6 +90,11 @@ export default function SettingsScreen({ navigation }: Props) {
           <BauhausButton onPress={() => navigation.getParent()?.navigate('ServerSetup')}>
             Workspace Tools
           </BauhausButton>
+          {server && (
+            <BauhausButton onPress={() => setConsoleOpen(true)}>
+              Server Console
+            </BauhausButton>
+          )}
           <View style={styles.row}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Services</Text>
             <TouchableOpacity onPress={() => navigation.getParent()?.navigate('Containers')} activeOpacity={0.7}>
@@ -115,6 +127,13 @@ export default function SettingsScreen({ navigation }: Props) {
           </BauhausButton>
         </BauhausPanel>
       </ScrollView>
+
+      <ServerWebBrowserSheet
+        visible={consoleOpen}
+        title="Server Console"
+        initialUrl={consoleUrl}
+        onClose={() => setConsoleOpen(false)}
+      />
     </AdaptiveShell>
   )
 }

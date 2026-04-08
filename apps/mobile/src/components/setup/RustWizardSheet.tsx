@@ -75,6 +75,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       // Skip install if Rust is already installed with cargo
       if (rs.installed && rs.cargo_installed) {
         newStatuses['install-rustup'] = 'skipped'
+        newStatuses['verify'] = 'skipped'
       }
 
       // If everything is configured, go to all-done

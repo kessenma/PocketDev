@@ -1,14 +1,18 @@
-import React, { useState, useRef } from 'react'
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
+import React, { useState, useRef, useEffect } from 'react'
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
+import { useConnectionStore } from '../../../stores/connection'
+import { fetchGoSetupStatus } from '../../../services/api'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
-import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
+import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight, Check } from 'lucide-react-native'
 import CopyButton from '../../shared/CopyButton'
+import type { GoSetupStatus } from '@pocketdev/shared/types'
 
-const INSTALL_CMD = 'sudo apt update && sudo apt install -y golang-go'
+const INSTALL_CMD = 'sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" golang-go'
+const DISPLAY_CMD = 'sudo apt-get install -y golang-go'
 const DONE_MARKER = '__GO_INSTALL_DONE__'
 
 type WizardAction =
@@ -21,17 +25,29 @@ interface Props {
 
 export default function InstallGoStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
+  const server = useConnectionStore((s) => s.server)
+  const [checking, setChecking] = useState(true)
+  const [existingGo, setExistingGo] = useState<GoSetupStatus | null>(null)
   const [started, setStarted] = useState(false)
   const [success, setSuccess] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
+
+  // Pre-check: is Go already installed?
+  useEffect(() => {
+    if (!server) { setChecking(false); return }
+    fetchGoSetupStatus(server.ip, server.port)
+      .then((status) => { if (status.installed) setExistingGo(status) })
+      .catch(() => {})
+      .finally(() => setChecking(false))
+  }, [server])
 
   const {
     output, hasError, showSudoPrompt,
     sendCommand, submitSudoPassword, cancelSudoPrompt,
   } = useTerminalCommand({
     persistent: true,
-    errorPatterns: [/error:/im, /failed to/im, /E: Unable to/im],
+    errorPatterns: [/E: Unable to/im, /E: Failed/im, /dpkg:.*error/im],
     onOutput: (chunk) => {
       if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
         setSuccess(true)
@@ -42,8 +58,12 @@ export default function InstallGoStep({ dispatch }: Props) {
 
   function handleStart() {
     setStarted(true)
-    const fullCmd = `cd / && ( ${INSTALL_CMD} ) && echo ${DONE_MARKER} || echo GO_INSTALL_FAILED`
+    const fullCmd = `cd ~ && ( ${INSTALL_CMD} ) && echo ${DONE_MARKER} || echo GO_INSTALL_FAILED`
     sendCommand(fullCmd)
+  }
+
+  function handleSkip() {
+    dispatch({ type: 'STEP_COMPLETE', step: 'install' })
   }
 
   function handleContinue() {
@@ -53,6 +73,15 @@ export default function InstallGoStep({ dispatch }: Props) {
   function handleRetry() {
     setSuccess(false)
     handleStart()
+  }
+
+  if (checking) {
+    return (
+      <View style={styles.checkingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Checking for existing Go installation...</Text>
+      </View>
+    )
   }
 
   return (
@@ -67,30 +96,72 @@ export default function InstallGoStep({ dispatch }: Props) {
 
       <Text style={[styles.title, { color: colors.text }]}>Install Go</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Install the Go programming language from the system package manager.
+        {existingGo
+          ? 'Go is already installed. You can skip this step or reinstall.'
+          : 'Install the Go programming language from the system package manager.'}
       </Text>
+
+      {/* Already installed notice */}
+      {existingGo && !started && (
+        <View style={[styles.existingCard, { backgroundColor: '#22c55e18', borderColor: '#22c55e44' }]}>
+          <View style={styles.existingHeader}>
+            <Check color="#22c55e" size={18} strokeWidth={2.5} />
+            <Text style={[styles.existingTitle, { color: '#22c55e' }]}>
+              Go {existingGo.version} is already installed
+            </Text>
+          </View>
+          {existingGo.path && (
+            <Text style={[styles.existingDetail, { color: colors.textTertiary }]}>
+              {existingGo.path}
+            </Text>
+          )}
+        </View>
+      )}
 
       {!started && (
         <>
-          <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              This will install the <Text style={styles.mono}>go</Text> toolchain via apt.
-            </Text>
-            <View style={styles.commandList}>
-              <Text style={[styles.commandText, { color: colors.textTertiary }]}>
-                $ {INSTALL_CMD}
+          {!existingGo && (
+            <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                This will install the <Text style={styles.mono}>go</Text> toolchain via apt.
               </Text>
+              <View style={styles.commandList}>
+                <Text style={[styles.commandText, { color: colors.textTertiary }]}>
+                  $ {DISPLAY_CMD}
+                </Text>
+              </View>
             </View>
-          </View>
+          )}
 
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={handleStart}
-            activeOpacity={0.7}
-          >
-            <Download color={colors.primaryText} size={18} strokeWidth={2.25} />
-            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Install Go</Text>
-          </TouchableOpacity>
+          {existingGo ? (
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={handleSkip}
+                activeOpacity={0.7}
+              >
+                <ArrowRight color={colors.primaryText} size={18} strokeWidth={2.25} />
+                <Text style={[styles.buttonText, { color: colors.primaryText }]}>Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.secondaryButton, { borderColor: colors.border, flex: 1 }]}
+                onPress={handleStart}
+                activeOpacity={0.7}
+              >
+                <Download color={colors.text} size={16} strokeWidth={2.25} />
+                <Text style={[styles.buttonText, { color: colors.text }]}>Reinstall</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              onPress={handleStart}
+              activeOpacity={0.7}
+            >
+              <Download color={colors.primaryText} size={18} strokeWidth={2.25} />
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Install Go</Text>
+            </TouchableOpacity>
+          )}
         </>
       )}
 
@@ -190,6 +261,12 @@ const styles = StyleSheet.create({
     gap: spacing[3],
     paddingBottom: spacing[6],
   },
+  checkingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing[4],
+  },
   iconRow: {
     alignItems: 'center',
     marginTop: spacing[4],
@@ -207,6 +284,39 @@ const styles = StyleSheet.create({
     ...typographyScale.sm,
     textAlign: 'center',
     paddingHorizontal: spacing[4],
+  },
+  existingCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  existingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  existingTitle: {
+    ...typographyScale.sm,
+    fontWeight: '600',
+  },
+  existingDetail: {
+    ...typographyScale.xs,
+    fontFamily: 'monospace',
+    marginLeft: 26,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[4],
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
   },
   infoCard: {
     borderWidth: 1,

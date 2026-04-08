@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Modal, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Linking, Modal, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import WebView, { type WebViewNavigation, type WebViewProps } from 'react-native-webview'
-import { X, ChevronLeft, ChevronRight, RotateCw, AlertCircle } from 'lucide-react-native'
+import { X, ChevronLeft, ChevronRight, RotateCw, ExternalLink, AlertCircle } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 
@@ -88,6 +88,9 @@ export default function ServerWebBrowserSheet({
             </TouchableOpacity>
             <TouchableOpacity onPress={() => webViewRef.current?.reload()} style={styles.iconButton} activeOpacity={0.7}>
               <RotateCw color={colors.text} size={18} strokeWidth={2.25} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL(currentUrl)} style={styles.iconButton} activeOpacity={0.7}>
+              <ExternalLink color={colors.text} size={18} strokeWidth={2.25} />
             </TouchableOpacity>
           </View>
         </View>
