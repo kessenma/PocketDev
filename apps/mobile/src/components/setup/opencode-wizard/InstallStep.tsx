@@ -1,14 +1,13 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
 import { ArrowRight, CheckCircle, RefreshCw, TerminalSquare } from 'lucide-react-native'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useConnectionStore } from '../../../stores/connection'
-import { fetchOpenCodeSetupStatus, postInstallOpenCode } from '../../../services/api'
+import { fetchOpenCodeInstallCommand, fetchOpenCodeSetupStatus, postInstallOpenCode } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import type { OpenCodeSetupStatus } from '@pocketdev/shared/types'
-
-const INSTALL_COMMAND = 'curl -fsSL https://opencode.ai/install | bash'
+import CopyButton from '../../shared/CopyButton'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'install'; openCodeStatus?: OpenCodeSetupStatus | null }
@@ -25,7 +24,15 @@ export default function InstallStep({ dispatch }: Props) {
   const [output, setOutput] = useState<string | null>(null)
   const [installPath, setInstallPath] = useState<string | null>(null)
   const [version, setVersion] = useState<string | null>(null)
+  const [installCommand, setInstallCommand] = useState<string>('curl -fsSL https://opencode.ai/install | bash')
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!server) return
+    fetchOpenCodeInstallCommand(server.ip, server.port)
+      .then(setInstallCommand)
+      .catch(() => {})
+  }, [server])
 
   const handleInstall = useCallback(async () => {
     if (!server) return
@@ -73,7 +80,7 @@ export default function InstallStep({ dispatch }: Props) {
           </View>
           <View style={[styles.commandBlock, { backgroundColor: colors.background }]}>
             <Text style={[styles.commandText, { color: colors.text }]} selectable>
-              $ {INSTALL_COMMAND}
+              $ {installCommand}
             </Text>
           </View>
           <Text style={[styles.commandHint, { color: colors.textTertiary }]}>
@@ -105,10 +112,13 @@ export default function InstallStep({ dispatch }: Props) {
           {installPath ? <Text style={[styles.metaText, { color: colors.textSecondary }]}>Detected tool path: {installPath}</Text> : null}
           {error ? <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text> : null}
           {output ? (
-            <View style={[styles.outputBox, { backgroundColor: colors.background }]}>
-              <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                {output}
-              </Text>
+            <View style={styles.outputSection}>
+              <CopyButton value={output} label="Copy output" />
+              <View style={[styles.outputBox, { backgroundColor: colors.background }]}>
+                <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
+                  {output}
+                </Text>
+              </View>
             </View>
           ) : null}
         </View>
@@ -152,6 +162,7 @@ const styles = StyleSheet.create({
   statusTitle: { ...typographyScale.base, fontWeight: '700' },
   metaText: { ...typographyScale.sm },
   errorText: { ...typographyScale.sm },
+  outputSection: { gap: spacing[2] },
   outputBox: { borderRadius: borderRadius.md, padding: spacing[3] },
   outputText: { ...typographyScale.xs, fontFamily: 'monospace' },
   primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], borderRadius: borderRadius.lg },

@@ -5,10 +5,17 @@ const OPENCODE_INSTALL_COMMAND = 'curl -fsSL https://opencode.ai/install | bash'
 const PATH_PREFIX = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/homebrew/bin'
 const CANDIDATE_PATHS = [
   `${process.env.HOME ?? process.env.USERPROFILE ?? '/root'}/.local/bin/opencode`,
+  '/root/.local/bin/opencode',
+  '/home/ubuntu/.local/bin/opencode',
+  '/home/linuxbrew/.linuxbrew/bin/opencode',
   '/usr/local/bin/opencode',
   '/opt/homebrew/bin/opencode',
 ]
 const VERIFY_OUTPUT_MAX = 1200
+
+export function getOpenCodeInstallCommand(): string {
+  return OPENCODE_INSTALL_COMMAND
+}
 
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
@@ -40,6 +47,17 @@ async function pathExists(path: string): Promise<boolean> {
   return exitCode === 0
 }
 
+async function scanForOpenCodeBinary(): Promise<string | null> {
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
+  const { stdout, exitCode } = await exec(
+    `find '${home.replace(/'/g, `'\\''`)}' /root /home -path '*/.local/bin/opencode' -type f -perm -111 2>/dev/null | head -n 1`,
+    20_000,
+  )
+
+  if (exitCode !== 0 || !stdout) return null
+  return stdout.split('\n').map((line) => line.trim()).find(Boolean) ?? null
+}
+
 async function findOpenCodeBinary(): Promise<string | null> {
   const fromPath = await which('opencode')
   if (fromPath) return fromPath
@@ -47,6 +65,9 @@ async function findOpenCodeBinary(): Promise<string | null> {
   for (const candidate of CANDIDATE_PATHS) {
     if (await pathExists(candidate)) return candidate
   }
+
+  const scanned = await scanForOpenCodeBinary()
+  if (scanned) return scanned
 
   return null
 }

@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 import { authenticateRequest } from '../services/auth.ts'
-import { checkOpenCodeStatus, installOpenCode, verifyOpenCode } from '../services/opencode-setup.ts'
+import { checkOpenCodeStatus, getOpenCodeInstallCommand, installOpenCode, verifyOpenCode } from '../services/opencode-setup.ts'
 
 export const opencodeSetupRoutes = new Elysia({ prefix: '/opencode-setup' })
   .get('/status', async ({ request, set }) => {
@@ -22,4 +22,11 @@ export const opencodeSetupRoutes = new Elysia({ prefix: '/opencode-setup' })
     if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
 
     return verifyOpenCode()
+  })
+
+  .get('/install-command', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    return { command: getOpenCodeInstallCommand() }
   })

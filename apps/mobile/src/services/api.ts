@@ -792,6 +792,15 @@ export async function postInstallOpenCode(ip: string, port: number): Promise<Ope
   return response.json() as Promise<OpenCodeInstallResult>
 }
 
+export async function fetchOpenCodeInstallCommand(ip: string, port: number): Promise<string> {
+  const response = await fetch(apiUrl(ip, port, '/opencode-setup/install-command'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch OpenCode install command (${response.status})`)
+  const data = await response.json() as { command: string }
+  return data.command
+}
+
 export async function postVerifyOpenCode(ip: string, port: number): Promise<OpenCodeSetupStatus> {
   const response = await fetch(apiUrl(ip, port, '/opencode-setup/verify'), {
     method: 'POST',
