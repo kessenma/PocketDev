@@ -43,6 +43,7 @@ RUN cd apps/web && npx vite build
 FROM base AS console-build
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/agent/console/node_modules ./apps/agent/console/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY apps/agent/console/ ./apps/agent/console/
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
