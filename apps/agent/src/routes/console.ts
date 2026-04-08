@@ -23,9 +23,11 @@ import { getCopilotAuthDebug } from '../services/copilot-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
 import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
 import { checkPythonStatus } from '../services/python-setup.ts'
+import { checkRustStatus } from '../services/rust-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
+import { getAgentVersion, checkForUpdate } from '../services/version.ts'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
@@ -93,11 +95,13 @@ async function listRepoDirectory(baseDir: string, dirPath: string): Promise<Tree
 
 export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   // ─── Health (no auth) ─────────────────────────────────
-  .get('/health', () => ({
+  .get('/health', async () => ({
     hasAdmin: hasAdminAccount(),
     paired: hasDevices(),
     uptime: process.uptime(),
     hasPasskeys: hasPasskeyCredentials(),
+    version: getAgentVersion(),
+    update: await checkForUpdate(),
   }))
 
   // ─── Setup (create admin, no auth) ────────────────────
@@ -427,6 +431,15 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     return checkPythonStatus()
   })
 
+  // ─── Rust debug (requires session) ─────────────────────
+  .get('/debug/rust', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    return checkRustStatus()
+  })
+
   // ─── Prerequisites (requires session) ─────────────────
   .get('/prerequisites', async ({ request, set }) => {
     if (!requireConsoleSession(request, set)) {
@@ -674,6 +687,66 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     body: t.Object({
       domain: t.String(),
     }),
+  })
+
+  // ─── Agent update (requires session) ──────────────────
+  .post('/update', async ({ request, body, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const targetVersion = body?.version
+    const bundleUrl = targetVersion
+      ? `https://pocketdev.run/agent/bundle/${targetVersion}`
+      : 'https://pocketdev.run/agent/bundle'
+
+    try {
+      // Download bundle to temp file
+      const res = await fetch(bundleUrl)
+      if (!res.ok) {
+        set.status = 502
+        return { error: `Failed to download bundle: ${res.status} ${res.statusText}` }
+      }
+
+      const tmpFile = `/tmp/pocketdev-update-${Date.now()}.tar.gz`
+      await Bun.write(tmpFile, res)
+
+      // Validate it's a real tarball
+      const validateProc = Bun.spawn(['tar', '-tzf', tmpFile], { stdout: 'pipe', stderr: 'pipe' })
+      if ((await validateProc.exited) !== 0) {
+        set.status = 502
+        return { error: 'Downloaded file is not a valid tarball' }
+      }
+
+      // Schedule the actual update to happen after we respond
+      // This gives the client time to receive the response before we restart
+      setTimeout(async () => {
+        const installDir = process.cwd()
+        const serviceName = 'pocketdev-agent'
+
+        // Extract new files over the current install
+        const extractProc = Bun.spawn(
+          ['tar', '-xzf', tmpFile, '-C', installDir, '--strip-components=1'],
+          { stdout: 'pipe', stderr: 'pipe' },
+        )
+        await extractProc.exited
+
+        // Clean up temp file
+        Bun.spawn(['rm', '-f', tmpFile])
+
+        // Restart the service (this will kill us)
+        Bun.spawn(['systemctl', 'restart', serviceName], { stdout: 'pipe', stderr: 'pipe' })
+      }, 500)
+
+      return { ok: true, message: 'Update started. The agent will restart shortly.' }
+    } catch (err) {
+      set.status = 500
+      return { error: err instanceof Error ? err.message : 'Update failed' }
+    }
+  }, {
+    body: t.Optional(t.Object({
+      version: t.Optional(t.String()),
+    })),
   })
 
 // ─── Static file serving for console SPA ────────────────

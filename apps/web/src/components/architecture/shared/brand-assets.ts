@@ -14,6 +14,12 @@ import nodeBlack from '../../../../../../packages/shared/assets/brands/node-blac
 import nodeWhite from '../../../../../../packages/shared/assets/brands/node-white.png'
 import npmBlack from '../../../../../../packages/shared/assets/brands/npm-black.png'
 import npmWhite from '../../../../../../packages/shared/assets/brands/npm-white.png'
+import rustBlack from '../../../../../../packages/shared/assets/brands/rust-black.png'
+import rustWhite from '../../../../../../packages/shared/assets/brands/rust-white.png'
+import goBlack from '../../../../../../packages/shared/assets/brands/go-black.png'
+import goWhite from '../../../../../../packages/shared/assets/brands/go-white.png'
+import typescriptBlack from '../../../../../../packages/shared/assets/brands/typescript-black.png'
+import typescriptWhite from '../../../../../../packages/shared/assets/brands/typescript-white.png'
 
 export const brandAssets = {
   claudeBlack,
@@ -32,4 +38,10 @@ export const brandAssets = {
   nodeWhite,
   npmBlack,
   npmWhite,
+  rustBlack,
+  rustWhite,
+  goBlack,
+  goWhite,
+  typescriptBlack,
+  typescriptWhite,
 } as const

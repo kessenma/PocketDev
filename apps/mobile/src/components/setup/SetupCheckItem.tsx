@@ -38,6 +38,7 @@ interface Props {
   onBlockedCopilotWizard?: (tool: ToolCheck) => void
   onPkgWizard?: (tool: ToolCheck) => void
   onPythonWizard?: (tool: ToolCheck) => void
+  onRustWizard?: (tool: ToolCheck) => void
   onDockerWizard?: (tool: ToolCheck) => void
   disabledReason?: string | null
 }
@@ -86,6 +87,7 @@ export default function SetupCheckItem({
   onBlockedCopilotWizard,
   onPkgWizard,
   onPythonWizard,
+  onRustWizard,
   onDockerWizard,
   disabledReason,
 }: Props) {
@@ -124,11 +126,15 @@ export default function SetupCheckItem({
   const pythonNeedsAction = isPython && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showPythonWizard = isPython && !!onPythonWizard
 
+  const isRust = tool.id === 'rust'
+  const rustNeedsAction = isRust && (tool.status === 'missing' || tool.status === 'misconfigured')
+  const showRustWizard = isRust && !!onRustWizard
+
   const isDocker = tool.id === 'docker'
   const dockerNeedsAction = isDocker && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showDockerWizard = isDocker && !!onDockerWizard
 
-  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython || isDocker
+  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython || isRust || isDocker
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -307,6 +313,20 @@ export default function SetupCheckItem({
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
               {pythonNeedsAction ? 'Enable Python' : 'Open Python'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {showRustWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onRustWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>
+              {rustNeedsAction ? 'Enable Rust' : 'Open Rust'}
             </Text>
           </TouchableOpacity>
         </View>

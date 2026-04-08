@@ -50,6 +50,7 @@ import type {
   CopilotTrustSessionStatus,
   BrowserSessionCreateResult,
   PythonSetupStatus,
+  RustSetupStatus,
   PkgManagerStatus,
   PkgInstallTool,
   PkgInstallResult,
@@ -834,6 +835,25 @@ export async function postVerifyPython(ip: string, port: number): Promise<Python
   })
   if (!response.ok) throw new Error(`Failed to verify Python (${response.status})`)
   return response.json() as Promise<PythonSetupStatus>
+}
+
+// ─── Rust Setup ────────────────────────────────────────────────────
+
+export async function fetchRustSetupStatus(ip: string, port: number): Promise<RustSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/rust-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Rust status (${response.status})`)
+  return response.json() as Promise<RustSetupStatus>
+}
+
+export async function postVerifyRust(ip: string, port: number): Promise<RustSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/rust-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify Rust (${response.status})`)
+  return response.json() as Promise<RustSetupStatus>
 }
 
 // ─── Package Manager Setup ──────────────────────────────────────────

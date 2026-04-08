@@ -11,9 +11,11 @@ import ClaudeWizardSheet from '../components/setup/ClaudeWizardSheet'
 import CopilotWizardSheet from '../components/setup/CopilotWizardSheet'
 import CodexWizardSheet from '../components/setup/CodexWizardSheet'
 import PythonWizardSheet from '../components/setup/PythonWizardSheet'
+import RustWizardSheet from '../components/setup/RustWizardSheet'
 import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
 import DockerWizardSheet from '../components/setup/DockerWizardSheet'
 import DockerSetupAnimation from '../components/animations/DockerSetupAnimation'
+import RustSetupAnimation from '../components/animations/RustSetupAnimation'
 import PackageInstallAnimation from '../components/animations/PackageInstallAnimation'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
@@ -58,6 +60,8 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showDockerWizard, setShowDockerWizard] = useState(false)
   const [showDockerAnimation, setShowDockerAnimation] = useState(false)
   const [showPythonWizard, setShowPythonWizard] = useState(false)
+  const [showRustWizard, setShowRustWizard] = useState(false)
+  const [showRustAnimation, setShowRustAnimation] = useState(false)
   const [showMissingDialogue, setShowMissingDialogue] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
@@ -191,6 +195,21 @@ export default function ServerSetupScreen({ navigation }: Props) {
     setShowPythonWizard(false)
   }, [])
 
+  const handleRustWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening Rust wizard')
+    setShowRustWizard(true)
+  }, [])
+
+  const handleRustWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] Rust wizard complete')
+    setShowRustWizard(false)
+    setShowRustAnimation(true)
+  }, [])
+
+  const handleRustAnimationComplete = useCallback(() => {
+    setShowRustAnimation(false)
+  }, [])
+
   const handleInstall = useCallback((tool: ToolCheck) => {
     setInstallTool(tool)
     setInstallCommand(tool.install_command)
@@ -270,6 +289,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
     npm: { light: Assets.npmBlack, dark: Assets.npmWhite },
     ai: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
     python: { light: Assets.pythonBlack, dark: Assets.pythonWhite },
+    rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
   }
 
   return (
@@ -377,6 +397,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onBlockedCopilotWizard={handleBlockedCopilotWizard}
           onPkgWizard={handlePkgWizard}
           onPythonWizard={handlePythonWizard}
+          onRustWizard={handleRustWizard}
           onDockerWizard={handleDockerWizard}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -462,6 +483,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onComplete={handlePythonWizardComplete}
         />
 
+        <RustWizardSheet
+          visible={showRustWizard}
+          onClose={() => setShowRustWizard(false)}
+          onComplete={handleRustWizardComplete}
+        />
+
         <DockerWizardSheet
           visible={showDockerWizard}
           onClose={() => setShowDockerWizard(false)}
@@ -485,6 +512,9 @@ export default function ServerSetupScreen({ navigation }: Props) {
       )}
       {showDockerAnimation && (
         <DockerSetupAnimation onComplete={handleDockerAnimationComplete} />
+      )}
+      {showRustAnimation && (
+        <RustSetupAnimation onComplete={handleRustAnimationComplete} />
       )}
     </AnimatedGradientBackground>
   )

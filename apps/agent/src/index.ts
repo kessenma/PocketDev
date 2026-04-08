@@ -17,6 +17,7 @@ import { copilotSetupRoutes } from './routes/copilot-setup.ts'
 import { codexSetupRoutes } from './routes/codex-setup.ts'
 import { pkgSetupRoutes } from './routes/pkg-setup.ts'
 import { pythonSetupRoutes } from './routes/python-setup.ts'
+import { rustSetupRoutes } from './routes/rust-setup.ts'
 import { dockerSetupRoutes } from './routes/docker-setup.ts'
 import { serverActionsRoutes } from './routes/server-actions.ts'
 import { planRoutes } from './routes/plans.ts'
@@ -74,6 +75,7 @@ new Elysia()
       .use(codexSetupRoutes)
       .use(pkgSetupRoutes)
       .use(pythonSetupRoutes)
+      .use(rustSetupRoutes)
       .use(dockerSetupRoutes)
       .use(serverActionsRoutes)
       .use(planRoutes)

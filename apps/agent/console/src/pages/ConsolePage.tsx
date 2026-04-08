@@ -10,8 +10,9 @@ import { PasskeySettings } from '#/components/PasskeySettings'
 import { ServerTerminal } from '#/components/ServerTerminal'
 import { DiagnosticsPanel } from '#/components/DiagnosticsPanel'
 import { RepoInspectorPanel } from '#/components/RepoInspectorPanel'
+import { UpdateBanner } from '#/components/UpdateBanner'
 import { Modal } from '#/components/ui/modal'
-import { checkHealth, fetchStatus, logout, type ConsoleStatus } from '#/lib/api'
+import { checkHealth, fetchStatus, logout, type ConsoleStatus, type UpdateInfo } from '#/lib/api'
 import { Server, LogOut, Maximize2 } from 'lucide-react'
 
 export function ConsolePage() {
@@ -19,6 +20,8 @@ export function ConsolePage() {
   const [status, setStatus] = useState<ConsoleStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [terminalOpen, setTerminalOpen] = useState(false)
+  const [agentVersion, setAgentVersion] = useState<string>('unknown')
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
 
   const loadStatus = useCallback(async () => {
     try {
@@ -27,6 +30,9 @@ export function ConsolePage() {
         navigate('/setup', { replace: true })
         return
       }
+
+      setAgentVersion(health.version)
+      setUpdateInfo(health.update)
 
       const data = await fetchStatus()
       setStatus(data)
@@ -104,6 +110,8 @@ export function ConsolePage() {
               </div>
             </div>
           </header>
+
+          <UpdateBanner version={agentVersion} update={updateInfo} />
 
           <main className="grid gap-4 lg:grid-cols-12">
             <div className="lg:col-span-12">

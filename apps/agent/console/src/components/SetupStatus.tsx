@@ -10,7 +10,7 @@ type LayoutMode = 'list' | 'grid' | 'bauhaus'
 
 const PACKAGE_MANAGER_TOOL_IDS = ['node', 'npm', 'pnpm', 'bun'] as const
 const AI_ASSISTANT_TOOL_IDS = ['claude_cli', 'codex_cli', 'copilot_cli'] as const
-const LANGUAGE_TOOL_IDS = ['python'] as const
+const LANGUAGE_TOOL_IDS = ['python', 'rust'] as const
 
 function getToolById(report: PrerequisitesReport | null, toolId: string): ToolCheck | undefined {
   return report?.tools.find((tool) => tool.id === toolId)
@@ -88,7 +88,8 @@ function getSupportingTools(report: PrerequisitesReport | null): ToolCheck[] {
 function getSetupStatus(report: PrerequisitesReport | null) {
   const requiredReady = getRequiredSetupTools(report).every((tool) => isToolConfigured(tool))
   const aiReady = getAiAssistantTools(report).some((tool) => isToolConfigured(tool))
-  const languageReady = getLanguageTools(report).every((tool) => isToolConfigured(tool))
+  const requiredLangTools = getLanguageTools(report).filter((t) => t.required)
+  const languageReady = requiredLangTools.length === 0 || requiredLangTools.every((t) => isToolConfigured(t))
 
   return {
     requiredReady,
@@ -168,6 +169,12 @@ function toolIntentDetail(tool: ToolCheck): string | null {
     return tool.status === 'installed'
       ? 'Python runtime with pip and venv is available for workspace tasks.'
       : 'Adds Python with pip and venv for language tooling.'
+  }
+
+  if (tool.id === 'rust') {
+    return tool.status === 'installed'
+      ? 'Rust toolchain with Cargo is available for workspace tasks.'
+      : 'Adds Rust with rustc and Cargo for language tooling.'
   }
 
   if (tool.id === 'tmux') {
@@ -473,7 +480,7 @@ export function SetupStatus() {
 
             <Section
               title="Language"
-              hint="Set up Python for workspace language support."
+              hint="Set up Python and Rust for workspace language support."
               tools={languageTools}
               layoutMode={layoutMode}
             />

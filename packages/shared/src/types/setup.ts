@@ -318,6 +318,22 @@ export interface PythonSetupStatus {
 export type PythonWizardStep = 'detect' | 'add-ppa' | 'install' | 'install-venv' | 'install-pip' | 'verify'
 export type PythonWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
+// ─── Rust wizard types ──────────────────────────────────────────
+
+export interface RustSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  cargo_installed: boolean
+  cargo_version: string | null
+  cargo_path: string | null
+  rustup_installed: boolean
+  rustup_version: string | null
+}
+
+export type RustWizardStep = 'detect' | 'install-rustup' | 'verify'
+export type RustWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
 // ─── Package Manager wizard types ──────────────────────────────────
 
 export interface PkgToolInfo {

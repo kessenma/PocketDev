@@ -1,6 +1,7 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import { handleInstallScript } from './src/server/install-script'
+import { handleVersionCheck, handleBundleDownload } from './src/server/agent-version'
 
 const PORT = Number(process.env.PORT ?? 3000)
 const DIST_DIR = path.resolve(import.meta.dir, 'dist')
@@ -42,21 +43,14 @@ async function start() {
         return handleInstallScript(req)
       }
 
-      // Serve pre-built agent bundle
-      if (url.pathname === '/agent/bundle') {
-        const bundlePath = path.resolve(import.meta.dir, 'public', 'agent-bundle.tar.gz')
-        if (fs.existsSync(bundlePath)) {
-          return new Response(Bun.file(bundlePath), {
-            headers: {
-              'Content-Type': 'application/gzip',
-              'Content-Disposition': 'attachment; filename="agent-bundle.tar.gz"',
-              'Cache-Control': 'public, max-age=300',
-            },
-          })
-        }
-        return new Response('Agent bundle not available. Run: bash scripts/build-agent-bundle.sh', {
-          status: 404,
-        })
+      // Agent version check
+      if (url.pathname === '/agent/version') {
+        return handleVersionCheck()
+      }
+
+      // Serve agent bundle (latest or pinned version)
+      if (url.pathname.startsWith('/agent/bundle')) {
+        return handleBundleDownload(url.pathname)
       }
 
       // Try serving static files from client dist

@@ -25,11 +25,21 @@ async function del(path: string) {
   return response
 }
 
+export interface UpdateInfo {
+  current: string
+  latest: string
+  updateAvailable: boolean
+  changelogUrl: string
+  versions: string[]
+}
+
 export async function checkHealth(): Promise<{
   hasAdmin: boolean
   paired: boolean
   uptime: number
   hasPasskeys: boolean
+  version: string
+  update: UpdateInfo | null
 }> {
   const res = await get('/health')
   return res.json()
@@ -457,6 +467,25 @@ export async function fetchPythonDebug(): Promise<PythonDebugInfo> {
   return res.json()
 }
 
+// ─── Rust debug ────────────────────────────────────────
+
+export interface RustDebugInfo {
+  installed: boolean
+  version: string | null
+  path: string | null
+  cargo_installed: boolean
+  cargo_version: string | null
+  cargo_path: string | null
+  rustup_installed: boolean
+  rustup_version: string | null
+}
+
+export async function fetchRustDebug(): Promise<RustDebugInfo> {
+  const res = await get('/debug/rust')
+  if (!res.ok) throw new Error('Failed to fetch Rust debug')
+  return res.json()
+}
+
 export interface RepoSummary {
   repoName: string
   repoPath: string
@@ -552,6 +581,22 @@ export async function updateDomain(domain: string): Promise<{ ok: boolean; url: 
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Failed to update domain' }))
     throw new Error(data.error || 'Failed to update domain')
+  }
+  return res.json()
+}
+
+// ─── Agent update ─────────────────────────────────────
+
+export async function triggerUpdate(version?: string): Promise<{ ok: boolean; message: string }> {
+  const res = await fetch(`${BASE}/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(version ? { version } : {}),
+    credentials: 'same-origin',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Update failed' }))
+    throw new Error(data.error || 'Update failed')
   }
   return res.json()
 }

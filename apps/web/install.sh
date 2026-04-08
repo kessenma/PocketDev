@@ -156,7 +156,7 @@ ok "Agent installed to $INSTALL_DIR"
 
 # If reinstalling, offer to reset the admin account
 DB_FILE="${DATA_DIR}/pocketdev.db"
-if [ -f "$DB_FILE" ]; then
+if [ -f "$DB_FILE" ] && [ "$POCKETDEV_UPDATE" != "1" ]; then
   info "Existing database found — this is a reinstall."
   printf "  Reset admin account? [y/N]: "
   read -r RESET_ADMIN </dev/tty || RESET_ADMIN=""

@@ -17,6 +17,8 @@ export const BrandAssets = {
   githubWhite: require('../../assets/brands/github-white.png'),
   githubCopilotBlack: require('../../assets/brands/github-copilot-black.png'),
   githubCopilotWhite: require('../../assets/brands/github-copilot-white.png'),
+  goBlack: require('../../assets/brands/go-black.png'),
+  goWhite: require('../../assets/brands/go-white.png'),
   javaBlack: require('../../assets/brands/java-black.png'),
   javaWhite: require('../../assets/brands/java-white.png'),
   mongodbBlack: require('../../assets/brands/mongodb-black.png'),
@@ -35,4 +37,6 @@ export const BrandAssets = {
   pythonWhite: require('../../assets/brands/python-white.png'),
   rustBlack: require('../../assets/brands/rust-black.png'),
   rustWhite: require('../../assets/brands/rust-white.png'),
+  typescriptBlack: require('../../assets/brands/typescript-black.png'),
+  typescriptWhite: require('../../assets/brands/typescript-white.png'),
 };

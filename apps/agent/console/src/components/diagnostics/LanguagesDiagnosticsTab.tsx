@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import type { PythonDebugInfo } from '#/lib/api'
+import type { PythonDebugInfo, RustDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Code, Copy, Check } from 'lucide-react'
 
 interface Props {
   pythonInfo: PythonDebugInfo | null
+  rustInfo: RustDebugInfo | null
 }
 
 function CopyableCommand({ command }: { command: string }) {
@@ -35,11 +36,12 @@ function CopyableCommand({ command }: { command: string }) {
   )
 }
 
-export function LanguagesDiagnosticsTab({ pythonInfo }: Props) {
+export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo }: Props) {
   return (
     <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
-      {/* Left sidebar: Python status summary */}
+      {/* Left sidebar: status summaries */}
       <div className="space-y-3">
+        {/* Python status */}
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
             <Code className="h-4 w-4 text-[#f0c419]" />
@@ -77,6 +79,49 @@ export function LanguagesDiagnosticsTab({ pythonInfo }: Props) {
               <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
                 <p>venv module: {pythonInfo?.venv_available ? 'Available' : 'Not available'}</p>
                 <p>Deadsnakes PPA: {pythonInfo?.ppa_added ? 'Added' : 'Not added'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rust status */}
+        <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+          <div className="flex items-center gap-2">
+            <Code className="h-4 w-4 text-[#CE422B]" />
+            <p className="text-sm font-medium">Rust Toolchain</p>
+          </div>
+          <div className="mt-4 space-y-3">
+            <div className={cn(
+              'rounded-[1.2rem] border border-white/8 p-4',
+              rustInfo?.installed ? 'bg-[#CE422B] text-white' : 'bg-white/6',
+            )}>
+              <p className={cn('text-[0.68rem] font-semibold uppercase tracking-[0.26em]',
+                rustInfo?.installed ? 'text-white/65' : 'text-[#f4f0e8]/45')}>
+                Status
+              </p>
+              <p className={cn('mt-2 text-3xl font-semibold',
+                rustInfo?.installed ? '' : 'text-red-400')}>
+                {rustInfo?.installed ? `v${rustInfo.version}` : 'Not Found'}
+              </p>
+              {rustInfo?.path && (
+                <p className={cn('mt-1 font-mono text-xs', rustInfo.installed ? 'text-white/60' : 'text-[#f4f0e8]/50')}>
+                  {rustInfo.path}
+                </p>
+              )}
+            </div>
+            <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Cargo</p>
+              <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                <p>Installed: {rustInfo?.cargo_installed ? 'Yes' : 'No'}</p>
+                <p>Version: {rustInfo?.cargo_version ?? 'Unknown'}</p>
+                <p>Path: {rustInfo?.cargo_path ?? 'Not found'}</p>
+              </div>
+            </div>
+            <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Rustup</p>
+              <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                <p>Installed: {rustInfo?.rustup_installed ? 'Yes' : 'No'}</p>
+                <p>Version: {rustInfo?.rustup_version ?? 'Unknown'}</p>
               </div>
             </div>
           </div>
@@ -140,7 +185,6 @@ export function LanguagesDiagnosticsTab({ pythonInfo }: Props) {
                 </div>
               </div>
 
-              {/* Install commands for missing components */}
               {(!pythonInfo.installed || !pythonInfo.pip_installed || !pythonInfo.venv_available) && (
                 <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Install Commands</p>
@@ -170,6 +214,77 @@ export function LanguagesDiagnosticsTab({ pythonInfo }: Props) {
           ) : (
             <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
               No Python data. Refresh to load.
+            </div>
+          )}
+        </div>
+
+        {/* Rust details */}
+        <p className="mt-5 text-sm font-medium">Rust Installation Details</p>
+        <div className="mt-3 space-y-2">
+          {rustInfo ? (
+            <>
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">rustc</p>
+                    <p className="mt-1 font-mono text-xs text-[#f4f0e8]/50">{rustInfo.path ?? 'Not found'}</p>
+                  </div>
+                  <Badge variant="outline" className={cn('border-white/10',
+                    rustInfo.installed ? 'text-green-400' : 'text-red-400')}>
+                    {rustInfo.installed ? 'installed' : 'missing'}
+                  </Badge>
+                </div>
+                {rustInfo.version && (
+                  <div className="mt-2 text-xs text-[#f4f0e8]/60">
+                    <span>v{rustInfo.version}</span>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">cargo</p>
+                    <p className="mt-1 font-mono text-xs text-[#f4f0e8]/50">{rustInfo.cargo_path ?? 'Not found'}</p>
+                  </div>
+                  <Badge variant="outline" className={cn('border-white/10',
+                    rustInfo.cargo_installed ? 'text-green-400' : 'text-red-400')}>
+                    {rustInfo.cargo_installed ? 'installed' : 'missing'}
+                  </Badge>
+                </div>
+                {rustInfo.cargo_version && (
+                  <div className="mt-2 text-xs text-[#f4f0e8]/60">
+                    <span>v{rustInfo.cargo_version}</span>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div><p className="text-sm font-medium">rustup</p></div>
+                  <Badge variant="outline" className={cn('border-white/10',
+                    rustInfo.rustup_installed ? 'text-green-400' : 'text-[#f4f0e8]/40')}>
+                    {rustInfo.rustup_installed ? 'installed' : 'not found'}
+                  </Badge>
+                </div>
+                {rustInfo.rustup_version && (
+                  <div className="mt-2 text-xs text-[#f4f0e8]/60">
+                    <span>v{rustInfo.rustup_version}</span>
+                  </div>
+                )}
+              </div>
+
+              {!rustInfo.installed && (
+                <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Install Commands</p>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs text-[#f4f0e8]/60">Install Rust via rustup:</p>
+                    <CopyableCommand command="curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y" />
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+              No Rust data. Refresh to load.
             </div>
           )}
         </div>

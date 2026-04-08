@@ -28,6 +28,7 @@ interface Props {
   onBlockedCopilotWizard: (tool: ToolCheck) => void
   onPkgWizard: (tool: ToolCheck) => void
   onPythonWizard: (tool: ToolCheck) => void
+  onRustWizard: (tool: ToolCheck) => void
   onDockerWizard: (tool: ToolCheck) => void
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
 }
@@ -43,6 +44,7 @@ export default function SetupChecklist({
   onBlockedCopilotWizard,
   onPkgWizard,
   onPythonWizard,
+  onRustWizard,
   onDockerWizard,
   onScroll,
 }: Props) {
@@ -91,6 +93,7 @@ export default function SetupChecklist({
         onBlockedCopilotWizard={onBlockedCopilotWizard}
         onPkgWizard={onPkgWizard}
         onPythonWizard={onPythonWizard}
+        onRustWizard={onRustWizard}
         onDockerWizard={onDockerWizard}
         disabledReason={
           tool.id === 'codex_cli'
@@ -144,7 +147,7 @@ export default function SetupChecklist({
 
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Language</Text>
           <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-            Set up Python for workspace language support.
+            Set up Python and Rust for workspace language support.
           </Text>
           <View style={styles.section}>
             {renderTools(languages)}

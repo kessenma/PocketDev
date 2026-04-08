@@ -6,7 +6,7 @@ export function getToolById(report: PrerequisitesReport | null, toolId: string):
 
 const PACKAGE_MANAGER_TOOL_IDS = ['node', 'npm', 'pnpm', 'bun'] as const
 const AI_ASSISTANT_TOOL_IDS = ['claude_cli', 'codex_cli', 'copilot_cli'] as const
-const LANGUAGE_TOOL_IDS = ['python'] as const
+const LANGUAGE_TOOL_IDS = ['python', 'rust'] as const
 
 function isToolConfigured(tool: ToolCheck | undefined): boolean {
   if (!tool) return false
@@ -67,7 +67,8 @@ export function getSupportingTools(report: PrerequisitesReport | null): ToolChec
 export function getServerSetupStatus(report: PrerequisitesReport | null) {
   const requiredReady = getRequiredSetupTools(report).every((tool) => isToolConfigured(tool))
   const aiReady = getAiAssistantTools(report).some((tool) => isToolConfigured(tool))
-  const languageReady = getLanguageTools(report).every((tool) => isToolConfigured(tool))
+  const requiredLangTools = getLanguageTools(report).filter((t) => t.required)
+  const languageReady = requiredLangTools.length === 0 || requiredLangTools.every((t) => isToolConfigured(t))
 
   const missing: string[] = []
   if (!requiredReady) {
@@ -76,7 +77,7 @@ export function getServerSetupStatus(report: PrerequisitesReport | null) {
   }
   if (!aiReady) missing.push('At least one AI assistant (Claude, Codex, or Copilot)')
   if (!languageReady) {
-    const tools = getLanguageTools(report).filter((t) => !isToolConfigured(t))
+    const tools = requiredLangTools.filter((t) => !isToolConfigured(t))
     tools.forEach((t) => missing.push(t.name))
   }
 

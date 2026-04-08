@@ -13,6 +13,7 @@ import {
   fetchTasksDebug,
   fetchSetupDebug,
   fetchPythonDebug,
+  fetchRustDebug,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
@@ -23,6 +24,7 @@ import {
   type TasksDebugInfo,
   type SetupDebugInfo,
   type PythonDebugInfo,
+  type RustDebugInfo,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Bug, Maximize2, RefreshCw, Smartphone, Waves, KeyRound, Sparkles } from 'lucide-react'
@@ -57,6 +59,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [tasksInfo, setTasksInfo] = useState<TasksDebugInfo | null>(null)
   const [setupInfo, setSetupInfo] = useState<SetupDebugInfo | null>(null)
   const [pythonInfo, setPythonInfo] = useState<PythonDebugInfo | null>(null)
+  const [rustInfo, setRustInfo] = useState<RustDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -77,11 +80,12 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
       fetchTasksDebug(),
       fetchSetupDebug(),
       fetchPythonDebug(),
+      fetchRustDebug(),
     ])
 
     const failures: string[] = []
 
-    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult] = results
+    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult, rustResult] = results
 
     if (authResult.status === 'fulfilled') setInfo(authResult.value)
     else failures.push(`auth: ${authResult.reason instanceof Error ? authResult.reason.message : 'failed'}`)
@@ -112,6 +116,9 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
     if (pythonResult.status === 'fulfilled') setPythonInfo(pythonResult.value)
     else failures.push(`python: ${pythonResult.reason instanceof Error ? pythonResult.reason.message : 'failed'}`)
+
+    if (rustResult.status === 'fulfilled') setRustInfo(rustResult.value)
+    else failures.push(`rust: ${rustResult.reason instanceof Error ? rustResult.reason.message : 'failed'}`)
 
     setLastUpdated(new Date().toISOString())
     setError(failures.length ? `Partial refresh failure: ${failures.join(' | ')}` : null)
@@ -354,7 +361,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
         ) : activeTab === 'setup' ? (
           <SetupDiagnosticsTab setupInfo={setupInfo} />
         ) : activeTab === 'languages' ? (
-          <LanguagesDiagnosticsTab pythonInfo={pythonInfo} />
+          <LanguagesDiagnosticsTab pythonInfo={pythonInfo} rustInfo={rustInfo} />
         ) : activeTab === 'claude' ? (
           <ClaudeDiagnosticsTab claudeInfo={claudeInfo} />
         ) : activeTab === 'codex' ? (

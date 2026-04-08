@@ -407,6 +407,47 @@ async function checkPython(): Promise<ToolCheck> {
   }
 }
 
+async function checkRust(): Promise<ToolCheck> {
+  // Source cargo env for PATH, then check rustc
+  const cargoEnv = '[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env";'
+  const { stdout: rustcOut, exitCode: rustcExit } = await exec(`${cargoEnv} which rustc 2>/dev/null`)
+  const path = rustcExit === 0 && rustcOut ? rustcOut.split('\n')[0] : null
+
+  if (!path) {
+    return {
+      id: 'rust', name: 'Rust', status: 'missing', auth_status: 'not_applicable',
+      version: null, path: null, required: false,
+      install_command: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+      auth_command: null, details: {},
+    }
+  }
+
+  const { stdout: versionOut } = await exec(`${cargoEnv} rustc --version 2>&1`)
+  const version = (versionOut.match(/rustc (\d+\.\d+[\.\d]*)/))?.[1] ?? null
+
+  // Check cargo
+  const { stdout: cargoOut, exitCode: cargoExit } = await exec(`${cargoEnv} cargo --version 2>&1`)
+  const cargoInstalled = cargoExit === 0
+  const cargoVersion = cargoInstalled ? (cargoOut.match(/cargo (\d+\.\d+[\.\d]*)/))?.[1] ?? null : null
+
+  // Check rustup
+  const { stdout: rustupOut, exitCode: rustupExit } = await exec(`${cargoEnv} which rustup 2>/dev/null`)
+  const rustupInstalled = rustupExit === 0 && !!rustupOut
+
+  upsertToolPath('rust', path, version)
+
+  const fullyConfigured = cargoInstalled
+  const status: ToolStatus = fullyConfigured ? 'installed' : 'misconfigured'
+
+  return {
+    id: 'rust', name: 'Rust', status, auth_status: 'not_applicable',
+    version, path, required: false,
+    install_command: fullyConfigured ? null : "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+    auth_command: null,
+    details: { cargo_version: cargoVersion, rustup_installed: rustupInstalled ? 'true' : 'false' },
+  }
+}
+
 async function checkTmux(): Promise<ToolCheck> {
   const path = await which('tmux')
   if (!path) {
@@ -521,6 +562,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkPnpm(),
     checkChromium(),
     checkPython(),
+    checkRust(),
     checkTmux(),
   ])
 

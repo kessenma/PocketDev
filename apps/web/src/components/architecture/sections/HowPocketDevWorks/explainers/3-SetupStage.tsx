@@ -39,6 +39,9 @@ const STREAM_ITEMS: BrandStreamItem[] = [
   { key: 'codex', orbitHref: brandAssets.codexWhite, startX: 110, startY: -190, orbitX: 30, orbitY: 18, size: 16 },
   { key: 'copilot', orbitHref: brandAssets.githubCopilotWhite, startX: 178, startY: -175, orbitX: -10, orbitY: 28, size: 15 },
   { key: 'docker', orbitHref: brandAssets.dockerWhite, startX: 212, startY: -155, orbitX: 20, orbitY: 30, size: 17 },
+  { key: 'rust', orbitHref: brandAssets.rustWhite, startX: 140, startY: -195, orbitX: -18, orbitY: -28, size: 16 },
+  { key: 'go', orbitHref: brandAssets.goWhite, startX: 200, startY: -185, orbitX: 22, orbitY: -20, size: 17 },
+  { key: 'typescript', orbitHref: brandAssets.typescriptWhite, startX: 168, startY: -200, orbitX: -8, orbitY: 24, size: 16 },
 ]
 
 // Rest positions inside the funnel where icons stack like balls (center coords)
@@ -52,6 +55,9 @@ const FUNNEL_REST = [
   { x: 128, y: 56 },
   { x: 160, y: 54 },
   { x: 192, y: 56 },
+  { x: 116, y: 40 },
+  { x: 160, y: 38 },
+  { x: 204, y: 40 },
 ]
 
 export function SetupTakeoverScene({
