@@ -60,7 +60,7 @@ COPY packages/shared/ ./packages/shared/
 COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
 COPY package.json ./
 RUN cd apps/agent && bun build src/index.ts --outdir dist --target bun
-# Stage the tarball contents
+# Stage the tarball contents — version comes from install.sh (bumped by GitHub Action)
 COPY apps/web/install.sh /tmp/install.sh
 RUN mkdir -p /tmp/bundle/pocketdev-agent \
     && cp apps/agent/dist/index.js /tmp/bundle/pocketdev-agent/ \

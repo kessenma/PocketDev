@@ -21,9 +21,24 @@ pocketdev.run                          User's Linux Server
 
 ## Version Tracking
 
-The agent's version is embedded in `version.json` at the bundle root during the build process. The build script (`scripts/build-agent-bundle.sh`) extracts the version from `apps/web/install.sh` (`POCKETDEV_VERSION`) and writes it into the bundle.
+The agent's version is embedded in `version.json` at the bundle root during the build process.
 
-Each build also archives a copy to `apps/web/public/agent-versions/{version}.tar.gz` so previous versions are always available for rollback.
+### Auto-Versioning (GitHub Action)
+
+A GitHub Action (`.github/workflows/bump-version.yml`) automatically increments the patch version on every push to `main`:
+
+1. You push code to `main` (e.g., version is `0.2.3`)
+2. The action bumps `POCKETDEV_VERSION` in `install.sh` → `0.2.4`
+3. Commits "chore: bump agent version to v0.2.4" and pushes
+4. Coolify's webhook fires on that commit and builds the Docker image with the new version
+
+The action skips commits that start with "chore: bump agent version" to prevent infinite loops.
+
+**To bump major or minor**: edit `POCKETDEV_VERSION` in `apps/web/install.sh` (e.g., to `0.3.0`). Push that change — the action will then bump it to `0.3.1` on the next push, `0.3.2` after that, etc.
+
+### Local Builds
+
+The local build script (`scripts/build-agent-bundle.sh`) extracts the version from `apps/web/install.sh` directly. Each build also archives a copy to `apps/web/public/agent-versions/{version}.tar.gz` for rollback.
 
 ## Key Files
 
@@ -33,15 +48,16 @@ Each build also archives a copy to `apps/web/public/agent-versions/{version}.tar
 | `apps/web/src/server/agent-version.ts` | Serves `/agent/version` (JSON) and `/agent/bundle/{version}` (tarball) |
 | `apps/agent/src/routes/console.ts` | `GET /health` includes version/update; `POST /update` triggers upgrade |
 | `apps/agent/console/src/components/UpdateBanner.tsx` | Console UI banner with update + rollback controls |
+| `.github/workflows/bump-version.yml` | Auto-increments patch version in `install.sh` on push to main |
 | `scripts/build-agent-bundle.sh` | Generates `version.json` + archives versioned bundles (local builds) |
-| `apps/web/Dockerfile` | `agent-build` stage — bundles agent tarball for Docker/Coolify deploys |
+| `apps/web/Dockerfile` | `agent-build` stage — reads version from `install.sh`, bundles for Docker/Coolify deploys |
 
-## Bundle Build: Two Paths
+## Bundle Build
 
-The agent tarball is built in two places — both **must** include `version.json`:
+The agent tarball is built in two places — both extract `POCKETDEV_VERSION` from `apps/web/install.sh` and write `version.json` into the bundle:
 
-1. **Local/CI** — `scripts/build-agent-bundle.sh` extracts `POCKETDEV_VERSION` from `apps/web/install.sh` and writes `version.json` into the staging directory.
-2. **Docker (Coolify deploy)** — The `agent-build` stage in `apps/web/Dockerfile` does the same extraction inline. This is the path used in production when Coolify builds from git webhooks.
+1. **Docker (Coolify deploy)** — The `agent-build` stage in `apps/web/Dockerfile`. This is the production path.
+2. **Local** — `scripts/build-agent-bundle.sh` for development builds.
 
 If `version.json` is missing from the bundle, the installed agent reports its version as `"dev"`, and the update banner gets stuck in a loop (always showing an update available but never resolving after install).
 

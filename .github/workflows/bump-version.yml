@@ -1,0 +1,41 @@
+name: Bump agent version
+
+on:
+  push:
+    branches: [main]
+
+# Prevent the version-bump commit from triggering another run
+concurrency:
+  group: version-bump
+  cancel-in-progress: true
+
+jobs:
+  bump:
+    # Skip if the last commit was already a version bump (prevents infinite loop)
+    if: "!startsWith(github.event.head_commit.message, 'chore: bump agent version')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump patch version in install.sh
+        run: |
+          CURRENT=$(grep -oP 'POCKETDEV_VERSION="\K[^"]+' apps/web/install.sh)
+          MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT" | cut -d. -f2)
+          PATCH=$(echo "$CURRENT" | cut -d. -f3)
+          NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+          sed -i "s/POCKETDEV_VERSION=\"$CURRENT\"/POCKETDEV_VERSION=\"$NEW_VERSION\"/" apps/web/install.sh
+          echo "Bumped $CURRENT -> $NEW_VERSION"
+          echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/web/install.sh
+          git commit -m "chore: bump agent version to v$NEW_VERSION"
+          git push
