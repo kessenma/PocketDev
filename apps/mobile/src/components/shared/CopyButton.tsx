@@ -4,6 +4,7 @@ import Clipboard from '@react-native-clipboard/clipboard'
 import { Copy, Check } from 'lucide-react-native'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { useToast } from '../../hooks/useToast'
 
 interface Props {
   value: string
@@ -13,11 +14,19 @@ interface Props {
 
 export default function CopyButton({ value, label = 'Copy', style }: Props) {
   const { colors } = useTheme()
+  const { toast } = useToast()
   const [copied, setCopied] = useState(false)
 
   function handleCopy() {
     Clipboard.setString(value)
     setCopied(true)
+
+    toast({
+      title: 'Copied!',
+      description: `${label} has been copied to clipboard.`,
+      variant: 'success',
+    })
+
     setTimeout(() => setCopied(false), 2000)
   }
 

@@ -4,8 +4,11 @@ import type { OpenCodeInstallResult, OpenCodeSetupStatus } from '@pocketdev/shar
 const OPENCODE_INSTALL_COMMAND = 'curl -fsSL https://opencode.ai/install | bash'
 const PATH_PREFIX = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/homebrew/bin'
 const CANDIDATE_PATHS = [
+  `${process.env.HOME ?? process.env.USERPROFILE ?? '/root'}/.opencode/bin/opencode`,
   `${process.env.HOME ?? process.env.USERPROFILE ?? '/root'}/.local/bin/opencode`,
+  '/root/.opencode/bin/opencode',
   '/root/.local/bin/opencode',
+  '/home/ubuntu/.opencode/bin/opencode',
   '/home/ubuntu/.local/bin/opencode',
   '/home/linuxbrew/.linuxbrew/bin/opencode',
   '/usr/local/bin/opencode',
@@ -19,7 +22,7 @@ export function getOpenCodeInstallCommand(): string {
 
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
-  const wrappedCmd = `export PATH="${PATH_PREFIX}:$HOME/.local/bin:$PATH"; source ~/.bashrc 2>/dev/null; ${cmd}`
+  const wrappedCmd = `export PATH="${PATH_PREFIX}:$HOME/.opencode/bin:$HOME/.local/bin:$PATH"; source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; ${cmd}`
   const proc = Bun.spawn(['bash', '-lc', wrappedCmd], {
     stdout: 'pipe',
     stderr: 'pipe',
@@ -50,7 +53,7 @@ async function pathExists(path: string): Promise<boolean> {
 async function scanForOpenCodeBinary(): Promise<string | null> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
   const { stdout, exitCode } = await exec(
-    `find '${home.replace(/'/g, `'\\''`)}' /root /home -path '*/.local/bin/opencode' -type f -perm -111 2>/dev/null | head -n 1`,
+    `find '${home.replace(/'/g, `'\\''`)}' /root /home \\( -path '*/.opencode/bin/opencode' -o -path '*/.local/bin/opencode' \\) -type f -perm -111 2>/dev/null | head -n 1`,
     20_000,
   )
 

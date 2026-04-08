@@ -1,10 +1,13 @@
 import type { TypeScriptSetupStatus } from '@pocketdev/shared/types'
 
-/** Run a command in a login shell */
+/** Run a command in a login shell with full PATH visibility */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-  const proc = Bun.spawn(['bash', '-lc', cmd], {
+  const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
+  const wrapped = `export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"; source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; ${cmd}`
+  const proc = Bun.spawn(['bash', '-lc', wrapped], {
     stdout: 'pipe',
     stderr: 'pipe',
+    env: { ...process.env, HOME: home },
   })
 
   const timer = setTimeout(() => proc.kill(), timeoutMs)
