@@ -92,6 +92,13 @@ export const wsRoutes = new Elysia()
             break
           }
 
+          case 'task.answer': {
+            const { taskId, answer } = msg.payload as { taskId: string; questionId: string; answer: string }
+            const proc = getProcess(taskId)
+            if (proc) proc.sendInput(answer + '\n')
+            break
+          }
+
           case 'task.list': {
             const tasks = getTaskList()
             ws.send(JSON.stringify(makeMessage('task.list', { tasks })))

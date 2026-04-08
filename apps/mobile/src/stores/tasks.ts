@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Task } from '@pocketdev/shared/types'
+import type { Task, TaskActivity, TaskQuestion } from '@pocketdev/shared/types'
 import type { TaskStatus, AgentType, TaskMode } from '@pocketdev/shared/schema'
 import { fetchTaskList } from '../services/api'
 import { useConnectionStore } from './connection'
@@ -14,7 +14,9 @@ interface TaskState {
   tasks: Map<string, Task>
   activeTaskId: string | null
   taskLogs: Map<string, string[]>
+  taskActivities: Map<string, TaskActivity[]>
   pendingPermissions: Map<string, PermissionDenial[]>
+  pendingQuestions: Map<string, TaskQuestion[]>
   setTasks: (tasks: Task[]) => void
   refreshFromServer: () => Promise<void>
   startTask: (
@@ -27,17 +29,23 @@ interface TaskState {
   killTask: (id: string) => void
   sendInput: (taskId: string, data: string) => void
   appendLog: (taskId: string, line: string) => void
+  appendActivity: (taskId: string, activity: TaskActivity) => void
   updateTaskStatus: (taskId: string, status: TaskStatus) => void
   addPermissionRequest: (taskId: string, denials: PermissionDenial[]) => void
   clearPermissions: (taskId: string) => void
+  addQuestion: (taskId: string, question: TaskQuestion) => void
+  removeQuestion: (taskId: string, questionId: string) => void
+  answerQuestion: (taskId: string, questionId: string, answer: string) => void
   setActiveTask: (id: string | null) => void
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: new Map(),
   pendingPermissions: new Map(),
+  pendingQuestions: new Map(),
   activeTaskId: null,
   taskLogs: new Map(),
+  taskActivities: new Map(),
 
   setTasks: (tasks: Task[]) => {
     const map = new Map<string, Task>()
@@ -92,6 +100,15 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     })
   },
 
+  appendActivity: (taskId: string, activity: TaskActivity) => {
+    set((state) => {
+      const activities = new Map(state.taskActivities)
+      const existing = activities.get(taskId) ?? []
+      activities.set(taskId, [...existing, activity])
+      return { taskActivities: activities }
+    })
+  },
+
   updateTaskStatus: (taskId: string, status: TaskStatus) => {
     set((state) => {
       const tasks = new Map(state.tasks)
@@ -123,6 +140,37 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       pending.delete(taskId)
       return { pendingPermissions: pending }
     })
+  },
+
+  addQuestion: (taskId: string, question: TaskQuestion) => {
+    set((state) => {
+      const questions = new Map(state.pendingQuestions)
+      const existing = questions.get(taskId) ?? []
+      questions.set(taskId, [...existing, question])
+      return { pendingQuestions: questions }
+    })
+  },
+
+  removeQuestion: (taskId: string, questionId: string) => {
+    set((state) => {
+      const questions = new Map(state.pendingQuestions)
+      const existing = questions.get(taskId) ?? []
+      const filtered = existing.filter((q) => q.questionId !== questionId)
+      if (filtered.length === 0) {
+        questions.delete(taskId)
+      } else {
+        questions.set(taskId, filtered)
+      }
+      return { pendingQuestions: questions }
+    })
+  },
+
+  answerQuestion: (taskId: string, questionId: string, answer: string) => {
+    const ws = useConnectionStore.getState().ws
+    if (ws) {
+      ws.send('task.answer', { taskId, questionId, answer })
+    }
+    get().removeQuestion(taskId, questionId)
   },
 
   setActiveTask: (id: string | null) => {

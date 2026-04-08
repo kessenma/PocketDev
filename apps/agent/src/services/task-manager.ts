@@ -32,6 +32,12 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
       cmd.push('--prompt', prompt)
       return cmd
     }
+    case 'copilot': {
+      const copilotPath = getToolPath('copilot_cli') ?? 'copilot'
+      const cmd = [copilotPath]
+      if (model) cmd.push('--model', model)
+      return cmd
+    }
     case 'shell':
       return ['sh', '-c', prompt]
     default:
@@ -55,8 +61,8 @@ export function startTask(
 
   if (agentType === 'copilot') {
     console.log(`[task-manager] Starting copilot tmux task ${taskId}`)
-    console.log(`[task-manager]   cwd=${cwd} mode=${mode} agent=${agentType}`)
-    const proc = new ManagedTmuxProcess({ taskId, prompt, cwd, mode })
+    console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
+    const proc = new ManagedTmuxProcess({ taskId, prompt, cwd, mode, model })
     processes.set(taskId, proc)
     proc.start()
   } else {

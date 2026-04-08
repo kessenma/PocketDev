@@ -1,5 +1,5 @@
 import type { Subprocess } from 'bun'
-import type { PlanStep, PlanQuestion } from '@pocketdev/shared/types'
+import type { PlanStep, PlanQuestion, TaskActivity } from '@pocketdev/shared/types'
 import { insertTaskLog, updateTaskStatus } from '../db/index.ts'
 import { broadcast, makeMessage } from './ws.ts'
 import { detectDevServerPort, setDevServerPort } from './proxy.ts'
@@ -100,6 +100,69 @@ function parseStreamJsonLine(json: Record<string, unknown>): string | null {
   if (type === 'rate_limit_event') return null
 
   return null
+}
+
+/**
+ * Extract structured activity events from a Claude CLI stream-json object.
+ * Returns an array of TaskActivity items to broadcast.
+ */
+function extractActivities(json: Record<string, unknown>): TaskActivity[] {
+  const type = json.type as string | undefined
+  const activities: TaskActivity[] = []
+
+  if (type === 'assistant') {
+    const message = json.message as Record<string, unknown> | undefined
+    const content = message?.content as Array<Record<string, unknown>> | undefined
+    if (!content?.length) return activities
+
+    for (const block of content) {
+      if (block.type === 'thinking') {
+        const text = (block.thinking as string) ?? ''
+        activities.push({ type: 'thinking', preview: text.length > 200 ? text.slice(0, 200) + '...' : text })
+      } else if (block.type === 'text') {
+        activities.push({ type: 'text', content: block.text as string })
+      } else if (block.type === 'tool_use') {
+        const name = block.name as string
+        const input = block.input as Record<string, unknown> | undefined
+        const activity: TaskActivity = { type: 'tool_use', tool: name }
+        if (input) {
+          if (input.file_path) (activity as any).filePath = input.file_path as string
+          if (input.command) (activity as any).command = (input.command as string).slice(0, 300)
+          if (input.pattern) (activity as any).pattern = input.pattern as string
+          if (input.description) (activity as any).description = input.description as string
+          if (input.path && !input.file_path) (activity as any).filePath = input.path as string
+        }
+        activities.push(activity)
+      }
+    }
+  }
+
+  if (type === 'user') {
+    const message = json.message as Record<string, unknown> | undefined
+    const content = message?.content as Array<Record<string, unknown>> | undefined
+    if (!content?.length) return activities
+
+    for (const block of content) {
+      if (block.type === 'tool_result') {
+        const text = (block.content as string) ?? ''
+        const isError = (block.is_error as boolean) ?? false
+        activities.push({
+          type: 'tool_result',
+          toolName: (block.tool_use_id as string) ?? 'unknown',
+          isError,
+          preview: text.length > 300 ? text.slice(0, 300) + '...' : text,
+        })
+      }
+    }
+  }
+
+  if (type === 'result') {
+    const message = json.message as Record<string, unknown> | undefined
+    const stopReason = message?.stop_reason as string | undefined
+    activities.push({ type: 'status', message: `Task finished (${stopReason ?? 'complete'})` })
+  }
+
+  return activities
 }
 
 interface CollectedToolUse {
@@ -279,15 +342,32 @@ export class ManagedProcess {
 
               // Check for permission denials
               if (parsed.permission_denials?.length) {
+                const denials = parsed.permission_denials as Array<{ tool_name: string; tool_use_id?: string; tool_input?: Record<string, unknown> }>
                 broadcast(
                   makeMessage('task.permission_request', {
                     taskId: this.taskId,
-                    denials: parsed.permission_denials,
+                    denials,
                   }),
                 )
+
+                // Also emit structured question events for the interaction sheet
+                for (const denial of denials) {
+                  broadcast(
+                    makeMessage('task.question', {
+                      questionId: denial.tool_use_id ?? crypto.randomUUID(),
+                      taskId: this.taskId,
+                      prompt: `Allow ${denial.tool_name}?`,
+                      type: 'permission',
+                      toolDetails: {
+                        toolName: denial.tool_name,
+                        toolInput: denial.tool_input,
+                      },
+                    }),
+                  )
+                }
               }
 
-              // Extract human-readable text for mobile
+              // Extract human-readable text for mobile (raw logs)
               const readable = parseStreamJsonLine(parsed)
               if (readable) {
                 broadcast(
@@ -295,6 +375,18 @@ export class ManagedProcess {
                     taskId: this.taskId,
                     stream: name,
                     line: readable,
+                  }),
+                )
+              }
+
+              // Emit structured activity events for TaskStreamer UI
+              const activities = extractActivities(parsed)
+              for (const activity of activities) {
+                broadcast(
+                  makeMessage('task.activity', {
+                    taskId: this.taskId,
+                    activity,
+                    timestamp: Date.now(),
                   }),
                 )
               }

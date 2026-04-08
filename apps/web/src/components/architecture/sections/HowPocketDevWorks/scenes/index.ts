@@ -5,6 +5,7 @@ import { setupScene } from './3-setup'
 import { repoCloneScene } from './4-repo-clone'
 import { remoteAiScene } from './5-remote-ai-takeover'
 import { taskFlowScene } from './6-task-flow-takeover'
+import { mobileAiTaskCallScene } from './7-mobile-ai-task-call'
 
 export const howItWorksScenes: SceneConfig[] = [
   consoleSetupScene,
@@ -13,4 +14,5 @@ export const howItWorksScenes: SceneConfig[] = [
   repoCloneScene,
   remoteAiScene,
   taskFlowScene,
+  mobileAiTaskCallScene,
 ]

@@ -3,7 +3,7 @@ import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } fr
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
-import { postVerifyGo } from '../../../services/api'
+import { postVerifyTypeScript } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { Check, RefreshCw, CheckCircle, XCircle } from 'lucide-react-native'
 
@@ -23,8 +23,8 @@ export default function VerifyStep({ dispatch }: Props) {
   const [state, setState] = useState<VerifyState>('idle')
   const [version, setVersion] = useState<string | null>(null)
   const [path, setPath] = useState<string | null>(null)
-  const [gopath, setGopath] = useState<string | null>(null)
-  const [goroot, setGoroot] = useState<string | null>(null)
+  const [tsNodeInstalled, setTsNodeInstalled] = useState(false)
+  const [tsNodeVersion, setTsNodeVersion] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   async function handleVerify() {
@@ -33,17 +33,17 @@ export default function VerifyStep({ dispatch }: Props) {
     setError(null)
 
     try {
-      const result = await postVerifyGo(server.ip, server.port)
+      const result = await postVerifyTypeScript(server.ip, server.port)
       setVersion(result.version)
       setPath(result.path)
-      setGopath(result.gopath)
-      setGoroot(result.goroot)
+      setTsNodeInstalled(result.ts_node_installed)
+      setTsNodeVersion(result.ts_node_version)
 
       if (result.installed) {
         setState('success')
       } else {
         setState('failed')
-        setError('Go binary not detected. Try going back and re-running the install step.')
+        setError('tsc binary not detected. Try going back and re-running the install step.')
       }
     } catch (err) {
       setState('failed')
@@ -56,7 +56,7 @@ export default function VerifyStep({ dispatch }: Props) {
       <View style={styles.center}>
         {state === 'idle' && (
           <Image
-            source={isDark ? Assets.goWhite : Assets.goBlack}
+            source={isDark ? Assets.typescriptWhite : Assets.typescriptBlack}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -76,25 +76,29 @@ export default function VerifyStep({ dispatch }: Props) {
         )}
 
         <Text style={[styles.title, { color: colors.text }]}>
-          {state === 'success' ? 'Go is ready!' :
+          {state === 'success' ? 'TypeScript is ready!' :
             state === 'loading' ? 'Verifying...' :
             state === 'failed' ? 'Verification Failed' :
             'Verify Installation'}
         </Text>
 
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {state === 'success' ? 'Go toolchain is installed and working.' :
-            state === 'loading' ? 'Checking go binary...' :
-            state === 'failed' ? 'Go could not be verified.' :
-            'Confirm that the Go toolchain is properly installed.'}
+          {state === 'success' ? 'TypeScript compiler is installed and working.' :
+            state === 'loading' ? 'Checking tsc binary...' :
+            state === 'failed' ? 'TypeScript could not be verified.' :
+            'Confirm that the TypeScript compiler is properly installed.'}
         </Text>
 
         {state === 'success' && (
           <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <DetailRow label="go" value={version ? `v${version}` : 'installed'} ok colors={colors} />
+            <DetailRow label="tsc" value={version ? `v${version}` : 'installed'} ok colors={colors} />
             <DetailRow label="Path" value={path ?? 'unknown'} ok colors={colors} />
-            <DetailRow label="GOPATH" value={gopath ?? '~/go (default)'} ok colors={colors} />
-            <DetailRow label="GOROOT" value={goroot ?? 'unknown'} ok={!!goroot} colors={colors} />
+            <DetailRow
+              label="ts-node"
+              value={tsNodeInstalled ? (tsNodeVersion ? `v${tsNodeVersion}` : 'installed') : 'not installed'}
+              ok={tsNodeInstalled}
+              colors={colors}
+            />
           </View>
         )}
 

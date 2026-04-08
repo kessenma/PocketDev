@@ -1,4 +1,4 @@
-import type { ProviderAvailability } from '@pocketdev/shared/types'
+import type { ProviderAvailability, ServerModelDiscovery } from '@pocketdev/shared/types'
 
 export type ModelProviderId = 'claude' | 'codex' | 'copilot'
 
@@ -9,6 +9,7 @@ export type SelectableModel = {
   headline: string
   description: string
   contextWindow: string
+  premiumMultiplier?: number | null
 }
 
 export type ModelProvider = {
@@ -17,4 +18,5 @@ export type ModelProvider = {
   summary: string
   models: SelectableModel[]
   availability?: ProviderAvailability
+  modelDiscovery?: ServerModelDiscovery
 }

@@ -19,6 +19,7 @@ import { pkgSetupRoutes } from './routes/pkg-setup.ts'
 import { pythonSetupRoutes } from './routes/python-setup.ts'
 import { rustSetupRoutes } from './routes/rust-setup.ts'
 import { goSetupRoutes } from './routes/go-setup.ts'
+import { typescriptSetupRoutes } from './routes/typescript-setup.ts'
 import { dockerSetupRoutes } from './routes/docker-setup.ts'
 import { serverActionsRoutes } from './routes/server-actions.ts'
 import { planRoutes } from './routes/plans.ts'
@@ -78,6 +79,7 @@ new Elysia()
       .use(pythonSetupRoutes)
       .use(rustSetupRoutes)
       .use(goSetupRoutes)
+      .use(typescriptSetupRoutes)
       .use(dockerSetupRoutes)
       .use(serverActionsRoutes)
       .use(planRoutes)

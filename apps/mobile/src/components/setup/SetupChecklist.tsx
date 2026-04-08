@@ -30,6 +30,7 @@ interface Props {
   onPythonWizard: (tool: ToolCheck) => void
   onRustWizard: (tool: ToolCheck) => void
   onGoWizard: (tool: ToolCheck) => void
+  onTypeScriptWizard: (tool: ToolCheck) => void
   onDockerWizard: (tool: ToolCheck) => void
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
 }
@@ -47,6 +48,7 @@ export default function SetupChecklist({
   onPythonWizard,
   onRustWizard,
   onGoWizard,
+  onTypeScriptWizard,
   onDockerWizard,
   onScroll,
 }: Props) {
@@ -97,6 +99,7 @@ export default function SetupChecklist({
         onPythonWizard={onPythonWizard}
         onRustWizard={onRustWizard}
         onGoWizard={onGoWizard}
+        onTypeScriptWizard={onTypeScriptWizard}
         onDockerWizard={onDockerWizard}
         disabledReason={
           tool.id === 'codex_cli'
@@ -150,7 +153,7 @@ export default function SetupChecklist({
 
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Language</Text>
           <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-            Set up Python, Rust, and Go for workspace language support.
+            Set up Python, Rust, Go, and TypeScript for workspace language support.
           </Text>
           <View style={styles.section}>
             {renderTools(languages)}

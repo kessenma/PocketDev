@@ -2,6 +2,7 @@ export type CommandType =
   | 'task.start'
   | 'task.kill'
   | 'task.input'
+  | 'task.answer'
   | 'task.list'
   | 'container.logs.follow'
   | 'container.logs.stop'
@@ -18,6 +19,8 @@ export type CommandType =
 
 export type EventType =
   | 'task.output'
+  | 'task.activity'
+  | 'task.question'
   | 'task.status_changed'
   | 'task.completed'
   | 'task.permission_request'

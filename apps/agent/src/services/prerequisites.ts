@@ -476,6 +476,36 @@ async function checkGo(): Promise<ToolCheck> {
   }
 }
 
+async function checkTypeScript(): Promise<ToolCheck> {
+  const path = await which('tsc')
+  if (!path) {
+    return {
+      id: 'typescript', name: 'TypeScript', status: 'missing', auth_status: 'not_applicable',
+      version: null, path: null, required: false,
+      install_command: 'npm install -g typescript',
+      auth_command: null, details: {},
+    }
+  }
+
+  // "Version 5.4.5" → "5.4.5"
+  const { stdout: versionOut } = await exec('tsc --version')
+  const versionMatch = versionOut.match(/Version\s+(\d+\.\d+[\.\d]*)/)
+  const version = versionMatch ? versionMatch[1] : null
+
+  // Check ts-node as optional detail
+  const tsNodePath = await which('ts-node')
+  const tsNodeInstalled = !!tsNodePath
+
+  upsertToolPath('typescript', path, version)
+
+  return {
+    id: 'typescript', name: 'TypeScript', status: 'installed', auth_status: 'not_applicable',
+    version, path, required: false,
+    install_command: null, auth_command: null,
+    details: { ts_node_installed: tsNodeInstalled ? 'true' : 'false' },
+  }
+}
+
 async function checkTmux(): Promise<ToolCheck> {
   const path = await which('tmux')
   if (!path) {
@@ -592,6 +622,7 @@ export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
     checkPython(),
     checkRust(),
     checkGo(),
+    checkTypeScript(),
     checkTmux(),
   ])
 

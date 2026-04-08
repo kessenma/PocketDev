@@ -1,20 +1,19 @@
 # Mobile Model Selector
 
-This document tracks the mobile-only prototype for the model selection flow used by `NewTaskScreen`.
+This document tracks the mobile model selection flow used by `NewTaskScreen`.
 
 ## Purpose
 
-The current implementation is a UI-first prototype for choosing an AI provider and model from mobile before any server-backed capability discovery or task routing exists.
-
-Right now the selector is intentionally local-only. The mobile app does not query the paired server for installed CLIs, available model catalogs, or model-specific execution support.
+The current implementation is mostly local-first, with server-backed capability discovery for provider availability and GitHub Copilot model enumeration.
 
 Primary areas represented in the UI:
 
 - provider-first selection for Claude, Codex, and GitHub Copilot
-- curated static model lists per provider
+- curated static model lists for Claude and Codex
+- server-discovered Copilot model list from the paired agent capability payload
 - prompt drafting alongside the selected provider/model
 - local draft persistence on-device
-- prototype messaging that the flow is not connected to the server agent yet
+- task startup routing that passes the selected CLI model id to the agent
 
 ## Entry Points
 
@@ -23,7 +22,7 @@ Primary areas represented in the UI:
 - `apps/mobile/src/components/model-selector/ModelSelector.tsx`
   - reusable provider/model picker UI
 - `apps/mobile/src/components/model-selector/catalog.ts`
-  - local static provider and model catalog
+  - local provider catalog plus merge helpers for server-supplied Copilot models
 - `apps/mobile/src/stores/new-task-draft.ts`
   - local Zustand draft state and persistence bridge
 - `apps/mobile/src/services/storage.ts`
@@ -54,11 +53,11 @@ Primary areas represented in the UI:
 
 ## Current Behavior
 
-- all provider and model data is local static mock data
+- Claude and Codex provider/model data is local curated catalog data
+- Copilot model data is merged from the server capability payload when available
 - prompt, provider, and model selection are persisted locally on the device
-- the primary action saves a local draft only
-- no websocket task is started from this flow
-- no server capability checks or auth checks are performed
+- the primary action starts a websocket task with the selected provider/model
+- server capability checks are performed for provider availability and Copilot models
 
 ## Expected Backend Wiring Later
 

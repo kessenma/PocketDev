@@ -13,6 +13,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./components": {
+      "types": "./dist/components/index.d.ts",
+      "import": "./dist/components/index.js"
+    },
     "./types": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/types/index.js"
@@ -39,11 +43,14 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "lucide-react": "^1.7.0",
+    "react": "^19.2.0",
     "@noble/ed25519": "^2.2.3",
     "@noble/hashes": "^2.0.1",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/react": "^19.2.0",
     "typescript": "^5.7.2"
   }
 }

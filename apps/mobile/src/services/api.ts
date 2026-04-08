@@ -52,6 +52,7 @@ import type {
   PythonSetupStatus,
   RustSetupStatus,
   GoSetupStatus,
+  TypeScriptSetupStatus,
   PkgManagerStatus,
   PkgInstallTool,
   PkgInstallResult,
@@ -883,6 +884,25 @@ export async function postVerifyGo(ip: string, port: number): Promise<GoSetupSta
   })
   if (!response.ok) throw new Error(`Failed to verify Go (${response.status})`)
   return response.json() as Promise<GoSetupStatus>
+}
+
+// ─── TypeScript Setup ──────────────────────────────────────────────
+
+export async function fetchTypeScriptSetupStatus(ip: string, port: number): Promise<TypeScriptSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/typescript-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch TypeScript status (${response.status})`)
+  return response.json() as Promise<TypeScriptSetupStatus>
+}
+
+export async function postVerifyTypeScript(ip: string, port: number): Promise<TypeScriptSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/typescript-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify TypeScript (${response.status})`)
+  return response.json() as Promise<TypeScriptSetupStatus>
 }
 
 // ─── Package Manager Setup ──────────────────────────────────────────

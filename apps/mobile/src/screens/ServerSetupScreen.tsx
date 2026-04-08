@@ -13,10 +13,12 @@ import CodexWizardSheet from '../components/setup/CodexWizardSheet'
 import PythonWizardSheet from '../components/setup/PythonWizardSheet'
 import RustWizardSheet from '../components/setup/RustWizardSheet'
 import GoWizardSheet from '../components/setup/GoWizardSheet'
+import TypeScriptWizardSheet from '../components/setup/TypeScriptWizardSheet'
 import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
 import DockerWizardSheet from '../components/setup/DockerWizardSheet'
 import DockerSetupAnimation from '../components/animations/DockerSetupAnimation'
 import RustSetupAnimation from '../components/animations/RustSetupAnimation'
+import TypeScriptSetupAnimation from '../components/animations/TypeScriptSetupAnimation'
 import PackageInstallAnimation from '../components/animations/PackageInstallAnimation'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
@@ -64,6 +66,8 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showRustWizard, setShowRustWizard] = useState(false)
   const [showRustAnimation, setShowRustAnimation] = useState(false)
   const [showGoWizard, setShowGoWizard] = useState(false)
+  const [showTypeScriptWizard, setShowTypeScriptWizard] = useState(false)
+  const [showTypeScriptAnimation, setShowTypeScriptAnimation] = useState(false)
   const [showMissingDialogue, setShowMissingDialogue] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
@@ -222,6 +226,21 @@ export default function ServerSetupScreen({ navigation }: Props) {
     setShowGoWizard(false)
   }, [])
 
+  const handleTypeScriptWizard = useCallback(() => {
+    console.log('[ServerSetup] Opening TypeScript wizard')
+    setShowTypeScriptWizard(true)
+  }, [])
+
+  const handleTypeScriptWizardComplete = useCallback(() => {
+    console.log('[ServerSetup] TypeScript wizard complete')
+    setShowTypeScriptWizard(false)
+    setShowTypeScriptAnimation(true)
+  }, [])
+
+  const handleTypeScriptAnimationComplete = useCallback(() => {
+    setShowTypeScriptAnimation(false)
+  }, [])
+
   const handleInstall = useCallback((tool: ToolCheck) => {
     setInstallTool(tool)
     setInstallCommand(tool.install_command)
@@ -303,6 +322,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
     python: { light: Assets.pythonBlack, dark: Assets.pythonWhite },
     rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
     go: { light: Assets.goBlack, dark: Assets.goWhite },
+    typescript: { light: Assets.typescriptBlack, dark: Assets.typescriptWhite },
   }
 
   return (
@@ -412,6 +432,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onPythonWizard={handlePythonWizard}
           onRustWizard={handleRustWizard}
           onGoWizard={handleGoWizard}
+          onTypeScriptWizard={handleTypeScriptWizard}
           onDockerWizard={handleDockerWizard}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -509,6 +530,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onComplete={handleGoWizardComplete}
         />
 
+        <TypeScriptWizardSheet
+          visible={showTypeScriptWizard}
+          onClose={() => setShowTypeScriptWizard(false)}
+          onComplete={handleTypeScriptWizardComplete}
+        />
+
         <DockerWizardSheet
           visible={showDockerWizard}
           onClose={() => setShowDockerWizard(false)}
@@ -535,6 +562,9 @@ export default function ServerSetupScreen({ navigation }: Props) {
       )}
       {showRustAnimation && (
         <RustSetupAnimation onComplete={handleRustAnimationComplete} />
+      )}
+      {showTypeScriptAnimation && (
+        <TypeScriptSetupAnimation onComplete={handleTypeScriptAnimationComplete} />
       )}
     </AnimatedGradientBackground>
   )

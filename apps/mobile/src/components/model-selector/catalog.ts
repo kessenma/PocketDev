@@ -1,4 +1,8 @@
-import type { ServerCapabilities } from '@pocketdev/shared/types'
+import type {
+  ServerCapabilities,
+  ServerProvider,
+  ServerSelectableModel,
+} from '@pocketdev/shared/types'
 import type { ModelProvider, ModelProviderId, SelectableModel } from './model'
 
 export const MODEL_PROVIDERS: ModelProvider[] = [
@@ -121,15 +125,19 @@ export const MODEL_PROVIDERS: ModelProvider[] = [
   },
 ]
 
-export function getProviderById(providerId: ModelProviderId): ModelProvider {
-  return MODEL_PROVIDERS.find((provider) => provider.id === providerId) ?? MODEL_PROVIDERS[0]
+export function getProviderById(
+  providerId: ModelProviderId,
+  providers: ModelProvider[] = MODEL_PROVIDERS,
+): ModelProvider {
+  return getProviderByIdFromList(providers, providerId)
 }
 
 export function getModelById(
   providerId: ModelProviderId,
   modelId: string,
+  providers: ModelProvider[] = MODEL_PROVIDERS,
 ): SelectableModel {
-  const provider = getProviderById(providerId)
+  const provider = getProviderByIdFromList(providers, providerId)
   return provider.models.find((model) => model.id === modelId) ?? provider.models[0]
 }
 
@@ -146,8 +154,9 @@ export function getDefaultModelSelection() {
 export function getCliModelId(
   providerId: ModelProviderId,
   modelId: string,
+  providers: ModelProvider[] = MODEL_PROVIDERS,
 ): string {
-  const model = getModelById(providerId, modelId)
+  const model = getModelById(providerId, modelId, providers)
   return model.cliModelId
 }
 
@@ -156,7 +165,34 @@ export function mergeServerAvailability(capabilities: ServerCapabilities): Model
     const serverProvider = capabilities.providers.find((sp) => sp.id === provider.id)
     return {
       ...provider,
+      models: mergeProviderModels(provider, serverProvider),
       availability: serverProvider?.availability ?? 'not_installed',
+      modelDiscovery: serverProvider?.modelDiscovery,
     }
   })
+}
+
+function getProviderByIdFromList(providers: ModelProvider[], providerId: ModelProviderId): ModelProvider {
+  return providers.find((provider) => provider.id === providerId) ?? providers[0]
+}
+
+function mergeProviderModels(
+  provider: ModelProvider,
+  serverProvider: ServerProvider | undefined,
+): SelectableModel[] {
+  if (provider.id !== 'copilot') return provider.models
+  if (!serverProvider?.models?.length) return provider.models
+  return serverProvider.models.map(serverModelToSelectableModel)
+}
+
+function serverModelToSelectableModel(model: ServerSelectableModel): SelectableModel {
+  return {
+    id: model.id,
+    cliModelId: model.cliModelId,
+    name: model.name,
+    headline: model.headline,
+    description: model.description,
+    contextWindow: model.contextWindow,
+    premiumMultiplier: model.premiumMultiplier ?? null,
+  }
 }

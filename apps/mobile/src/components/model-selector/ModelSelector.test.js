@@ -10,7 +10,9 @@ jest.mock('react-native', () => {
   return {
     View: createComponent('View'),
     Text: createComponent('Text'),
+    Image: createComponent('Image'),
     Pressable: createComponent('Pressable'),
+    TouchableOpacity: createComponent('TouchableOpacity'),
     StyleSheet: {
       create: (styles) => styles,
       hairlineWidth: 1,
@@ -35,35 +37,74 @@ jest.mock('../../contexts/ThemeContext', () => ({
   }),
 }))
 
+jest.mock('@pocketdev/shared/theme', () => ({
+  borderRadius: { md: 12, lg: 16 },
+  spacing: { 1: 4, 2: 8, 3: 12, 4: 16 },
+}), { virtual: true })
+
+jest.mock('../../theme/typography', () => ({
+  typeStyles: {
+    labelStrong: {},
+    meta: {},
+    screenTitle: {},
+    bodySmall: {},
+  },
+}))
+
+jest.mock('../../../assets', () => ({
+  Assets: {
+    claudeBlack: 1,
+    claudeWhite: 2,
+    codexBlack: 3,
+    codexWhite: 4,
+    githubCopilotBlack: 5,
+    githubCopilotWhite: 6,
+  },
+}))
+
+jest.mock('lucide-react-native', () => {
+  const React = require('react')
+
+  function Icon(props) {
+    return React.createElement('Icon', props, props.children)
+  }
+
+  return {
+    ChevronDown: Icon,
+    ChevronUp: Icon,
+    Check: Icon,
+  }
+})
+
 const React = require('react')
 const renderer = require('react-test-renderer')
 const { Text } = require('react-native')
 const { MODEL_PROVIDERS } = require('./catalog')
 const ModelSelector = require('./ModelSelector').default
 
-function Harness() {
-  const [selectedProviderId, setSelectedProviderId] = React.useState('claude')
-  const [selectedModelId, setSelectedModelId] = React.useState('claude-sonnet-4')
+function Harness({ providers = MODEL_PROVIDERS, initialProviderId = 'claude', initialModelId = 'claude-sonnet' }) {
+  const [selectedProviderId, setSelectedProviderId] = React.useState(initialProviderId)
+  const [selectedModelId, setSelectedModelId] = React.useState(initialModelId)
 
   return React.createElement(ModelSelector, {
-    providers: MODEL_PROVIDERS,
+    providers,
     selectedProviderId,
     selectedModelId,
     onSelectProvider: (providerId) => {
       setSelectedProviderId(providerId)
-      const provider = MODEL_PROVIDERS.find((entry) => entry.id === providerId)
+      const provider = providers.find((entry) => entry.id === providerId)
       setSelectedModelId(provider.models[0].id)
     },
     onSelectModel: (_providerId, modelId) => setSelectedModelId(modelId),
   })
 }
 
-function renderSelector() {
+function renderSelector(props) {
   let tree
 
   renderer.act(() => {
     tree = renderer.create(
-      React.createElement(Harness),
+      React.createElement(Harness, props),
     )
   })
 
@@ -103,9 +144,9 @@ describe('ModelSelector', () => {
     const text = collectText(tree)
 
     expect(text).toContain('Claude')
-    expect(text).toContain('Claude Sonnet 4')
-    expect(text).toContain('Claude Opus 4.1')
-    expect(text).not.toContain('GPT-5.4 Codex')
+    expect(text).toContain('Claude Sonnet 4.6')
+    expect(text).toContain('Claude Opus 4.6')
+    expect(text).not.toContain('GPT-5.4')
   })
 
   it('updates the model list when the provider changes', () => {
@@ -117,20 +158,60 @@ describe('ModelSelector', () => {
 
     const text = collectText(tree)
 
-    expect(text).toContain('GPT-5.4 Codex')
-    expect(text).toContain('GPT-5.4 Mini')
-    expect(text).not.toContain('Claude Opus 4.1')
+    expect(text).toContain('GPT-5.4')
+    expect(text).toContain('GPT-5.3 Codex')
+    expect(text).not.toContain('Claude Opus 4.6')
   })
 
   it('updates the selected model within the current provider', () => {
     const tree = renderSelector()
 
     renderer.act(() => {
-      pressByLabel(tree, 'Claude Opus 4.1')
+      pressByLabel(tree, 'Claude Opus 4.6')
     })
 
     const text = collectText(tree)
-    expect(text).toContain('Claude Opus 4.1')
+    expect(text).toContain('Claude Opus 4.6')
     expect(text).toContain('Deep reasoning for harder refactors')
+  })
+
+  it('renders server-provided copilot models', () => {
+    const providers = MODEL_PROVIDERS.map((provider) => (
+      provider.id === 'copilot'
+        ? {
+            ...provider,
+            availability: 'available',
+            models: [
+              {
+                id: 'claude-sonnet-4.6',
+                cliModelId: 'claude-sonnet-4.6',
+                name: 'Claude Sonnet 4.6',
+                headline: 'Balanced Copilot model for daily coding',
+                description: 'Good default for most coding, planning, and debugging tasks in Copilot.',
+                contextWindow: 'Managed by Copilot',
+                premiumMultiplier: 1,
+              },
+              {
+                id: 'gpt-5.4',
+                cliModelId: 'gpt-5.4',
+                name: 'GPT-5.4',
+                headline: 'Frontier GPT model available through Copilot',
+                description: 'General-purpose GPT model available through Copilot model selection.',
+                contextWindow: 'Managed by Copilot',
+                premiumMultiplier: 1,
+              },
+            ],
+          }
+        : provider
+    ))
+    const tree = renderSelector({
+      providers,
+      initialProviderId: 'copilot',
+      initialModelId: 'claude-sonnet-4.6',
+    })
+    const text = collectText(tree)
+
+    expect(text).toContain('Claude Sonnet 4.6')
+    expect(text).toContain('GPT-5.4')
   })
 })

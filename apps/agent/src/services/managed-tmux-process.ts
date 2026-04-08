@@ -63,6 +63,7 @@ export interface ManagedTmuxProcessOptions {
   prompt: string
   cwd: string
   mode: 'default' | 'plan'
+  model?: string | null
 }
 
 export class ManagedTmuxProcess {
@@ -71,6 +72,7 @@ export class ManagedTmuxProcess {
   private tmuxSession: string
   private prompt: string
   private cwd: string
+  private model: string | null
   private previousCapture = ''
   private lastChangeTime = 0
   private pollTimer: ReturnType<typeof setTimeout> | null = null
@@ -81,6 +83,7 @@ export class ManagedTmuxProcess {
     this.taskId = opts.taskId
     this.prompt = opts.prompt
     this.cwd = opts.cwd
+    this.model = opts.model ?? null
     this.tmuxSession = `pocketdev-task-${opts.taskId.slice(0, 8)}`
   }
 
@@ -103,8 +106,11 @@ export class ManagedTmuxProcess {
     await exec(`tmux kill-session -t ${this.tmuxSession} 2>/dev/null`)
 
     // Launch copilot inside tmux
+    const copilotCommand = this.model
+      ? `${shellEscape(copilotPath)} --model ${shellEscape(this.model)}`
+      : shellEscape(copilotPath)
     const { exitCode } = await exec(
-      `cd ${shellEscape(this.cwd)} && tmux new-session -d -s ${this.tmuxSession} -x 120 -y 40 ${shellEscape(copilotPath)}`,
+      `cd ${shellEscape(this.cwd)} && tmux new-session -d -s ${this.tmuxSession} -x 120 -y 40 ${copilotCommand}`,
     )
 
     if (exitCode !== 0) {
@@ -113,7 +119,7 @@ export class ManagedTmuxProcess {
       return
     }
 
-    this.emitLog('stdout', '[copilot] Starting GitHub Copilot TUI session...')
+    this.emitLog('stdout', `[copilot] Starting GitHub Copilot TUI session${this.model ? ` with model ${this.model}` : ''}...`)
     this.lastChangeTime = Date.now()
 
     // Start polling

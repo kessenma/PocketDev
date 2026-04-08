@@ -5,11 +5,11 @@ import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
-import WizardStepper from './go-wizard/WizardStepper'
-import DetectStep from './go-wizard/DetectStep'
-import InstallGoStep from './go-wizard/InstallGoStep'
-import VerifyStep from './go-wizard/VerifyStep'
-import type { GoSetupStatus, GoWizardStep, GoWizardStepStatus } from '@pocketdev/shared/types'
+import WizardStepper from './typescript-wizard/WizardStepper'
+import DetectStep from './typescript-wizard/DetectStep'
+import InstallTypeScriptStep from './typescript-wizard/InstallTypeScriptStep'
+import VerifyStep from './typescript-wizard/VerifyStep'
+import type { TypeScriptSetupStatus, TypeScriptWizardStep, TypeScriptWizardStepStatus } from '@pocketdev/shared/types'
 
 interface Props {
   visible: boolean
@@ -19,45 +19,45 @@ interface Props {
 
 // ─── State machine ──────────────────────────────────────
 
-const ALL_STEPS: GoWizardStep[] = ['detect', 'install', 'verify']
+const ALL_STEPS: TypeScriptWizardStep[] = ['detect', 'install', 'verify']
 
 interface WizardState {
-  currentStep: GoWizardStep
-  stepStatuses: Record<GoWizardStep, GoWizardStepStatus>
-  goStatus: GoSetupStatus | null
+  currentStep: TypeScriptWizardStep
+  stepStatuses: Record<TypeScriptWizardStep, TypeScriptWizardStepStatus>
+  tsStatus: TypeScriptSetupStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; goStatus: GoSetupStatus }
-  | { type: 'STEP_COMPLETE'; step: GoWizardStep }
-  | { type: 'STEP_FAILED'; step: GoWizardStep; error: string }
+  | { type: 'DETECTION_COMPLETE'; tsStatus: TypeScriptSetupStatus }
+  | { type: 'STEP_COMPLETE'; step: TypeScriptWizardStep }
+  | { type: 'STEP_FAILED'; step: TypeScriptWizardStep; error: string }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
 
 function getInitialState(): WizardState {
-  const stepStatuses = {} as Record<GoWizardStep, GoWizardStepStatus>
+  const stepStatuses = {} as Record<TypeScriptWizardStep, TypeScriptWizardStepStatus>
   for (const step of ALL_STEPS) {
     stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
   }
   return {
     currentStep: 'detect',
     stepStatuses,
-    goStatus: null,
+    tsStatus: null,
     error: null,
     allConfigured: false,
   }
 }
 
-function findNextActiveStep(statuses: Record<GoWizardStep, GoWizardStepStatus>, afterIndex: number): GoWizardStep | null {
+function findNextActiveStep(statuses: Record<TypeScriptWizardStep, TypeScriptWizardStepStatus>, afterIndex: number): TypeScriptWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<GoWizardStep, GoWizardStepStatus>, beforeIndex: number): GoWizardStep | null {
+function findPrevActiveStep(statuses: Record<TypeScriptWizardStep, TypeScriptWizardStepStatus>, beforeIndex: number): TypeScriptWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) { // skip detect (index 0)
     const s = statuses[ALL_STEPS[i]]
     if (s === 'completed' || s === 'active') return ALL_STEPS[i]
@@ -68,12 +68,12 @@ function findPrevActiveStep(statuses: Record<GoWizardStep, GoWizardStepStatus>, 
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const gs = action.goStatus
+      const ts = action.tsStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
 
-      // Skip install if Go is already installed
-      if (gs.installed) {
+      // Skip install if TypeScript is already installed
+      if (ts.installed) {
         newStatuses['install'] = 'skipped'
       }
 
@@ -84,7 +84,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          goStatus: gs,
+          tsStatus: ts,
           allConfigured: true,
         }
       }
@@ -97,7 +97,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: firstPending ?? 'detect',
         stepStatuses: newStatuses,
-        goStatus: gs,
+        tsStatus: ts,
       }
     }
 
@@ -152,7 +152,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function GoWizardSheet({ visible, onClose, onComplete }: Props) {
+export default function TypeScriptWizardSheet({ visible, onClose, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
@@ -181,27 +181,27 @@ export default function GoWizardSheet({ visible, onClose, onComplete }: Props) {
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
           <Image
-            source={isDark ? Assets.goWhite : Assets.goBlack}
+            source={isDark ? Assets.typescriptWhite : Assets.typescriptBlack}
             style={styles.completedLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Go is ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>TypeScript is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Go{state.goStatus?.version ? ` ${state.goStatus.version}` : ''} is installed on your server.
+            TypeScript{state.tsStatus?.version ? ` ${state.tsStatus.version}` : ''} is installed on your server.
           </Text>
-          {state.goStatus?.version && (
+          {state.tsStatus?.version && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              v{state.goStatus.version}
+              v{state.tsStatus.version}
             </Text>
           )}
-          {state.goStatus?.path && (
+          {state.tsStatus?.path && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              {state.goStatus.path}
+              {state.tsStatus.path}
             </Text>
           )}
-          {state.goStatus?.gopath && (
+          {state.tsStatus?.ts_node_installed && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              GOPATH: {state.goStatus.gopath}
+              ts-node{state.tsStatus.ts_node_version ? ` v${state.tsStatus.ts_node_version}` : ''} available
             </Text>
           )}
         </View>
@@ -212,7 +212,7 @@ export default function GoWizardSheet({ visible, onClose, onComplete }: Props) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
       case 'install':
-        return <InstallGoStep dispatch={dispatch} />
+        return <InstallTypeScriptStep dispatch={dispatch} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
@@ -232,7 +232,7 @@ export default function GoWizardSheet({ visible, onClose, onComplete }: Props) {
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Go Setup</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>TypeScript Setup</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>

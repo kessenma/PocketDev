@@ -8,6 +8,7 @@ import { fetchCapabilities } from '../services/api'
 import {
   getDefaultModelSelection,
   getModelById,
+  MODEL_PROVIDERS,
   getProviderById,
   mergeServerAvailability,
 } from '../components/model-selector/catalog'
@@ -57,6 +58,17 @@ function persistDraft(state: StoredNewTaskDraft) {
   saveNewTaskDraft(state)
 }
 
+function getProviderCatalog(state: Pick<NewTaskDraftState, 'providers'>): ModelProvider[] {
+  return state.providers ?? MODEL_PROVIDERS
+}
+
+function resolveProvider(
+  providerId: ModelProviderId,
+  providers: ModelProvider[],
+): ModelProvider {
+  return providers.find((provider) => provider.id === providerId) ?? providers[0]
+}
+
 export const useNewTaskDraftStore = create<NewTaskDraftState>((set, get) => ({
   ...getInitialState(),
   providers: null,
@@ -88,7 +100,8 @@ export const useNewTaskDraftStore = create<NewTaskDraftState>((set, get) => ({
 
   selectProvider: (providerId) => {
     set((state) => {
-      const provider = getProviderById(providerId)
+      const providerCatalog = getProviderCatalog(state)
+      const provider = resolveProvider(providerId, providerCatalog)
       const hasCurrentModel = provider.models.some(
         (model) => model.id === state.selectedModelId,
       )
@@ -104,8 +117,9 @@ export const useNewTaskDraftStore = create<NewTaskDraftState>((set, get) => ({
 
   selectModel: (providerId, modelId) => {
     set((state) => {
-      const provider = getProviderById(providerId)
-      const model = getModelById(provider.id, modelId)
+      const providerCatalog = getProviderCatalog(state)
+      const provider = resolveProvider(providerId, providerCatalog)
+      const model = getModelById(provider.id, modelId, providerCatalog)
       const nextState = {
         ...state,
         selectedProviderId: provider.id,
@@ -118,8 +132,9 @@ export const useNewTaskDraftStore = create<NewTaskDraftState>((set, get) => ({
 
   submitDraft: () => {
     set((state) => {
-      const provider = getProviderById(state.selectedProviderId as ModelProviderId)
-      const model = getModelById(provider.id, state.selectedModelId)
+      const providerCatalog = getProviderCatalog(state)
+      const provider = resolveProvider(state.selectedProviderId as ModelProviderId, providerCatalog)
+      const model = getModelById(provider.id, state.selectedModelId, providerCatalog)
       const promptSummary = state.prompt.trim().length > 0 ? 'Prompt draft saved.' : 'Selection saved.'
       const nextState = {
         ...state,
@@ -152,10 +167,13 @@ export const useNewTaskDraftStore = create<NewTaskDraftState>((set, get) => ({
     try {
       const capabilities = await fetchCapabilities(server.ip, server.port)
       const providers = mergeServerAvailability(capabilities)
+      const currentSelection = {
+        providerId: get().selectedProviderId as ModelProviderId,
+        modelId: get().selectedModelId,
+      }
 
       // Auto-select first available provider if current selection is unavailable
-      const currentProviderId = get().selectedProviderId
-      const currentProvider = providers.find((p) => p.id === currentProviderId)
+      const currentProvider = providers.find((p) => p.id === currentSelection.providerId)
       const currentAvailable = currentProvider?.availability === 'available'
 
       if (!currentAvailable) {
@@ -171,7 +189,16 @@ export const useNewTaskDraftStore = create<NewTaskDraftState>((set, get) => ({
         }
       }
 
-      set({ providers, isLoadingCapabilities: false })
+      const selectedProvider = resolveProvider(currentSelection.providerId, providers)
+      const selectedModel = selectedProvider.models.find((model) => model.id === currentSelection.modelId)
+        ?? selectedProvider.models[0]
+
+      set({
+        providers,
+        isLoadingCapabilities: false,
+        selectedProviderId: selectedProvider.id,
+        selectedModelId: selectedModel?.id ?? get().selectedModelId,
+      })
     } catch {
       set({
         isLoadingCapabilities: false,

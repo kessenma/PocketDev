@@ -4,10 +4,11 @@ import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Button } from '#/components/ui/button'
 import { Separator } from '#/components/ui/separator'
-import { CopyButton } from './CopyButton'
+import { CopyButton } from '@pocketdev/shared/components'
 import { QRCodeDisplay } from './QRCodeDisplay'
 import { setPasscode, refreshPasscode } from '#/lib/api'
 import { QrCode, RefreshCw, Smartphone } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Props {
   passcode: string | null
@@ -107,7 +108,13 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
               <p className="text-sm font-medium">Manual Connection</p>
               <div className="flex items-center gap-2 rounded-[1.4rem] border border-black/10 bg-black p-4 font-mono text-sm text-[#f4f0e8]">
                 <p className="flex-1 break-all font-bold">{connectionUrl}</p>
-                <CopyButton value={connectionUrl!} size="icon" variant="ghost" />
+                <CopyButton
+                  value={connectionUrl!}
+                  size="icon"
+                  variant="ghost"
+                  className="text-[#f4f0e8] hover:bg-white/10"
+                  onCopied={showCopyToast}
+                />
               </div>
               <div className="space-y-0.5 px-1 text-xs text-black/55">
                 <p>Server: {serverIp}:{port}</p>
@@ -117,6 +124,7 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
                 value={connectionUrl!}
                 label="Copy connection URL"
                 className="w-full"
+                onCopied={showCopyToast}
               />
             </div>
           </>
@@ -130,4 +138,10 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
       </CardContent>
     </Card>
   )
+}
+
+function showCopyToast(value: string) {
+  toast.success('Copied to clipboard', {
+    description: value.length > 60 ? `${value.slice(0, 60)}...` : value,
+  })
 }

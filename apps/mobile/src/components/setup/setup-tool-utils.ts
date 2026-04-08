@@ -6,7 +6,7 @@ export function getToolById(report: PrerequisitesReport | null, toolId: string):
 
 const PACKAGE_MANAGER_TOOL_IDS = ['node', 'npm', 'pnpm', 'bun'] as const
 const AI_ASSISTANT_TOOL_IDS = ['claude_cli', 'codex_cli', 'copilot_cli'] as const
-const LANGUAGE_TOOL_IDS = ['python', 'rust', 'go'] as const
+const LANGUAGE_TOOL_IDS = ['python', 'rust', 'go', 'typescript'] as const
 
 function isToolConfigured(tool: ToolCheck | undefined): boolean {
   if (!tool) return false

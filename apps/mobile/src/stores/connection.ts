@@ -94,15 +94,25 @@ function handleWsMessage(message: WsMessage) {
 
   switch (message.type) {
     case 'task.output': {
-      const { task_id, data } = message.payload as { task_id: string; data: string }
-      tasks.appendLog(task_id, data)
-      scripts.handleTaskOutput(task_id, data)
+      const { taskId, line } = message.payload as { taskId: string; stream: string; line: string }
+      tasks.appendLog(taskId, line)
+      scripts.handleTaskOutput(taskId, line)
       break
     }
     case 'task.status_changed': {
-      const { task_id, status } = message.payload as { task_id: string; status: string }
-      tasks.updateTaskStatus(task_id, status as any)
-      scripts.handleTaskStatusChange(task_id, status)
+      const { taskId, status } = message.payload as { taskId: string; status: string }
+      tasks.updateTaskStatus(taskId, status as any)
+      scripts.handleTaskStatusChange(taskId, status)
+      break
+    }
+    case 'task.activity': {
+      const { taskId, activity } = message.payload as { taskId: string; activity: import('@pocketdev/shared/types').TaskActivity }
+      tasks.appendActivity(taskId, activity)
+      break
+    }
+    case 'task.question': {
+      const question = message.payload as import('@pocketdev/shared/types').TaskQuestion
+      tasks.addQuestion(question.taskId, question)
       break
     }
     case 'task.permission_request':

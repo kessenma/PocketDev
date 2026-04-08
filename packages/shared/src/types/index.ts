@@ -68,6 +68,9 @@ export type {
   GoSetupStatus,
   GoWizardStep,
   GoWizardStepStatus,
+  TypeScriptSetupStatus,
+  TypeScriptWizardStep,
+  TypeScriptWizardStepStatus,
   PkgToolInfo,
   PkgManagerStatus,
   PkgInstallTool,
@@ -106,6 +109,9 @@ export type {
 } from './server-actions.js'
 export type {
   ProviderAvailability,
+  ServerSelectableModel,
+  ServerModelDiscoverySource,
+  ServerModelDiscovery,
   ServerProviderId,
   ServerProvider,
   ServerCapabilities,
@@ -146,6 +152,17 @@ export type {
   ScriptPackageInfo,
   ScriptsResponse,
 } from './scripts.js'
+export type {
+  TaskActivity,
+  ToolUseActivity,
+  ToolResultActivity,
+  ThinkingActivity,
+  TextActivity,
+  StatusActivity,
+  TaskActivityEvent,
+  QuestionType,
+  TaskQuestion,
+} from './activity.js'
 export type {
   ContainerStatus,
   ContainerLogsDirection,

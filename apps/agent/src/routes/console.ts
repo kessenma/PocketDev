@@ -25,6 +25,7 @@ import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
 import { checkPythonStatus } from '../services/python-setup.ts'
 import { checkRustStatus } from '../services/rust-setup.ts'
 import { checkGoStatus } from '../services/go-setup.ts'
+import { checkTypeScriptStatus } from '../services/typescript-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
@@ -448,6 +449,15 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return checkGoStatus()
+  })
+
+  // ─── TypeScript debug (requires session) ───────────────
+  .get('/debug/typescript', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    return checkTypeScriptStatus()
   })
 
   // ─── Prerequisites (requires session) ─────────────────

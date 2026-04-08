@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { Info, ShieldAlert } from 'lucide-react-native'
+import { Code, Info, ShieldAlert } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
+import TaskStreamer from './TaskStreamer'
+import TaskInteractionSheet from './TaskInteractionSheet'
 import { typeStyles } from '../../theme/typography'
 
 type Props = {
@@ -39,6 +41,7 @@ export default function TaskDetailPane({
 
   const flatListRef = useRef<FlatList>(null)
   const [autoScroll, setAutoScroll] = useState(true)
+  const [showRawLogs, setShowRawLogs] = useState(false)
 
   useEffect(() => {
     if (autoScroll && logs.length > 0) {
@@ -77,11 +80,20 @@ export default function TaskDetailPane({
           <BauhausBadge label={task.status} color={statusColor} />
           <Text style={[styles.elapsed, { color: colors.textTertiary }]}>{elapsed}</Text>
         </View>
-        {isRunning ? (
-          <BauhausButton variant="danger" compact onPress={() => killTask(task.id)}>
-            Kill
-          </BauhausButton>
-        ) : null}
+        <View style={styles.statusActions}>
+          <TouchableOpacity
+            onPress={() => setShowRawLogs((v) => !v)}
+            activeOpacity={0.7}
+            style={[styles.logToggle, { backgroundColor: showRawLogs ? colors.primary + '18' : 'transparent', borderColor: colors.border }]}
+          >
+            <Code color={showRawLogs ? colors.primary : colors.textTertiary} size={14} strokeWidth={2.25} />
+          </TouchableOpacity>
+          {isRunning ? (
+            <BauhausButton variant="danger" compact onPress={() => killTask(task.id)}>
+              Kill
+            </BauhausButton>
+          ) : null}
+        </View>
       </View>
 
       <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
@@ -132,34 +144,41 @@ export default function TaskDetailPane({
         <View style={[styles.copilotBanner, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
           <Info color={colors.textTertiary} size={16} strokeWidth={2.25} />
           <Text style={[styles.copilotBannerText, { color: colors.textSecondary }]}>
-            Copilot runs as a TUI session in tmux. Task completion is auto-detected when the agent returns to idle.
+            Copilot runs as a TUI session in tmux. {task.model ? `Selected model: ${task.model}. ` : ''}Task completion is auto-detected when the agent returns to idle.
           </Text>
         </View>
       )}
 
-      <FlatList
-        ref={flatListRef}
-        data={logs}
-        keyExtractor={(_, i) => String(i)}
-        renderItem={({ item }) => <Text style={[styles.logLine, { color: colors.text }]}>{item}</Text>}
-        style={styles.logList}
-        contentContainerStyle={styles.logContent}
-        onScroll={handleScroll}
-        scrollEventThrottle={100}
-        ListEmptyComponent={
-          <Text style={[styles.emptyLogs, { color: colors.textSecondary }]}>
-            Task output will appear here.
-          </Text>
-        }
-      />
+      {showRawLogs ? (
+        <>
+          <FlatList
+            ref={flatListRef}
+            data={logs}
+            keyExtractor={(_, i) => String(i)}
+            renderItem={({ item }) => <Text style={[styles.logLine, { color: colors.text }]}>{item}</Text>}
+            style={styles.logList}
+            contentContainerStyle={styles.logContent}
+            onScroll={handleScroll}
+            scrollEventThrottle={100}
+            ListEmptyComponent={
+              <Text style={[styles.emptyLogs, { color: colors.textSecondary }]}>
+                Task output will appear here.
+              </Text>
+            }
+          />
+          {!autoScroll ? (
+            <View style={styles.scrollButton}>
+              <BauhausButton compact onPress={handleScrollToBottom}>
+                Scroll To Bottom
+              </BauhausButton>
+            </View>
+          ) : null}
+        </>
+      ) : (
+        <TaskStreamer taskId={task.id} />
+      )}
 
-      {!autoScroll ? (
-        <View style={styles.scrollButton}>
-          <BauhausButton compact onPress={handleScrollToBottom}>
-            Scroll To Bottom
-          </BauhausButton>
-        </View>
-      ) : null}
+      {taskId ? <TaskInteractionSheet taskId={taskId} /> : null}
     </View>
   )
 }
@@ -211,6 +230,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
+  },
+  statusActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  logToggle: {
+    width: 30,
+    height: 30,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   elapsed: {
     ...typeStyles.meta,

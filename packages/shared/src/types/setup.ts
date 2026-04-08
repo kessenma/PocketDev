@@ -347,6 +347,19 @@ export interface GoSetupStatus {
 export type GoWizardStep = 'detect' | 'install' | 'verify'
 export type GoWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
+// ─── TypeScript wizard types ──────────────────────────────────────────
+
+export interface TypeScriptSetupStatus {
+  installed: boolean
+  version: string | null
+  path: string | null
+  ts_node_installed: boolean
+  ts_node_version: string | null
+}
+
+export type TypeScriptWizardStep = 'detect' | 'install' | 'verify'
+export type TypeScriptWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
 // ─── Package Manager wizard types ──────────────────────────────────
 
 export interface PkgToolInfo {

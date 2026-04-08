@@ -78,9 +78,10 @@ export default function NewTaskForm({ onSubmitted }: Props) {
 
   const providers = useNewTaskDraftStore((state) => state.providers)
   const loadCapabilities = useNewTaskDraftStore((state) => state.loadCapabilities)
+  const providerCatalog = providers ?? MODEL_PROVIDERS
 
-  const selectedProvider = getProviderById(selectedProviderId as ModelProviderId)
-  const selectedModel = getModelById(selectedProviderId as ModelProviderId, selectedModelId)
+  const selectedProvider = getProviderById(selectedProviderId as ModelProviderId, providerCatalog)
+  const selectedModel = getModelById(selectedProviderId as ModelProviderId, selectedModelId, providerCatalog)
 
   // --- Model sheet state ---
   const [showModelSheet, setShowModelSheet] = React.useState(false)
@@ -253,7 +254,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       trimmedPrompt,
     ].join('\n')
 
-    const cliModelId = getCliModelId(selectedProviderId as ModelProviderId, selectedModelId)
+    const cliModelId = getCliModelId(selectedProviderId as ModelProviderId, selectedModelId, providerCatalog)
     startTask(taskPrompt, agentType, rootPath || null, cliModelId, selectedTaskMode)
     submitDraft()
     onSubmitted()
@@ -525,7 +526,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
           </View>
           <ScrollView style={styles.sheetBody} contentContainerStyle={styles.sheetBodyContent}>
             <ModelSelector
-              providers={providers ?? MODEL_PROVIDERS}
+              providers={providerCatalog}
               selectedProviderId={selectedProviderId as ModelProviderId}
               selectedModelId={selectedModelId}
               onSelectProvider={selectProvider}

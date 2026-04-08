@@ -17,6 +17,7 @@ import {
   SiGithubcopilot,
   SiGithubcopilotHex,
 } from '@icons-pack/react-simple-icons'
+import { CopyButton } from '@pocketdev/shared/components'
 import { PocketHeroSvg } from '../PocketHeroSvg'
 import { ArchitectureHeroAnimation } from '../ArchitectureHeroAnimation'
 import { brandAssets } from '../../shared/brand-assets'
@@ -25,6 +26,12 @@ import { architectureTextStyles } from '../../shared/theme'
 import { HeroScene } from './HeroScene'
 
 const PAPER = '#f7f1e3'
+const INSTALL_COMMAND = 'curl -fsSL https://pocketdev.run/install.sh | bash'
+const INSTALL_COMMAND_LINES = [
+  'curl -fsSL',
+  'https://pocketdev.run/install.sh',
+  '| bash',
+]
 
 export function HeroScrollSequence({
   onProgressChange,
@@ -131,42 +138,46 @@ export function HeroScrollSequence({
 
 function HeroTitle() {
   return (
-    <h1
-      className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl"
-      style={architectureTextStyles.heroTitle}
-    >
-      PocketDev
-    </h1>
+    <div className="flex flex-col items-center">
+      <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-foreground/70 shadow-sm backdrop-blur-sm">
+        Private Mobile Beta
+      </span>
+      <h1
+        className="mt-4 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl"
+        style={architectureTextStyles.heroTitle}
+      >
+        PocketDev
+      </h1>
+    </div>
   )
 }
 
 function HeroDescription() {
-  const [copied, setCopied] = useState(false)
-  const installCommand = 'curl -fsSL https://pocketdev.run/install.sh | bash'
-  
-  const handleCopy = () => {
-    navigator.clipboard.writeText(installCommand)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  
   return (
-    <><p
-      className="mt-4 max-w-xl text-lg text-muted-foreground"
-      style={architectureTextStyles.heroLead}
-    >
-      From pocket to production
-    </p><pre className="mt-4 border border-border/40 rounded-lg bg-muted/50 p-3 text-xs text-foreground/80 flex items-center justify-between gap-3">
-      <code className="overflow-x-auto">{installCommand}</code>
-      <button
-        onClick={handleCopy}
-        className="shrink-0 rounded px-2 py-1 text-xs font-medium hover:bg-muted transition-colors"
-        title="Copy to clipboard"
+    <>
+      <p
+        className="mt-4 max-w-xl text-lg text-muted-foreground"
+        style={architectureTextStyles.heroLead}
       >
-        {copied ? '✓' : 'Copy'}
-      </button>
-    </pre></>
-    
+        From pocket to production
+      </p>
+      <div className="mt-5 w-full max-w-[min(92vw,40rem)] rounded-2xl border border-border/50 bg-background/70 p-3 text-left shadow-sm backdrop-blur-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <code className="min-w-0 flex-1 rounded-xl bg-muted/70 px-3 py-2 font-mono text-[0.72rem] leading-relaxed text-foreground/85 sm:text-xs">
+            {INSTALL_COMMAND_LINES.map((line) => (
+              <span key={line} className="block break-all">
+                {line}
+              </span>
+            ))}
+          </code>
+          <CopyButton
+            value={INSTALL_COMMAND}
+            label="Copy"
+            className="w-full border-border/60 bg-transparent text-foreground hover:bg-muted/80 sm:w-auto"
+          />
+        </div>
+      </div>
+    </>
   )
 }
 

@@ -20,6 +20,7 @@ const toolAssetMap: Record<string, { light: ImageSourcePropType; dark: ImageSour
   copilot_cli: { light: Assets.githubBlack, dark: Assets.githubWhite },
   rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
   go: { light: Assets.goBlack, dark: Assets.goWhite },
+  typescript: { light: Assets.typescriptBlack, dark: Assets.typescriptWhite },
   java: { light: Assets.javaBlack, dark: Assets.javaWhite },
   cpp: { light: Assets.cppBlack, dark: Assets.cppWhite },
   postgresql: { light: Assets.postgresqlBlack, dark: Assets.postgresqlWhite },
@@ -41,6 +42,7 @@ interface Props {
   onPythonWizard?: (tool: ToolCheck) => void
   onRustWizard?: (tool: ToolCheck) => void
   onGoWizard?: (tool: ToolCheck) => void
+  onTypeScriptWizard?: (tool: ToolCheck) => void
   onDockerWizard?: (tool: ToolCheck) => void
   disabledReason?: string | null
 }
@@ -91,6 +93,7 @@ export default function SetupCheckItem({
   onPythonWizard,
   onRustWizard,
   onGoWizard,
+  onTypeScriptWizard,
   onDockerWizard,
   disabledReason,
 }: Props) {
@@ -137,11 +140,15 @@ export default function SetupCheckItem({
   const goNeedsAction = isGo && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showGoWizard = isGo && !!onGoWizard
 
+  const isTypeScript = tool.id === 'typescript'
+  const tsNeedsAction = isTypeScript && (tool.status === 'missing' || tool.status === 'misconfigured')
+  const showTypeScriptWizard = isTypeScript && !!onTypeScriptWizard
+
   const isDocker = tool.id === 'docker'
   const dockerNeedsAction = isDocker && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showDockerWizard = isDocker && !!onDockerWizard
 
-  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython || isRust || isGo || isDocker
+  const hasWizard = isGit || isClaude || isCodex || isCopilot || isPkgManager || isPython || isRust || isGo || isTypeScript || isDocker
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -348,6 +355,20 @@ export default function SetupCheckItem({
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
               {goNeedsAction ? 'Enable Go' : 'Open Go'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {showTypeScriptWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
+            onPress={() => onTypeScriptWizard(tool)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>
+              {tsNeedsAction ? 'Enable TypeScript' : 'Open TypeScript'}
             </Text>
           </TouchableOpacity>
         </View>

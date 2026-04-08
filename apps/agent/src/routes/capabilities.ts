@@ -2,6 +2,7 @@ import { Elysia } from 'elysia'
 import type { ServerCapabilities, ServerProvider, ProviderAvailability, ServerProviderId } from '@pocketdev/shared/types'
 import { authenticateRequest } from '../services/auth.ts'
 import { getToolRecord, type ToolPathRow } from '../db/index.ts'
+import { discoverCopilotModels } from '../services/copilot-models.ts'
 
 function toAvailability(row: ToolPathRow | undefined): ProviderAvailability {
   if (!row?.path) return 'not_installed'
@@ -9,10 +10,11 @@ function toAvailability(row: ToolPathRow | undefined): ProviderAvailability {
   return 'installed_no_auth'
 }
 
-function buildProviders(): ServerProvider[] {
+async function buildProviders(): Promise<ServerProvider[]> {
   const claude = getToolRecord('claude_cli')
   const codex = getToolRecord('codex_cli')
   const copilot = getToolRecord('copilot_cli')
+  const copilotModels = await discoverCopilotModels()
 
   return [
     {
@@ -32,6 +34,8 @@ function buildProviders(): ServerProvider[] {
       label: 'GitHub Copilot',
       availability: toAvailability(copilot),
       version: copilot?.version ?? null,
+      models: copilotModels.models,
+      modelDiscovery: copilotModels.modelDiscovery,
     },
   ]
 }
@@ -50,7 +54,7 @@ export const capabilitiesRoutes = new Elysia()
     }
 
     console.log('[capabilities] GET /capabilities')
-    const providers = buildProviders()
+    const providers = await buildProviders()
     const result: ServerCapabilities = {
       providers,
       defaultProviderId: pickDefault(providers),
