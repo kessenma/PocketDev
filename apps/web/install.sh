@@ -166,8 +166,9 @@ if [ -f "$DB_FILE" ]; then
     if command -v sqlite3 >/dev/null 2>&1; then
       sqlite3 "$DB_FILE" "DELETE FROM admin_accounts;" 2>/dev/null || true
       sqlite3 "$DB_FILE" "DELETE FROM passkey_credentials;" 2>/dev/null || true
+      sqlite3 "$DB_FILE" "DELETE FROM server_config WHERE key LIKE 'console_session:%';" 2>/dev/null || true
     elif command -v bun >/dev/null 2>&1; then
-      bun -e "const db = require('bun:sqlite').open('${DB_FILE}'); db.run('DELETE FROM admin_accounts'); try { db.run('DELETE FROM passkey_credentials'); } catch {} db.close();" 2>/dev/null || true
+      bun -e "const db = require('bun:sqlite').open('${DB_FILE}'); db.run('DELETE FROM admin_accounts'); try { db.run('DELETE FROM passkey_credentials'); } catch {} db.run(\"DELETE FROM server_config WHERE key LIKE 'console_session:%'\"); db.close();" 2>/dev/null || true
     else
       warn "Could not reset admin — no sqlite3 or bun available"
     fi
