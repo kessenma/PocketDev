@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchTypeScriptSetupStatus } from '../../../services/api'
-import TypeScriptSetupAnimation from '../../animations/TypeScriptSetupAnimation'
 import { RefreshCw } from 'lucide-react-native'
 import type { TypeScriptSetupStatus } from '@pocketdev/shared/types'
 
@@ -20,23 +19,10 @@ export default function DetectStep({ dispatch }: Props) {
   const { colors } = useTheme()
   const server = useConnectionStore((s) => s.server)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [animationDone, setAnimationDone] = useState(false)
   const [statusResult, setStatusResult] = useState<TypeScriptSetupStatus | null>(null)
 
-  useEffect(() => {
-    detect()
-  }, [])
-
-  useEffect(() => {
-    if (animationDone && statusResult) {
-      dispatch({ type: 'DETECTION_COMPLETE', tsStatus: statusResult })
-    }
-  }, [animationDone, statusResult])
-
-  async function detect() {
+  const detect = useCallback(async () => {
     if (!server) return
-    setLoading(true)
     setError(null)
     try {
       const status = await fetchTypeScriptSetupStatus(server.ip, server.port)
@@ -45,10 +31,18 @@ export default function DetectStep({ dispatch }: Props) {
       const message = err instanceof Error ? err.message : 'Failed to check TypeScript status'
       setError(message)
       dispatch({ type: 'STEP_FAILED', step: 'detect', error: message })
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [dispatch, server])
+
+  useEffect(() => {
+    detect()
+  }, [detect])
+
+  useEffect(() => {
+    if (statusResult) {
+      dispatch({ type: 'DETECTION_COMPLETE', tsStatus: statusResult })
+    }
+  }, [dispatch, statusResult])
 
   if (error) {
     return (
@@ -67,16 +61,14 @@ export default function DetectStep({ dispatch }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <TypeScriptSetupAnimation onComplete={() => setAnimationDone(true)} />
+    <View style={styles.center}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Checking TypeScript setup...</Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -100,5 +92,9 @@ const styles = StyleSheet.create({
   retryText: {
     ...typographyScale.sm,
     fontWeight: '600',
+  },
+  loadingText: {
+    ...typographyScale.sm,
+    textAlign: 'center',
   },
 })

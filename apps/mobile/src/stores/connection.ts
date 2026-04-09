@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { ConnectionStatus } from '../services/websocket'
 import { PocketDevWebSocket } from '../services/websocket'
 import { buildWsUrl, unpairFromServer, setSecureMode } from '../services/api'
-import { getServer, clearAll, savePrerequisitesReport, type StoredServer } from '../services/storage'
+import { getServer, clearAll, type StoredServer } from '../services/storage'
 import type { WsMessage } from '@pocketdev/shared/types'
 import { useTaskStore } from './tasks'
 import { useContainerStore } from './containers'
@@ -59,7 +59,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         set({ status })
         if (status === 'connected') {
           useNewTaskDraftStore.getState().loadCapabilities()
-          void useTaskStore.getState().refreshFromServer().catch(() => {})
+          useTaskStore.getState().refreshFromServer().catch(() => {})
         }
       },
       (message: WsMessage) => handleWsMessage(message),
@@ -85,6 +85,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     if (server) {
       unpairFromServer(server.ip, server.port)
     }
+    useSetupStore.getState().resetForUnpair(server?.deviceId).catch(() => {})
     clearAll()
     set({ ws: null, server: null, status: 'disconnected' })
   },
@@ -134,12 +135,7 @@ function handleWsMessage(message: WsMessage) {
       containers.handleLogsStopped(message.payload as any)
       break
     case 'setup.prerequisites_result':
-      savePrerequisitesReport(message.payload)
-      useSetupStore.setState({
-        report: message.payload as any,
-        loading: false,
-      })
-      useNewTaskDraftStore.getState().loadCapabilities()
+      useSetupStore.getState().applyLiveReport(message.payload as any).catch(() => {})
       break
     case 'plan.proposed':
       usePlanStore.getState().handlePlanProposed(message.payload as any)

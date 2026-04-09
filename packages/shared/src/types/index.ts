@@ -133,6 +133,11 @@ export type {
   GitCommitRequest,
   GitErrorResponse,
   GitMutationResult,
+  GitCommitFileEntry,
+  GitDetailedCommitEntry,
+  GitHistorySyncStatus,
+  GitHistorySyncResult,
+  GitDetailedHistoryResponse,
 } from './git.js'
 export type {
   TreeEntry,

@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react'
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
-import { Assets } from '../../../../assets'
-import { Package, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
+import { ArrowRight, Package, RefreshCw } from 'lucide-react-native'
+import SetupCommandCard from '../shared/SetupCommandCard'
+import SetupProgressCard from '../shared/SetupProgressCard'
+import SetupTerminalPanel from '../shared/SetupTerminalPanel'
 
 const PPA_COMMANDS = [
   'sudo apt update',
@@ -25,7 +27,7 @@ interface Props {
 }
 
 export default function AddPpaStep({ dispatch }: Props) {
-  const { colors, isDark } = useTheme()
+  const { colors } = useTheme()
   const [started, setStarted] = useState(false)
   const [success, setSuccess] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
@@ -78,18 +80,10 @@ export default function AddPpaStep({ dispatch }: Props) {
       {/* Info card — before starting */}
       {!started && (
         <>
-          <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              Ubuntu's default repositories may not include the latest Python. The deadsnakes PPA is a trusted source maintained by the Python community for newer releases.
-            </Text>
-            <View style={styles.commandList}>
-              {PPA_COMMANDS.map((cmd, i) => (
-                <Text key={i} style={[styles.commandText, { color: colors.textTertiary }]}>
-                  $ {cmd}
-                </Text>
-              ))}
-            </View>
-          </View>
+          <SetupCommandCard
+            description="Ubuntu's default repositories may not include the latest Python. The deadsnakes PPA is a trusted source maintained by the Python community for newer releases."
+            commands={PPA_COMMANDS}
+          />
 
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -107,55 +101,23 @@ export default function AddPpaStep({ dispatch }: Props) {
         <>
           {/* Status message */}
           {!success && !hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
-              <Text style={[styles.statusText, { color: colors.primary }]}>
-                Setting up deadsnakes PPA...
-              </Text>
-            </View>
+            <SetupProgressCard tone="running" message="Setting up deadsnakes PPA..." />
           )}
 
           {success && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: '#22c55e' }]}>
-              <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
-              <Text style={[styles.statusText, { color: '#22c55e' }]}>
-                PPA added successfully
-              </Text>
-            </View>
+            <SetupProgressCard tone="success" message="PPA added successfully" />
           )}
 
           {hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-              <Text style={[styles.statusText, { color: colors.error }]}>
-                Failed to add PPA
-              </Text>
-            </View>
+            <SetupProgressCard tone="error" message="Failed to add PPA" />
           )}
 
-          {/* Collapsible terminal output */}
-          <TouchableOpacity
-            style={[styles.outputToggle, { borderColor: colors.border }]}
-            onPress={() => setShowOutput(!showOutput)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-              Terminal output
-            </Text>
-            {showOutput
-              ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
-              : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
-          </TouchableOpacity>
-
-          {showOutput && (
-            <ScrollView
-              ref={scrollRef}
-              style={[styles.outputBox, { backgroundColor: colors.background }]}
-              nestedScrollEnabled
-            >
-              <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                {output || 'Waiting for output...'}
-              </Text>
-            </ScrollView>
-          )}
+          <SetupTerminalPanel
+            visible={showOutput}
+            onToggle={() => setShowOutput(!showOutput)}
+            output={output}
+            scrollRef={scrollRef}
+          />
 
           {/* Actions */}
           {success && (

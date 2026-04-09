@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image, ActivityIndicator } from 'react-native'
 import { useTheme } from '../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale, palette } from '@pocketdev/shared/theme'
+import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../stores/setup'
 import SetupChecklist from '../components/setup/SetupChecklist'
 import InstallSheet from '../components/setup/InstallSheet'
@@ -39,11 +39,18 @@ type Props = {
 export default function ServerSetupScreen({ navigation }: Props) {
   const { colors, isDark } = useTheme()
   const report = useSetupStore((s) => s.report)
+  const hydrated = useSetupStore((s) => s.hydrated)
+  const revalidating = useSetupStore((s) => s.revalidating)
+  const reportSource = useSetupStore((s) => s.reportSource)
+  const hasLiveConfirmation = useSetupStore((s) => s.hasLiveConfirmation)
   const bauhaus = palette.bauhaus
   const codexBlockedReason = getCodexBlockedReason(report)
   const copilotBlockedReason = getCopilotBlockedReason(report)
   const setupStatus = getServerSetupStatus(report)
   const setupProgress = getSetupProgress(report)
+  const showingCachedSetup = !!report && revalidating && reportSource === 'cache'
+  const checkingSetup = !hydrated || revalidating
+  const canContinue = setupStatus.ready && hasLiveConfirmation && !revalidating
   const scrollY = React.useRef(new Animated.Value(0)).current
 
   const [installTool, setInstallTool] = useState<ToolCheck | null>(null)
@@ -337,6 +344,17 @@ export default function ServerSetupScreen({ navigation }: Props) {
     typescript: { light: Assets.typescriptBlack, dark: Assets.typescriptWhite },
   }
 
+  const workspaceStateLabel =
+    !hydrated || (!report && revalidating)
+      ? 'Checking…'
+      : showingCachedSetup
+        ? 'Checking…'
+        : revalidating
+          ? 'Refreshing'
+          : setupStatus.ready
+            ? 'Ready'
+            : 'In Progress'
+
   return (
     <AnimatedGradientBackground colors={colors} isDark={isDark} variant="setup">
       <View style={styles.container}>
@@ -367,15 +385,23 @@ export default function ServerSetupScreen({ navigation }: Props) {
               style={[
                 styles.statusBlock,
                 {
-                  backgroundColor: setupStatus.ready ? bauhaus.yellow : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(26,26,26,0.05)'),
-                  borderColor: setupStatus.ready ? bauhaus.yellow : colors.border,
+                  backgroundColor: canContinue ? bauhaus.yellow : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(26,26,26,0.05)'),
+                  borderColor: canContinue ? bauhaus.yellow : colors.border,
                 },
               ]}
             >
-              <Text style={[styles.statusBlockLabel, { color: setupStatus.ready ? bauhaus.black : colors.textTertiary }]}>Workspace</Text>
-              <Text style={[styles.statusBlockValue, { color: setupStatus.ready ? bauhaus.black : colors.text }]}>
-                {setupStatus.ready ? 'Ready' : 'In Progress'}
-              </Text>
+              <Text style={[styles.statusBlockLabel, { color: canContinue ? bauhaus.black : colors.textTertiary }]}>Workspace</Text>
+              <View style={styles.statusBlockValueRow}>
+                {checkingSetup && (
+                  <ActivityIndicator
+                    size="small"
+                    color={canContinue ? bauhaus.black : colors.textTertiary}
+                  />
+                )}
+                <Text style={[styles.statusBlockValue, { color: canContinue ? bauhaus.black : colors.text }]}>
+                  {workspaceStateLabel}
+                </Text>
+              </View>
             </View>
             <View style={[styles.statusBlock, { backgroundColor: bauhaus.blue, borderColor: bauhaus.blue }]}>
               <Text style={[styles.statusBlockLabel, { color: 'rgba(255,255,255,0.72)' }]}>Mode</Text>
@@ -457,9 +483,16 @@ export default function ServerSetupScreen({ navigation }: Props) {
           <TouchableOpacity
             style={[
               styles.continueButton,
-              { backgroundColor: setupStatus.ready ? bauhaus.red : colors.border },
+              { backgroundColor: canContinue ? bauhaus.red : colors.border },
             ]}
             onPress={() => {
+              if (!hydrated || showingCachedSetup || (!hasLiveConfirmation && revalidating)) {
+                Alert.alert(
+                  'Checking workspace',
+                  'PocketDev is still confirming your workspace tools with the server. Please wait a moment.',
+                )
+                return
+              }
               if (!setupStatus.ready) {
                 setShowMissingDialogue(true)
                 return
@@ -679,6 +712,11 @@ const styles = StyleSheet.create({
   statusBlockValue: {
     ...typographyScale.base,
     fontWeight: '700',
+  },
+  statusBlockValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
   },
   progressSection: {
     marginTop: spacing[3],

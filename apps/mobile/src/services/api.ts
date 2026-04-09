@@ -18,6 +18,10 @@ import type {
   GitBranchEntry,
   GitMutationResult,
   GitErrorResponse,
+  GitDetailedCommitEntry,
+  GitDetailedHistoryResponse,
+  GitHistorySyncStatus,
+  GitHistorySyncResult,
   ListProjectsResponse,
   ProjectMutationResult,
   ProjectSummary,
@@ -434,6 +438,73 @@ export async function postGitCommit(ip: string, port: number, message: string) {
 
 export async function postGitPush(ip: string, port: number) {
   return postGitMutation(ip, port, 'push')
+}
+
+// ─── Repo History ──────────────────────────────────────
+
+export async function fetchDetailedHistory(
+  ip: string,
+  port: number,
+  limit = 50,
+  offset = 0,
+): Promise<GitDetailedHistoryResponse> {
+  const query = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+  const response = await fetch(apiUrl(ip, port, `/git/history/detailed?${query.toString()}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch detailed history (${response.status})`)
+  return response.json() as Promise<GitDetailedHistoryResponse>
+}
+
+export async function fetchFileHistory(
+  ip: string,
+  port: number,
+  path: string,
+  limit = 20,
+): Promise<GitDetailedCommitEntry[]> {
+  const query = new URLSearchParams({ path, limit: String(limit) })
+  const response = await fetch(apiUrl(ip, port, `/git/history/file?${query.toString()}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch file history (${response.status})`)
+  const data = (await response.json()) as { commits: GitDetailedCommitEntry[] }
+  return data.commits
+}
+
+export async function fetchTaskCommits(
+  ip: string,
+  port: number,
+  taskId: string,
+): Promise<GitDetailedCommitEntry[]> {
+  const response = await fetch(apiUrl(ip, port, `/git/history/task/${taskId}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch task commits (${response.status})`)
+  const data = (await response.json()) as { commits: GitDetailedCommitEntry[] }
+  return data.commits
+}
+
+export async function triggerHistorySync(
+  ip: string,
+  port: number,
+): Promise<GitHistorySyncResult> {
+  const response = await fetch(apiUrl(ip, port, '/git/history/sync'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to trigger history sync (${response.status})`)
+  return response.json() as Promise<GitHistorySyncResult>
+}
+
+export async function fetchHistorySyncStatus(
+  ip: string,
+  port: number,
+): Promise<GitHistorySyncStatus> {
+  const response = await fetch(apiUrl(ip, port, '/git/history/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch sync status (${response.status})`)
+  return response.json() as Promise<GitHistorySyncStatus>
 }
 
 // ─── Server Actions ──────────────────────────────────────

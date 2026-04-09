@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import type { PythonDebugInfo, RustDebugInfo, GoDebugInfo } from '#/lib/api'
+import type { PythonDebugInfo, RustDebugInfo, GoDebugInfo, TypeScriptDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Code, Copy, Check } from 'lucide-react'
 
@@ -9,6 +9,7 @@ interface Props {
   pythonInfo: PythonDebugInfo | null
   rustInfo: RustDebugInfo | null
   goInfo: GoDebugInfo | null
+  tsInfo: TypeScriptDebugInfo | null
 }
 
 function CopyableCommand({ command }: { command: string }) {
@@ -37,7 +38,7 @@ function CopyableCommand({ command }: { command: string }) {
   )
 }
 
-export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo }: Props) {
+export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo, tsInfo }: Props) {
   return (
     <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
       {/* Left sidebar: status summaries */}
@@ -158,6 +159,41 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo }: Props)
               <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
                 <p>GOPATH: {goInfo?.gopath ?? 'Not set'}</p>
                 <p>GOROOT: {goInfo?.goroot ?? 'Not set'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* TypeScript status */}
+        <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+          <div className="flex items-center gap-2">
+            <Code className="h-4 w-4 text-[#3178C6]" />
+            <p className="text-sm font-medium">TypeScript Compiler</p>
+          </div>
+          <div className="mt-4 space-y-3">
+            <div className={cn(
+              'rounded-[1.2rem] border border-white/8 p-4',
+              tsInfo?.installed ? 'bg-[#3178C6] text-white' : 'bg-white/6',
+            )}>
+              <p className={cn('text-[0.68rem] font-semibold uppercase tracking-[0.26em]',
+                tsInfo?.installed ? 'text-white/65' : 'text-[#f4f0e8]/45')}>
+                Status
+              </p>
+              <p className={cn('mt-2 text-3xl font-semibold',
+                tsInfo?.installed ? '' : 'text-red-400')}>
+                {tsInfo?.installed ? `v${tsInfo.version}` : 'Not Found'}
+              </p>
+              {tsInfo?.path && (
+                <p className={cn('mt-1 font-mono text-xs', tsInfo.installed ? 'text-white/70' : 'text-[#f4f0e8]/50')}>
+                  {tsInfo.path}
+                </p>
+              )}
+            </div>
+            <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">ts-node</p>
+              <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                <p>Installed: {tsInfo?.ts_node_installed ? 'Yes' : 'No'}</p>
+                <p>Version: {tsInfo?.ts_node_version ?? 'Unknown'}</p>
               </div>
             </div>
           </div>
@@ -377,6 +413,60 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo }: Props)
           ) : (
             <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
               No Go data. Refresh to load.
+            </div>
+          )}
+        </div>
+
+        {/* TypeScript details */}
+        <p className="mt-5 text-sm font-medium">TypeScript Installation Details</p>
+        <div className="mt-3 space-y-2">
+          {tsInfo ? (
+            <>
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">tsc</p>
+                    <p className="mt-1 font-mono text-xs text-[#f4f0e8]/50">{tsInfo.path ?? 'Not found'}</p>
+                  </div>
+                  <Badge variant="outline" className={cn('border-white/10',
+                    tsInfo.installed ? 'text-green-400' : 'text-red-400')}>
+                    {tsInfo.installed ? 'installed' : 'missing'}
+                  </Badge>
+                </div>
+                {tsInfo.version && (
+                  <div className="mt-2 text-xs text-[#f4f0e8]/60">
+                    <span>v{tsInfo.version}</span>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div><p className="text-sm font-medium">ts-node</p></div>
+                  <Badge variant="outline" className={cn('border-white/10',
+                    tsInfo.ts_node_installed ? 'text-green-400' : 'text-[#f4f0e8]/40')}>
+                    {tsInfo.ts_node_installed ? 'installed' : 'not found'}
+                  </Badge>
+                </div>
+                {tsInfo.ts_node_version && (
+                  <div className="mt-2 text-xs text-[#f4f0e8]/60">
+                    <span>v{tsInfo.ts_node_version}</span>
+                  </div>
+                )}
+              </div>
+
+              {!tsInfo.installed && (
+                <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Install Commands</p>
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs text-[#f4f0e8]/60">Install TypeScript:</p>
+                    <CopyableCommand command="npm install -g typescript" />
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+              No TypeScript data. Refresh to load.
             </div>
           )}
         </div>

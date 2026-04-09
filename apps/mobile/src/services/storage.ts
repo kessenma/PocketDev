@@ -25,7 +25,7 @@ const KEYS = {
   ONDEVICE_AI_MODEL_STATUS: 'ondeviceai.modelStatus',
   ONDEVICE_AI_DOWNLOADED_AT: 'ondeviceai.downloadedAt',
   ONDEVICE_AI_INDEX_CACHE_PREFIX: 'ondeviceai.indexCache',
-  PREREQUISITES_REPORT: 'setup.prerequisitesReport',
+  LEGACY_PREREQUISITES_REPORT: 'setup.prerequisitesReport',
 } as const
 
 // --- Keypair ---
@@ -251,18 +251,18 @@ export function saveCachedFileIndex(index: CachedFileIndex) {
 
 // --- Prerequisites Report ---
 
-export function savePrerequisitesReport(report: unknown) {
-  getStorage().set(KEYS.PREREQUISITES_REPORT, JSON.stringify(report))
-}
-
-export function getPrerequisitesReport(): unknown | null {
-  const raw = getStorage().getString(KEYS.PREREQUISITES_REPORT)
+export function getLegacyPrerequisitesReport(): unknown | null {
+  const raw = getStorage().getString(KEYS.LEGACY_PREREQUISITES_REPORT)
   if (!raw) return null
   try {
     return JSON.parse(raw)
   } catch {
     return null
   }
+}
+
+export function clearLegacyPrerequisitesReport() {
+  getStorage().remove(KEYS.LEGACY_PREREQUISITES_REPORT)
 }
 
 // --- Clear All ---
@@ -272,7 +272,7 @@ export function clearAll() {
   clearServer()
   getStorage().remove(KEYS.RECENT_PROMPTS)
   getStorage().remove(KEYS.NEW_TASK_DRAFT)
-  getStorage().remove(KEYS.PREREQUISITES_REPORT)
+  getStorage().remove(KEYS.LEGACY_PREREQUISITES_REPORT)
 }
 
 // --- Helpers ---

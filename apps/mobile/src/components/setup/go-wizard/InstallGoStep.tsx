@@ -7,9 +7,11 @@ import { useConnectionStore } from '../../../stores/connection'
 import { fetchGoSetupStatus, fetchGoInstallCommand } from '../../../services/api'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
-import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight, Check } from 'lucide-react-native'
-import CopyButton from '../../shared/CopyButton'
+import { ArrowRight, Check, Download, RefreshCw } from 'lucide-react-native'
 import type { GoSetupStatus } from '@pocketdev/shared/types'
+import SetupCommandCard from '../shared/SetupCommandCard'
+import SetupProgressCard from '../shared/SetupProgressCard'
+import SetupTerminalPanel from '../shared/SetupTerminalPanel'
 
 const DISPLAY_CMD = 'apt-get install -y golang-go'
 const DONE_MARKER = '__GO_INSTALL_DONE__'
@@ -126,16 +128,14 @@ export default function InstallGoStep({ dispatch }: Props) {
       {!started && (
         <>
           {!existingGo && (
-            <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                This will install the <Text style={styles.mono}>go</Text> toolchain via apt.
-              </Text>
-              <View style={styles.commandList}>
-                <Text style={[styles.commandText, { color: colors.textTertiary }]}>
-                  $ {DISPLAY_CMD}
-                </Text>
-              </View>
-            </View>
+            <SetupCommandCard
+              description={(
+                <>
+                  This will install the <Text style={styles.mono}>go</Text> toolchain via apt.
+                </>
+              )}
+              commands={[DISPLAY_CMD]}
+            />
           )}
 
           {existingGo ? (
@@ -173,57 +173,23 @@ export default function InstallGoStep({ dispatch }: Props) {
       {started && (
         <>
           {!success && !hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
-              <Text style={[styles.statusText, { color: colors.primary }]}>
-                Installing Go...
-              </Text>
-            </View>
+            <SetupProgressCard tone="running" message="Installing Go..." />
           )}
 
           {success && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: '#22c55e' }]}>
-              <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
-              <Text style={[styles.statusText, { color: '#22c55e' }]}>
-                Go installed
-              </Text>
-            </View>
+            <SetupProgressCard tone="success" message="Go installed" />
           )}
 
           {hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-              <Text style={[styles.statusText, { color: colors.error }]}>
-                Installation failed
-              </Text>
-            </View>
+            <SetupProgressCard tone="error" message="Installation failed" />
           )}
 
-          <TouchableOpacity
-            style={[styles.outputToggle, { borderColor: colors.border }]}
-            onPress={() => setShowOutput(!showOutput)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-              Terminal output
-            </Text>
-            {showOutput
-              ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
-              : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
-          </TouchableOpacity>
-
-          {showOutput && (
-            <>
-              <ScrollView
-                ref={scrollRef}
-                style={[styles.outputBox, { backgroundColor: colors.background }]}
-                nestedScrollEnabled
-              >
-                <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                  {output || 'Waiting for output...'}
-                </Text>
-              </ScrollView>
-              {output ? <CopyButton value={output} label="Copy output" /> : null}
-            </>
-          )}
+          <SetupTerminalPanel
+            visible={showOutput}
+            onToggle={() => setShowOutput(!showOutput)}
+            output={output}
+            scrollRef={scrollRef}
+          />
 
           {success && (
             <TouchableOpacity

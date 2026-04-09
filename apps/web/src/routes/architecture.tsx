@@ -7,6 +7,7 @@ import { HeroLaptopOverlay } from '#/components/architecture/animations/hero-seq
 import {
   AgentEndpointsSection,
   HowPocketDevWorksSection,
+  RepoHistoryTransitionSection,
   SecurityModelSection,
   SetupReadinessSection,
   SystemOverviewSection,
@@ -23,18 +24,20 @@ export const Route = createFileRoute('/architecture')({
   component: ArchitecturePage,
 })
 
+const PAPER = '#f7f1e3'
+
 function ArchitecturePage() {
   const howItWorksRef = useRef<HTMLDivElement>(null)
   const [heroProgress, setHeroProgress] = useState(0)
   const [lowerPageTakeoverProgress, setLowerPageTakeoverProgress] = useState(0)
   const lowerPageStyle: CSSProperties & Record<string, string | number> = {
-    '--architecture-paper': blendHexColors('#f7f1e3', architectureTokens.colors.blue, lowerPageTakeoverProgress),
-    '--architecture-panel-alt': blendHexColors('#efe5cb', architectureTokens.colors.blue, Math.min(1, lowerPageTakeoverProgress * 1.12)),
-    '--architecture-text': blendHexColors('#201d18', '#ffffff', lowerPageTakeoverProgress),
-    '--architecture-text-secondary': blendHexColors('#5c5549', '#dbeafe', lowerPageTakeoverProgress),
-    '--architecture-border': blendHexColors('#b7aa91', '#93c5fd', lowerPageTakeoverProgress),
-    '--architecture-surface': `rgba(255,255,255, ${0.02 + lowerPageTakeoverProgress * 0.06})`,
-    backgroundColor: blendHexColors('#f7f1e3', architectureTokens.colors.blue, lowerPageTakeoverProgress),
+    '--architecture-paper': blendHexColors(architectureTokens.colors.blue, PAPER, lowerPageTakeoverProgress),
+    '--architecture-panel-alt': blendHexColors(architectureTokens.colors.blue, '#efe5cb', lowerPageTakeoverProgress),
+    '--architecture-text': blendHexColors('#ffffff', '#201d18', lowerPageTakeoverProgress),
+    '--architecture-text-secondary': blendHexColors('#dbeafe', '#5c5549', lowerPageTakeoverProgress),
+    '--architecture-border': blendHexColors('#93c5fd', '#b7aa91', lowerPageTakeoverProgress),
+    '--architecture-surface': `rgba(255,255,255, ${0.08 - lowerPageTakeoverProgress * 0.06})`,
+    backgroundColor: blendHexColors(architectureTokens.colors.blue, PAPER, lowerPageTakeoverProgress),
   }
 
   return (
@@ -53,10 +56,9 @@ function ArchitecturePage() {
 
       <HeroLaptopOverlay heroProgress={heroProgress} howItWorksRef={howItWorksRef} />
 
-      <HowPocketDevWorksSection
-        sectionRef={howItWorksRef}
-        onLowerPageTakeoverChange={setLowerPageTakeoverProgress}
-      />
+      <HowPocketDevWorksSection sectionRef={howItWorksRef} />
+
+      <RepoHistoryTransitionSection onTransitionProgress={setLowerPageTakeoverProgress} />
 
       <div style={lowerPageStyle}>
         <SystemOverviewSection />

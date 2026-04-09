@@ -1,11 +1,15 @@
-import React, { useState } from 'react'
-import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
+import React, { useState, useRef } from 'react'
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
+import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import { postVerifyTypeScript } from '../../../services/api'
 import { Assets } from '../../../../assets'
-import { Check, RefreshCw, CheckCircle, XCircle } from 'lucide-react-native'
+import { ArrowRight, Check, RefreshCw, XCircle } from 'lucide-react-native'
+import CopyButton from '../../shared/CopyButton'
+import SetupProgressCard from '../shared/SetupProgressCard'
+import SetupTerminalPanel from '../shared/SetupTerminalPanel'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'verify' }
@@ -17,6 +21,8 @@ interface Props {
 
 type VerifyState = 'idle' | 'loading' | 'success' | 'failed'
 
+const DIAG_CMD = 'echo "--- which tsc ---" && which tsc 2>&1; echo "--- tsc --version ---" && tsc --version 2>&1; echo "--- npm list -g typescript ---" && npm list -g typescript 2>&1; echo "--- echo $PATH ---" && echo $PATH'
+
 export default function VerifyStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
   const server = useConnectionStore((s) => s.server)
@@ -26,14 +32,37 @@ export default function VerifyStep({ dispatch }: Props) {
   const [tsNodeInstalled, setTsNodeInstalled] = useState(false)
   const [tsNodeVersion, setTsNodeVersion] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [rawResponse, setRawResponse] = useState<string | null>(null)
+  const [showOutput, setShowOutput] = useState(false)
+  const [diagRan, setDiagRan] = useState(false)
+  const scrollRef = useRef<ScrollView>(null)
+
+  const {
+    output: diagOutput,
+    sendCommand,
+  } = useTerminalCommand({
+    persistent: true,
+    errorPatterns: [],
+    onOutput: () => {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
+    },
+  })
 
   async function handleVerify() {
     if (!server) return
     setState('loading')
     setError(null)
+    setRawResponse(null)
+
+    // Run diagnostic terminal command alongside the API call for visibility
+    if (!diagRan) {
+      sendCommand(DIAG_CMD)
+      setDiagRan(true)
+    }
 
     try {
       const result = await postVerifyTypeScript(server.ip, server.port)
+      setRawResponse(JSON.stringify(result, null, 2))
       setVersion(result.version)
       setPath(result.path)
       setTsNodeInstalled(result.ts_node_installed)
@@ -43,16 +72,18 @@ export default function VerifyStep({ dispatch }: Props) {
         setState('success')
       } else {
         setState('failed')
-        setError('tsc binary not detected. Try going back and re-running the install step.')
+        setShowOutput(true)
+        setError('tsc binary not detected. Check the terminal output below for details.')
       }
     } catch (err) {
       setState('failed')
+      setShowOutput(true)
       setError(err instanceof Error ? err.message : 'Verification failed')
     }
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.center}>
         {state === 'idle' && (
           <Image
@@ -63,16 +94,6 @@ export default function VerifyStep({ dispatch }: Props) {
         )}
         {state === 'loading' && (
           <ActivityIndicator size="large" color={colors.primary} />
-        )}
-        {state === 'success' && (
-          <View style={[styles.resultIcon, { backgroundColor: '#22c55e20' }]}>
-            <CheckCircle color="#22c55e" size={40} strokeWidth={1.5} />
-          </View>
-        )}
-        {state === 'failed' && (
-          <View style={[styles.resultIcon, { backgroundColor: colors.error + '20' }]}>
-            <XCircle color={colors.error} size={40} strokeWidth={1.5} />
-          </View>
         )}
 
         <Text style={[styles.title, { color: colors.text }]}>
@@ -88,6 +109,16 @@ export default function VerifyStep({ dispatch }: Props) {
             state === 'failed' ? 'TypeScript could not be verified.' :
             'Confirm that the TypeScript compiler is properly installed.'}
         </Text>
+
+        {state === 'loading' && (
+          <SetupProgressCard tone="running" message="Checking tsc binary..." />
+        )}
+        {state === 'success' && (
+          <SetupProgressCard tone="success" message="TypeScript compiler is installed and working." />
+        )}
+        {state === 'failed' && (
+          <SetupProgressCard tone="error" message="TypeScript could not be verified." />
+        )}
 
         {state === 'success' && (
           <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -105,7 +136,27 @@ export default function VerifyStep({ dispatch }: Props) {
         {state === 'failed' && error && (
           <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
         )}
+
+        {/* Raw API response on failure */}
+        {state === 'failed' && rawResponse && (
+          <View style={[styles.rawCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.rawLabel, { color: colors.textTertiary }]}>API Response</Text>
+            <Text style={[styles.rawText, { color: colors.textSecondary }]} selectable>{rawResponse}</Text>
+            <CopyButton value={rawResponse} label="Copy response" />
+          </View>
+        )}
       </View>
+
+      {/* Terminal diagnostic output */}
+      {diagRan && (
+        <SetupTerminalPanel
+          visible={showOutput}
+          onToggle={() => setShowOutput(!showOutput)}
+          output={diagOutput}
+          scrollRef={scrollRef}
+          label="Terminal diagnostics"
+        />
+      )}
 
       {state === 'idle' && (
         <TouchableOpacity
@@ -124,6 +175,7 @@ export default function VerifyStep({ dispatch }: Props) {
           activeOpacity={0.7}
         >
           <Text style={[styles.buttonText, { color: colors.primaryText }]}>Continue</Text>
+          <ArrowRight color={colors.primaryText} size={16} strokeWidth={2.25} />
         </TouchableOpacity>
       )}
 
@@ -137,7 +189,7 @@ export default function VerifyStep({ dispatch }: Props) {
           <Text style={[styles.buttonText, { color: colors.primaryText }]}>Retry</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </ScrollView>
   )
 }
 
@@ -185,14 +237,16 @@ const detailStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    gap: spacing[4],
+  },
+  contentContainer: {
+    gap: spacing[3],
+    paddingBottom: spacing[6],
   },
   center: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
     gap: spacing[3],
     paddingHorizontal: spacing[4],
+    paddingTop: spacing[6],
   },
   logo: {
     width: 48,
@@ -227,6 +281,48 @@ const styles = StyleSheet.create({
     ...typographyScale.sm,
     textAlign: 'center',
     marginTop: spacing[1],
+  },
+  rawCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[2],
+    marginTop: spacing[2],
+  },
+  rawLabel: {
+    ...typographyScale.xs,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  rawText: {
+    ...typographyScale.xs,
+    fontFamily: 'monospace',
+    lineHeight: 16,
+  },
+  outputToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+  },
+  outputToggleText: {
+    ...typographyScale.xs,
+    fontWeight: '500',
+  },
+  outputBox: {
+    maxHeight: 200,
+    borderRadius: borderRadius.md,
+    padding: spacing[3],
+  },
+  outputText: {
+    ...typographyScale.xs,
+    fontFamily: 'monospace',
+    lineHeight: 16,
   },
   actionButton: {
     flexDirection: 'row',

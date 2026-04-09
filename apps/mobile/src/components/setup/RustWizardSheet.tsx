@@ -1,4 +1,4 @@
-import React, { useReducer, useCallback } from 'react'
+import React, { useReducer, useCallback, useEffect, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, StyleSheet, Modal, SafeAreaView } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
@@ -10,6 +10,7 @@ import DetectStep from './rust-wizard/DetectStep'
 import InstallRustupStep from './rust-wizard/InstallRustupStep'
 import VerifyStep from './rust-wizard/VerifyStep'
 import type { RustSetupStatus, RustWizardStep, RustWizardStepStatus } from '@pocketdev/shared/types'
+import RustSetupAnimation from '../animations/RustSetupAnimation'
 
 interface Props {
   visible: boolean
@@ -157,6 +158,13 @@ export default function RustWizardSheet({ visible, onClose, onComplete }: Props)
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
+  const [completionAnimationDone, setCompletionAnimationDone] = useState(false)
+
+  useEffect(() => {
+    if (!visible) {
+      setCompletionAnimationDone(false)
+    }
+  }, [visible])
 
   const handleClose = useCallback(() => {
     fetchPrerequisites()
@@ -168,10 +176,17 @@ export default function RustWizardSheet({ visible, onClose, onComplete }: Props)
     onComplete()
   }, [fetchPrerequisites, onComplete])
 
-  const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
+  const currentIndex = ALL_STEPS.indexOf(state.currentStep)
+  const hasPrevStep = currentIndex > 1 && ALL_STEPS.slice(1, currentIndex).some(
+    (s) => state.stepStatuses[s] === 'completed' || state.stepStatuses[s] === 'active',
+  )
+  const canGoBack = hasPrevStep && !state.allConfigured
 
   function renderStep() {
     if (state.allConfigured) {
+      if (!completionAnimationDone) {
+        return <RustSetupAnimation onComplete={() => setCompletionAnimationDone(true)} />
+      }
       return (
         <View style={styles.completedContainer}>
           <View style={[styles.completedIcon, { backgroundColor: colors.primary }]}>
@@ -239,7 +254,7 @@ export default function RustWizardSheet({ visible, onClose, onComplete }: Props)
         <View style={styles.content}>{renderStep()}</View>
 
         {/* Footer */}
-        {state.allConfigured && (
+        {state.allConfigured && completionAnimationDone && (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}

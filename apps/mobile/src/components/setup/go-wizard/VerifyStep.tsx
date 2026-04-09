@@ -1,11 +1,15 @@
-import React, { useState } from 'react'
-import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
+import React, { useRef, useState } from 'react'
+import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
+import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import { postVerifyGo } from '../../../services/api'
 import { Assets } from '../../../../assets'
-import { Check, RefreshCw, CheckCircle, XCircle } from 'lucide-react-native'
+import { ArrowRight, Check, RefreshCw, XCircle } from 'lucide-react-native'
+import CopyButton from '../../shared/CopyButton'
+import SetupProgressCard from '../shared/SetupProgressCard'
+import SetupTerminalPanel from '../shared/SetupTerminalPanel'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'verify' }
@@ -17,6 +21,8 @@ interface Props {
 
 type VerifyState = 'idle' | 'loading' | 'success' | 'failed'
 
+const DIAG_CMD = 'echo "--- go version ---" && go version 2>&1; echo "--- go env GOPATH GOROOT ---" && go env GOPATH GOROOT 2>&1; echo "--- which go ---" && which go 2>&1; echo "--- echo $PATH ---" && echo $PATH'
+
 export default function VerifyStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
   const server = useConnectionStore((s) => s.server)
@@ -26,14 +32,33 @@ export default function VerifyStep({ dispatch }: Props) {
   const [gopath, setGopath] = useState<string | null>(null)
   const [goroot, setGoroot] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [rawResponse, setRawResponse] = useState<string | null>(null)
+  const [showOutput, setShowOutput] = useState(false)
+  const [diagRan, setDiagRan] = useState(false)
+  const scrollRef = useRef<ScrollView>(null)
+
+  const { output: diagOutput, sendCommand } = useTerminalCommand({
+    persistent: true,
+    errorPatterns: [],
+    onOutput: () => {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
+    },
+  })
 
   async function handleVerify() {
     if (!server) return
     setState('loading')
     setError(null)
+    setRawResponse(null)
+
+    if (!diagRan) {
+      sendCommand(DIAG_CMD)
+      setDiagRan(true)
+    }
 
     try {
       const result = await postVerifyGo(server.ip, server.port)
+      setRawResponse(JSON.stringify(result, null, 2))
       setVersion(result.version)
       setPath(result.path)
       setGopath(result.gopath)
@@ -43,10 +68,12 @@ export default function VerifyStep({ dispatch }: Props) {
         setState('success')
       } else {
         setState('failed')
+        setShowOutput(true)
         setError('Go binary not detected. Try going back and re-running the install step.')
       }
     } catch (err) {
       setState('failed')
+      setShowOutput(true)
       setError(err instanceof Error ? err.message : 'Verification failed')
     }
   }
@@ -60,19 +87,6 @@ export default function VerifyStep({ dispatch }: Props) {
             style={styles.logo}
             resizeMode="contain"
           />
-        )}
-        {state === 'loading' && (
-          <ActivityIndicator size="large" color={colors.primary} />
-        )}
-        {state === 'success' && (
-          <View style={[styles.resultIcon, { backgroundColor: '#22c55e20' }]}>
-            <CheckCircle color="#22c55e" size={40} strokeWidth={1.5} />
-          </View>
-        )}
-        {state === 'failed' && (
-          <View style={[styles.resultIcon, { backgroundColor: colors.error + '20' }]}>
-            <XCircle color={colors.error} size={40} strokeWidth={1.5} />
-          </View>
         )}
 
         <Text style={[styles.title, { color: colors.text }]}>
@@ -89,6 +103,16 @@ export default function VerifyStep({ dispatch }: Props) {
             'Confirm that the Go toolchain is properly installed.'}
         </Text>
 
+        {state === 'loading' && (
+          <SetupProgressCard tone="running" message="Checking go binary..." />
+        )}
+        {state === 'success' && (
+          <SetupProgressCard tone="success" message="Go toolchain is installed and working." />
+        )}
+        {state === 'failed' && (
+          <SetupProgressCard tone="error" message="Go could not be verified." />
+        )}
+
         {state === 'success' && (
           <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <DetailRow label="go" value={version ? `v${version}` : 'installed'} ok colors={colors} />
@@ -101,7 +125,25 @@ export default function VerifyStep({ dispatch }: Props) {
         {state === 'failed' && error && (
           <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
         )}
+
+        {state === 'failed' && rawResponse && (
+          <View style={[styles.rawCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.rawLabel, { color: colors.textTertiary }]}>API Response</Text>
+            <Text style={[styles.rawText, { color: colors.textSecondary }]} selectable>{rawResponse}</Text>
+            <CopyButton value={rawResponse} label="Copy response" />
+          </View>
+        )}
       </View>
+
+      {diagRan && (
+        <SetupTerminalPanel
+          visible={showOutput}
+          onToggle={() => setShowOutput(!showOutput)}
+          output={diagOutput}
+          scrollRef={scrollRef}
+          label="Terminal diagnostics"
+        />
+      )}
 
       {state === 'idle' && (
         <TouchableOpacity
@@ -120,6 +162,7 @@ export default function VerifyStep({ dispatch }: Props) {
           activeOpacity={0.7}
         >
           <Text style={[styles.buttonText, { color: colors.primaryText }]}>Continue</Text>
+          <ArrowRight color={colors.primaryText} size={16} strokeWidth={2.25} />
         </TouchableOpacity>
       )}
 
@@ -195,14 +238,6 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: spacing[2],
   },
-  resultIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing[2],
-  },
   title: {
     ...typographyScale.xl,
     fontWeight: '700',
@@ -222,15 +257,32 @@ const styles = StyleSheet.create({
   errorText: {
     ...typographyScale.sm,
     textAlign: 'center',
-    marginTop: spacing[1],
+  },
+  rawCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  rawLabel: {
+    ...typographyScale.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  rawText: {
+    ...typographyScale.xs,
+    fontFamily: 'monospace',
   },
   actionButton: {
-    flexDirection: 'row',
+    width: '100%',
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing[4],
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
     gap: spacing[2],
-    paddingVertical: spacing[4],
-    borderRadius: borderRadius.lg,
   },
   buttonText: {
     ...typographyScale.base,

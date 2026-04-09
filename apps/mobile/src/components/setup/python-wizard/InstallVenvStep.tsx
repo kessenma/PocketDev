@@ -4,7 +4,10 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
-import { FolderOpen, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
+import { ArrowRight, FolderOpen, RefreshCw } from 'lucide-react-native'
+import SetupCommandCard from '../shared/SetupCommandCard'
+import SetupProgressCard from '../shared/SetupProgressCard'
+import SetupTerminalPanel from '../shared/SetupTerminalPanel'
 
 const DONE_MARKER = '__VENV_DONE__'
 
@@ -70,14 +73,10 @@ export default function InstallVenvStep({ dispatch, pythonBin }: Props) {
       {/* Info card — before starting */}
       {!started && (
         <>
-          <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              The venv module lets you create self-contained Python environments for each project, keeping dependencies isolated.
-            </Text>
-            <Text style={[styles.commandText, { color: colors.textTertiary }]}>
-              $ {INSTALL_COMMAND}
-            </Text>
-          </View>
+          <SetupCommandCard
+            description="The venv module lets you create self-contained Python environments for each project, keeping dependencies isolated."
+            commands={[INSTALL_COMMAND]}
+          />
 
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -94,55 +93,23 @@ export default function InstallVenvStep({ dispatch, pythonBin }: Props) {
       {started && (
         <>
           {!success && !hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
-              <Text style={[styles.statusText, { color: colors.primary }]}>
-                Installing {pythonBin}-venv...
-              </Text>
-            </View>
+            <SetupProgressCard tone="running" message={`Installing ${pythonBin}-venv...`} />
           )}
 
           {success && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: '#22c55e' }]}>
-              <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
-              <Text style={[styles.statusText, { color: '#22c55e' }]}>
-                venv module installed
-              </Text>
-            </View>
+            <SetupProgressCard tone="success" message="venv module installed" />
           )}
 
           {hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-              <Text style={[styles.statusText, { color: colors.error }]}>
-                Installation failed
-              </Text>
-            </View>
+            <SetupProgressCard tone="error" message="Installation failed" />
           )}
 
-          {/* Collapsible terminal output */}
-          <TouchableOpacity
-            style={[styles.outputToggle, { borderColor: colors.border }]}
-            onPress={() => setShowOutput(!showOutput)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-              Terminal output
-            </Text>
-            {showOutput
-              ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
-              : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
-          </TouchableOpacity>
-
-          {showOutput && (
-            <ScrollView
-              ref={scrollRef}
-              style={[styles.outputBox, { backgroundColor: colors.background }]}
-              nestedScrollEnabled
-            >
-              <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                {output || 'Waiting for output...'}
-              </Text>
-            </ScrollView>
-          )}
+          <SetupTerminalPanel
+            visible={showOutput}
+            onToggle={() => setShowOutput(!showOutput)}
+            output={output}
+            scrollRef={scrollRef}
+          />
 
           {success && (
             <TouchableOpacity

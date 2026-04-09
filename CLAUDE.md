@@ -39,6 +39,7 @@ Deep-dive documentation lives in `docs/` — see each CLAUDE.md for links to rel
 - `docs/database/` — Agent migrations
 - `docs/app-icon/` — Shared icon generation pipeline (iOS, Android, web)
 - `docs/agent/update-system.md` — Self-update mechanism, version tracking, rollback
+- `docs/repo-history/` — Git history persistence, file embeddings, task-commit linkage, AI integration
 
 ## Key Commands
 

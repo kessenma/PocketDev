@@ -1,4 +1,4 @@
-import React, { useReducer, useCallback } from 'react'
+import React, { useReducer, useCallback, useEffect, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, StyleSheet, Modal, SafeAreaView } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
@@ -10,6 +10,7 @@ import DetectStep from './go-wizard/DetectStep'
 import InstallGoStep from './go-wizard/InstallGoStep'
 import VerifyStep from './go-wizard/VerifyStep'
 import type { GoSetupStatus, GoWizardStep, GoWizardStepStatus } from '@pocketdev/shared/types'
+import GoSetupAnimation from '../animations/GoSetupAnimation'
 
 interface Props {
   visible: boolean
@@ -156,6 +157,13 @@ export default function GoWizardSheet({ visible, onClose, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
+  const [completionAnimationDone, setCompletionAnimationDone] = useState(false)
+
+  useEffect(() => {
+    if (!visible) {
+      setCompletionAnimationDone(false)
+    }
+  }, [visible])
 
   const handleClose = useCallback(() => {
     fetchPrerequisites()
@@ -175,6 +183,9 @@ export default function GoWizardSheet({ visible, onClose, onComplete }: Props) {
 
   function renderStep() {
     if (state.allConfigured) {
+      if (!completionAnimationDone) {
+        return <GoSetupAnimation onComplete={() => setCompletionAnimationDone(true)} />
+      }
       return (
         <View style={styles.completedContainer}>
           <View style={[styles.completedIcon, { backgroundColor: colors.primary }]}>
@@ -247,7 +258,7 @@ export default function GoWizardSheet({ visible, onClose, onComplete }: Props) {
         <View style={styles.content}>{renderStep()}</View>
 
         {/* Footer */}
-        {state.allConfigured && (
+        {state.allConfigured && completionAnimationDone && (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}

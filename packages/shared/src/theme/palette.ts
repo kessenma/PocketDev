@@ -71,6 +71,7 @@ export const palette = {
     red: '#D93025',
     yellow: '#E8B83D',
     black: '#1a1a1a',
+    cream: '#f5f5dc',
   },
   // Brand backgrounds for tool setup animations
   brand: {

@@ -1,5 +1,6 @@
 export { AgentEndpointsSection } from './AgentEndpointsSection'
 export { HowPocketDevWorksSection } from './HowPocketDevWorks/HowPocketDevWorksSection'
+export { RepoHistoryTransitionSection } from './RepoHistoryTransitionSection'
 export { SecurityModelSection } from './SecurityModelSection'
 export { SetupReadinessSection } from './SetupReadinessSection'
 export { SystemOverviewSection } from './SystemOverviewSection'

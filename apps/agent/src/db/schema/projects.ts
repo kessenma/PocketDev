@@ -12,4 +12,5 @@ export const projects = sqliteTable('projects', {
   createdAt: text('created_at').default(sql`(datetime('now'))`),
   updatedAt: text('updated_at').default(sql`(datetime('now'))`),
   lastUsedAt: text('last_used_at'),
+  lastSyncedSha: text('last_synced_sha'),
 })

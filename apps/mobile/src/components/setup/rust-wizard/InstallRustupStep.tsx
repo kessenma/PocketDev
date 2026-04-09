@@ -3,14 +3,19 @@ import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'rea
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
+import { useConnectionStore } from '../../../stores/connection'
+import { postVerifyRust } from '../../../services/api'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
-import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
-import CopyButton from '../../shared/CopyButton'
+import { AlertTriangle, ArrowRight, Download, RefreshCw } from 'lucide-react-native'
+import SetupCommandCard from '../shared/SetupCommandCard'
+import SetupProgressCard from '../shared/SetupProgressCard'
+import SetupTerminalPanel from '../shared/SetupTerminalPanel'
 
 const INSTALL_CMD = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 const SOURCE_CMD = '( [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env" ) || true'
 const DONE_MARKER = '__RUSTUP_DONE__'
+const FAIL_MARKER = '__RUSTUP_FAILED__'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'install-rustup' }
@@ -20,30 +25,60 @@ interface Props {
   dispatch: (action: WizardAction) => void
 }
 
+type InstallState = 'idle' | 'installing' | 'verifying' | 'success' | 'install-failed' | 'verify-failed'
+
 export default function InstallRustupStep({ dispatch }: Props) {
   const { colors, isDark } = useTheme()
-  const [started, setStarted] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const server = useConnectionStore((s) => s.server)
+  const [installState, setInstallState] = useState<InstallState>('idle')
   const [showOutput, setShowOutput] = useState(false)
+  const [verifyError, setVerifyError] = useState<string | null>(null)
   const scrollRef = useRef<ScrollView>(null)
 
   const {
-    output, hasError, showSudoPrompt,
+    output, showSudoPrompt,
     sendCommand, submitSudoPassword, cancelSudoPrompt,
   } = useTerminalCommand({
     persistent: true,
-    errorPatterns: [/RUSTUP_FAILED/, /curl:.*error/im],
+    // No errorPatterns here — we detect success/failure in onOutput
+    // to avoid matching the echoed command text
     onOutput: (chunk) => {
-      if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
-        setSuccess(true)
+      // Filter out chunks that are just the echoed command
+      if (chunk.includes('echo')) return
+
+      if (chunk.includes(DONE_MARKER)) {
+        verifyAfterInstall()
+      } else if (chunk.includes(FAIL_MARKER)) {
+        setInstallState('install-failed')
       }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
     },
   })
 
+  async function verifyAfterInstall() {
+    if (!server) return
+    setInstallState('verifying')
+    try {
+      const result = await postVerifyRust(server.ip, server.port)
+      if (result.installed && result.cargo_installed) {
+        setInstallState('success')
+      } else {
+        const missing: string[] = []
+        if (!result.installed) missing.push('rustc')
+        if (!result.cargo_installed) missing.push('cargo')
+        setVerifyError(`Installed but not detected: ${missing.join(', ')}. The agent may need a PATH refresh.`)
+        setInstallState('verify-failed')
+      }
+    } catch {
+      setVerifyError('Could not verify installation with the agent.')
+      setInstallState('verify-failed')
+    }
+  }
+
   function handleStart() {
-    setStarted(true)
-    const fullCmd = `cd / && ( ${INSTALL_CMD} && ${SOURCE_CMD} ) && echo ${DONE_MARKER} || echo RUSTUP_FAILED`
+    setInstallState('installing')
+    setVerifyError(null)
+    const fullCmd = `cd / && ( ${INSTALL_CMD} && ${SOURCE_CMD} ) && echo ${DONE_MARKER} || echo ${FAIL_MARKER}`
     sendCommand(fullCmd)
   }
 
@@ -52,8 +87,8 @@ export default function InstallRustupStep({ dispatch }: Props) {
   }
 
   function handleRetry() {
-    setSuccess(false)
-    handleStart()
+    setInstallState('idle')
+    setVerifyError(null)
   }
 
   return (
@@ -71,19 +106,17 @@ export default function InstallRustupStep({ dispatch }: Props) {
         Install Rust via rustup, the official Rust toolchain installer.
       </Text>
 
-      {!started && (
+      {installState === 'idle' && (
         <>
-          <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              This will install <Text style={styles.mono}>rustc</Text>, <Text style={styles.mono}>cargo</Text>, and{' '}
-              <Text style={styles.mono}>rustup</Text> to <Text style={styles.mono}>~/.cargo/bin</Text>.
-            </Text>
-            <View style={styles.commandList}>
-              <Text style={[styles.commandText, { color: colors.textTertiary }]}>
-                $ {INSTALL_CMD}
-              </Text>
-            </View>
-          </View>
+          <SetupCommandCard
+            description={(
+              <>
+                This will install <Text style={styles.mono}>rustc</Text>, <Text style={styles.mono}>cargo</Text>, and{' '}
+                <Text style={styles.mono}>rustup</Text> to <Text style={styles.mono}>~/.cargo/bin</Text>.
+              </>
+            )}
+            commands={[INSTALL_CMD]}
+          />
 
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -96,62 +129,42 @@ export default function InstallRustupStep({ dispatch }: Props) {
         </>
       )}
 
-      {started && (
+      {installState !== 'idle' && (
         <>
-          {!success && !hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
-              <Text style={[styles.statusText, { color: colors.primary }]}>
-                Installing Rust...
-              </Text>
-            </View>
+          {installState === 'installing' && (
+            <SetupProgressCard tone="running" message="Installing Rust..." />
           )}
 
-          {success && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: '#22c55e' }]}>
-              <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
-              <Text style={[styles.statusText, { color: '#22c55e' }]}>
-                Rust installed
-              </Text>
-            </View>
+          {installState === 'verifying' && (
+            <SetupProgressCard tone="running" message="Verifying installation..." />
           )}
 
-          {hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-              <Text style={[styles.statusText, { color: colors.error }]}>
-                Installation failed
-              </Text>
-            </View>
+          {installState === 'success' && (
+            <SetupProgressCard tone="success" message="Rust installed and verified" />
           )}
 
-          <TouchableOpacity
-            style={[styles.outputToggle, { borderColor: colors.border }]}
-            onPress={() => setShowOutput(!showOutput)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-              Terminal output
+          {installState === 'install-failed' && (
+            <SetupProgressCard tone="error" message="Installation failed" />
+          )}
+
+          {installState === 'verify-failed' && (
+            <SetupProgressCard tone="warning" message="Installed but not detected" icon={AlertTriangle} />
+          )}
+
+          {verifyError && (
+            <Text style={[styles.verifyErrorText, { color: colors.textSecondary }]}>
+              {verifyError}
             </Text>
-            {showOutput
-              ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
-              : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
-          </TouchableOpacity>
-
-          {showOutput && (
-            <>
-              <ScrollView
-                ref={scrollRef}
-                style={[styles.outputBox, { backgroundColor: colors.background }]}
-                nestedScrollEnabled
-              >
-                <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                  {output || 'Waiting for output...'}
-                </Text>
-              </ScrollView>
-              {output ? <CopyButton value={output} label="Copy output" /> : null}
-            </>
           )}
 
-          {success && (
+          <SetupTerminalPanel
+            visible={showOutput}
+            onToggle={() => setShowOutput(!showOutput)}
+            output={output}
+            scrollRef={scrollRef}
+          />
+
+          {installState === 'success' && (
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
               onPress={handleContinue}
@@ -162,7 +175,7 @@ export default function InstallRustupStep({ dispatch }: Props) {
             </TouchableOpacity>
           )}
 
-          {hasError && (
+          {(installState === 'install-failed' || installState === 'verify-failed') && (
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.error }]}
               onPress={handleRetry}
@@ -237,6 +250,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     padding: spacing[4],
+  },
+  verifyErrorText: {
+    ...typographyScale.xs,
+    textAlign: 'center',
+    paddingHorizontal: spacing[2],
   },
   statusText: {
     ...typographyScale.sm,

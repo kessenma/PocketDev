@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchPythonSetupStatus } from '../../../services/api'
-import PythonSetupAnimation from '../../animations/PythonSetupAnimation'
 import { RefreshCw } from 'lucide-react-native'
 import type { PythonSetupStatus } from '@pocketdev/shared/types'
 
@@ -20,24 +19,10 @@ export default function DetectStep({ dispatch }: Props) {
   const { colors } = useTheme()
   const server = useConnectionStore((s) => s.server)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [animationDone, setAnimationDone] = useState(false)
   const [statusResult, setStatusResult] = useState<PythonSetupStatus | null>(null)
 
-  useEffect(() => {
-    detect()
-  }, [])
-
-  // Once both animation and API call are done, dispatch
-  useEffect(() => {
-    if (animationDone && statusResult) {
-      dispatch({ type: 'DETECTION_COMPLETE', pythonStatus: statusResult })
-    }
-  }, [animationDone, statusResult])
-
-  async function detect() {
+  const detect = useCallback(async () => {
     if (!server) return
-    setLoading(true)
     setError(null)
     try {
       const status = await fetchPythonSetupStatus(server.ip, server.port)
@@ -46,10 +31,18 @@ export default function DetectStep({ dispatch }: Props) {
       const message = err instanceof Error ? err.message : 'Failed to check Python status'
       setError(message)
       dispatch({ type: 'STEP_FAILED', step: 'detect', error: message })
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [dispatch, server])
+
+  useEffect(() => {
+    detect()
+  }, [detect])
+
+  useEffect(() => {
+    if (statusResult) {
+      dispatch({ type: 'DETECTION_COMPLETE', pythonStatus: statusResult })
+    }
+  }, [dispatch, statusResult])
 
   if (error) {
     return (
@@ -68,16 +61,14 @@ export default function DetectStep({ dispatch }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <PythonSetupAnimation onComplete={() => setAnimationDone(true)} />
+    <View style={styles.center}>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Checking Python setup...</Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -101,5 +92,9 @@ const styles = StyleSheet.create({
   retryText: {
     ...typographyScale.sm,
     fontWeight: '600',
+  },
+  loadingText: {
+    ...typographyScale.sm,
+    textAlign: 'center',
   },
 })

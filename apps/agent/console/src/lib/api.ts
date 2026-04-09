@@ -505,6 +505,22 @@ export async function fetchGoDebug(): Promise<GoDebugInfo> {
   return res.json()
 }
 
+// ─── TypeScript debug ──────────────────────────────────
+
+export interface TypeScriptDebugInfo {
+  installed: boolean
+  version: string | null
+  path: string | null
+  ts_node_installed: boolean
+  ts_node_version: string | null
+}
+
+export async function fetchTypeScriptDebug(): Promise<TypeScriptDebugInfo> {
+  const res = await get('/debug/typescript')
+  if (!res.ok) throw new Error('Failed to fetch TypeScript debug')
+  return res.json()
+}
+
 export interface RepoSummary {
   repoName: string
   repoPath: string

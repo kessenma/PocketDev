@@ -15,9 +15,17 @@ import {
   postGitCheckout,
   postGitCommit,
   postGitPush,
+  fetchDetailedHistory,
+  triggerHistorySync,
 } from '../services/api'
 import { useConnectionStore } from './connection'
-import type { GitSummary, GitBranchEntry } from '@pocketdev/shared/types'
+import type { GitSummary, GitBranchEntry, GitDetailedCommitEntry } from '@pocketdev/shared/types'
+import { getModuleDb } from '../db/DatabaseProvider'
+import {
+  upsertGitCommitsForProject,
+  getCachedGitCommits,
+  pruneOldCommits,
+} from '../db/gitHistoryOperations'
 
 type GitState = {
   repoName: string
@@ -27,18 +35,21 @@ type GitState = {
   commitMessage: string
   changes: GitFileChange[]
   commits: GitCommitEntry[]
+  detailedCommits: GitDetailedCommitEntry[]
   branches: GitBranchOption[]
   remote: GitRemoteState
   lastActionMessage: string
   isRefreshing: boolean
   isCommitting: boolean
   isPushing: boolean
+  isSyncing: boolean
   error: string | null
   selectView: (view: GitView) => void
   selectFile: (fileId: string) => void
   selectBranch: (branchName: string) => void
   updateCommitMessage: (message: string) => void
   refresh: () => void
+  syncHistory: () => void
   commit: () => void
   push: () => void
 }
@@ -111,12 +122,14 @@ export const useGitStore = create<GitState>((set, get) => ({
   commitMessage: '',
   changes: [],
   commits: [],
+  detailedCommits: [],
   branches: [],
   remote: emptyRemote,
   lastActionMessage: 'Pull to refresh to load git status from the server.',
   isRefreshing: false,
   isCommitting: false,
   isPushing: false,
+  isSyncing: false,
   error: null,
 
   selectView: (view) => set({ activeView: view }),
@@ -186,6 +199,19 @@ export const useGitStore = create<GitState>((set, get) => ({
       return
     }
 
+    // Load cached detailed commits from SQLite for instant display
+    const db = getModuleDb()
+    const currentRepoPath = get().repoPath
+    if (db && currentRepoPath && get().detailedCommits.length === 0) {
+      try {
+        const cached = await getCachedGitCommits(db, currentRepoPath, 50, 0)
+        if (cached.length > 0) {
+          set({ detailedCommits: cached })
+          console.log('[git] Loaded', cached.length, 'cached commits from SQLite')
+        }
+      } catch { /* non-fatal */ }
+    }
+
     set({ isRefreshing: true, lastActionMessage: 'Refreshing git status...', error: null })
 
     try {
@@ -210,12 +236,54 @@ export const useGitStore = create<GitState>((set, get) => ({
           ? `${changes.length} changes on ${branchName}.`
           : `Working tree is clean on ${branchName}.`,
       })
+
+      // Background: fetch detailed history and cache to SQLite
+      fetchDetailedHistory(server.ip, server.port, 50, 0)
+        .then(async (result) => {
+          set({ detailedCommits: result.commits })
+          if (db && summary.repoPath && result.commits.length > 0) {
+            await upsertGitCommitsForProject(db, summary.repoPath, result.commits)
+            await pruneOldCommits(db, summary.repoPath, 200)
+          }
+        })
+        .catch((e) => console.warn('[git] Background history fetch failed:', e))
     } catch (err) {
       set({
         isRefreshing: false,
         lastActionMessage: 'Failed to load git status.',
         error: err instanceof Error ? err.message : 'Failed to refresh',
       })
+    }
+  },
+
+  syncHistory: async () => {
+    if (get().isSyncing) return
+    const server = getServer()
+    if (!server) return
+
+    set({ isSyncing: true })
+    try {
+      // Trigger server-side sync first
+      await triggerHistorySync(server.ip, server.port)
+      // Fetch detailed history
+      const result = await fetchDetailedHistory(server.ip, server.port, 50, 0)
+      set({ detailedCommits: result.commits })
+
+      // Cache to local SQLite
+      const db = getModuleDb()
+      const repoPath = get().repoPath
+      if (db && repoPath && result.commits.length > 0) {
+        try {
+          await upsertGitCommitsForProject(db, repoPath, result.commits)
+          await pruneOldCommits(db, repoPath, 200)
+        } catch (e) {
+          console.warn('[git] Failed to cache commits to SQLite:', e)
+        }
+      }
+    } catch (e) {
+      console.warn('[git] syncHistory failed:', e)
+    } finally {
+      set({ isSyncing: false })
     }
   },
 

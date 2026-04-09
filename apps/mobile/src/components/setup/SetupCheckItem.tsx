@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image, type ImageSourcePropType } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale, palette } from '@pocketdev/shared/theme'
+import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import { Assets } from '../../../assets'
 
@@ -47,24 +47,9 @@ interface Props {
   onTypeScriptWizard?: (tool: ToolCheck) => void
   onDockerWizard?: (tool: ToolCheck) => void
   disabledReason?: string | null
-}
-
-function StatusIcon({ tool }: { tool: ToolCheck }) {
-  const { colors } = useTheme()
-
-  if (tool.status === 'installed' && tool.auth_status === 'authenticated') {
-    return <Text style={styles.icon}>✓</Text>
-  }
-  if (tool.status === 'installed' && tool.auth_status === 'unauthenticated') {
-    return <Text style={[styles.icon, { color: '#facc15' }]}>!</Text>
-  }
-  if (tool.status === 'misconfigured') {
-    return <Text style={[styles.icon, { color: '#facc15' }]}>!</Text>
-  }
-  if (tool.status === 'installed') {
-    return <Text style={styles.icon}>✓</Text>
-  }
-  return <Text style={[styles.icon, { color: colors.error }]}>✗</Text>
+  disabled?: boolean
+  showLoadingState?: boolean
+  onDisabledPress?: (tool: ToolCheck) => void
 }
 
 function statusLabel(tool: ToolCheck): string {
@@ -99,6 +84,9 @@ export default function SetupCheckItem({
   onTypeScriptWizard,
   onDockerWizard,
   disabledReason,
+  disabled = false,
+  showLoadingState = false,
+  onDisabledPress,
 }: Props) {
   const { colors, isDark } = useTheme()
   const bauhaus = palette.bauhaus
@@ -171,10 +159,24 @@ export default function SetupCheckItem({
       ? bauhaus.red
       : tool.status === 'misconfigured' || tool.auth_status === 'unauthenticated'
         ? bauhaus.yellow
-        : bauhaus.blue
+      : bauhaus.blue
+
+  function handleActionPress(action?: (tool: ToolCheck) => void) {
+    if (disabled) {
+      onDisabledPress?.(tool)
+      return
+    }
+    action?.(tool)
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: panelBackground, borderColor: panelBorder }]}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: panelBackground, borderColor: panelBorder },
+        showLoadingState && styles.containerLoading,
+      ]}
+    >
       <View style={[styles.accentBlock, { backgroundColor: accentColor }]} />
       <View style={styles.header}>
         <View style={styles.logoContainer}>
@@ -195,6 +197,14 @@ export default function SetupCheckItem({
           <Text style={[styles.status, { color: statusColor(tool) }]}>
             {statusLabel(tool)}
           </Text>
+          {showLoadingState && (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                Checking server…
+              </Text>
+            </View>
+          )}
           {tool.details.user_name && (
             <Text style={[styles.path, { color: colors.textTertiary }]}>
               {tool.details.user_name} {'<'}{tool.details.user_email}{'>'}
@@ -207,7 +217,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onGitWizard(tool)}
+            onPress={() => handleActionPress(onGitWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -221,7 +231,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onClaudeWizard(tool)}
+            onPress={() => handleActionPress(onClaudeWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -240,11 +250,15 @@ export default function SetupCheckItem({
               codexBlocked && styles.actionButtonDisabled,
             ]}
             onPress={() => {
+              if (disabled) {
+                onDisabledPress?.(tool)
+                return
+              }
               if (codexBlocked) {
                 onBlockedCodexWizard?.(tool)
                 return
               }
-              onCodexWizard(tool)
+              onCodexWizard?.(tool)
             }}
             activeOpacity={0.7}
           >
@@ -260,7 +274,7 @@ export default function SetupCheckItem({
               {onPkgWizard && (
                 <TouchableOpacity
                   style={[styles.secondaryActionButton, { borderColor: colors.border }]}
-                  onPress={() => onPkgWizard(tool)}
+                  onPress={() => handleActionPress(onPkgWizard)}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.secondaryActionText, { color: colors.text }]}>Open Package Tools</Text>
@@ -275,7 +289,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onPkgWizard(tool)}
+            onPress={() => handleActionPress(onPkgWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -294,6 +308,10 @@ export default function SetupCheckItem({
               copilotBlocked && styles.actionButtonDisabled,
             ]}
             onPress={() => {
+              if (disabled) {
+                onDisabledPress?.(tool)
+                return
+              }
               if (copilotBlocked) {
                 onBlockedCopilotWizard?.(tool)
                 return
@@ -314,7 +332,7 @@ export default function SetupCheckItem({
               {onGitWizard && (
                 <TouchableOpacity
                   style={[styles.secondaryActionButton, { borderColor: colors.border }]}
-                  onPress={() => onGitWizard(tool)}
+                  onPress={() => handleActionPress(onGitWizard)}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.secondaryActionText, { color: colors.text }]}>Open Git Setup</Text>
@@ -329,7 +347,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onOpenCodeWizard(tool)}
+            onPress={() => handleActionPress(onOpenCodeWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -343,7 +361,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onPythonWizard(tool)}
+            onPress={() => handleActionPress(onPythonWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -357,7 +375,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onRustWizard(tool)}
+            onPress={() => handleActionPress(onRustWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -371,7 +389,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onGoWizard(tool)}
+            onPress={() => handleActionPress(onGoWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -385,7 +403,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onTypeScriptWizard(tool)}
+            onPress={() => handleActionPress(onTypeScriptWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -399,7 +417,7 @@ export default function SetupCheckItem({
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => onDockerWizard(tool)}
+            onPress={() => handleActionPress(onDockerWizard)}
             activeOpacity={0.7}
           >
             <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -414,7 +432,7 @@ export default function SetupCheckItem({
           {showInstall && (
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={() => onInstall(tool)}
+              onPress={() => handleActionPress(onInstall)}
               activeOpacity={0.7}
             >
               <Text style={[styles.actionText, { color: colors.primaryText }]}>Enable</Text>
@@ -423,7 +441,7 @@ export default function SetupCheckItem({
           {(showAuth || showConfigure) && (
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={() => onAuthenticate(tool)}
+              onPress={() => handleActionPress(onAuthenticate)}
               activeOpacity={0.7}
             >
               <Text style={[styles.actionText, { color: colors.primaryText }]}>
@@ -449,6 +467,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
     elevation: 6,
+  },
+  containerLoading: {
+    opacity: 0.72,
   },
   accentBlock: {
     position: 'absolute',
@@ -515,14 +536,19 @@ const styles = StyleSheet.create({
     ...typographyScale.sm,
     fontWeight: '700',
   },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    marginTop: 2,
+  },
+  loadingText: {
+    ...typographyScale.xs,
+    fontWeight: '600',
+  },
   path: {
     ...typographyScale.xs,
     fontFamily: 'monospace',
-  },
-  icon: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#22c55e',
   },
   actions: {
     flexDirection: 'row',

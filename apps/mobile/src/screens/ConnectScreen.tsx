@@ -58,14 +58,13 @@ export default function ConnectScreen({ navigation }: Props) {
   const resolvePostPairDestination = useCallback(async (ip: string, port: number) => {
     try {
       const report = await fetchPrerequisites(ip, port) as PrerequisitesReport
-      useSetupStore.setState({ report, loading: false, error: null })
+      await useSetupStore.getState().applyLiveReport(report)
       return report.ready
     } catch (e) {
       console.warn('[ConnectScreen] Failed to resolve setup readiness:', e)
-      useSetupStore.setState({
-        error: e instanceof Error ? e.message : 'Failed to check prerequisites',
-        loading: false,
-      })
+      useSetupStore.getState().setFetchError(
+        e instanceof Error ? e.message : 'Failed to check prerequisites',
+      )
       return false
     }
   }, [])

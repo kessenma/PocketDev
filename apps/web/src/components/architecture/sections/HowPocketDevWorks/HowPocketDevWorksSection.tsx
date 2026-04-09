@@ -9,7 +9,6 @@ export function HowPocketDevWorksSection({
   onLowerPageTakeoverChange?: (progress: number) => void
   sectionRef?: React.RefObject<HTMLElement | null>
 }) {
-  // Find the remote-ai scene's range to compute the lower-page takeover from rail progress
   const ranges = computeSceneRanges(howItWorksScenes)
   const remoteAiIndex = howItWorksScenes.findIndex((s) => s.id === 'remote-ai')
   const remoteAiRange = ranges[remoteAiIndex]
@@ -21,7 +20,6 @@ export function HowPocketDevWorksSection({
       externalSectionRef={externalSectionRef}
       onRailProgress={(p) => {
         if (!remoteAiRange) return
-        // Start the page color transition partway through the remote-ai scene
         const takeoverStart = remoteAiRange.start + (remoteAiRange.end - remoteAiRange.start) * 0.3
         const takeoverEnd = remoteAiRange.end
         onLowerPageTakeoverChange?.(

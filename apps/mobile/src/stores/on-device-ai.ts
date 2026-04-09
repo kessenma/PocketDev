@@ -6,6 +6,7 @@ import {
   buildFileIndex,
   suggestFiles,
   getExtension,
+  enrichPath,
   type FileIndex,
   type FileSuggestion,
   type SuggestResult,
@@ -13,11 +14,16 @@ import {
 import {
   getOnDeviceAIModelStatus,
   setOnDeviceAIModelStatus,
-  getCachedFileIndex,
-  saveCachedFileIndex,
 } from '../services/storage'
 import { BareResourceFetcher } from '@react-native-executorch/bare-resource-fetcher'
 import { ALL_MINILM_L6_V2 } from 'react-native-executorch'
+import { getModuleDb } from '../db/DatabaseProvider'
+import {
+  loadProjectEmbeddings,
+  getEmbeddingCount,
+  insertFileEmbeddingsBatch,
+  deleteProjectEmbeddings,
+} from '../db/vectorOperations'
 
 function computeExtensions(paths: string[]): string[] {
   const extSet = new Set<string>()
@@ -155,13 +161,29 @@ export const useOnDeviceAIStore = create<OnDeviceAIState>((set, get) => ({
       return
     }
 
-    // Check MMKV cache — must match count AND have intact vectors
-    const cached = getCachedFileIndex(rootPath)
-    if (cached && cached.paths.length === incoming.length
-      && cached.vectors.length === cached.paths.length) {
-      console.log('[OnDeviceAI] Using cached index for', rootPath, '→', cached.paths.length, 'files,', cached.vectors.length, 'vectors')
-      set({ fileIndex: cached, indexingProgress: 1, availableExtensions: computeExtensions(cached.paths) })
-      return
+    // Check SQLite cache — if embedding count matches file count, load from DB
+    const db = getModuleDb()
+    if (db) {
+      try {
+        const cachedCount = await getEmbeddingCount(db, rootPath)
+        if (cachedCount === incoming.length && cachedCount > 0) {
+          console.log('[OnDeviceAI] Loading cached embeddings from SQLite for', rootPath, '→', cachedCount, 'files')
+          const stored = await loadProjectEmbeddings(db, rootPath)
+          if (stored.length === incoming.length && stored.every((s) => s.embedding.length > 0)) {
+            const index: FileIndex = {
+              rootPath,
+              paths: stored.map((s) => s.path),
+              enrichedTexts: stored.map((s) => s.enrichedText),
+              vectors: stored.map((s) => s.embedding),
+              builtAt: stored[0]?.builtAt ?? Date.now(),
+            }
+            set({ fileIndex: index, indexingProgress: 1, availableExtensions: computeExtensions(index.paths) })
+            return
+          }
+        }
+      } catch (e) {
+        console.warn('[OnDeviceAI] SQLite cache check failed:', e)
+      }
     }
 
     set({ indexingProgress: 0.001 }) // Mark as in-progress
@@ -178,7 +200,22 @@ export const useOnDeviceAIStore = create<OnDeviceAIState>((set, get) => ({
 
       console.log('[OnDeviceAI] Index built in', Date.now() - startTime, 'ms →', index.vectors.length, 'vectors,', availableExtensions.length, 'extensions')
       set({ fileIndex: index, indexingProgress: 1, availableExtensions })
-      saveCachedFileIndex(index)
+
+      // Persist to SQLite (replaces MMKV cache)
+      if (db) {
+        try {
+          await deleteProjectEmbeddings(db, rootPath)
+          const items = index.paths.map((p, i) => ({
+            path: p,
+            enrichedText: index.enrichedTexts[i],
+            embedding: index.vectors[i],
+          }))
+          await insertFileEmbeddingsBatch(db, rootPath, items, index.builtAt)
+          console.log('[OnDeviceAI] Embeddings persisted to SQLite →', items.length, 'files')
+        } catch (e) {
+          console.warn('[OnDeviceAI] Failed to persist embeddings to SQLite:', e)
+        }
+      }
     } catch (e) {
       console.warn('[OnDeviceAI] Index build failed:', e)
       set({ indexingProgress: 0 })

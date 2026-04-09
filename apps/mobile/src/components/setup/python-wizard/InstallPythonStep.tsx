@@ -5,8 +5,10 @@ import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
-import { Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react-native'
-import CopyButton from '../../shared/CopyButton'
+import { ArrowRight, Download, RefreshCw } from 'lucide-react-native'
+import SetupCommandCard from '../shared/SetupCommandCard'
+import SetupProgressCard from '../shared/SetupProgressCard'
+import SetupTerminalPanel from '../shared/SetupTerminalPanel'
 
 const INSTALL_COMMANDS = [
   'sudo apt update',
@@ -37,9 +39,7 @@ export default function InstallPythonStep({ dispatch }: Props) {
     persistent: true,
     errorPatterns: [/^E: /m, /Unable to locate package/im],
     onOutput: (chunk, _fullOutput) => {
-      console.log('[python-install] output chunk:', JSON.stringify(chunk.slice(0, 120)))
       if (chunk.includes(DONE_MARKER) && !chunk.includes('echo')) {
-        console.log('[python-install] Done marker detected!')
         setSuccess(true)
       }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
@@ -50,7 +50,6 @@ export default function InstallPythonStep({ dispatch }: Props) {
     setStarted(true)
     const chainedCmd = INSTALL_COMMANDS.join(' && ')
     const fullCmd = `cd / && ( ${chainedCmd} ) && echo ${DONE_MARKER} || echo PYINSTALL_FAILED`
-    console.log('[python-install] Sending:', fullCmd.slice(0, 100))
     sendCommand(fullCmd)
   }
 
@@ -82,19 +81,15 @@ export default function InstallPythonStep({ dispatch }: Props) {
       {/* Info card — before starting */}
       {!started && (
         <>
-          <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              This will install the Python 3 interpreter on your server. The binary will be available as{' '}
-              <Text style={styles.mono}>python3</Text>.
-            </Text>
-            <View style={styles.commandList}>
-              {INSTALL_COMMANDS.map((cmd, i) => (
-                <Text key={i} style={[styles.commandText, { color: colors.textTertiary }]}>
-                  $ {cmd}
-                </Text>
-              ))}
-            </View>
-          </View>
+          <SetupCommandCard
+            description={(
+              <>
+                This will install the Python 3 interpreter on your server. The binary will be available as{' '}
+                <Text style={styles.mono}>python3</Text>.
+              </>
+            )}
+            commands={INSTALL_COMMANDS}
+          />
 
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
@@ -111,58 +106,23 @@ export default function InstallPythonStep({ dispatch }: Props) {
       {started && (
         <>
           {!success && !hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
-              <Text style={[styles.statusText, { color: colors.primary }]}>
-                Installing Python...
-              </Text>
-            </View>
+            <SetupProgressCard tone="running" message="Installing Python..." />
           )}
 
           {success && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: '#22c55e' }]}>
-              <CheckCircle color="#22c55e" size={18} strokeWidth={2.25} />
-              <Text style={[styles.statusText, { color: '#22c55e' }]}>
-                Python installed
-              </Text>
-            </View>
+            <SetupProgressCard tone="success" message="Python installed" />
           )}
 
           {hasError && (
-            <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.error }]}>
-              <Text style={[styles.statusText, { color: colors.error }]}>
-                Installation failed
-              </Text>
-            </View>
+            <SetupProgressCard tone="error" message="Installation failed" />
           )}
 
-          {/* Collapsible terminal output */}
-          <TouchableOpacity
-            style={[styles.outputToggle, { borderColor: colors.border }]}
-            onPress={() => setShowOutput(!showOutput)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.outputToggleText, { color: colors.textTertiary }]}>
-              Terminal output
-            </Text>
-            {showOutput
-              ? <ChevronUp color={colors.textTertiary} size={16} strokeWidth={2} />
-              : <ChevronDown color={colors.textTertiary} size={16} strokeWidth={2} />}
-          </TouchableOpacity>
-
-          {showOutput && (
-            <>
-              <ScrollView
-                ref={scrollRef}
-                style={[styles.outputBox, { backgroundColor: colors.background }]}
-                nestedScrollEnabled
-              >
-                <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-                  {output || 'Waiting for output...'}
-                </Text>
-              </ScrollView>
-              {output ? <CopyButton value={output} label="Copy output" /> : null}
-            </>
-          )}
+          <SetupTerminalPanel
+            visible={showOutput}
+            onToggle={() => setShowOutput(!showOutput)}
+            output={output}
+            scrollRef={scrollRef}
+          />
 
           {success && (
             <TouchableOpacity

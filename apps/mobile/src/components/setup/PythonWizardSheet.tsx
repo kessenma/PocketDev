@@ -1,4 +1,4 @@
-import React, { useReducer, useCallback } from 'react'
+import React, { useReducer, useCallback, useEffect, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, StyleSheet, Modal, SafeAreaView } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
@@ -13,6 +13,7 @@ import InstallVenvStep from './python-wizard/InstallVenvStep'
 import InstallPipStep from './python-wizard/InstallPipStep'
 import VerifyStep from './python-wizard/VerifyStep'
 import type { PythonSetupStatus, PythonWizardStep, PythonWizardStepStatus } from '@pocketdev/shared/types'
+import PythonSetupAnimation from '../animations/PythonSetupAnimation'
 
 interface Props {
   visible: boolean
@@ -166,6 +167,13 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
+  const [completionAnimationDone, setCompletionAnimationDone] = useState(false)
+
+  useEffect(() => {
+    if (!visible) {
+      setCompletionAnimationDone(false)
+    }
+  }, [visible])
 
   const handleClose = useCallback(() => {
     fetchPrerequisites()
@@ -177,10 +185,17 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
     onComplete()
   }, [fetchPrerequisites, onComplete])
 
-  const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
+  const currentIndex = ALL_STEPS.indexOf(state.currentStep)
+  const hasPrevStep = currentIndex > 1 && ALL_STEPS.slice(1, currentIndex).some(
+    (s) => state.stepStatuses[s] === 'completed' || state.stepStatuses[s] === 'active',
+  )
+  const canGoBack = hasPrevStep && !state.allConfigured
 
   function renderStep() {
     if (state.allConfigured) {
+      if (!completionAnimationDone) {
+        return <PythonSetupAnimation onComplete={() => setCompletionAnimationDone(true)} />
+      }
       return (
         <View style={styles.completedContainer}>
           <View style={[styles.completedIcon, { backgroundColor: colors.primary }]}>
@@ -254,7 +269,7 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
         <View style={styles.content}>{renderStep()}</View>
 
         {/* Footer */}
-        {state.allConfigured && (
+        {state.allConfigured && completionAnimationDone && (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}

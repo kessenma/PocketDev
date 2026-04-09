@@ -78,3 +78,37 @@ export interface GitMutationResult {
   ok: true
   summary: GitSummary
 }
+
+// ─── Repo History types ────────────────────────────────
+
+export interface GitCommitFileEntry {
+  path: string
+  oldPath?: string
+  kind: GitFileChangeKind
+  additions: number
+  deletions: number
+}
+
+export interface GitDetailedCommitEntry extends GitCommitEntry {
+  fullSha: string
+  authorEmail?: string
+  committedAt: string // ISO 8601 (not relative)
+  branch?: string
+  files: GitCommitFileEntry[]
+}
+
+export interface GitHistorySyncStatus {
+  lastSyncedSha: string | null
+  headSha: string
+  pendingCommits: number
+}
+
+export interface GitHistorySyncResult {
+  newCommits: number
+  latestSha: string | null
+}
+
+export interface GitDetailedHistoryResponse {
+  commits: GitDetailedCommitEntry[]
+  hasMore: boolean
+}

@@ -3,6 +3,7 @@ import { View, Text, RefreshControl, StyleSheet, Animated, type NativeScrollEven
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../../stores/setup'
+import { useToast } from '../../hooks/useToast'
 import SetupCheckItem from './SetupCheckItem'
 import DatabaseSetup from './DatabaseSetup'
 import OnDeviceModelSetup from './OnDeviceModelSetup'
@@ -55,12 +56,21 @@ export default function SetupChecklist({
   onScroll,
 }: Props) {
   const { colors } = useTheme()
-  const { report, loading, error, fetchPrerequisites } = useSetupStore()
+  const { toast } = useToast()
+  const {
+    report,
+    loading,
+    error,
+    hydrated,
+    revalidating,
+    reportSource,
+    fetchPrerequisites,
+  } = useSetupStore()
   const bauhaus = palette.bauhaus
 
   useEffect(() => {
     fetchPrerequisites()
-  }, [])
+  }, [fetchPrerequisites])
 
   const onRefresh = useCallback(() => {
     fetchPrerequisites()
@@ -73,6 +83,9 @@ export default function SetupChecklist({
       </View>
     )
   }
+
+  const showCachedLoadingState = !!report && revalidating && reportSource === 'cache'
+  const showSkeletonState = !report && (loading || revalidating || !hydrated)
 
   const required = getRequiredSetupTools(report)
   const aiAssistants = getAiAssistantTools(report)
@@ -111,6 +124,15 @@ export default function SetupChecklist({
               ? copilotBlockedReason
               : null
         }
+        disabled={showCachedLoadingState}
+        showLoadingState={showCachedLoadingState}
+        onDisabledPress={() => {
+          toast({
+            title: 'Checking workspace status',
+            description: 'Setup actions are locked until the server confirms the current tool status.',
+            variant: 'info',
+          })
+        }}
       />
     ))
   }
@@ -130,55 +152,125 @@ export default function SetupChecklist({
           {report && (
             <View style={styles.serverInfoRow}>
               <View style={[styles.serverInfoCard, { backgroundColor: bauhaus.black }]}>
-              <Text style={[styles.serverInfoLabel, { color: 'rgba(255,255,255,0.55)' }]}>Workspace</Text>
-              <Text style={[styles.serverInfoValue, { color: '#ffffff' }]}>
-                  {setupStatus.ready ? 'Coding tools ready' : 'Tool setup in progress'}
+                <Text style={[styles.serverInfoLabel, { color: 'rgba(255,255,255,0.55)' }]}>Workspace</Text>
+                <Text style={[styles.serverInfoValue, { color: '#ffffff' }]}>
+                  {showCachedLoadingState
+                    ? 'Checking saved setup…'
+                    : revalidating
+                      ? 'Refreshing workspace status'
+                      : setupStatus.ready
+                        ? 'Coding tools ready'
+                        : 'Tool setup in progress'}
                 </Text>
+                {showCachedLoadingState && (
+                  <Text style={[styles.serverInfoMeta, { color: 'rgba(255,255,255,0.7)' }]}>
+                    Showing the last known device state until the server confirms it.
+                  </Text>
+                )}
               </View>
             </View>
           )}
 
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Required Setup</Text>
-          <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-            Complete Git and package managers.
-          </Text>
-          <View style={styles.section}>
-            {renderTools(required)}
-          </View>
+          {error && report && (
+            <View style={[styles.banner, { backgroundColor: colors.errorBackground, borderColor: colors.error }]}>
+              <Text style={[styles.bannerTitle, { color: colors.error }]}>Server check failed</Text>
+              <Text style={[styles.bannerBody, { color: colors.textSecondary }]}>
+                Showing the last known setup state. Pull to refresh when the workspace is reachable again.
+              </Text>
+            </View>
+          )}
 
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Assistant</Text>
-          <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-            Choose at least one: Claude, Codex, GitHub Copilot, or OpenCode.
-          </Text>
-          <View style={styles.section}>
-            {renderTools(aiAssistants)}
-          </View>
-
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Language</Text>
-          <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-            Set up Python, Rust, Go, and TypeScript for workspace language support.
-          </Text>
-          <View style={styles.section}>
-            {renderTools(languages)}
-          </View>
-
-          {supportingTools.length ? (
+          {showSkeletonState ? (
             <>
-              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Supporting Tools</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Required Setup</Text>
               <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-                Additional utilities PocketDev can use during setup and workspace tasks.
+                Checking your workspace before showing setup actions.
               </Text>
               <View style={styles.section}>
-                {renderTools(supportingTools)}
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <View
+                    key={`required-skeleton-${index}`}
+                    style={[styles.skeletonCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <View style={[styles.skeletonAccent, { backgroundColor: colors.border }]} />
+                    <View style={styles.skeletonHeader}>
+                      <View style={[styles.skeletonAvatar, { backgroundColor: colors.border }]} />
+                      <View style={styles.skeletonTextColumn}>
+                        <View style={[styles.skeletonLinePrimary, { backgroundColor: colors.border }]} />
+                        <View style={[styles.skeletonLineSecondary, { backgroundColor: colors.border }]} />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Assistant</Text>
+              <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+                Restoring the last known tool state while the server responds.
+              </Text>
+              <View style={styles.section}>
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <View
+                    key={`ai-skeleton-${index}`}
+                    style={[styles.skeletonCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <View style={[styles.skeletonAccent, { backgroundColor: colors.border }]} />
+                    <View style={styles.skeletonHeader}>
+                      <View style={[styles.skeletonAvatar, { backgroundColor: colors.border }]} />
+                      <View style={styles.skeletonTextColumn}>
+                        <View style={[styles.skeletonLinePrimary, { backgroundColor: colors.border }]} />
+                        <View style={[styles.skeletonLineSecondary, { backgroundColor: colors.border }]} />
+                      </View>
+                    </View>
+                  </View>
+                ))}
               </View>
             </>
-          ) : null}
+          ) : (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Required Setup</Text>
+              <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+                Complete Git and package managers.
+              </Text>
+              <View style={[styles.section, showCachedLoadingState && styles.sectionMuted]}>
+                {renderTools(required)}
+              </View>
 
-          <DatabaseSetup
-            databases={report?.databases ?? []}
-            dockerInstalled={dockerInstalled}
-            onRefresh={onRefresh}
-          />
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Assistant</Text>
+              <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+                Choose at least one: Claude, Codex, GitHub Copilot, or OpenCode.
+              </Text>
+              <View style={[styles.section, showCachedLoadingState && styles.sectionMuted]}>
+                {renderTools(aiAssistants)}
+              </View>
+
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Language</Text>
+              <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+                Set up Python, Rust, Go, and TypeScript for workspace language support.
+              </Text>
+              <View style={[styles.section, showCachedLoadingState && styles.sectionMuted]}>
+                {renderTools(languages)}
+              </View>
+
+              {supportingTools.length ? (
+                <>
+                  <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Supporting Tools</Text>
+                  <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+                    Additional utilities PocketDev can use during setup and workspace tasks.
+                  </Text>
+                  <View style={[styles.section, showCachedLoadingState && styles.sectionMuted]}>
+                    {renderTools(supportingTools)}
+                  </View>
+                </>
+              ) : null}
+
+              <DatabaseSetup
+                databases={report?.databases ?? []}
+                dockerInstalled={dockerInstalled}
+                onRefresh={onRefresh}
+              />
+            </>
+          )}
 
           <OnDeviceModelSetup />
         </>
@@ -225,6 +317,27 @@ const styles = StyleSheet.create({
     ...typographyScale.base,
     fontWeight: '700',
   },
+  serverInfoMeta: {
+    ...typographyScale.xs,
+    marginTop: spacing[1],
+    lineHeight: 18,
+  },
+  banner: {
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    gap: spacing[1],
+    marginBottom: spacing[2],
+  },
+  bannerTitle: {
+    ...typographyScale.sm,
+    fontWeight: '700',
+  },
+  bannerBody: {
+    ...typographyScale.xs,
+    lineHeight: 18,
+  },
   sectionTitle: {
     ...typographyScale.xs,
     fontWeight: '700',
@@ -235,9 +348,54 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing[2],
   },
+  sectionMuted: {
+    opacity: 0.9,
+  },
   sectionHint: {
     ...typographyScale.sm,
     marginTop: -spacing[1],
     marginBottom: spacing[1],
+  },
+  skeletonCard: {
+    borderWidth: 1,
+    borderRadius: 24,
+    padding: spacing[4],
+    overflow: 'hidden',
+  },
+  skeletonAccent: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 76,
+    height: 76,
+    borderBottomLeftRadius: 28,
+    opacity: 0.55,
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+  },
+  skeletonAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    opacity: 0.7,
+  },
+  skeletonTextColumn: {
+    flex: 1,
+    gap: spacing[2],
+  },
+  skeletonLinePrimary: {
+    width: '42%',
+    height: 14,
+    borderRadius: 999,
+    opacity: 0.8,
+  },
+  skeletonLineSecondary: {
+    width: '68%',
+    height: 10,
+    borderRadius: 999,
+    opacity: 0.45,
   },
 })
