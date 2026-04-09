@@ -375,7 +375,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
         ) : activeTab === 'tasks' ? (
           <TasksDiagnosticsTab tasksInfo={tasksInfo} onRefresh={refresh} />
         ) : activeTab === 'setup' ? (
-          <SetupDiagnosticsTab setupInfo={setupInfo} />
+          <SetupDiagnosticsTab setupInfo={setupInfo} onRefresh={refresh} />
         ) : activeTab === 'languages' ? (
           <LanguagesDiagnosticsTab pythonInfo={pythonInfo} rustInfo={rustInfo} goInfo={goInfo} tsInfo={tsInfo} />
         ) : activeTab === 'claude' ? (

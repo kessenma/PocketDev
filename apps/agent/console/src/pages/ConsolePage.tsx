@@ -4,7 +4,6 @@ import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { ConnectionWizard } from '#/components/ConnectionWizard'
 import { DeviceList } from '#/components/DeviceList'
-import { SetupStatus } from '#/components/SetupStatus'
 import { DomainSettings } from '#/components/DomainSettings'
 import { PasskeySettings } from '#/components/PasskeySettings'
 import { ServerTerminal } from '#/components/ServerTerminal'
@@ -114,10 +113,6 @@ export function ConsolePage() {
           <UpdateBanner version={agentVersion} update={updateInfo} />
 
           <main className="grid gap-4 lg:grid-cols-12">
-            <div className="lg:col-span-12">
-              <SetupStatus />
-            </div>
-
             <div className="lg:col-span-7">
               <DomainSettings />
             </div>

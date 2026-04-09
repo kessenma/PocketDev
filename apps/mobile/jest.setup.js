@@ -18,6 +18,53 @@ jest.mock('react-native-device-info', () => ({
   isTablet: () => false,
 }))
 
+jest.mock('react-native-fs', () => ({
+  DocumentDirectoryPath: '/tmp/pocketdev-tests',
+  exists: jest.fn().mockResolvedValue(true),
+  mkdir: jest.fn().mockResolvedValue(undefined),
+}))
+
+jest.mock('@op-engineering/op-sqlite', () => ({
+  open: jest.fn(() => ({
+    execute: jest.fn().mockResolvedValue({ rows: [] }),
+    close: jest.fn().mockResolvedValue(undefined),
+  })),
+}))
+
+jest.mock('react-native-executorch', () => ({
+  initExecutorch: jest.fn(),
+  TextEmbeddingsModule: {
+    generate: jest.fn(),
+  },
+  ALL_MINILM_L6_V2: {
+    name: 'ALL_MINILM_L6_V2',
+  },
+}), { virtual: true })
+
+jest.mock('@react-native-executorch/bare-resource-fetcher', () => ({
+  BareResourceFetcher: {
+    download: jest.fn(),
+  },
+}), { virtual: true })
+
+jest.mock('@pocketdev/shared/theme', () => ({
+  fontFamilyTokens: {
+    body: 'System',
+    mono: 'Menlo',
+    displayFallback: 'System',
+  },
+  semanticTypography: {
+    display: { fontSize: 28, lineHeight: 32 },
+    screenTitle: { fontSize: 24, lineHeight: 28 },
+    sectionTitle: { fontSize: 18, lineHeight: 22 },
+    labelStrong: { fontSize: 14, lineHeight: 18 },
+    body: { fontSize: 16, lineHeight: 24 },
+    bodySmall: { fontSize: 14, lineHeight: 20 },
+    meta: { fontSize: 12, lineHeight: 16 },
+    button: { fontSize: 15, lineHeight: 20 },
+  },
+}), { virtual: true })
+
 jest.mock('react-native-mmkv', () => {
   const values = new Map()
 

@@ -6,6 +6,7 @@
     "kill": "node ../../scripts/kill-agent-port.js",
     "dev": "bun --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
+    "test": "bun test",
     "check-types": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",

@@ -11,8 +11,17 @@ import {
 import { checkCopilotStatus } from './copilot-setup.ts'
 import { checkOpenCodeStatus } from './opencode-setup.ts'
 
+const EXEC_TIMEOUT_MS = 15_000
+const PREREQUISITES_CACHE_TTL_MS = 2 * 60_000
+
+type ToolCheckFn = () => Promise<ToolCheck>
+type CheckAllPrerequisitesOptions = { forceRefresh?: boolean }
+
 /** Run commands in a shell that can see standard system-wide tool locations. */
-async function exec(cmd: string): Promise<{ stdout: string; exitCode: number }> {
+async function exec(
+  cmd: string,
+  timeoutMs = EXEC_TIMEOUT_MS,
+): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
   const wrapped = `export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"; source ~/.bashrc 2>/dev/null; ${cmd}`
   const proc = Bun.spawn(['bash', '-lc', wrapped], {
@@ -20,24 +29,36 @@ async function exec(cmd: string): Promise<{ stdout: string; exitCode: number }> 
     stderr: 'pipe',
     env: { ...process.env, HOME: home },
   })
-  const stdout = await new Response(proc.stdout).text()
-  await proc.exited
-  return { stdout: stdout.trim(), exitCode: proc.exitCode ?? 1 }
+  const timer = setTimeout(() => {
+    try { proc.kill('SIGKILL') } catch { /* already exited */ }
+  }, timeoutMs)
+
+  try {
+    const [stdout, stderr] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ])
+    await proc.exited
+    return { stdout: stdout.trim(), stderr: stderr.trim(), exitCode: proc.exitCode ?? 1 }
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** Detect which binary is available, returns absolute path or null */
 async function which(binary: string): Promise<string | null> {
-  const { stdout, exitCode } = await exec(`which ${binary}`)
+  const { stdout, exitCode } = await exec(`command -v ${binary}`)
   return exitCode === 0 && stdout ? stdout.split('\n')[0] : null
 }
 
 /** Get version from a command like "git --version" → "2.44.0" */
 async function getVersion(cmd: string): Promise<string | null> {
-  const { stdout, exitCode } = await exec(cmd)
-  if (exitCode !== 0 || !stdout) return null
+  const { stdout, stderr, exitCode } = await exec(cmd)
+  const output = [stdout, stderr].filter(Boolean).join('\n').trim()
+  if (exitCode !== 0 || !output) return null
   // Extract version number pattern from output
-  const match = stdout.match(/(\d+\.\d+[\.\d]*)/)
-  return match ? match[1] : stdout.split('\n')[0]
+  const match = output.match(/(\d+\.\d+[\.\d]*)/)
+  return match ? match[1] : output.split('\n')[0]
 }
 
 // ─── Individual tool checkers ───────────────────────────────────────────
@@ -554,6 +575,124 @@ async function checkTmux(): Promise<ToolCheck> {
   }
 }
 
+const LIGHT_TOOL_CHECKS: ReadonlyArray<ToolCheckFn> = [
+  checkGit,
+  checkNode,
+  checkNpm,
+  checkBun,
+  checkPnpm,
+  checkTmux,
+]
+
+const MEDIUM_TOOL_CHECKS: ReadonlyArray<ToolCheckFn> = [
+  checkGitHubCli,
+  checkDocker,
+  checkChromium,
+  checkPython,
+  checkRust,
+  checkGo,
+  checkTypeScript,
+]
+
+const HEAVY_TOOL_CHECKS: ReadonlyArray<ToolCheckFn> = [
+  checkClaudeCli,
+  checkCodexCli,
+  checkCopilotCli,
+  checkOpenCodeCli,
+]
+
+const TOOL_ORDER = [
+  'git',
+  'github_cli',
+  'node',
+  'npm',
+  'claude_cli',
+  'codex_cli',
+  'copilot_cli',
+  'opencode_cli',
+  'docker',
+  'bun',
+  'pnpm',
+  'chromium',
+  'python',
+  'rust',
+  'go',
+  'typescript',
+  'tmux',
+] as const
+
+async function runChecksWithLimit<T>(
+  checks: ReadonlyArray<() => Promise<T>>,
+  limit: number,
+): Promise<T[]> {
+  if (limit < 1) {
+    throw new Error(`Invalid prerequisite check concurrency limit: ${limit}`)
+  }
+
+  if (checks.length === 0) return []
+
+  const results = new Array<T>(checks.length)
+  let nextIndex = 0
+
+  async function worker() {
+    while (true) {
+      const currentIndex = nextIndex
+      nextIndex += 1
+
+      if (currentIndex >= checks.length) return
+      results[currentIndex] = await checks[currentIndex]()
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, checks.length) }, () => worker()),
+  )
+
+  return results
+}
+
+function createCachedAsyncValue<T>(
+  build: () => Promise<T>,
+  ttlMs: number,
+  now: () => number = () => Date.now(),
+) {
+  let cached: { value: T; timestamp: number } | null = null
+  let inFlight: Promise<T> | null = null
+
+  return {
+    async get(options: { forceRefresh?: boolean } = {}): Promise<T> {
+      const forceRefresh = options.forceRefresh === true
+      const cachedValue = cached
+
+      if (!forceRefresh && cachedValue && now() - cachedValue.timestamp < ttlMs) {
+        return cachedValue.value
+      }
+
+      if (!forceRefresh && inFlight) {
+        return inFlight
+      }
+
+      const buildPromise = build()
+        .then((value) => {
+          cached = { value, timestamp: now() }
+          return value
+        })
+        .finally(() => {
+          if (inFlight === buildPromise) {
+            inFlight = null
+          }
+        })
+
+      inFlight = buildPromise
+      return buildPromise
+    },
+    clear() {
+      cached = null
+      inFlight = null
+    },
+  }
+}
+
 // ─── Database detection (Docker containers) ─────────────────────────────
 
 /** Known database Docker image prefixes */
@@ -631,49 +770,75 @@ async function getOsInfo(): Promise<{ os: string; arch: string }> {
 
 // ─── Main export ────────────────────────────────────────────────────────
 
-export async function checkAllPrerequisites(): Promise<PrerequisitesReport> {
-  const [osInfo, databases, ...tools] = await Promise.all([
-    getOsInfo(),
-    detectRunningDatabases(),
-    checkGit(),
-    checkGitHubCli(),
-    checkNode(),
-    checkNpm(),
-    checkClaudeCli(),
-    checkCodexCli(),
-    checkCopilotCli(),
-    checkOpenCodeCli(),
-    checkDocker(),
-    checkBun(),
-    checkPnpm(),
-    checkChromium(),
-    checkPython(),
-    checkRust(),
-    checkGo(),
-    checkTypeScript(),
-    checkTmux(),
-  ])
+async function checkAllPrerequisitesUncached(): Promise<PrerequisitesReport> {
+  const osInfoPromise = getOsInfo()
+
+  const lightTools = await runChecksWithLimit(LIGHT_TOOL_CHECKS, 4)
+  const mediumTools = await runChecksWithLimit(MEDIUM_TOOL_CHECKS, 3)
+  const dockerTool = mediumTools.find((tool) => tool.id === 'docker')
+  const databasesPromise = dockerTool?.status === 'installed'
+    ? detectRunningDatabases()
+    : Promise.resolve([] as DatabaseInfo[])
+  const heavyTools = await runChecksWithLimit(HEAVY_TOOL_CHECKS, 1)
+
+  const [osInfo, databases] = await Promise.all([osInfoPromise, databasesPromise])
+  const toolsById = new Map(
+    [...lightTools, ...mediumTools, ...heavyTools].map((tool) => [tool.id, tool] as const),
+  )
+  const tools = TOOL_ORDER.map((toolId) => {
+    const tool = toolsById.get(toolId)
+    if (!tool) {
+      throw new Error(`Missing prerequisite tool check for ${toolId}`)
+    }
+    return tool
+  })
+
+  const gitTool = toolsById.get('git')
+  const githubCliTool = toolsById.get('github_cli')
+  const nodeTool = toolsById.get('node')
+  const npmTool = toolsById.get('npm')
+  const claudeTool = toolsById.get('claude_cli')
+  const codexTool = toolsById.get('codex_cli')
+  const opencodeTool = toolsById.get('opencode_cli')
 
   // ready = git configured + node + npm + at least one AI runtime available
   const gitReady =
-    tools[0].status === 'installed' && tools[0].auth_status === 'authenticated'
+    gitTool?.status === 'installed' && gitTool.auth_status === 'authenticated'
   const githubCliReady =
-    tools[1].status === 'installed' && tools[1].auth_status === 'authenticated'
-  const nodeReady = tools[2].status === 'installed'
-  const npmReady = tools[3].status === 'installed'
+    githubCliTool?.status === 'installed' && githubCliTool.auth_status === 'authenticated'
+  const nodeReady = nodeTool?.status === 'installed'
+  const npmReady = npmTool?.status === 'installed'
   const claudeReady =
-    tools[4].status === 'installed' && tools[4].auth_status === 'authenticated'
+    claudeTool?.status === 'installed' && claudeTool.auth_status === 'authenticated'
   const codexReady =
-    tools[5].status === 'installed' && tools[5].auth_status === 'authenticated'
-  const openCodeReady = tools[7].status === 'installed'
+    codexTool?.status === 'installed' && codexTool.auth_status === 'authenticated'
+  const openCodeReady = opencodeTool?.status === 'installed'
   const aiReady = claudeReady || codexReady || openCodeReady
-
-  const ready = gitReady && githubCliReady && nodeReady && npmReady && aiReady
 
   return {
     ...osInfo,
     tools,
     databases,
-    ready,
+    ready: Boolean(gitReady && githubCliReady && nodeReady && npmReady && aiReady),
   }
+}
+
+const prerequisitesCache = createCachedAsyncValue(
+  checkAllPrerequisitesUncached,
+  PREREQUISITES_CACHE_TTL_MS,
+)
+
+export function invalidatePrerequisitesCache() {
+  prerequisitesCache.clear()
+}
+
+export async function checkAllPrerequisites(
+  options: CheckAllPrerequisitesOptions = {},
+): Promise<PrerequisitesReport> {
+  return prerequisitesCache.get(options)
+}
+
+export const __test = {
+  createCachedAsyncValue,
+  runChecksWithLimit,
 }

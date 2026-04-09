@@ -1,12 +1,14 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   REPO_HISTORY_PATTERN_PRESETS,
   buildRepoHistoryMaskSvg,
   buildRepoHistoryVisualSvg,
 } from '../apps/web/src/components/architecture/sections/repo-history-pattern'
 
-const outputDir = path.resolve(process.cwd(), 'apps/web/public/assets/architecture')
+const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const outputDir = path.resolve(scriptDir, '../apps/web/public/assets/architecture')
 const dotColor = '#2D5FE5'
 
 async function main() {

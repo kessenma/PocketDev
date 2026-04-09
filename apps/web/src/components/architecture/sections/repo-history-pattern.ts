@@ -123,7 +123,6 @@ export function buildRepoHistoryMaskSvg(preset: RepoHistoryPatternPreset) {
   const dots = buildRepoHistoryDots(preset)
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${preset.width} ${preset.height}" preserveAspectRatio="xMidYMid slice">`,
-    `<rect width="${preset.width}" height="${preset.height}" fill="black"/>`,
     ...dots.map((dot) => `<circle cx="${dot.x}" cy="${dot.y}" r="${dot.radius}" fill="white"/>`),
     `</svg>`,
   ]

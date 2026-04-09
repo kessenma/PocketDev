@@ -1,10 +1,10 @@
 const BASE = '/PocketDev/api/console'
 
-async function post(path: string, body?: Record<string, string>) {
+async function post(path: string, body?: unknown) {
   const response = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
     credentials: 'same-origin',
   })
   return response
@@ -422,31 +422,93 @@ export interface SetupProviderInfo {
   verifyOutput?: string | null
 }
 
-export interface SetupDebugInfo {
-  prerequisites: {
-    os: string
-    arch: string
-    tools: Array<{
-      id: string
-      name: string
-      status: string
-      auth_status: string
-      version: string | null
-      path: string | null
-      required: boolean
-    }>
-    ready: boolean
+export interface SwapEntry {
+  path: string
+  type: string
+  sizeBytes: number
+  usedBytes: number
+  priority: number
+}
+
+export interface SwapDebugInfo {
+  supported: boolean
+  canManage: boolean
+  totalBytes: number
+  usedBytes: number
+  freeBytes: number
+  swappiness: number | null
+  entries: SwapEntry[]
+  managed: {
+    tracked: boolean
+    active: boolean
+    filePath: string | null
+    sizeBytes: number | null
+    swappiness: number | null
+    previousSwappiness: number | null
+    createdAt: string | null
   }
+  actions: {
+    canEnable: boolean
+    canDisable: boolean
+    enableBlockedReason: string | null
+    disableBlockedReason: string | null
+  }
+}
+
+export interface SwapMetricsInfo {
+  generatedAt: string
+  storage: {
+    path: string
+    totalBytes: number
+    usedBytes: number
+    availableBytes: number
+  } | null
+  app: {
+    path: string
+    footprintBytes: number
+  } | null
+}
+
+export interface SetupDebugInfo {
+  prerequisites: PrerequisitesReport
   providers: {
     claude: SetupProviderInfo
     codex: SetupProviderInfo
     opencode: SetupProviderInfo
   }
+  swap: SwapDebugInfo
 }
 
 export async function fetchSetupDebug(): Promise<SetupDebugInfo> {
   const res = await get('/debug/setup')
   if (!res.ok) throw new Error('Failed to fetch setup debug')
+  return res.json()
+}
+
+export async function enableManagedSwap(sizeGb: number): Promise<SwapDebugInfo> {
+  const res = await post('/swap/enable', { sizeGb })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Failed to enable swap' }))
+    throw new Error(data.error || 'Failed to enable swap')
+  }
+  return res.json()
+}
+
+export async function disableManagedSwap(): Promise<SwapDebugInfo> {
+  const res = await post('/swap/disable')
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Failed to disable swap' }))
+    throw new Error(data.error || 'Failed to disable swap')
+  }
+  return res.json()
+}
+
+export async function fetchSwapMetrics(): Promise<SwapMetricsInfo> {
+  const res = await get('/swap/metrics')
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Failed to fetch swap metrics' }))
+    throw new Error(data.error || 'Failed to fetch swap metrics')
+  }
   return res.json()
 }
 

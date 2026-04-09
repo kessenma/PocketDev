@@ -22,7 +22,10 @@ jest.mock('react-native', () => {
       hairlineWidth: 1,
       absoluteFillObject: {},
     },
-    Platform: { OS: 'ios' },
+    Platform: {
+      OS: 'ios',
+      select: (options) => options.ios ?? options.default,
+    },
     useColorScheme: () => 'light',
   }
 })
@@ -45,6 +48,21 @@ jest.mock('../../contexts/ThemeContext', () => ({
 }))
 
 jest.mock('@pocketdev/shared/theme', () => ({
+  fontFamilyTokens: {
+    body: 'System',
+    mono: 'Menlo',
+    displayFallback: 'System',
+  },
+  semanticTypography: {
+    display: { fontSize: 28, lineHeight: 32 },
+    screenTitle: { fontSize: 24, lineHeight: 28 },
+    sectionTitle: { fontSize: 18, lineHeight: 22 },
+    labelStrong: { fontSize: 14, lineHeight: 18 },
+    body: { fontSize: 16, lineHeight: 24 },
+    bodySmall: { fontSize: 14, lineHeight: 20 },
+    meta: { fontSize: 12, lineHeight: 16 },
+    button: { fontSize: 15, lineHeight: 20 },
+  },
   borderRadius: {
     full: 999,
     xl: 24,

@@ -6,7 +6,7 @@ module.exports = {
   ...reactNativePreset,
   setupFiles: ['<rootDir>/jest.setup.js'],
   transformIgnorePatterns: [
-    'node_modules/(?!.pnpm|((jest-)?react-native|@react-native(-community)?|react-native-device-info|react-native-mmkv)/)',
-    '<rootDir>/../../node_modules/.pnpm/(?!(react-native|@react-native\\+community|react-native-device-info|react-native-mmkv|@react-native)@)',
+    'node_modules/(?!.pnpm|((jest-)?react-native|@react-native(-community)?|react-native-device-info|react-native-mmkv|@react-navigation)/)',
+    '<rootDir>/../../node_modules/.pnpm/(?!(react-native|@react-native\\+community|react-native-device-info|react-native-mmkv|@react-native|@react-navigation\\+)@)',
   ],
 }

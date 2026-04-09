@@ -26,11 +26,11 @@ import { checkPythonStatus } from '../services/python-setup.ts'
 import { checkRustStatus } from '../services/rust-setup.ts'
 import { checkGoStatus } from '../services/go-setup.ts'
 import { checkTypeScriptStatus } from '../services/typescript-setup.ts'
-import { checkOpenCodeStatus } from '../services/opencode-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { createBrowserSession } from '../services/proxy.ts'
 import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/version.ts'
+import { disableManagedSwap, enableManagedSwap, getSwapMetrics, getSwapStatus } from '../services/swap.ts'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
@@ -402,12 +402,13 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       return { error: 'Unauthorized' }
     }
 
-    const [prerequisites, opencodeStatus] = await Promise.all([
-      checkAllPrerequisites(),
-      checkOpenCodeStatus(),
-    ])
+    const prerequisites = await checkAllPrerequisites()
     const claudeRecord = getToolRecord('claude_cli')
     const codexRecord = getToolRecord('codex_cli')
+    const opencodeTool = prerequisites.tools.find((tool) => tool.id === 'opencode_cli')
+    const opencodeInstalled = !!opencodeTool && opencodeTool.status !== 'missing'
+    const opencodeVerified = opencodeTool?.details.verified === 'true'
+    const swap = getSwapStatus()
 
     return {
       prerequisites,
@@ -425,14 +426,58 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
           path: codexRecord?.path ?? null,
         },
         opencode: {
-          installed: opencodeStatus.installed,
-          authenticated: opencodeStatus.verified,
-          verified: opencodeStatus.verified,
-          version: opencodeStatus.version,
-          path: opencodeStatus.path,
-          verifyOutput: opencodeStatus.verify_output,
+          installed: opencodeInstalled,
+          authenticated: opencodeVerified,
+          verified: opencodeVerified,
+          version: opencodeTool?.version ?? null,
+          path: opencodeTool?.path ?? null,
+          verifyOutput: opencodeTool?.details.verify_output ?? null,
         },
       },
+      swap,
+    }
+  })
+
+  .post('/swap/enable', async ({ request, set, body }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    try {
+      return await enableManagedSwap(body.sizeGb)
+    } catch (error) {
+      set.status = 400
+      return { error: error instanceof Error ? error.message : 'Failed to enable swap' }
+    }
+  }, {
+    body: t.Object({
+      sizeGb: t.Number(),
+    }),
+  })
+
+  .post('/swap/disable', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    try {
+      return await disableManagedSwap()
+    } catch (error) {
+      set.status = 400
+      return { error: error instanceof Error ? error.message : 'Failed to disable swap' }
+    }
+  })
+
+  .get('/swap/metrics', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    try {
+      return await getSwapMetrics()
+    } catch (error) {
+      set.status = 400
+      return { error: error instanceof Error ? error.message : 'Failed to inspect swap metrics' }
     }
   })
 

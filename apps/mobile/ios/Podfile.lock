@@ -101,6 +101,28 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - opencv-rne (4.11.0)
+  - Pulsar (1.0.2):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RCTDeprecation (0.83.0)
   - RCTRequired (0.83.0)
   - RCTSwiftUI (0.83.0)
@@ -2365,6 +2387,7 @@ DEPENDENCIES:
   - NitroMmkv (from `../node_modules/react-native-mmkv`)
   - NitroModules (from `../node_modules/react-native-nitro-modules`)
   - "op-sqlite (from `../node_modules/@op-engineering/op-sqlite`)"
+  - Pulsar (from `../node_modules/react-native-pulsar`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
   - RCTSwiftUI (from `../node_modules/react-native/ReactApple/RCTSwiftUI`)
@@ -2477,6 +2500,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-nitro-modules"
   op-sqlite:
     :path: "../node_modules/@op-engineering/op-sqlite"
+  Pulsar:
+    :path: "../node_modules/react-native-pulsar"
   RCTDeprecation:
     :path: "../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation"
   RCTRequired:
@@ -2665,6 +2690,7 @@ SPEC CHECKSUMS:
   NitroModules: 113b4a704e0d6a436d2c5600d5af41f847b0fdd1
   op-sqlite: 7e5c7666a5202c0b77c554db80ad70bd1cdc946d
   opencv-rne: 2305807573b6e29c8c87e3416ab096d09047a7a0
+  Pulsar: b5198f5f221996c0bc0d28ef92e92748a1d49caa
   RCTDeprecation: dbbb85eae640e3b43cc16462d0476b00ca5959ae
   RCTRequired: 7047b18af29a76069818fd3fa0f4df423483abab
   RCTSwiftUI: 5928f7ca7e9e2f1a82d85d4c79ea3065137ad81c

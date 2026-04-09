@@ -286,6 +286,13 @@ export function setConfig(key: string, value: string) {
     .run()
 }
 
+export function deleteConfig(key: string) {
+  getDb()
+    .delete(schema.serverConfig)
+    .where(eq(schema.serverConfig.key, key))
+    .run()
+}
+
 // ─── Task operations ────────────────────────────────────
 
 export function insertTask(
