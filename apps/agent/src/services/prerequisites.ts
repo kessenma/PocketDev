@@ -92,6 +92,20 @@ async function checkGit(): Promise<ToolCheck> {
     githubConnected = /Hi\s+[^!]+!/.test(sshOut) || sshOut.includes('successfully authenticated')
   }
 
+  let ghPrivateRepoAccess = false
+  if (!githubConnected) {
+    const ghPath = await which('gh')
+    if (ghPath) {
+      const { exitCode: ghAuthExit } = await exec('gh auth status 2>&1')
+      if (ghAuthExit === 0) {
+        const { exitCode: privateExit } = await exec("gh api 'user/repos?per_page=1&visibility=private&affiliation=owner' >/dev/null 2>&1")
+        ghPrivateRepoAccess = privateExit === 0
+      }
+    }
+  }
+
+  const privateRepoAccess = githubConnected || ghPrivateRepoAccess
+
   const configured = !!userName && !!userEmail
   const status: ToolStatus = configured ? 'installed' : 'misconfigured'
   const authStatus: AuthStatus = configured ? 'authenticated' : 'unauthenticated'
@@ -108,6 +122,8 @@ async function checkGit(): Promise<ToolCheck> {
       user_email: userEmail || null,
       ssh_key_exists: sshKeyExists ? 'true' : 'false',
       github_connected: githubConnected ? 'true' : 'false',
+      private_repo_access: privateRepoAccess ? 'true' : 'false',
+      private_repo_access_source: githubConnected ? 'ssh' : ghPrivateRepoAccess ? 'github_cli' : null,
     },
   }
 }
@@ -525,7 +541,10 @@ async function checkGo(): Promise<ToolCheck> {
 }
 
 async function checkTypeScript(): Promise<ToolCheck> {
-  const path = await which('tsc')
+  // tsc is typically installed via npm under nvm, so source nvm before checking
+  const nvmPrefix = 'if [ -s "$HOME/.nvm/nvm.sh" ]; then . "$HOME/.nvm/nvm.sh" 2>/dev/null; fi;'
+  const { stdout: tscPath, exitCode: tscExit } = await exec(`${nvmPrefix} which tsc 2>/dev/null`)
+  const path = tscExit === 0 && tscPath ? tscPath.split('\n')[0] : null
   if (!path) {
     return {
       id: 'typescript', name: 'TypeScript', status: 'missing', auth_status: 'not_applicable',
@@ -536,13 +555,13 @@ async function checkTypeScript(): Promise<ToolCheck> {
   }
 
   // "Version 5.4.5" → "5.4.5"
-  const { stdout: versionOut } = await exec('tsc --version')
+  const { stdout: versionOut } = await exec(`${nvmPrefix} tsc --version`)
   const versionMatch = versionOut.match(/Version\s+(\d+\.\d+[\.\d]*)/)
   const version = versionMatch ? versionMatch[1] : null
 
   // Check ts-node as optional detail
-  const tsNodePath = await which('ts-node')
-  const tsNodeInstalled = !!tsNodePath
+  const { stdout: tsNodePath, exitCode: tsNodeExit } = await exec(`${nvmPrefix} which ts-node 2>/dev/null`)
+  const tsNodeInstalled = tsNodeExit === 0 && !!tsNodePath
 
   upsertToolPath('typescript', path, version)
 

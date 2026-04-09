@@ -65,4 +65,34 @@ describe('swap helpers', () => {
       footprintBytes: 209715200,
     })
   })
+
+  test('calculates suggested swap sizes from available storage', () => {
+    expect(__test.getSwapRecommendations({
+      path: '/',
+      totalBytes: 128 * 1024 * 1024 * 1024,
+      usedBytes: 48 * 1024 * 1024 * 1024,
+      availableBytes: 80 * 1024 * 1024 * 1024,
+    })).toEqual({
+      suggestedGb: [6, 10, 13],
+      recommendedGb: 10,
+      maxRecommendedGb: 32,
+      maxCustomGb: 79,
+      customWarning: 'Custom sizes above 32 GB are allowed up to 79 GB, but they leave less free disk for the server and workspace data.',
+    })
+  })
+
+  test('falls back to warning-only mode when storage is too tight for a recommendation', () => {
+    expect(__test.getSwapRecommendations({
+      path: '/',
+      totalBytes: 20 * 1024 * 1024 * 1024,
+      usedBytes: 15 * 1024 * 1024 * 1024,
+      availableBytes: 5 * 1024 * 1024 * 1024,
+    })).toEqual({
+      suggestedGb: [1],
+      recommendedGb: 1,
+      maxRecommendedGb: 1,
+      maxCustomGb: 4,
+      customWarning: 'Custom sizes above 1 GB are allowed up to 4 GB, but they leave less free disk for the server and workspace data.',
+    })
+  })
 })

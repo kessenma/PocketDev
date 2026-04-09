@@ -5,6 +5,7 @@ import { getRepoHistoryPatternPreset } from './repo-history-pattern'
 
 const PAPER = '#f7f1e3'
 const SUN = palette.bauhaus.yellow
+const SUBTEXT_PREFIX = 'giving you the power to traverse your repo\'s timeline as it'
 
 export function RepoHistoryTransitionSection({
   onTransitionProgress,
@@ -50,13 +51,18 @@ export function RepoHistoryTransitionSection({
   const sunCx = mix(vpSize.w + sunRadius * 0.55, vpSize.w * (isDesktopLayout ? 0.75 : 0.72), sunReveal)
   const sunCy = mix(-sunRadius * 1.35, vpSize.h * (isDesktopLayout ? 0.2 : 0.18), sunReveal)
   const textZoneHeight = isDesktopLayout ? '42vh' : '42vh'
-  const textReveal = easeOut(segmentProgress(progress, 0.58, 0.9))
-  const textOpacity = reduceMotion ? 1 : textReveal
-  const textTranslateY = reduceMotion ? 0 : mix(40, 0, textReveal)
-  const accentScaleX = reduceMotion ? 1 : textReveal
-  const growsReveal = easeOut(segmentProgress(progress, 0.76, 0.96))
-  const growsTranslateY = reduceMotion ? 0 : mix(10, 0, growsReveal)
-  const growsDotScale = reduceMotion ? 1 : mix(0.15, 1, growsReveal)
+  const headerReveal = easeOut(segmentProgress(progress, 0.38, 0.72))
+  const headerOpacity = reduceMotion ? 1 : headerReveal
+  const headerTranslateY = reduceMotion ? 0 : mix(40, 0, headerReveal)
+  const accentScaleX = reduceMotion ? 1 : headerReveal
+  const subtextReveal = reduceMotion ? 1 : easeOut(segmentProgress(progress, 0.48, 0.82))
+  const subtextTyped = reduceMotion ? SUBTEXT_PREFIX : revealByProgress(SUBTEXT_PREFIX, subtextReveal)
+  const cursorTravel = reduceMotion ? 1 : easeOut(segmentProgress(progress, 0.52, 0.82))
+  const growsReveal = reduceMotion ? 1 : easeOut(segmentProgress(progress, 0.74, 0.92))
+  const growsBadgeSize = mix(isDesktopLayout ? 12 : 10, isDesktopLayout ? 68 : 58, growsReveal)
+  const growsTextOpacity = reduceMotion ? 1 : growsReveal
+  const cursorVisible = subtextTyped.length < SUBTEXT_PREFIX.length || growsReveal > 0
+  const subtextOpacity = reduceMotion ? 1 : Math.max(0.9, subtextReveal)
 
   return (
     <section
@@ -107,13 +113,15 @@ export function RepoHistoryTransitionSection({
           <div className="pointer-events-none absolute inset-x-0 bottom-[8vh] z-10 flex justify-center px-6">
             <div
               className="w-full max-w-5xl"
-              style={{
-                opacity: textOpacity,
-                transform: `translateY(${textTranslateY}px)`,
-              }}
             >
               <div className={isDesktopLayout ? 'max-w-6xl' : 'max-w-3xl'}>
                 <div
+                  style={{
+                    opacity: headerOpacity,
+                    transform: `translateY(${headerTranslateY}px)`,
+                  }}
+                >
+                  <div
                   className="inline-flex items-center gap-3 border px-4 py-2"
                   style={{
                     borderColor: palette.bauhaus.black,
@@ -132,46 +140,46 @@ export function RepoHistoryTransitionSection({
                       transform: `scaleX(${accentScaleX})`,
                     }}
                   />
+                  </div>
+
+                  <div className="mt-6">
+                    <p
+                      className={
+                        isDesktopLayout
+                          ? 'max-w-none text-pretty text-3xl leading-[0.9] sm:text-4xl lg:text-[4.8rem]'
+                          : 'max-w-[11ch] text-pretty text-3xl leading-[0.96] sm:text-4xl'
+                      }
+                      style={{
+                        color: palette.bauhaus.black,
+                        fontFamily: 'var(--font-display), var(--font-heading), sans-serif',
+                        fontWeight: 700,
+                        letterSpacing: '-0.04em',
+                      }}
+                    >
+                      tasks and <span style={{ fontStyle: 'italic' }}>git history</span> are tracked for each repo
+                    </p>
+
+                    <div
+                      className="mt-3 h-[3px] w-32 origin-left"
+                      style={{
+                        backgroundColor: SUN,
+                        transform: `scaleX(${accentScaleX})`,
+                      }}
+                    />
+                  </div>
                 </div>
 
-                <div className="mt-6">
+                <div
+                  className="mt-5"
+                  style={{
+                    opacity: subtextOpacity,
+                  }}
+                >
                   <p
                     className={
                       isDesktopLayout
-                        ? 'max-w-none text-pretty text-3xl leading-[0.9] sm:text-4xl lg:text-[4.8rem]'
-                        : 'max-w-[11ch] text-pretty text-3xl leading-[0.96] sm:text-4xl'
-                    }
-                    style={{
-                      color: palette.bauhaus.black,
-                      fontFamily: 'var(--font-display), var(--font-heading), sans-serif',
-                      fontWeight: 700,
-                      letterSpacing: '-0.04em',
-                    }}
-                  >
-                    {isDesktopLayout ? (
-                      <>
-                        tasks and <span style={{ fontStyle: 'italic' }}>git history</span> tracked for each repo
-                      </>
-                    ) : (
-                      <>
-                        tasks and <span style={{ fontStyle: 'italic' }}>git history</span> tracked for each repo
-                      </>
-                    )}
-                  </p>
-
-                  <div
-                    className="mt-3 h-[3px] w-32 origin-left"
-                    style={{
-                      backgroundColor: SUN,
-                      transform: `scaleX(${accentScaleX})`,
-                    }}
-                  />
-
-                  <p
-                    className={
-                      isDesktopLayout
-                        ? 'mt-5 max-w-3xl text-balance text-base leading-7 sm:text-lg lg:text-xl'
-                        : 'mt-5 max-w-xl text-balance text-base leading-7 sm:text-lg'
+                        ? 'max-w-4xl text-balance text-base leading-8 sm:text-lg lg:text-xl'
+                        : 'max-w-xl text-balance text-base leading-8 sm:text-lg'
                     }
                     style={{
                       color: 'rgba(26,26,26,0.82)',
@@ -179,31 +187,27 @@ export function RepoHistoryTransitionSection({
                       letterSpacing: '0.01em',
                     }}
                   >
-                    giving you the power to traverse your repo&apos;s timeline as it{' '}
-                    <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                      <span
-                        className="inline-block rounded-full"
-                        style={{
-                          width: isDesktopLayout ? '0.7rem' : '0.62rem',
-                          height: isDesktopLayout ? '0.7rem' : '0.62rem',
-                          backgroundColor: palette.bauhaus.blue,
-                          transform: `scale(${growsDotScale})`,
-                          transformOrigin: 'center',
-                        }}
-                      />
-                      <span
-                        className="inline-block"
-                        style={{
-                          color: palette.bauhaus.black,
-                          fontStyle: 'italic',
-                          fontWeight: 600,
-                          transform: `translateY(${growsTranslateY}px)`,
-                          opacity: growsReveal,
-                        }}
-                      >
-                        grows
+                    <span>{subtextTyped}</span>
+                    {(cursorVisible || growsReveal > 0) && (
+                      <span className="inline-flex items-center whitespace-nowrap align-middle">
+                        <span
+                          className="mx-2 inline-flex items-center justify-center rounded-full"
+                          style={{
+                            width: `${growsBadgeSize}px`,
+                            height: `${growsBadgeSize}px`,
+                            backgroundColor: palette.bauhaus.blue,
+                            color: PAPER,
+                            fontFamily: 'var(--font-sans), sans-serif',
+                            fontSize: isDesktopLayout ? '0.95rem' : '0.82rem',
+                            fontWeight: 600,
+                            letterSpacing: growsReveal > 0.75 ? '0.01em' : '0em',
+                            transform: `translateY(${mix(0, -2, cursorTravel)}px)`,
+                          }}
+                        >
+                          <span style={{ opacity: growsTextOpacity }}>grows</span>
+                        </span>
                       </span>
-                    </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -226,4 +230,9 @@ function segmentProgress(value: number, start: number, end: number) {
 
 function easeOut(value: number) {
   return 1 - (1 - value) ** 3
+}
+
+function revealByProgress(text: string, progress: number) {
+  const count = Math.round(Math.max(0, Math.min(1, progress)) * text.length)
+  return text.slice(0, count)
 }

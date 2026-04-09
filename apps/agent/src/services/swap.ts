@@ -6,6 +6,10 @@ const MANAGED_SWAP_FILE_PATH = '/swapfile'
 const MANAGED_SWAPPINESS_FILE_PATH = '/etc/sysctl.d/99-pocketdev-swap.conf'
 const DEFAULT_SWAPPINESS = 10
 const COMMAND_TIMEOUT_MS = 20_000
+const GIGABYTE = 1024 * 1024 * 1024
+const MIN_SWAP_SIZE_GB = 1
+const MIN_STORAGE_RESERVE_GB = 4
+const MAX_RECOMMENDED_SWAP_GB = 32
 
 interface ExecResult {
   stdout: string
@@ -66,6 +70,13 @@ export interface SwapMetrics {
     path: string
     footprintBytes: number
   } | null
+  recommendations: {
+    suggestedGb: number[]
+    recommendedGb: number | null
+    maxRecommendedGb: number | null
+    maxCustomGb: number | null
+    customWarning: string | null
+  }
 }
 
 function isLinux() {
@@ -198,6 +209,72 @@ function parseDuOutput(raw: string, path: string): SwapMetrics['app'] {
   return {
     path,
     footprintBytes: bytesFromKilobytes(match[1]),
+  }
+}
+
+function bytesToWholeGigabytes(bytes: number): number {
+  return Math.floor(bytes / GIGABYTE)
+}
+
+function uniqueSorted(values: number[]): number[] {
+  return [...new Set(values)].sort((a, b) => a - b)
+}
+
+function getSwapRecommendations(storage: SwapMetrics['storage']) {
+  if (!storage) {
+    return {
+      suggestedGb: [],
+      recommendedGb: null,
+      maxRecommendedGb: null,
+      maxCustomGb: null,
+      customWarning: 'Refresh storage metrics to calculate a safe swap size for this server.',
+    }
+  }
+
+  const availableGb = bytesToWholeGigabytes(storage.availableBytes)
+  const reserveGb = Math.max(MIN_STORAGE_RESERVE_GB, Math.floor(storage.totalBytes / GIGABYTE / 10))
+  const maxCustomGb = Math.max(0, availableGb - 1)
+  const maxRecommendedGb = Math.max(
+    0,
+    Math.min(MAX_RECOMMENDED_SWAP_GB, availableGb - reserveGb),
+  )
+
+  if (maxCustomGb < MIN_SWAP_SIZE_GB) {
+    return {
+      suggestedGb: [],
+      recommendedGb: null,
+      maxRecommendedGb: null,
+      maxCustomGb: null,
+      customWarning: 'Not enough free storage is available to create a swap file safely.',
+    }
+  }
+
+  if (maxRecommendedGb < MIN_SWAP_SIZE_GB) {
+    return {
+      suggestedGb: [],
+      recommendedGb: null,
+      maxRecommendedGb: null,
+      maxCustomGb,
+      customWarning: `Custom swap sizes up to ${maxCustomGb} GB are allowed, but PocketDev does not recommend reserving swap on a disk this tight.`,
+    }
+  }
+
+  const recommendedGb = Math.max(
+    MIN_SWAP_SIZE_GB,
+    Math.min(maxRecommendedGb, Math.round(availableGb * 0.12)),
+  )
+  const suggestedGb = uniqueSorted([
+    Math.max(MIN_SWAP_SIZE_GB, Math.min(maxRecommendedGb, Math.round(availableGb * 0.08))),
+    recommendedGb,
+    Math.max(MIN_SWAP_SIZE_GB, Math.min(maxRecommendedGb, Math.round(availableGb * 0.16))),
+  ])
+
+  return {
+    suggestedGb,
+    recommendedGb,
+    maxRecommendedGb,
+    maxCustomGb,
+    customWarning: `Custom sizes above ${maxRecommendedGb} GB are allowed up to ${maxCustomGb} GB, but they leave less free disk for the server and workspace data.`,
   }
 }
 
@@ -358,6 +435,7 @@ export async function getSwapMetrics(): Promise<SwapMetrics> {
       generatedAt: new Date().toISOString(),
       storage: null,
       app: null,
+      recommendations: getSwapRecommendations(null),
     }
   }
 
@@ -365,23 +443,37 @@ export async function getSwapMetrics(): Promise<SwapMetrics> {
   const appPath = process.cwd()
   const appResult = await exec(['du', '-sk', appPath], 120_000)
 
+  const storage = storageResult.exitCode === 0 ? parseDfOutput(storageResult.stdout) : null
+  const app = appResult.exitCode === 0 ? parseDuOutput(appResult.stdout, appPath) : null
+
   return {
     generatedAt: new Date().toISOString(),
-    storage: storageResult.exitCode === 0 ? parseDfOutput(storageResult.stdout) : null,
-    app: appResult.exitCode === 0 ? parseDuOutput(appResult.stdout, appPath) : null,
+    storage,
+    app,
+    recommendations: getSwapRecommendations(storage),
   }
 }
 
 export async function enableManagedSwap(sizeGb: number): Promise<SwapStatus> {
   assertManageableHost()
 
-  if (![1, 2, 4].includes(sizeGb)) {
-    throw new Error('PocketDev swap sizes are limited to 1GB, 2GB, or 4GB.')
+  if (!Number.isInteger(sizeGb) || sizeGb < MIN_SWAP_SIZE_GB) {
+    throw new Error('Swap size must be a whole number of gigabytes greater than or equal to 1.')
   }
 
   const existingStatus = getSwapStatus()
   if (!existingStatus.actions.canEnable) {
     throw new Error(existingStatus.actions.enableBlockedReason ?? 'Swap cannot be enabled right now.')
+  }
+
+  const metrics = await getSwapMetrics()
+  const maxCustomGb = metrics.recommendations.maxCustomGb
+  if (maxCustomGb === null || sizeGb > maxCustomGb) {
+    throw new Error(
+      maxCustomGb === null
+        ? 'Not enough free storage is available to create a swap file safely.'
+        : `Requested swap size exceeds the current safe disk budget. Maximum allowed right now: ${maxCustomGb} GB.`,
+    )
   }
 
   const sizeBytes = sizeGb * 1024 * 1024 * 1024
@@ -482,6 +574,7 @@ export async function disableManagedSwap(): Promise<SwapStatus> {
 }
 
 export const __test = {
+  getSwapRecommendations,
   parseDfOutput,
   parseDuOutput,
   parseSwapEntries,

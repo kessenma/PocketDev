@@ -467,6 +467,13 @@ export interface SwapMetricsInfo {
     path: string
     footprintBytes: number
   } | null
+  recommendations: {
+    suggestedGb: number[]
+    recommendedGb: number | null
+    maxRecommendedGb: number | null
+    maxCustomGb: number | null
+    customWarning: string | null
+  }
 }
 
 export interface SetupDebugInfo {

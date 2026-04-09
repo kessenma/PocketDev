@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
 import {
   disableManagedSwap,
   enableManagedSwap,
@@ -22,7 +24,7 @@ import {
   statusLabel,
   toolIntentDetail,
 } from './setup-tool-utils'
-import { Check, HardDrive, RefreshCw, ShieldCheck, X } from 'lucide-react'
+import { AlertTriangle, Check, HardDrive, RefreshCw, ShieldCheck, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Props {
@@ -48,6 +50,7 @@ function GitDetails({ tool }: { tool: ToolCheck }) {
   const sshExists = tool.details.ssh_key_exists === 'true'
   const githubConnected = tool.details.github_connected === 'true'
   const privateRepoAccess = tool.details.private_repo_access === 'true'
+  const privateRepoSource = tool.details.private_repo_access_source
 
   return (
     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#f4f0e8]/58">
@@ -60,11 +63,11 @@ function GitDetails({ tool }: { tool: ToolCheck }) {
       </span>
       <span className="flex items-center gap-1">
         {githubConnected ? <Check className="h-3 w-3 text-green-400" /> : <X className="h-3 w-3 text-red-400" />}
-        GitHub
+        GitHub SSH
       </span>
       <span className="flex items-center gap-1">
         {privateRepoAccess ? <Check className="h-3 w-3 text-green-400" /> : <X className="h-3 w-3 text-red-400" />}
-        Private Repos
+        {privateRepoSource === 'github_cli' ? 'Private Repos via GitHub CLI' : 'Private Repos'}
       </span>
     </div>
   )
@@ -203,7 +206,9 @@ function DonutChart({
                   strokeWidth={strokeWidth}
                   strokeDasharray={`${Math.max(segmentLength - 2, 0)} ${circumference}`}
                   strokeDashoffset={-offset}
-                />
+                >
+                  <title>{`${segment.label}: ${segment.detail}`}</title>
+                </circle>
               )
               offset += segmentLength
               return element
@@ -225,9 +230,13 @@ function DonutChart({
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: segment.color }}
               />
-              <span className="truncate text-sm text-[#f4f0e8]/76">{segment.label}</span>
+              <span title={segment.label} className="truncate text-sm text-[#f4f0e8]/76">
+                {segment.label}
+              </span>
             </div>
-            <span className="shrink-0 text-xs text-[#f4f0e8]/52">{segment.detail}</span>
+            <span title={segment.detail} className="shrink-0 text-xs text-[#f4f0e8]/52">
+              {segment.detail}
+            </span>
           </div>
         ))}
       </div>
@@ -279,11 +288,13 @@ function SwapCard({
   swap: SwapDebugInfo | undefined
   onRefresh: () => Promise<void> | void
 }) {
+  type SwapAction = { type: 'disable' } | { type: 'enable', sizeGb: number }
   const [metrics, setMetrics] = useState<SwapMetricsInfo | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [metricsError, setMetricsError] = useState<string | null>(null)
-  const [actionPending, setActionPending] = useState<string | null>(null)
+  const [actionPending, setActionPending] = useState<SwapAction | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [customSizeGb, setCustomSizeGb] = useState('')
 
   const loadMetrics = useCallback(async () => {
     setMetricsLoading(true)
@@ -303,28 +314,41 @@ function SwapCard({
 
   const storageSegments = useMemo(() => buildStorageSegments(swap, metrics), [metrics, swap])
   const storageAvailableBytes = metrics?.storage?.availableBytes ?? null
+  const recommendations = metrics?.recommendations
   const swapUsedPercent = swap && swap.totalBytes > 0
     ? Math.round((swap.usedBytes / swap.totalBytes) * 100)
     : 0
-
-  async function runAction(action: 'enable-1' | 'enable-2' | 'enable-4' | 'disable') {
+  const customParsedGb = Number(customSizeGb)
+  const customHasValue = customSizeGb.trim().length > 0
+  const customIsValidInteger = Number.isInteger(customParsedGb) && customParsedGb >= 1
+  const customExceedsMax = recommendations?.maxCustomGb !== null && recommendations?.maxCustomGb !== undefined
+    ? customParsedGb > recommendations.maxCustomGb
+    : false
+  const customNeedsWarning = customIsValidInteger && !!recommendations?.maxRecommendedGb && customParsedGb > recommendations.maxRecommendedGb
+  const customCanSubmit =
+    !!swap?.actions.canEnable &&
+    actionPending === null &&
+    customHasValue &&
+    customIsValidInteger &&
+    !customExceedsMax
+  async function runAction(action: SwapAction) {
     setActionPending(action)
     setActionError(null)
 
     try {
-      if (action === 'disable') {
+      if (action.type === 'disable') {
         await disableManagedSwap()
         toast.success('PocketDev-managed swap removed')
       } else {
-        const sizeGb = Number(action.split('-')[1])
-        await enableManagedSwap(sizeGb)
-        toast.success(`Enabled ${sizeGb}GB PocketDev-managed swap`)
+        await enableManagedSwap(action.sizeGb)
+        toast.success(`Enabled ${action.sizeGb}GB PocketDev-managed swap`)
       }
 
       await Promise.all([
         Promise.resolve(onRefresh()),
         loadMetrics(),
       ])
+      setCustomSizeGb('')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Swap action failed'
       setActionError(message)
@@ -419,7 +443,7 @@ function SwapCard({
 
         <div className="rounded-[1.2rem] border border-white/8 bg-black/25 p-4">
           <div className="flex flex-wrap gap-2">
-            {[1, 2, 4].map((sizeGb) => {
+            {(recommendations?.suggestedGb ?? []).map((sizeGb) => {
               const requiredBytes = sizeGb * 1024 * 1024 * 1024
               const lacksSpace = storageAvailableBytes !== null && storageAvailableBytes < requiredBytes
               const disabled = !swap?.actions.canEnable || actionPending !== null || lacksSpace
@@ -431,9 +455,9 @@ function SwapCard({
                   variant="secondary"
                   className="bg-[#f0c419] text-black hover:bg-[#f0c419]/90 disabled:bg-[#5e4f15] disabled:text-black/60"
                   disabled={disabled}
-                  onClick={() => void runAction(`enable-${sizeGb}` as 'enable-1' | 'enable-2' | 'enable-4')}
+                  onClick={() => void runAction({ type: 'enable', sizeGb })}
                 >
-                  {actionPending === `enable-${sizeGb}` ? 'Working…' : `Enable ${sizeGb}GB`}
+                  {actionPending && actionPending.type === 'enable' && actionPending.sizeGb === sizeGb ? 'Working…' : `Enable ${sizeGb}GB`}
                 </Button>
               )
             })}
@@ -442,10 +466,62 @@ function SwapCard({
               variant="outline"
               className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
               disabled={!swap?.actions.canDisable || actionPending !== null}
-              onClick={() => void runAction('disable')}
+              onClick={() => void runAction({ type: 'disable' })}
             >
-              {actionPending === 'disable' ? 'Reverting…' : 'Disable & Remove'}
+              {actionPending?.type === 'disable' ? 'Reverting…' : 'Disable & Remove'}
             </Button>
+          </div>
+
+          {recommendations?.suggestedGb.length ? (
+            <p className="mt-3 text-sm text-[#f4f0e8]/58">
+              Suggested sizes based on current free storage: {recommendations.suggestedGb.map((size) => `${size} GB`).join(', ')}
+              {recommendations.recommendedGb ? ` · Recommended: ${recommendations.recommendedGb} GB` : ''}
+            </p>
+          ) : null}
+
+          <div className="mt-4 rounded-[1rem] border border-white/8 bg-black/20 p-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[180px] flex-1">
+                <Label htmlFor="swap-custom-size" className="text-xs uppercase tracking-[0.2em] text-[#f4f0e8]/45">
+                  Custom Swap Size (GB)
+                </Label>
+                <Input
+                  id="swap-custom-size"
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  value={customSizeGb}
+                  onChange={(event) => setCustomSizeGb(event.target.value)}
+                  className="mt-2 bg-[#17130f] text-[#f5eedf]"
+                  placeholder={recommendations?.recommendedGb ? `${recommendations.recommendedGb}` : 'Enter GB'}
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="bg-[#f0c419] text-black hover:bg-[#f0c419]/90 disabled:bg-[#5e4f15] disabled:text-black/60"
+                disabled={!customCanSubmit}
+                onClick={() => void runAction({ type: 'enable', sizeGb: customParsedGb })}
+              >
+                {actionPending?.type === 'enable' && actionPending.sizeGb === customParsedGb ? 'Working…' : 'Enable Custom Size'}
+              </Button>
+            </div>
+
+            {!customHasValue ? null : !customIsValidInteger ? (
+              <p className="mt-3 text-sm text-red-300">Enter a whole number of gigabytes.</p>
+            ) : customExceedsMax ? (
+              <p className="mt-3 text-sm text-red-300">
+                Custom size exceeds the current maximum allowed size of {recommendations?.maxCustomGb ?? 0} GB.
+              </p>
+            ) : customNeedsWarning ? (
+              <div className="mt-3 flex items-start gap-2 rounded-[0.9rem] border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-100">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{recommendations?.customWarning}</p>
+              </div>
+            ) : recommendations?.customWarning ? (
+              <p className="mt-3 text-sm text-[#f4f0e8]/52">{recommendations.customWarning}</p>
+            ) : null}
           </div>
 
           {swap?.actions.enableBlockedReason ? (

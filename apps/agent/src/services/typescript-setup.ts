@@ -1,9 +1,18 @@
 import type { TypeScriptSetupStatus } from '@pocketdev/shared/types'
 
-/** Run a command in a login shell with full PATH visibility */
+/** Run a command in a login shell with full PATH visibility (including nvm-managed tools) */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
-  const wrapped = `export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"; source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; ${cmd}`
+  const wrapped = `
+export HOME="${home}"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+if [ -s "/etc/profile" ]; then . "/etc/profile" 2>/dev/null; fi
+if [ -s "$HOME/.profile" ]; then . "$HOME/.profile" 2>/dev/null; fi
+if [ -s "$HOME/.bash_profile" ]; then . "$HOME/.bash_profile" 2>/dev/null; fi
+if [ -s "$HOME/.bashrc" ]; then . "$HOME/.bashrc" 2>/dev/null; fi
+if [ -s "$HOME/.nvm/nvm.sh" ]; then . "$HOME/.nvm/nvm.sh" 2>/dev/null; fi
+${cmd}
+`.trim()
   const proc = Bun.spawn(['bash', '-lc', wrapped], {
     stdout: 'pipe',
     stderr: 'pipe',
