@@ -21,13 +21,15 @@ import { getCodexAuthDebug } from '../services/codex-setup.ts'
 import { getClaudeAuthDebug } from '../services/claude-setup.ts'
 import { getCopilotAuthDebug } from '../services/copilot-setup.ts'
 import { getGitHubAuthDebug } from '../services/git-setup.ts'
-import { getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
+import { getActiveProjectId, getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
 import { checkPythonStatus } from '../services/python-setup.ts'
 import { checkRustStatus } from '../services/rust-setup.ts'
 import { checkGoStatus } from '../services/go-setup.ts'
 import { checkTypeScriptStatus } from '../services/typescript-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
+import { getDetailedCommits, detectNewCommits } from '../services/git-history-sync.ts'
+import { getWsDebugInfo } from '../services/ws.ts'
 import { createBrowserSession } from '../services/proxy.ts'
 import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/version.ts'
 import { disableManagedSwap, enableManagedSwap, getSwapMetrics, getSwapStatus } from '../services/swap.ts'
@@ -311,6 +313,22 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     return { entries: getTerminalDebugLog() }
   })
 
+  // ─── Network / WebSocket debug (requires session) ─────
+  .get('/debug/network', ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const wsInfo = getWsDebugInfo()
+    return {
+      websocket: wsInfo,
+      server: {
+        port: Number(process.env.POCKETDEV_PORT ?? 4387),
+        uptime: wsInfo.serverUptime,
+      },
+    }
+  })
+
   .get('/debug/codex-auth', ({ request, set }) => {
     if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
@@ -349,6 +367,53 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return await getProjectsDebug()
+  })
+
+  // ─── Git history debug (requires session) ──────────────
+  .get('/debug/git-history', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const projectId = getActiveProjectId()
+    if (!projectId) {
+      return { commits: [], syncStatus: null, projectId: null }
+    }
+
+    try {
+      const [historyResult, syncStatus] = await Promise.all([
+        Promise.resolve(getDetailedCommits(projectId, 30, 0)),
+        detectNewCommits(projectId).catch(() => null),
+      ])
+
+      return {
+        projectId,
+        commits: historyResult.commits.map((c) => ({
+          sha: c.shortSha,
+          fullSha: c.sha,
+          message: c.message,
+          authorName: c.authorName,
+          authorEmail: c.authorEmail,
+          committedAt: c.committedAt,
+          branch: c.branch,
+          additions: c.additions ?? 0,
+          deletions: c.deletions ?? 0,
+          filesChanged: c.filesChanged ?? 0,
+          origin: c.origin ?? 'external',
+          files: c.files.map((f) => ({
+            path: f.path,
+            oldPath: f.oldPath,
+            kind: f.kind,
+            additions: f.additions ?? 0,
+            deletions: f.deletions ?? 0,
+          })),
+        })),
+        hasMore: historyResult.hasMore,
+        syncStatus,
+      }
+    } catch {
+      return { commits: [], syncStatus: null, projectId }
+    }
   })
 
   // ─── Tasks debug (requires session) ────────────────────

@@ -363,6 +363,48 @@ export async function fetchProjectsDebug(): Promise<ProjectsDebugInfo> {
   return res.json()
 }
 
+// ─── Git history debug ─────────────────────────────────────
+
+export interface GitHistoryDebugCommitFile {
+  path: string
+  oldPath: string | null
+  kind: string
+  additions: number
+  deletions: number
+}
+
+export interface GitHistoryDebugCommit {
+  sha: string
+  fullSha: string
+  message: string
+  authorName: string
+  authorEmail: string | null
+  committedAt: string
+  branch: string | null
+  additions: number
+  deletions: number
+  filesChanged: number
+  origin: 'app' | 'task' | 'external'
+  files: GitHistoryDebugCommitFile[]
+}
+
+export interface GitHistoryDebugInfo {
+  projectId: string | null
+  commits: GitHistoryDebugCommit[]
+  hasMore: boolean
+  syncStatus: {
+    lastSyncedSha: string | null
+    headSha: string
+    pendingCommits: number
+  } | null
+}
+
+export async function fetchGitHistoryDebug(): Promise<GitHistoryDebugInfo> {
+  const res = await get('/debug/git-history')
+  if (!res.ok) throw new Error('Failed to fetch git history debug')
+  return res.json()
+}
+
 // ─── Tasks debug ────────────────────────────────────────
 
 export interface TaskDebugEntry {
@@ -596,6 +638,40 @@ export interface TypeScriptDebugInfo {
 export async function fetchTypeScriptDebug(): Promise<TypeScriptDebugInfo> {
   const res = await get('/debug/typescript')
   if (!res.ok) throw new Error('Failed to fetch TypeScript debug')
+  return res.json()
+}
+
+// ─── Network / WebSocket debug ──────────────────────────
+
+export interface WsConnectionEvent {
+  type: 'connect' | 'disconnect' | 'auth_rejected' | 'stale_closed' | 'message_in'
+  deviceId: string
+  timestamp: number
+  detail?: string
+}
+
+export interface WsConnectedClient {
+  deviceId: string
+  connectedAt: number
+  connectedDuration: number
+  messageCount: number
+}
+
+export interface NetworkDebugInfo {
+  websocket: {
+    connectedClients: WsConnectedClient[]
+    recentEvents: WsConnectionEvent[]
+    serverUptime: number
+  }
+  server: {
+    port: number
+    uptime: number
+  }
+}
+
+export async function fetchNetworkDebug(): Promise<NetworkDebugInfo> {
+  const res = await get('/debug/network')
+  if (!res.ok) throw new Error('Failed to fetch network debug')
   return res.json()
 }
 

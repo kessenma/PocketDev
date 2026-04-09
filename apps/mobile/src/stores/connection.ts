@@ -45,7 +45,16 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       return
     }
 
-    console.log('[connection] Connecting to:', { ip: server.ip, port: server.port, secure: server.secure, deviceId: server.deviceId })
+    console.log('[connection] connect() called:', {
+      ip: server.ip,
+      port: server.port,
+      secure: server.secure,
+      deviceId: server.deviceId,
+      hasExistingWs: !!existingWs,
+    })
+    if (existingWs) {
+      console.log('[connection] disconnecting existing WS before creating new one')
+    }
     existingWs?.disconnect()
 
     // Set the module-level secure flag so all API/WS calls use the right protocol
@@ -55,6 +64,12 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     const ws = new PocketDevWebSocket(
       url,
       (status) => {
+        // Guard: only update store if this WS is still the current one.
+        // Prevents stale WS instances from overwriting a newer connection's status.
+        if (get().ws !== ws) {
+          console.log('[connection] STALE WebSocket status ignored:', status)
+          return
+        }
         console.log('[connection] WebSocket status:', status)
         set({ status })
         if (status === 'connected') {

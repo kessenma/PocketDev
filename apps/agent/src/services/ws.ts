@@ -13,8 +13,50 @@ import { handleAnswer, handlePlanMessage, acceptPlan, denyPlan } from './plan-ma
 import type { PlanAnswerCommand, PlanMessageCommand, PlanAcceptCommand, PlanDenyCommand } from '@pocketdev/shared/types'
 
 /** Connected clients keyed by device ID */
-const clients = new Map<string, { send: (data: string) => void; close: () => void }>()
+interface WsClient {
+  send: (data: string) => void
+  close: () => void
+  ws: unknown  // raw Elysia WS ref for identity checks
+  connectedAt: number
+  messageCount: number
+}
+const clients = new Map<string, WsClient>()
 const containerLogFollowers = new Map<string, ContainerLogsFollower>()
+
+// ─── Connection event ring buffer for diagnostics ────────
+interface WsConnectionEvent {
+  type: 'connect' | 'disconnect' | 'auth_rejected' | 'stale_closed' | 'message_in'
+  deviceId: string
+  timestamp: number
+  detail?: string
+}
+
+const WS_EVENT_BUFFER_SIZE = 50
+const wsEventBuffer: WsConnectionEvent[] = []
+const serverStartedAt = Date.now()
+
+function pushWsEvent(event: WsConnectionEvent) {
+  wsEventBuffer.push(event)
+  if (wsEventBuffer.length > WS_EVENT_BUFFER_SIZE) {
+    wsEventBuffer.shift()
+  }
+}
+
+/** Get WebSocket debug info for the Network diagnostics tab */
+export function getWsDebugInfo() {
+  const connectedClients = Array.from(clients.entries()).map(([deviceId, client]) => ({
+    deviceId,
+    connectedAt: client.connectedAt,
+    connectedDuration: Date.now() - client.connectedAt,
+    messageCount: client.messageCount,
+  }))
+
+  return {
+    connectedClients,
+    recentEvents: [...wsEventBuffer].reverse(), // newest first
+    serverUptime: Date.now() - serverStartedAt,
+  }
+}
 
 /** Send a WsMessage to all connected clients */
 export function broadcast(msg: WsMessage) {
@@ -46,8 +88,12 @@ export const wsRoutes = new Elysia()
     async beforeHandle({ request }) {
       const deviceId = await authenticateRequest(request.headers.get('authorization'))
       if (!deviceId) {
+        const parsedId = parseDeviceIdFromAuthHeader(request.headers.get('authorization'))
+        console.warn(`[ws] beforeHandle: auth REJECTED for deviceId=${parsedId ?? 'unknown'}`)
+        pushWsEvent({ type: 'auth_rejected', deviceId: parsedId ?? 'unknown', timestamp: Date.now() })
         throw new Error('Unauthorized')
       }
+      console.log(`[ws] beforeHandle: auth OK for deviceId=${deviceId}`)
     },
     open(ws) {
       const deviceId = parseDeviceIdFromAuthHeader(ws.data.request.headers.get('authorization')) ?? 'dev-device'
@@ -57,7 +103,8 @@ export const wsRoutes = new Elysia()
       // Close stale connection from the same device (e.g. mobile app reload)
       const existing = clients.get(deviceId)
       if (existing) {
-        console.log(`Closing stale WS for device: ${deviceId}`)
+        console.log(`[ws] open: closing stale WS for device=${deviceId}`)
+        pushWsEvent({ type: 'stale_closed', deviceId, timestamp: Date.now(), detail: `connectedFor=${Date.now() - existing.connectedAt}ms` })
         try { existing.close() } catch { /* already closed */ }
         // Also clean up any container log follower for the old connection
         const follower = containerLogFollowers.get(deviceId)
@@ -67,17 +114,29 @@ export const wsRoutes = new Elysia()
         }
       }
 
-      clients.set(deviceId, {
+      const client: WsClient = {
         send: (data: string) => ws.send(data),
         close: () => ws.close(),
-      })
-      console.log(`Device connected: ${deviceId}`)
+        ws,
+        connectedAt: Date.now(),
+        messageCount: 0,
+      }
+      clients.set(deviceId, client)
+      pushWsEvent({ type: 'connect', deviceId, timestamp: Date.now(), detail: `staleClient=${!!existing}` })
+      console.log(`[ws] open: device=${deviceId}, staleClient=${!!existing}`)
     },
     async message(ws, raw) {
       let containerIdForError = ''
 
       try {
         const msg = typeof raw === 'string' ? JSON.parse(raw) : raw as WsMessage
+
+        // Track message count for diagnostics
+        const senderDeviceId = (ws as any)._deviceId as string | undefined
+        if (senderDeviceId) {
+          const senderClient = clients.get(senderDeviceId)
+          if (senderClient) senderClient.messageCount++
+        }
 
         switch (msg.type) {
           case 'ping':
@@ -264,8 +323,18 @@ export const wsRoutes = new Elysia()
           containerLogFollowers.delete(deviceId)
           follower.stop()
         }
-        clients.delete(deviceId)
-        console.log(`Device disconnected: ${deviceId}`)
+
+        // Only delete from clients map if this WS is still the registered client.
+        // Prevents a stale close handler from removing a newer connection's entry.
+        const current = clients.get(deviceId)
+        if (current && current.ws === ws) {
+          clients.delete(deviceId)
+          pushWsEvent({ type: 'disconnect', deviceId, timestamp: Date.now(), detail: 'current_client' })
+          console.log(`[ws] close: device=${deviceId}, was current client — removed from map`)
+        } else {
+          pushWsEvent({ type: 'disconnect', deviceId, timestamp: Date.now(), detail: 'stale_client_ignored' })
+          console.log(`[ws] close: device=${deviceId}, was STALE client — map entry preserved for newer connection`)
+        }
       }
     },
   })

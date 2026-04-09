@@ -142,7 +142,25 @@ type GithubRepoFetchResult = {
   error: string | null
 }
 
+/** Cache for GitHub repo fetches — avoids hammering the API on every poll */
+let _repoCache: { result: GithubRepoFetchResult; expiresAt: number } | null = null
+const REPO_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
 async function fetchGithubRepos(githubUsername: string | null): Promise<GithubRepoFetchResult> {
+  // Return cached result if fresh
+  if (_repoCache && Date.now() < _repoCache.expiresAt) {
+    return _repoCache.result
+  }
+
+  const result = await fetchGithubReposUncached(githubUsername)
+  // Only cache successful fetches (repos found or no GitHub user)
+  if (result.error === null || result.repos.length > 0) {
+    _repoCache = { result, expiresAt: Date.now() + REPO_CACHE_TTL_MS }
+  }
+  return result
+}
+
+async function fetchGithubReposUncached(githubUsername: string | null): Promise<GithubRepoFetchResult> {
   if (await hasGhAuth()) {
     const userResult = await exec('gh api user --jq .login')
     const authedUsername = userResult.exitCode === 0 && userResult.stdout ? userResult.stdout.trim() : githubUsername
@@ -307,13 +325,46 @@ export async function getProjectsDebug() {
   const activeProjectId = getActiveProjectId()
   const localProjects = getProjects().map((project) => projectToSummary(project, activeProjectId))
   const sshStatus = await checkSshStatus()
+  // Use cached fetchGithubRepos — avoids double-fetching from GitHub API
   const githubData = await fetchGithubRepos(sshStatus.github_username)
-  const listed = await listProjects()
+
+  // Merge GitHub repos into the local projects (same logic as listProjects but without a second fetch)
+  const merged = new Map(localProjects.map((p) => [p.id, p]))
+  for (const repo of githubData.repos) {
+    const matchingLocal = localProjects.find((p) =>
+      p.remoteUrl === repo.ssh_url || p.remoteUrl === repo.clone_url,
+    )
+    if (matchingLocal) {
+      merged.set(matchingLocal.id, {
+        ...matchingLocal,
+        defaultBranch: matchingLocal.defaultBranch ?? repo.default_branch,
+        lastUpdatedAt: repo.updated_at,
+        visibility: repo.private ? 'private' as const : 'public' as const,
+      })
+    } else {
+      const id = buildProfileProjectId(repo.owner.login, repo.name)
+      merged.set(id, {
+        id,
+        name: repo.name,
+        owner: repo.owner.login,
+        remoteUrl: repo.ssh_url || repo.clone_url,
+        localPath: null,
+        isLocal: false,
+        isActive: false,
+        needsClone: true,
+        defaultBranch: repo.default_branch,
+        lastUpdatedAt: repo.updated_at,
+        visibility: repo.private ? 'private' as const : 'public' as const,
+        source: 'github_profile' as const,
+      })
+    }
+  }
+  const allProjects = Array.from(merged.values())
 
   const privateRepos = githubData.repos.filter((repo) => repo.private)
   const publicRepos = githubData.repos.filter((repo) => !repo.private)
-  const listedPrivate = listed.projects.filter((project) => project.visibility === 'private')
-  const listedPublic = listed.projects.filter((project) => project.visibility === 'public')
+  const listedPrivate = allProjects.filter((project) => project.visibility === 'private')
+  const listedPublic = allProjects.filter((project) => project.visibility === 'public')
 
   return {
     activeProjectId,
@@ -330,10 +381,10 @@ export async function getProjectsDebug() {
     fetchedPrivateSample: privateRepos.slice(0, 8).map((repo) => `${repo.owner.login}/${repo.name}`),
     fetchedPublicSample: publicRepos.slice(0, 8).map((repo) => `${repo.owner.login}/${repo.name}`),
     localProjectCount: localProjects.length,
-    listedProjectCount: listed.projects.length,
+    listedProjectCount: allProjects.length,
     listedPrivateCount: listedPrivate.length,
     listedPublicCount: listedPublic.length,
-    listedUnknownCount: listed.projects.filter((project) => project.visibility === 'unknown').length,
+    listedUnknownCount: allProjects.filter((project) => project.visibility === 'unknown').length,
     listedPrivateSample: listedPrivate.slice(0, 8).map((project) => `${project.owner ?? 'unknown'}/${project.name}`),
     recentOperations: [...projectDebugLog],
   }
