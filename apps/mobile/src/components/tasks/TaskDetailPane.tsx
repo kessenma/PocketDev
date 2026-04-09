@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
@@ -9,7 +9,9 @@ import { useTaskStore } from '../../stores/tasks'
 import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
+import BauhausChatInput from '../shared/BauhausChatInput'
 import { TaskStreamerInline } from './TaskStreamer'
+import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
 import { typeStyles } from '../../theme/typography'
 
@@ -44,6 +46,10 @@ export default function TaskDetailPane({
 
   const activitiesRaw = useTaskStore((s) => (taskId ? s.taskActivities.get(taskId) : undefined))
   const activities = useMemo(() => activitiesRaw ?? [], [activitiesRaw])
+  const turnsRaw = useTaskStore((s) => (taskId ? s.taskTurns.get(taskId) : undefined))
+  const turns = useMemo(() => turnsRaw ?? [], [turnsRaw])
+  const continueTask = useTaskStore((s) => s.continueTask)
+  const loadTurnsForTask = useTaskStore((s) => s.loadTurnsForTask)
   const { toast } = useToast()
 
   const scrollViewRef = useRef<ScrollView>(null)
@@ -106,6 +112,14 @@ export default function TaskDetailPane({
     }
   }, [task?.status, taskId, logs.length, loadLogsForTask])
 
+  // Auto-fetch turns for multi-turn tasks
+  useEffect(() => {
+    if (!task || !taskId) return
+    if ((task.turn_count ?? 1) > 1 && turns.length === 0) {
+      void loadTurnsForTask(taskId)
+    }
+  }, [task?.turn_count, taskId, turns.length, loadTurnsForTask])
+
   const itemCount = activities.length + logs.length
   useEffect(() => {
     if (autoScroll && itemCount > 0) {
@@ -134,6 +148,9 @@ export default function TaskDetailPane({
   }
 
   const isRunning = task.status === 'running'
+  const isTerminal = task.status === 'completed' || task.status === 'failed'
+  const canContinue = isTerminal && task.agent_type === 'claude' && !!task.session_id
+  const isMultiTurn = (task.turn_count ?? 1) > 1
   const statusColor = STATUS_COLORS[task.status ?? 'pending']
   const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '--'
 
@@ -157,7 +174,11 @@ export default function TaskDetailPane({
   }, [activities, logs])
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
         <View style={styles.statusMeta}>
           <BauhausBadge label={task.status} color={statusColor} />
@@ -195,14 +216,20 @@ export default function TaskDetailPane({
         onScroll={handleScroll}
         scrollEventThrottle={100}
       >
-        <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
-          <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
-          <Text style={[styles.promptText, { color: colors.text }]} numberOfLines={3}>
-            {extractUserRequest(task.prompt)}
-          </Text>
-        </View>
+        {/* For multi-turn tasks, show conversation thread instead of single prompt card */}
+        {isMultiTurn && turns.length > 0 ? (
+          <TaskConversation turns={turns} />
+        ) : (
+          <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
+            <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
+            <Text style={[styles.promptText, { color: colors.text }]} numberOfLines={3}>
+              {extractUserRequest(task.prompt)}
+            </Text>
+          </View>
+        )}
 
-        {!isRunning && resultText ? (
+        {/* Only show result card for single-turn completed tasks (multi-turn has results in conversation) */}
+        {!isRunning && !isMultiTurn && resultText ? (
           <View style={[styles.resultCard, { backgroundColor: colors.panelAlt, borderColor: colors.primary }]}>
             <View style={styles.resultHeader}>
               <MessageSquare color={colors.primary} size={14} strokeWidth={2.25} />
@@ -286,6 +313,14 @@ export default function TaskDetailPane({
         </View>
       ) : null}
 
+      {/* Chat input for continuing Claude tasks */}
+      {canContinue && !isRunning ? (
+        <BauhausChatInput
+          placeholder="Send a follow-up..."
+          onSend={(text) => continueTask(task.id, text)}
+        />
+      ) : null}
+
       {taskId ? <TaskInteractionSheet taskId={taskId} /> : null}
 
       {/* Copy option menu */}
@@ -310,7 +345,7 @@ export default function TaskDetailPane({
           </View>
         </Pressable>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   )
 }
 

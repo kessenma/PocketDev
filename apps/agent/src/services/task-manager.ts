@@ -1,4 +1,4 @@
-import { insertTask, getRecentTasks, getToolPath, getProject } from '../db/index.ts'
+import { insertTask, getRecentTasks, getToolPath, getProject, getTask, insertTaskTurn, resetTaskForContinuation } from '../db/index.ts'
 import { ManagedProcess } from './managed-process.ts'
 import { ManagedTmuxProcess } from './managed-tmux-process.ts'
 import { getActiveProjectId } from './projects.ts'
@@ -9,7 +9,7 @@ const processes = new Map<string, ManagedProcess | ManagedTmuxProcess>()
 type TaskMode = 'default' | 'plan'
 
 /** Build the command array for a given agent type, using stored tool paths when available */
-export function buildCommand(agentType: string, prompt: string, model: string | null, mode: TaskMode): string[] {
+export function buildCommand(agentType: string, prompt: string, model: string | null, mode: TaskMode, sessionId?: string): string[] {
   switch (agentType) {
     case 'claude': {
       const claudePath = getToolPath('claude_cli') ?? 'claude'
@@ -20,6 +20,7 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
         '--permission-mode', permissionMode,
         '--verbose',
       ]
+      if (sessionId) cmd.push('--session-id', sessionId)
       if (model) cmd.push('--model', model)
       cmd.push('-p', prompt)
       return cmd
@@ -54,10 +55,16 @@ export function startTask(
   mode: TaskMode = 'default',
 ): string {
   const taskId = crypto.randomUUID()
+  const sessionId = agentType === 'claude' ? crypto.randomUUID() : null
   const projectId = getActiveProjectId()
   const project = projectId ? getProject(projectId) : undefined
   const cwd = workingDirectory ?? project?.absolutePath ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
-  insertTask(taskId, prompt, agentType, mode, cwd, project?.id ?? null, project?.name ?? null, model)
+  insertTask(taskId, prompt, agentType, mode, cwd, project?.id ?? null, project?.name ?? null, model, sessionId)
+
+  // Record the initial user turn
+  if (sessionId) {
+    insertTaskTurn(crypto.randomUUID(), taskId, 1, 'user', prompt)
+  }
 
   if (agentType === 'copilot') {
     console.log(`[task-manager] Starting copilot tmux task ${taskId}`)
@@ -66,7 +73,7 @@ export function startTask(
     processes.set(taskId, proc)
     proc.start()
   } else {
-    const command = buildCommand(agentType, prompt, model, mode)
+    const command = buildCommand(agentType, prompt, model, mode, sessionId ?? undefined)
     console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
     console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
     const proc = new ManagedProcess({ taskId, command, cwd, mode, agentType })
@@ -75,6 +82,44 @@ export function startTask(
   }
 
   return taskId
+}
+
+/** Continue a completed Claude task with a follow-up message */
+export function continueTask(taskId: string, prompt: string, model: string | null = null): boolean {
+  const task = getTask(taskId)
+  if (!task) return false
+  if (task.status !== 'completed' && task.status !== 'failed') return false
+  if (task.agentType !== 'claude' || !task.sessionId) return false
+
+  const newTurnCount = (task.turnCount ?? 1) + 1
+  const turnModel = model ?? task.model
+
+  // Build resume command
+  const claudePath = getToolPath('claude_cli') ?? 'claude'
+  const command = [
+    claudePath,
+    '--output-format', 'stream-json',
+    '--permission-mode', 'acceptEdits',
+    '--verbose',
+    '--resume', task.sessionId,
+  ]
+  if (turnModel) command.push('--model', turnModel)
+  command.push('-p', prompt)
+
+  // Record the user turn
+  insertTaskTurn(crypto.randomUUID(), taskId, newTurnCount, 'user', prompt)
+
+  // Reset task status for the new turn
+  resetTaskForContinuation(taskId, newTurnCount)
+
+  const cwd = task.workingDirectory ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
+  console.log(`[task-manager] Continuing task ${taskId} (turn ${newTurnCount}): ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
+
+  const proc = new ManagedProcess({ taskId, command, cwd, mode: 'default', agentType: 'claude', turnNumber: newTurnCount })
+  processes.set(taskId, proc)
+  proc.start()
+
+  return true
 }
 
 /** Kill a running task */

@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import type { DB } from '@op-engineering/op-sqlite'
-import type { Task, TaskActivity, TaskQuestion } from '@pocketdev/shared/types'
+import type { Task, TaskTurn, TaskActivity, TaskQuestion } from '@pocketdev/shared/types'
 import type { TaskStatus, AgentType, TaskMode } from '@pocketdev/shared/schema'
-import { fetchTaskList, fetchTaskLogs } from '../services/api'
+import { fetchTaskList, fetchTaskLogs, fetchTaskTurns } from '../services/api'
 import {
   upsertTasks,
   getCachedTasks,
@@ -11,6 +11,8 @@ import {
   hasTaskLogs,
   updateCachedTaskStatus,
   deleteOldTasks,
+  upsertTaskTurns,
+  getCachedTaskTurns,
 } from '../db/taskOperations'
 import { useConnectionStore } from './connection'
 
@@ -32,11 +34,13 @@ interface TaskState {
   activeTaskId: string | null
   taskLogs: Map<string, string[]>
   taskActivities: Map<string, TaskActivity[]>
+  taskTurns: Map<string, TaskTurn[]>
   pendingPermissions: Map<string, PermissionDenial[]>
   pendingQuestions: Map<string, TaskQuestion[]>
   setTasks: (tasks: Task[]) => void
   refreshFromServer: () => Promise<void>
   loadLogsForTask: (taskId: string) => Promise<void>
+  loadTurnsForTask: (taskId: string) => Promise<void>
   startTask: (
     prompt: string,
     agentType: AgentType,
@@ -44,6 +48,7 @@ interface TaskState {
     model?: string | null,
     mode?: TaskMode,
   ) => void
+  continueTask: (taskId: string, prompt: string, model?: string | null) => void
   killTask: (id: string) => void
   sendInput: (taskId: string, data: string) => void
   appendLog: (taskId: string, line: string) => void
@@ -64,6 +69,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   activeTaskId: null,
   taskLogs: new Map(),
   taskActivities: new Map(),
+  taskTurns: new Map(),
 
   setTasks: (tasks: Task[]) => {
     const map = new Map<string, Task>()
@@ -146,6 +152,71 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     } catch {
       // Silent fail — logs just won't show
     }
+  },
+
+  loadTurnsForTask: async (taskId: string) => {
+    // Already loaded
+    const existing = get().taskTurns.get(taskId)
+    if (existing && existing.length > 0) return
+
+    // Try local DB cache first
+    if (_db) {
+      try {
+        const cached = await getCachedTaskTurns(_db, taskId)
+        if (cached.length > 0) {
+          set((state) => {
+            const turns = new Map(state.taskTurns)
+            turns.set(taskId, cached)
+            return { taskTurns: turns }
+          })
+          return
+        }
+      } catch { /* fall through */ }
+    }
+
+    // Fetch from server
+    const server = useConnectionStore.getState().server
+    if (!server) return
+
+    try {
+      const result = await fetchTaskTurns(server.ip, server.port, taskId)
+      const typedTurns = result.turns as TaskTurn[]
+      set((state) => {
+        const turns = new Map(state.taskTurns)
+        turns.set(taskId, typedTurns)
+        return { taskTurns: turns }
+      })
+
+      // Cache locally
+      if (_db) {
+        void upsertTaskTurns(_db, taskId, typedTurns).catch(() => {})
+      }
+    } catch { /* silent */ }
+  },
+
+  continueTask: (taskId: string, prompt: string, model = null) => {
+    const ws = useConnectionStore.getState().ws
+    if (!ws) return
+
+    ws.send('task.continue', { taskId, prompt, model })
+
+    // Optimistically add the user turn
+    const task = get().tasks.get(taskId)
+    const turnNumber = (task?.turn_count ?? 1) + 1
+    const newTurn: TaskTurn = {
+      id: crypto.randomUUID(),
+      task_id: taskId,
+      turn_number: turnNumber,
+      role: 'user',
+      content: prompt,
+      created_at: new Date().toISOString(),
+    }
+    set((state) => {
+      const turns = new Map(state.taskTurns)
+      const existing = turns.get(taskId) ?? []
+      turns.set(taskId, [...existing, newTurn])
+      return { taskTurns: turns }
+    })
   },
 
   startTask: (prompt: string, agentType: AgentType, workingDirectory = null, model = null, mode = 'default') => {

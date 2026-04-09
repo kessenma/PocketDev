@@ -162,6 +162,20 @@ export async function fetchTaskList(ip: string, port: number) {
   return response.json()
 }
 
+export async function fetchTaskTurns(
+  ip: string,
+  port: number,
+  taskId: string,
+): Promise<{ taskId: string; turns: Array<{ id: string; task_id: string; turn_number: number; role: string; content: string; created_at: string }> }> {
+  const response = await fetch(apiUrl(ip, port, `/tasks/${taskId}/turns`), {
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch task turns (${response.status})`)
+  return response.json()
+}
+
 export async function fetchTaskLogs(
   ip: string,
   port: number,

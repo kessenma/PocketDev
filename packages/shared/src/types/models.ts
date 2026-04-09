@@ -19,9 +19,20 @@ export interface Task {
   working_directory: string | null
   project_id: string | null
   project_name: string | null
+  session_id: string | null
+  turn_count: number
   created_at: string
   started_at: string | null
   completed_at: string | null
+}
+
+export interface TaskTurn {
+  id: string
+  task_id: string
+  turn_number: number
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
 }
 
 export interface FileChange {

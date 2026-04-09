@@ -1,6 +1,6 @@
 import type { Subprocess } from 'bun'
 import type { PlanStep, PlanQuestion, TaskActivity } from '@pocketdev/shared/types'
-import { insertTaskLog, updateTaskStatus } from '../db/index.ts'
+import { insertTaskLog, updateTaskStatus, insertTaskTurn } from '../db/index.ts'
 import { broadcast, makeMessage } from './ws.ts'
 import { detectDevServerPort, setDevServerPort } from './proxy.ts'
 import { proposePlan } from './plan-manager.ts'
@@ -202,6 +202,7 @@ export interface ManagedProcessOptions {
   cwd: string | null
   mode: 'default' | 'plan'
   agentType: string
+  turnNumber?: number
 }
 
 export class ManagedProcess {
@@ -216,6 +217,7 @@ export class ManagedProcess {
   private collectedText = ''
   private command: string[]
   private cwd: string | null
+  private turnNumber: number
 
   constructor(opts: ManagedProcessOptions) {
     this.taskId = opts.taskId
@@ -223,6 +225,7 @@ export class ManagedProcess {
     this.cwd = opts.cwd
     this.mode = opts.mode
     this.agentType = opts.agentType
+    this.turnNumber = opts.turnNumber ?? 1
   }
 
   get status(): TaskStatus {
@@ -244,6 +247,16 @@ export class ManagedProcess {
   /** Spawn the child process and start streaming output */
   start() {
     this.setStatus('running')
+
+    // Notify clients of new turn for continuation
+    if (this.turnNumber > 1) {
+      broadcast(
+        makeMessage('task.turn_started', {
+          taskId: this.taskId,
+          turnNumber: this.turnNumber,
+        }),
+      )
+    }
 
     this.proc = Bun.spawn(this.command, {
       cwd: this.cwd ?? undefined,
@@ -271,6 +284,15 @@ export class ManagedProcess {
       this.killTimer && clearTimeout(this.killTimer)
       const status: TaskStatus = exitCode === 0 ? 'completed' : 'failed'
       this.setStatus(status, exitCode)
+
+      // Save the assistant's response as a turn
+      if (this.agentType === 'claude' && this.collectedText.trim()) {
+        try {
+          insertTaskTurn(crypto.randomUUID(), this.taskId, this.turnNumber, 'assistant', this.collectedText.trim())
+        } catch (err) {
+          console.error(`[managed-process] Failed to save assistant turn for task ${this.taskId}:`, err)
+        }
+      }
 
       broadcast(
         makeMessage('task.completed', {

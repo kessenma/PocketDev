@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMotionValueEvent, useReducedMotion, useScroll } from 'framer-motion'
-import { architectureTokens, blendHexColors } from '../shared/theme'
+import { architectureTokens } from '../shared/theme'
 
 const PAPER = '#f7f1e3'
 const SUN = '#f59e0b'
@@ -41,42 +41,59 @@ export function RepoHistoryTransitionSection({
   })
 
   const isDesktopLayout = vpSize.w >= 1024
-  const paperReveal = easeOut(segmentProgress(progress, 0.08, 0.84))
-  const dotReveal = easeOut(segmentProgress(progress, 0.18, 0.78))
-  const sunReveal = easeOut(segmentProgress(progress, 0.26, 0.86))
-  const sectionBg = blendHexColors(architectureTokens.colors.blue, PAPER, paperReveal)
+  const sunReveal = easeOut(segmentProgress(progress, 0.18, 0.76))
   const dotColor = architectureTokens.colors.blue
-  const cols = isDesktopLayout ? 17 : 11
-  const rows = isDesktopLayout ? 13 : 15
-  const dotGap = vpSize.w / (cols + 2.8)
-  const dotRadius = dotGap * (isDesktopLayout ? 0.26 : 0.23)
-  const dotGridWidth = dotGap * (cols - 1)
-  const dotOriginX = (vpSize.w - dotGridWidth) / 2
-  const dotOriginY = vpSize.h * (isDesktopLayout ? 0.12 : 0.16)
-  const dotFieldOffsetY = mix(vpSize.h * 0.08, -vpSize.h * 0.04, dotReveal)
-  const sunRadius = Math.min(vpSize.w, vpSize.h) * (isDesktopLayout ? 0.34 : 0.38)
-  const sunCx = vpSize.w * (isDesktopLayout ? 0.74 : 0.64)
-  const sunCy = mix(-sunRadius * 0.42, vpSize.h * (isDesktopLayout ? 0.27 : 0.22), sunReveal)
+  const rows = isDesktopLayout ? 11 : 12
+  const baseY = vpSize.h * (isDesktopLayout ? 0.12 : 0.1)
+  const sunRadius = Math.min(vpSize.w, vpSize.h) * (isDesktopLayout ? 0.36 : 0.4)
+  const sunCx = mix(vpSize.w + sunRadius * 0.55, vpSize.w * (isDesktopLayout ? 0.75 : 0.72), sunReveal)
+  const sunCy = mix(-sunRadius * 1.35, vpSize.h * (isDesktopLayout ? 0.2 : 0.18), sunReveal)
   const dots = useMemo(() => {
-    return Array.from({ length: rows * cols }, (_, index) => {
-      const row = Math.floor(index / cols)
-      const col = index % cols
-      return {
-        key: `${row}-${col}`,
-        x: dotOriginX + col * dotGap + (row % 2 === 0 ? 0 : dotGap * 0.5),
-        y: dotOriginY + row * dotGap + dotFieldOffsetY,
-        opacity: (0.24 + (1 - row / rows) * 0.54) * (0.35 + dotReveal * 0.65),
+    const dotsList: Array<{ key: string; x: number; y: number; radius: number }> = []
+    const maxCols = isDesktopLayout ? 15 : 10
+    const minCols = isDesktopLayout ? 10 : 7
+    const topRadius = vpSize.w * (isDesktopLayout ? 0.038 : 0.062)
+    const bottomRadius = vpSize.w * (isDesktopLayout ? 0.028 : 0.046)
+    const rowGapTop = vpSize.h * (isDesktopLayout ? 0.06 : 0.055)
+    const rowGapBottom = vpSize.h * (isDesktopLayout ? 0.118 : 0.108)
+
+    for (let row = 0; row < rows; row++) {
+      const rowT = row / (rows - 1)
+      const colsForRow = Math.round(mix(maxCols, minCols, rowT ** 1.05))
+      const radius = mix(topRadius, bottomRadius, rowT ** 0.95)
+      const usableWidth = vpSize.w + radius * 1.6
+      const spacing = usableWidth / Math.max(1, colsForRow - 1)
+      const rowWidth = spacing * Math.max(0, colsForRow - 1)
+      const originX = (vpSize.w - rowWidth) / 2
+      const y = baseY + cumulativeGap(
+        row,
+        rows,
+        rowGapTop,
+        rowGapBottom,
+      )
+
+      for (let col = 0; col < colsForRow; col++) {
+        const x = originX + col * spacing
+
+        dotsList.push({
+          key: `${row}-${col}`,
+          x,
+          y,
+          radius,
+        })
       }
-    })
-  }, [cols, dotFieldOffsetY, dotGap, dotOriginX, dotOriginY, dotReveal, rows])
+    }
+
+    return dotsList
+  }, [baseY, isDesktopLayout, rows, vpSize.h, vpSize.w])
 
   return (
     <section
       ref={sectionRef}
       className="relative overflow-clip"
       style={{
-        height: reduceMotion ? '100vh' : '240vh',
-        backgroundColor: architectureTokens.colors.blue,
+        height: reduceMotion ? '100vh' : '220vh',
+        backgroundColor: PAPER,
       }}
     >
       <div className={reduceMotion ? 'relative h-screen' : 'sticky top-0 h-screen'}>
@@ -86,61 +103,28 @@ export function RepoHistoryTransitionSection({
           className="block h-full w-full"
           preserveAspectRatio="xMidYMid slice"
           aria-hidden="true"
-          style={{ backgroundColor: sectionBg }}
+          style={{ backgroundColor: PAPER }}
         >
-          <defs>
-            <linearGradient id="repo-history-paper-fade" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={PAPER} stopOpacity={0} />
-              <stop offset="34%" stopColor={PAPER} stopOpacity={0.28 + paperReveal * 0.22} />
-              <stop offset="100%" stopColor={PAPER} stopOpacity={0.98} />
-            </linearGradient>
-            <radialGradient id="repo-history-sun-glow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.18 + sunReveal * 0.2} />
-              <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
-            </radialGradient>
-          </defs>
+          <rect width="100%" height="100%" fill={PAPER} />
 
-          <rect width="100%" height="100%" fill={architectureTokens.colors.blue} />
-          <rect width="100%" height="100%" fill={PAPER} opacity={paperReveal} />
-          <rect width="100%" height="100%" fill="url(#repo-history-paper-fade)" />
-
-          <circle
-            cx={sunCx}
-            cy={sunCy}
-            r={sunRadius * 1.08}
-            fill="url(#repo-history-sun-glow)"
-            opacity={0.45 + sunReveal * 0.3}
-          />
           <circle
             cx={sunCx}
             cy={sunCy}
             r={sunRadius}
             fill={SUN}
-            opacity={0.18 + sunReveal * 0.82}
           />
 
-          <g opacity={0.12 + dotReveal * 0.88}>
+          <g>
             {dots.map((dot) => (
               <circle
                 key={dot.key}
                 cx={dot.x}
                 cy={dot.y}
-                r={dotRadius}
+                r={dot.radius}
                 fill={dotColor}
-                opacity={dot.opacity}
               />
             ))}
           </g>
-
-          <rect
-            x="0"
-            y="0"
-            width="100%"
-            height={vpSize.h * 0.16}
-            fill={`url(#repo-history-paper-fade)`}
-            opacity={0.22 + paperReveal * 0.3}
-            transform={`scale(1,-1) translate(0,-${vpSize.h * 0.16})`}
-          />
         </svg>
       </div>
     </section>
@@ -158,4 +142,13 @@ function segmentProgress(value: number, start: number, end: number) {
 
 function easeOut(value: number) {
   return 1 - (1 - value) ** 3
+}
+
+function cumulativeGap(row: number, rows: number, topGap: number, bottomGap: number) {
+  let total = 0
+  for (let index = 0; index < row; index++) {
+    const t = rows <= 1 ? 0 : index / (rows - 1)
+    total += mix(topGap, bottomGap, t ** 1.2)
+  }
+  return total
 }

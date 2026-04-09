@@ -1,5 +1,5 @@
 import type { DB } from '@op-engineering/op-sqlite'
-import type { Task } from '@pocketdev/shared/types'
+import type { Task, TaskTurn } from '@pocketdev/shared/types'
 
 // ─── Task metadata ──────────────────────────────────────
 
@@ -8,8 +8,8 @@ export async function upsertTasks(db: DB, tasks: Task[]): Promise<void> {
   for (const task of tasks) {
     await db.execute(
       `INSERT OR REPLACE INTO tasks
-        (id, prompt, agent_type, mode, model, status, project_id, project_name, working_directory, created_at, started_at, completed_at, exit_code)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, prompt, agent_type, mode, model, status, project_id, project_name, working_directory, session_id, turn_count, created_at, started_at, completed_at, exit_code)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         task.id,
         task.prompt,
@@ -20,6 +20,8 @@ export async function upsertTasks(db: DB, tasks: Task[]): Promise<void> {
         task.project_id ?? null,
         task.project_name ?? null,
         task.working_directory ?? null,
+        task.session_id ?? null,
+        task.turn_count ?? 1,
         task.created_at,
         task.started_at ?? null,
         task.completed_at ?? null,
@@ -73,10 +75,41 @@ function rowToTask(row: any): Task {
     project_id: row.project_id ?? null,
     project_name: row.project_name ?? null,
     working_directory: row.working_directory ?? null,
+    session_id: row.session_id ?? null,
+    turn_count: row.turn_count ?? 1,
     created_at: row.created_at,
     started_at: row.started_at ?? null,
     completed_at: row.completed_at ?? null,
   }
+}
+
+// ─── Task turns ────────────────────────────────────────
+
+/** Cache task turns from server */
+export async function upsertTaskTurns(db: DB, taskId: string, turns: TaskTurn[]): Promise<void> {
+  await db.execute('DELETE FROM task_turns WHERE task_id = ?', [taskId])
+  for (const turn of turns) {
+    await db.execute(
+      'INSERT INTO task_turns (id, task_id, turn_number, role, content, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [turn.id, turn.task_id, turn.turn_number, turn.role, turn.content, turn.created_at],
+    )
+  }
+}
+
+/** Get cached turns for a task */
+export async function getCachedTaskTurns(db: DB, taskId: string): Promise<TaskTurn[]> {
+  const result = await db.execute(
+    'SELECT * FROM task_turns WHERE task_id = ? ORDER BY turn_number ASC, created_at ASC',
+    [taskId],
+  )
+  return (result.rows ?? []).map((row: any) => ({
+    id: row.id,
+    task_id: row.task_id,
+    turn_number: row.turn_number,
+    role: row.role,
+    content: row.content,
+    created_at: row.created_at,
+  }))
 }
 
 // ─── Task logs ──────────────────────────────────────────

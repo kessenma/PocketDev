@@ -119,6 +119,11 @@ function handleWsMessage(message: WsMessage) {
       tasks.addQuestion(question.taskId, question)
       break
     }
+    case 'task.turn_started': {
+      const { taskId, turnNumber } = message.payload as { taskId: string; turnNumber: number }
+      tasks.appendActivity(taskId, { type: 'status', message: `Turn ${turnNumber}` })
+      break
+    }
     case 'task.permission_request':
       tasks.addPermissionRequest(
         (message.payload as { taskId: string }).taskId,

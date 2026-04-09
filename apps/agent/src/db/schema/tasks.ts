@@ -11,10 +11,21 @@ export const tasks = sqliteTable('tasks', {
   projectId: text('project_id'),
   projectName: text('project_name'),
   workingDirectory: text('working_directory'),
+  sessionId: text('session_id'),
+  turnCount: integer('turn_count').default(1),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
   startedAt: text('started_at'),
   completedAt: text('completed_at'),
   exitCode: integer('exit_code'),
+})
+
+export const taskTurns = sqliteTable('task_turns', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull().references(() => tasks.id),
+  turnNumber: integer('turn_number').notNull(),
+  role: text('role').notNull(),
+  content: text('content').notNull(),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
 
 export const taskLogs = sqliteTable('task_logs', {

@@ -5,7 +5,7 @@ import type {
   ContainerLogsFollowRequest,
   ContainerLogsStoppedEvent,
 } from '@pocketdev/shared/types'
-import { startTask, killTask, getTaskList, getProcess } from './task-manager.ts'
+import { startTask, killTask, getTaskList, getProcess, continueTask } from './task-manager.ts'
 import { authenticateRequest, parseDeviceIdFromAuthHeader } from './auth.ts'
 import { DockerServiceError, getContainerLogs, startContainerLogsFollow, type ContainerLogsFollower } from './docker.ts'
 import { checkAllPrerequisites } from './prerequisites.ts'
@@ -96,6 +96,19 @@ export const wsRoutes = new Elysia()
             const { taskId, answer } = msg.payload as { taskId: string; questionId: string; answer: string }
             const proc = getProcess(taskId)
             if (proc) proc.sendInput(answer + '\n')
+            break
+          }
+
+          case 'task.continue': {
+            const { taskId, prompt, model } = msg.payload as { taskId: string; prompt: string; model?: string }
+            const success = continueTask(taskId, prompt, model ?? null)
+            if (!success) {
+              ws.send(JSON.stringify(makeMessage('task.status_changed', {
+                taskId,
+                status: 'failed',
+                error: 'Cannot continue this task — only completed Claude tasks with a session can be continued.',
+              })))
+            }
             break
           }
 

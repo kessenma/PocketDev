@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia'
 import { authenticateRequest } from '../services/auth.ts'
 import { getTaskList } from '../services/task-manager.ts'
-import { getTaskLogs } from '../db/index.ts'
+import { getTaskLogs, getTaskTurns } from '../db/index.ts'
 
 export const taskRoutes = new Elysia({ prefix: '/tasks' })
   .get('', async ({ request, set }) => {
@@ -35,4 +35,27 @@ export const taskRoutes = new Elysia({ prefix: '/tasks' })
   }, {
     params: t.Object({ id: t.String() }),
     query: t.Object({ limit: t.Optional(t.String()) }),
+  })
+  .get('/:id/turns', async ({ request, set, params }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    const turns = getTaskTurns(params.id)
+
+    return {
+      taskId: params.id,
+      turns: turns.map((row: any) => ({
+        id: row.id,
+        task_id: row.taskId,
+        turn_number: row.turnNumber,
+        role: row.role,
+        content: row.content,
+        created_at: row.createdAt,
+      })),
+    }
+  }, {
+    params: t.Object({ id: t.String() }),
   })

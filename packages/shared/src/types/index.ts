@@ -6,6 +6,7 @@ export type {
 export type {
   Device,
   Task,
+  TaskTurn,
   FileChange,
   InstallRecord,
 } from './models.js'

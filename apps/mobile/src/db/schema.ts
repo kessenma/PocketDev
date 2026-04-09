@@ -18,6 +18,15 @@ CREATE TABLE IF NOT EXISTS tasks (
   exit_code INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS task_turns (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  turn_number INTEGER NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS task_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -94,6 +103,7 @@ CREATE TABLE IF NOT EXISTS sync_state (
 `
 
 export const CREATE_INDEXES_SQL = `
+CREATE INDEX IF NOT EXISTS idx_task_turns_task_id ON task_turns(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_logs_task_id ON task_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);

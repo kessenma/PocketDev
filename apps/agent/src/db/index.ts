@@ -189,6 +189,24 @@ export function getDb() {
       sqlite.exec(`ALTER TABLE tasks ADD COLUMN mode TEXT DEFAULT 'default';`)
       sqlite.exec(`UPDATE tasks SET mode = 'default' WHERE mode IS NULL;`)
     }
+    if (!taskColumns.some((column) => column.name === 'session_id')) {
+      sqlite.exec(`ALTER TABLE tasks ADD COLUMN session_id TEXT;`)
+    }
+    if (!taskColumns.some((column) => column.name === 'turn_count')) {
+      sqlite.exec(`ALTER TABLE tasks ADD COLUMN turn_count INTEGER DEFAULT 1;`)
+      sqlite.exec(`UPDATE tasks SET turn_count = 1 WHERE turn_count IS NULL;`)
+    }
+
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS task_turns (
+        id TEXT PRIMARY KEY NOT NULL,
+        task_id TEXT NOT NULL REFERENCES tasks(id),
+        turn_number INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+    `)
   }
   return _db
 }
@@ -205,6 +223,7 @@ export type PlanRow = typeof schema.plans.$inferSelect
 export type PlanStepRow = typeof schema.planSteps.$inferSelect
 export type PlanQuestionRow = typeof schema.planQuestions.$inferSelect
 export type PlanMessageRow = typeof schema.planMessages.$inferSelect
+export type TaskTurnRow = typeof schema.taskTurns.$inferSelect
 export type ToolPathRow = typeof schema.toolPaths.$inferSelect
 export type AdminAccountRow = typeof schema.adminAccounts.$inferSelect
 export type PasskeyCredentialRow = typeof schema.passkeyCredentials.$inferSelect
@@ -278,6 +297,7 @@ export function insertTask(
   projectId: string | null,
   projectName: string | null,
   model: string | null,
+  sessionId: string | null = null,
 ) {
   getDb().insert(schema.tasks).values({
     id,
@@ -288,6 +308,7 @@ export function insertTask(
     workingDirectory,
     projectId,
     projectName,
+    sessionId,
   }).run()
 }
 
@@ -332,6 +353,40 @@ export function getTaskLogs(taskId: string, limit = 100) {
     .limit(limit)
     .all()
     .reverse()
+}
+
+// ─── Task turn operations ──────────────────────────────
+
+export function insertTaskTurn(
+  id: string,
+  taskId: string,
+  turnNumber: number,
+  role: string,
+  content: string,
+) {
+  getDb().insert(schema.taskTurns).values({ id, taskId, turnNumber, role, content }).run()
+}
+
+export function getTaskTurns(taskId: string): TaskTurnRow[] {
+  return getDb()
+    .select()
+    .from(schema.taskTurns)
+    .where(eq(schema.taskTurns.taskId, taskId))
+    .orderBy(schema.taskTurns.turnNumber, schema.taskTurns.createdAt)
+    .all()
+}
+
+export function resetTaskForContinuation(taskId: string, newTurnCount: number) {
+  getDb()
+    .update(schema.tasks)
+    .set({
+      status: 'running',
+      completedAt: null,
+      exitCode: null,
+      turnCount: newTurnCount,
+    })
+    .where(eq(schema.tasks.id, taskId))
+    .run()
 }
 
 // ─── Project operations ─────────────────────────────────

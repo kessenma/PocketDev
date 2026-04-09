@@ -60,6 +60,10 @@ export default function DatabaseProvider({ children }: { children: React.ReactNo
         await database.execute(statement + ';')
       }
 
+      // Additive migrations for existing installs
+      await database.execute('ALTER TABLE tasks ADD COLUMN session_id TEXT').catch(() => {})
+      await database.execute('ALTER TABLE tasks ADD COLUMN turn_count INTEGER DEFAULT 1').catch(() => {})
+
       // Initialize vector support (probes for vec0 extension)
       await initVectorSupport(database)
 
