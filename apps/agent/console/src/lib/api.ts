@@ -25,6 +25,11 @@ async function del(path: string) {
   return response
 }
 
+async function readError(response: Response, fallback: string) {
+  const data = await response.json().catch(() => ({ error: fallback }))
+  return data.error || fallback
+}
+
 export interface UpdateInfo {
   current: string
   latest: string
@@ -35,6 +40,7 @@ export interface UpdateInfo {
 
 export async function checkHealth(): Promise<{
   hasAdmin: boolean
+  signupEnabled: boolean
   paired: boolean
   uptime: number
   hasPasskeys: boolean
@@ -48,8 +54,15 @@ export async function checkHealth(): Promise<{
 export async function createAdmin(email: string, password: string) {
   const res = await post('/setup', { email, password })
   if (!res.ok) {
-    const data = await res.json().catch(() => ({ error: 'Setup failed' }))
-    throw new Error(data.error || 'Setup failed')
+    throw new Error(await readError(res, 'Setup failed'))
+  }
+  return res.json()
+}
+
+export async function signup(email: string, password: string) {
+  const res = await post('/signup', { email, password })
+  if (!res.ok) {
+    throw new Error(await readError(res, 'Signup failed'))
   }
   return res.json()
 }
@@ -57,8 +70,7 @@ export async function createAdmin(email: string, password: string) {
 export async function login(email: string, password: string) {
   const res = await post('/login', { email, password })
   if (!res.ok) {
-    const data = await res.json().catch(() => ({ error: 'Login failed' }))
-    throw new Error(data.error || 'Login failed')
+    throw new Error(await readError(res, 'Login failed'))
   }
   return res.json()
 }
@@ -67,7 +79,27 @@ export async function logout() {
   await post('/logout')
 }
 
+export interface ConsoleUser {
+  id: number
+  email: string
+  role: 'owner' | 'admin' | 'member'
+  status: 'active' | 'pending' | 'denied' | 'revoked'
+  createdAt: string | null
+  reviewedByUserId: number | null
+  reviewedAt: string | null
+  lastLoginAt: string | null
+}
+
+export interface ConsolePermissions {
+  canManageUsers: boolean
+  canManageRoles: boolean
+  canToggleSignup: boolean
+}
+
 export interface ConsoleStatus {
+  currentUser: ConsoleUser
+  permissions: ConsolePermissions
+  signupEnabled: boolean
   paired: boolean
   devices: Array<{
     id: string
@@ -138,6 +170,45 @@ export async function removeDevice(id: string) {
   const res = await del(`/devices/${id}`)
   if (!res.ok) throw new Error('Failed to remove device')
   return res.json()
+}
+
+export interface UserManagementResponse {
+  currentUser: ConsoleUser
+  permissions: ConsolePermissions
+  signupEnabled: boolean
+  users: ConsoleUser[]
+}
+
+export async function fetchUsers(): Promise<UserManagementResponse> {
+  const res = await get('/users')
+  if (!res.ok) {
+    throw new Error(await readError(res, 'Failed to fetch users'))
+  }
+  return res.json()
+}
+
+export async function updateUserStatus(id: number, status: 'active' | 'denied' | 'revoked') {
+  const res = await post(`/users/${id}/status`, { status })
+  if (!res.ok) {
+    throw new Error(await readError(res, 'Failed to update user'))
+  }
+  return res.json() as Promise<UserManagementResponse>
+}
+
+export async function updateUserRole(id: number, role: 'admin' | 'member') {
+  const res = await post(`/users/${id}/role`, { role })
+  if (!res.ok) {
+    throw new Error(await readError(res, 'Failed to update role'))
+  }
+  return res.json() as Promise<UserManagementResponse>
+}
+
+export async function updateSignupSetting(enabled: boolean) {
+  const res = await post('/settings/signup', { enabled })
+  if (!res.ok) {
+    throw new Error(await readError(res, 'Failed to update signup setting'))
+  }
+  return res.json() as Promise<UserManagementResponse>
 }
 
 // ─── Debug ──────────────────────────────────────────────

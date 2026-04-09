@@ -16,6 +16,29 @@ import {
 } from '../db/taskOperations'
 import { useConnectionStore } from './connection'
 
+/**
+ * Normalize a task object from the server (camelCase Drizzle rows) to our snake_case Task interface.
+ * Handles both camelCase and snake_case input for robustness.
+ */
+function normalizeTask(raw: any): Task {
+  return {
+    id: raw.id,
+    prompt: raw.prompt,
+    agent_type: raw.agent_type ?? raw.agentType ?? 'claude',
+    mode: raw.mode ?? 'default',
+    model: raw.model ?? null,
+    status: raw.status ?? 'pending',
+    working_directory: raw.working_directory ?? raw.workingDirectory ?? null,
+    project_id: raw.project_id ?? raw.projectId ?? null,
+    project_name: raw.project_name ?? raw.projectName ?? null,
+    session_id: raw.session_id ?? raw.sessionId ?? null,
+    turn_count: raw.turn_count ?? raw.turnCount ?? 1,
+    created_at: raw.created_at ?? raw.createdAt ?? new Date().toISOString(),
+    started_at: raw.started_at ?? raw.startedAt ?? null,
+    completed_at: raw.completed_at ?? raw.completedAt ?? null,
+  }
+}
+
 export interface PermissionDenial {
   tool_name: string
   tool_use_id?: string
@@ -73,7 +96,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   setTasks: (tasks: Task[]) => {
     const map = new Map<string, Task>()
-    tasks.forEach((t) => map.set(t.id, t))
+    tasks.forEach((t) => map.set(t.id, normalizeTask(t)))
     set({ tasks: map })
   },
 

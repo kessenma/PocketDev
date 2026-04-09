@@ -4,17 +4,36 @@ import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { join, extname, relative, resolve } from 'node:path'
 import {
   createAdmin,
-  verifyAdmin,
+  createSignupRequest,
+  authenticateConsoleUser,
   createSession,
-  validateSession,
+  getSessionUser,
   clearSession,
   setCustomPasscode,
   getActivePasscode,
   regeneratePasscode,
   sessionCookieHeader,
+  getConsolePermissions,
+  isConsoleSignupEnabled,
+  setConsoleSignupEnabled,
+  canManageTargetUser,
 } from '../services/console-auth.ts'
 import { hasDevices } from '../services/setup.ts'
-import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName, getToolRecord, getTaskLogs, getTaskFileTouches, hasPasskeyCredentials } from '../db/index.ts'
+import {
+  hasAdminAccount,
+  getDevices,
+  deleteDevice,
+  updateDeviceName,
+  getToolRecord,
+  getTaskLogs,
+  getTaskFileTouches,
+  hasPasskeyCredentials,
+  getAdminAccounts,
+  getAdminAccountById,
+  updateAdminAccountStatus,
+  updateAdminAccountRole,
+  type AdminAccountRow,
+} from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
 import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
@@ -64,11 +83,46 @@ function extractHostIp(request: Request): string {
 }
 
 function requireConsoleSession(request: Request, set: { status?: unknown }) {
-  if (!validateSession(request.headers.get('cookie'))) {
+  const user = getSessionUser(request.headers.get('cookie'))
+  if (!user) {
     set.status = 401
-    return false
+    return null
   }
-  return true
+  return user
+}
+
+function serializeConsoleUser(user: AdminAccountRow) {
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    createdAt: user.createdAt,
+    reviewedByUserId: user.reviewedByUserId,
+    reviewedAt: user.reviewedAt,
+    lastLoginAt: user.lastLoginAt,
+  }
+}
+
+function getUserManagementPayload(currentUser: AdminAccountRow) {
+  return {
+    currentUser: serializeConsoleUser(currentUser),
+    permissions: getConsolePermissions(currentUser),
+    signupEnabled: isConsoleSignupEnabled(),
+    users: getAdminAccounts().map(serializeConsoleUser),
+  }
+}
+
+function requireUserManagementAccess(request: Request, set: { status?: unknown }) {
+  const user = requireConsoleSession(request, set)
+  if (!user) return null
+
+  if (!getConsolePermissions(user).canManageUsers) {
+    set.status = 403
+    return null
+  }
+
+  return user
 }
 
 function safeRepoPath(baseDir: string, requestedPath: string) {
@@ -102,6 +156,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   // ─── Health (no auth) ─────────────────────────────────
   .get('/health', async () => ({
     hasAdmin: hasAdminAccount(),
+    signupEnabled: isConsoleSignupEnabled(),
     paired: hasDevices(),
     uptime: process.uptime(),
     hasPasskeys: hasPasskeyCredentials(),
@@ -118,7 +173,11 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
     try {
       await createAdmin(body.email, body.password)
-      const token = createSession(body.email)
+      const account = getAdminAccounts().find((user) => user.role === 'owner')
+      if (!account) {
+        throw new Error('Owner account was not created')
+      }
+      const token = createSession(account.id)
       set.headers['set-cookie'] = sessionCookieHeader(token)
       return { ok: true }
     } catch (err) {
@@ -132,15 +191,34 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }),
   })
 
+  // ─── Signup request (no auth) ────────────────────────
+  .post('/signup', async ({ body, set }) => {
+    try {
+      await createSignupRequest(body.email, body.password)
+      return { ok: true }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Signup failed'
+      set.status = message === 'Sign-ups are currently closed' || message === 'Use setup to create the first owner account'
+        ? 403
+        : 400
+      return { error: message }
+    }
+  }, {
+    body: t.Object({
+      email: t.String(),
+      password: t.String(),
+    }),
+  })
+
   // ─── Login (no auth) ─────────────────────────────────
   .post('/login', async ({ body, set }) => {
-    const valid = await verifyAdmin(body.email, body.password)
-    if (!valid) {
+    const result = await authenticateConsoleUser(body.email, body.password)
+    if (!result.ok) {
       set.status = 401
-      return { error: 'Invalid email or password' }
+      return { error: result.error }
     }
 
-    const token = createSession(body.email)
+    const token = createSession(result.user.id)
     set.headers['set-cookie'] = sessionCookieHeader(token)
     return { ok: true }
   }, {
@@ -159,7 +237,8 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
   // ─── Status (requires session) ────────────────────────
   .get('/status', async ({ request, set }) => {
-    if (!requireConsoleSession(request, set)) {
+    const currentUser = requireConsoleSession(request, set)
+    if (!currentUser) {
       return { error: 'Unauthorized' }
     }
 
@@ -195,6 +274,9 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     return {
+      currentUser: serializeConsoleUser(currentUser),
+      permissions: getConsolePermissions(currentUser),
+      signupEnabled: isConsoleSignupEnabled(),
       paired: hasDevices(),
       devices,
       passcode: getActivePasscode(),
@@ -202,6 +284,102 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       port: externalPort,
       secure,
     }
+  })
+
+  // ─── User management (requires elevated session) ─────
+  .get('/users', ({ request, set }) => {
+    const user = requireUserManagementAccess(request, set)
+    if (!user) {
+      return { error: set.status === 403 ? 'Forbidden' : 'Unauthorized' }
+    }
+
+    return getUserManagementPayload(user)
+  })
+
+  .post('/users/:id/status', ({ request, params, body, set }) => {
+    const actor = requireUserManagementAccess(request, set)
+    if (!actor) {
+      return { error: set.status === 403 ? 'Forbidden' : 'Unauthorized' }
+    }
+
+    const target = getAdminAccountById(Number(params.id))
+    if (!target) {
+      set.status = 404
+      return { error: 'User not found' }
+    }
+
+    if (!canManageTargetUser(actor, target)) {
+      set.status = 403
+      return { error: 'You cannot manage this user' }
+    }
+
+    updateAdminAccountStatus(target.id, body.status, actor.id)
+    return getUserManagementPayload(actor)
+  }, {
+    body: t.Object({
+      status: t.Union([
+        t.Literal('active'),
+        t.Literal('denied'),
+        t.Literal('revoked'),
+      ]),
+    }),
+  })
+
+  .post('/users/:id/role', ({ request, params, body, set }) => {
+    const actor = requireConsoleSession(request, set)
+    if (!actor) {
+      return { error: 'Unauthorized' }
+    }
+
+    const permissions = getConsolePermissions(actor)
+    if (!permissions.canManageRoles) {
+      set.status = 403
+      return { error: 'Forbidden' }
+    }
+
+    const target = getAdminAccountById(Number(params.id))
+    if (!target) {
+      set.status = 404
+      return { error: 'User not found' }
+    }
+    if (target.role === 'owner') {
+      set.status = 403
+      return { error: 'The owner account cannot be changed' }
+    }
+    if (target.status !== 'active') {
+      set.status = 400
+      return { error: 'Only active users can change roles' }
+    }
+
+    updateAdminAccountRole(target.id, body.role)
+    return getUserManagementPayload(actor)
+  }, {
+    body: t.Object({
+      role: t.Union([
+        t.Literal('admin'),
+        t.Literal('member'),
+      ]),
+    }),
+  })
+
+  .post('/settings/signup', ({ request, body, set }) => {
+    const actor = requireConsoleSession(request, set)
+    if (!actor) {
+      return { error: 'Unauthorized' }
+    }
+
+    const permissions = getConsolePermissions(actor)
+    if (!permissions.canToggleSignup) {
+      set.status = 403
+      return { error: 'Forbidden' }
+    }
+
+    setConsoleSignupEnabled(body.enabled)
+    return getUserManagementPayload(actor)
+  }, {
+    body: t.Object({
+      enabled: t.Boolean(),
+    }),
   })
 
   // ─── Set custom passcode (requires session) ──────────

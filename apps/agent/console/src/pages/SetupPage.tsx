@@ -18,7 +18,7 @@ export function SetupPage() {
 
   useEffect(() => {
     checkHealth().then((health) => {
-      if (health.hasAdmin) navigate('/console', { replace: true })
+      if (health.hasAdmin) navigate('/login', { replace: true })
       setChecking(false)
     }).catch(() => setChecking(false))
   }, [navigate])
@@ -63,14 +63,14 @@ export function SetupPage() {
             <Server className="h-6 w-6 text-primary" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">PocketDev</h1>
-          <p className="text-muted-foreground">Create your admin account to get started</p>
+          <p className="text-muted-foreground">Create the protected owner account to get started</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Admin Setup</CardTitle>
+            <CardTitle>Owner Setup</CardTitle>
             <CardDescription>
-              This account will be used to manage your PocketDev server and pair mobile devices.
+              This first account becomes the protected owner. It can approve future signups, manage roles, and cannot be removed.
             </CardDescription>
           </CardHeader>
           <CardContent>

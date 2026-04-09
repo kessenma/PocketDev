@@ -13,7 +13,7 @@ import type {
 import {
   getPasskeysByAdminId,
   getPasskeyByCredentialId,
-  getAdminAccount,
+  getAdminAccountById,
   insertPasskeyCredential,
   updatePasskeyCounter,
 } from '../db/index.ts'
@@ -215,10 +215,9 @@ export async function verifyAuthenticationCredential(
   // Update counter
   updatePasskeyCounter(storedCred.credentialId, verification.authenticationInfo.newCounter)
 
-  // Verify admin still exists
-  const admin = getAdminAccount()
-  if (!admin || admin.id !== storedCred.adminId) {
-    throw new Error('Admin account not found')
+  const user = getAdminAccountById(storedCred.adminId)
+  if (!user || user.status !== 'active') {
+    throw new Error('User account not found')
   }
 
   return { verified: true, adminId: storedCred.adminId }

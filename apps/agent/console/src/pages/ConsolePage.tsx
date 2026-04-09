@@ -8,10 +8,11 @@ import { PasskeySettings } from '#/components/PasskeySettings'
 import { ServerTerminal } from '#/components/ServerTerminal'
 import { DiagnosticsPanel } from '#/components/DiagnosticsPanel'
 import { RepoInspectorPanel } from '#/components/RepoInspectorPanel'
+import { UserManagementPanel } from '#/components/UserManagementPanel'
 import { UpdateBanner } from '#/components/UpdateBanner'
 import { Modal } from '#/components/ui/modal'
 import { checkHealth, fetchStatus, logout, type ConsoleStatus, type UpdateInfo } from '#/lib/api'
-import { Server, LogOut, Maximize2 } from 'lucide-react'
+import { Server, LogOut, Maximize2, Shield } from 'lucide-react'
 
 export function ConsolePage() {
   const navigate = useNavigate()
@@ -81,9 +82,16 @@ export function ConsolePage() {
                     <h1 className="font-heading text-[2rem] leading-none font-semibold uppercase tracking-[0.08em] sm:text-[2.5rem]">Server Control Board</h1>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <Badge variant="outline" className="border-[var(--border)] text-[#f5eedf]">
+                      Build v{agentVersion}
+                    </Badge>
                     <Badge className="bg-[#f4efdf] text-black">{status.serverIp}:{status.port}</Badge>
                     <Badge className={status.paired ? 'bg-[#f0c419] text-black' : 'bg-[#2a241d] text-[#f5eedf]'}>
                       {status.paired ? 'Paired' : 'Awaiting Pairing'}
+                    </Badge>
+                    <Badge className={status.currentUser.role === 'owner' ? 'bg-[#d93025] text-white' : 'bg-[#2a241d] text-[#f5eedf]'}>
+                      <Shield className="mr-1 h-3 w-3" />
+                      {status.currentUser.role}
                     </Badge>
                     <Badge variant="outline" className="border-[var(--border)] text-[#f5eedf]">
                       {status.devices.length} device{status.devices.length !== 1 ? 's' : ''}
@@ -115,6 +123,16 @@ export function ConsolePage() {
             <div className="lg:col-span-7">
               <PasskeySettings />
             </div>
+
+            {status.permissions.canManageUsers && (
+              <div className="lg:col-span-5">
+                <UserManagementPanel
+                  currentUser={status.currentUser}
+                  permissions={status.permissions}
+                  signupEnabled={status.signupEnabled}
+                />
+              </div>
+            )}
 
             <div className="lg:col-span-7">
               <ConnectionWizard

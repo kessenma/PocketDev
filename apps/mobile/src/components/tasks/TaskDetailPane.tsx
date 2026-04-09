@@ -150,11 +150,6 @@ export default function TaskDetailPane({
   const isRunning = task.status === 'running'
   const isTerminal = task.status === 'completed' || task.status === 'failed'
   const canContinue = isTerminal && task.agent_type === 'claude' && !!task.session_id
-
-  // Debug: remove once chat continuation is confirmed working
-  if (isTerminal && task.agent_type === 'claude') {
-    console.log('[TaskDetailPane] canContinue check:', { status: task.status, agent_type: task.agent_type, session_id: task.session_id, turn_count: task.turn_count, canContinue, taskKeys: Object.keys(task) })
-  }
   const isMultiTurn = (task.turn_count ?? 1) > 1
   const statusColor = STATUS_COLORS[task.status ?? 'pending']
   const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '--'

@@ -138,6 +138,40 @@ export function getDb() {
     migrate(_db, { migrationsFolder })
     console.log('[db] Migration complete')
 
+    const adminAccountColumns = sqlite.query(`PRAGMA table_info(admin_accounts)`).all() as { name: string }[]
+    if (!adminAccountColumns.some((column) => column.name === 'role')) {
+      sqlite.exec(`ALTER TABLE admin_accounts ADD COLUMN role TEXT DEFAULT 'member' NOT NULL;`)
+    }
+    if (!adminAccountColumns.some((column) => column.name === 'status')) {
+      sqlite.exec(`ALTER TABLE admin_accounts ADD COLUMN status TEXT DEFAULT 'pending' NOT NULL;`)
+    }
+    if (!adminAccountColumns.some((column) => column.name === 'reviewed_by_user_id')) {
+      sqlite.exec(`ALTER TABLE admin_accounts ADD COLUMN reviewed_by_user_id INTEGER;`)
+    }
+    if (!adminAccountColumns.some((column) => column.name === 'reviewed_at')) {
+      sqlite.exec(`ALTER TABLE admin_accounts ADD COLUMN reviewed_at TEXT;`)
+    }
+    if (!adminAccountColumns.some((column) => column.name === 'last_login_at')) {
+      sqlite.exec(`ALTER TABLE admin_accounts ADD COLUMN last_login_at TEXT;`)
+    }
+
+    sqlite.exec(`UPDATE admin_accounts SET role = 'member' WHERE role IS NULL OR trim(role) = '';`)
+    sqlite.exec(`UPDATE admin_accounts SET status = 'pending' WHERE status IS NULL OR trim(status) = '';`)
+    sqlite.exec(`
+      UPDATE admin_accounts
+      SET role = 'owner',
+          status = 'active',
+          reviewed_at = COALESCE(reviewed_at, created_at)
+      WHERE id = (
+        SELECT id
+        FROM admin_accounts
+        ORDER BY
+          CASE WHEN role = 'owner' THEN 0 ELSE 1 END,
+          id ASC
+        LIMIT 1
+      )
+    `)
+
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS passkey_credentials (
         id TEXT PRIMARY KEY NOT NULL,
@@ -173,6 +207,11 @@ export function getDb() {
         updated_at TEXT DEFAULT (datetime('now')),
         last_used_at TEXT
       );
+    `)
+
+    sqlite.exec(`
+      INSERT OR IGNORE INTO server_config (key, value)
+      VALUES ('console_signup_enabled', '1');
     `)
 
     const taskColumns = sqlite.query(`PRAGMA table_info(tasks)`).all() as { name: string }[]
@@ -240,6 +279,8 @@ export type TaskFileTouchRow = typeof schema.taskFileTouches.$inferSelect
 export type ToolPathRow = typeof schema.toolPaths.$inferSelect
 export type AdminAccountRow = typeof schema.adminAccounts.$inferSelect
 export type PasskeyCredentialRow = typeof schema.passkeyCredentials.$inferSelect
+export type ConsoleUserRole = 'owner' | 'admin' | 'member'
+export type ConsoleUserStatus = 'active' | 'pending' | 'denied' | 'revoked'
 
 // ─── Device operations ──────────────────────────────────
 
@@ -697,11 +738,85 @@ export function hasAdminAccount(): boolean {
 }
 
 export function getAdminAccount(): AdminAccountRow | undefined {
-  return getDb().select().from(schema.adminAccounts).limit(1).get()
+  return getDb()
+    .select()
+    .from(schema.adminAccounts)
+    .where(eq(schema.adminAccounts.role, 'owner'))
+    .limit(1)
+    .get()
 }
 
 export function insertAdminAccount(email: string, passwordHash: string) {
-  getDb().insert(schema.adminAccounts).values({ email, passwordHash }).run()
+  getDb()
+    .insert(schema.adminAccounts)
+    .values({
+      email,
+      passwordHash,
+      role: 'owner',
+      status: 'active',
+      reviewedAt: sql`datetime('now')`,
+    })
+    .run()
+}
+
+export function getAdminAccountById(id: number): AdminAccountRow | undefined {
+  return getDb().select().from(schema.adminAccounts).where(eq(schema.adminAccounts.id, id)).get()
+}
+
+export function getAdminAccountByEmail(email: string): AdminAccountRow | undefined {
+  return getDb()
+    .select()
+    .from(schema.adminAccounts)
+    .where(sql`lower(${schema.adminAccounts.email}) = ${email.toLowerCase()}`)
+    .get()
+}
+
+export function getAdminAccounts(): AdminAccountRow[] {
+  return getDb()
+    .select()
+    .from(schema.adminAccounts)
+    .orderBy(schema.adminAccounts.createdAt, schema.adminAccounts.id)
+    .all()
+}
+
+export function insertPendingAdminAccount(email: string, passwordHash: string) {
+  getDb()
+    .insert(schema.adminAccounts)
+    .values({
+      email,
+      passwordHash,
+      role: 'member',
+      status: 'pending',
+    })
+    .run()
+}
+
+export function updateAdminAccountStatus(id: number, status: ConsoleUserStatus, reviewedByUserId: number) {
+  getDb()
+    .update(schema.adminAccounts)
+    .set({
+      status,
+      reviewedByUserId,
+      reviewedAt: sql`datetime('now')`,
+    })
+    .where(eq(schema.adminAccounts.id, id))
+    .run()
+}
+
+export function updateAdminAccountRole(id: number, role: Exclude<ConsoleUserRole, 'owner'>) {
+  getDb()
+    .update(schema.adminAccounts)
+    .set({ role })
+    .where(eq(schema.adminAccounts.id, id))
+    .run()
+}
+
+export function touchAdminAccountLogin(id: number) {
+  getDb()
+    .update(schema.adminAccounts)
+    .set({ lastLoginAt: sql`datetime('now')` })
+    .where(eq(schema.adminAccounts.id, id))
+    .run()
 }
 
 // ─── Passkey credential operations ─────────────────────

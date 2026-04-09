@@ -6,19 +6,19 @@ import {
   verifyAuthenticationCredential,
 } from '../services/webauthn.ts'
 import {
-  getAdminAccount,
+  getAdminAccountById,
   getPasskeysByAdminId,
   softDeletePasskey,
 } from '../db/index.ts'
-import { validateSession, createSession, sessionCookieHeader } from '../services/console-auth.ts'
+import { getSessionUser, createSession, sessionCookieHeader } from '../services/console-auth.ts'
 
 function requireConsoleSession(request: Request, set: { status?: unknown; headers?: Record<string, string> | HTTPHeaders }) {
-  if (!validateSession(request.headers.get('cookie'))) {
+  const user = getSessionUser(request.headers.get('cookie'))
+  if (!user) {
     set.status = 401
     return null
   }
-  const admin = getAdminAccount()
-  return admin ?? null
+  return user
 }
 
 export const passkeyRoutes = new Elysia({ prefix: '/api/console/passkey' })
@@ -87,14 +87,14 @@ export const passkeyRoutes = new Elysia({ prefix: '/api/console/passkey' })
           return { error: 'Authentication failed' }
         }
 
-        const admin = getAdminAccount()
-        if (!admin || admin.id !== adminId) {
+        const admin = getAdminAccountById(adminId)
+        if (!admin || admin.status !== 'active') {
           set.status = 401
           return { error: 'Admin not found' }
         }
 
         // Create session (same as password login)
-        const token = createSession(admin.email)
+        const token = createSession(admin.id)
         set.headers = {
           'Set-Cookie': sessionCookieHeader(token),
         }

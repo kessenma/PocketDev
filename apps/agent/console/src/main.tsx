@@ -22,7 +22,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/setup" element={<SetupPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/console" element={<ConsolePage />} />
-        <Route path="*" element={<Navigate to="/setup" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       <Toaster theme="dark" position="bottom-center" richColors />
     </BrowserRouter>
