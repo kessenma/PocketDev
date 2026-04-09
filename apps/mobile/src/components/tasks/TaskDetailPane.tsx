@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
-import { Check, Code, Copy, FileText, Info, Layers, ShieldAlert, Terminal } from 'lucide-react-native'
+import { Check, Code, Copy, FileText, Info, Layers, MessageSquare, ShieldAlert, Terminal } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
 import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
-import TaskStreamer from './TaskStreamer'
+import { TaskStreamerInline } from './TaskStreamer'
 import TaskInteractionSheet from './TaskInteractionSheet'
 import { typeStyles } from '../../theme/typography'
 
@@ -46,7 +46,7 @@ export default function TaskDetailPane({
   const activities = useMemo(() => activitiesRaw ?? [], [activitiesRaw])
   const { toast } = useToast()
 
-  const flatListRef = useRef<FlatList>(null)
+  const scrollViewRef = useRef<ScrollView>(null)
   const [autoScroll, setAutoScroll] = useState(true)
   const [showRawLogs, setShowRawLogs] = useState(false)
   const [showCopyMenu, setShowCopyMenu] = useState(false)
@@ -95,11 +95,23 @@ export default function TaskDetailPane({
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const loadLogsForTask = useTaskStore((s) => s.loadLogsForTask)
+
+  // Auto-fetch logs for completed tasks that have no logs in memory
   useEffect(() => {
-    if (autoScroll && logs.length > 0) {
-      flatListRef.current?.scrollToEnd({ animated: false })
+    if (!task || !taskId) return
+    const isTerminal = task.status === 'completed' || task.status === 'failed' || task.status === 'killed'
+    if (isTerminal && logs.length === 0) {
+      void loadLogsForTask(taskId)
     }
-  }, [logs.length, autoScroll])
+  }, [task?.status, taskId, logs.length, loadLogsForTask])
+
+  const itemCount = activities.length + logs.length
+  useEffect(() => {
+    if (autoScroll && itemCount > 0) {
+      scrollViewRef.current?.scrollToEnd({ animated: false })
+    }
+  }, [itemCount, autoScroll])
 
   function handleScroll(event: any) {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent
@@ -108,7 +120,7 @@ export default function TaskDetailPane({
   }
 
   function handleScrollToBottom() {
-    flatListRef.current?.scrollToEnd({ animated: true })
+    scrollViewRef.current?.scrollToEnd({ animated: true })
     setAutoScroll(true)
   }
 
@@ -124,6 +136,25 @@ export default function TaskDetailPane({
   const isRunning = task.status === 'running'
   const statusColor = STATUS_COLORS[task.status ?? 'pending']
   const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '--'
+
+  // Extract the AI's final text response for the result card
+  const resultText = useMemo(() => {
+    // From structured activities — grab all text blocks
+    if (activities.length > 0) {
+      const textParts = activities
+        .filter((a): a is Extract<typeof a, { type: 'text' }> => a.type === 'text')
+        .map((a) => a.content)
+      if (textParts.length > 0) return textParts.join('\n\n')
+    }
+    // Fallback: parse from raw logs — lines that aren't prefixed with [system], [tool], [thinking], [error], [result], [done], [agent]
+    if (logs.length > 0) {
+      const textLines = logs.filter(
+        (l) => l.length > 0 && !/^\[(system|tool|thinking|error|result|done|agent)\]/.test(l) && !/^Warning:/.test(l),
+      )
+      if (textLines.length > 0) return textLines.join('\n')
+    }
+    return null
+  }, [activities, logs])
 
   return (
     <View style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}>
@@ -157,23 +188,41 @@ export default function TaskDetailPane({
         </View>
       </View>
 
-      <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
-        <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
-        <Text style={[styles.promptText, { color: colors.text }]} numberOfLines={3}>
-          {extractUserRequest(task.prompt)}
-        </Text>
-      </View>
-
-      {pendingPermissions.length > 0 && (
-        <View style={[styles.permissionCard, { backgroundColor: colors.panelAlt, borderColor: '#f59e0b' }]}>
-          <View style={styles.permissionHeader}>
-            <ShieldAlert color="#f59e0b" size={18} strokeWidth={2.25} />
-            <Text style={[styles.permissionTitle, { color: colors.text }]}>Permissions Required</Text>
-          </View>
-          <Text style={[styles.permissionBody, { color: colors.textSecondary }]}>
-            Claude requested {pendingPermissions.length} tool{pendingPermissions.length > 1 ? 's' : ''} that need approval. The task exited — re-run with auto-approve to allow these tools.
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollAreaContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={100}
+      >
+        <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
+          <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
+          <Text style={[styles.promptText, { color: colors.text }]} numberOfLines={3}>
+            {extractUserRequest(task.prompt)}
           </Text>
-          <ScrollView style={styles.permissionList} nestedScrollEnabled>
+        </View>
+
+        {!isRunning && resultText ? (
+          <View style={[styles.resultCard, { backgroundColor: colors.panelAlt, borderColor: colors.primary }]}>
+            <View style={styles.resultHeader}>
+              <MessageSquare color={colors.primary} size={14} strokeWidth={2.25} />
+              <Text style={[styles.resultLabel, { color: colors.primary }]}>Result</Text>
+            </View>
+            <Text style={[styles.resultText, { color: colors.text }]} selectable>
+              {resultText}
+            </Text>
+          </View>
+        ) : null}
+
+        {pendingPermissions.length > 0 && (
+          <View style={[styles.permissionCard, { backgroundColor: colors.panelAlt, borderColor: '#f59e0b' }]}>
+            <View style={styles.permissionHeader}>
+              <ShieldAlert color="#f59e0b" size={18} strokeWidth={2.25} />
+              <Text style={[styles.permissionTitle, { color: colors.text }]}>Permissions Required</Text>
+            </View>
+            <Text style={[styles.permissionBody, { color: colors.textSecondary }]}>
+              Claude requested {pendingPermissions.length} tool{pendingPermissions.length > 1 ? 's' : ''} that need approval. The task exited — re-run with auto-approve to allow these tools.
+            </Text>
             {pendingPermissions.map((denial, i) => (
               <View key={`${denial.tool_use_id ?? i}`} style={[styles.permissionItem, { borderColor: colors.border }]}>
                 <Text style={[styles.permissionTool, { color: colors.text }]}>{denial.tool_name}</Text>
@@ -184,62 +233,58 @@ export default function TaskDetailPane({
                 ) : null}
               </View>
             ))}
-          </ScrollView>
-          <View style={styles.permissionActions}>
-            <BauhausButton
-              compact
-              onPress={() => {
-                if (!task) return
-                clearPermissions(task.id)
-                startTask(task.prompt, task.agent_type, task.working_directory, task.model, 'default')
-              }}
-            >
-              Re-run with Auto-Approve
-            </BauhausButton>
-            <BauhausButton compact variant="quiet" onPress={() => { if (taskId) clearPermissions(taskId) }}>
-              Dismiss
-            </BauhausButton>
+            <View style={styles.permissionActions}>
+              <BauhausButton
+                compact
+                onPress={() => {
+                  if (!task) return
+                  clearPermissions(task.id)
+                  startTask(task.prompt, task.agent_type, task.working_directory, task.model, 'default')
+                }}
+              >
+                Re-run with Auto-Approve
+              </BauhausButton>
+              <BauhausButton compact variant="quiet" onPress={() => { if (taskId) clearPermissions(taskId) }}>
+                Dismiss
+              </BauhausButton>
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {task.agent_type === 'copilot' && (
-        <View style={[styles.copilotBanner, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
-          <Info color={colors.textTertiary} size={16} strokeWidth={2.25} />
-          <Text style={[styles.copilotBannerText, { color: colors.textSecondary }]}>
-            Copilot runs as a TUI session in tmux. {task.model ? `Selected model: ${task.model}. ` : ''}Task completion is auto-detected when the agent returns to idle.
-          </Text>
-        </View>
-      )}
+        {task.agent_type === 'copilot' && (
+          <View style={[styles.copilotBanner, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
+            <Info color={colors.textTertiary} size={16} strokeWidth={2.25} />
+            <Text style={[styles.copilotBannerText, { color: colors.textSecondary }]}>
+              Copilot runs as a TUI session in tmux. {task.model ? `Selected model: ${task.model}. ` : ''}Task completion is auto-detected when the agent returns to idle.
+            </Text>
+          </View>
+        )}
 
-      {showRawLogs ? (
-        <>
-          <FlatList
-            ref={flatListRef}
-            data={logs}
-            keyExtractor={(_, i) => String(i)}
-            renderItem={({ item }) => <Text style={[styles.logLine, { color: colors.text }]}>{item}</Text>}
-            style={styles.logList}
-            contentContainerStyle={styles.logContent}
-            onScroll={handleScroll}
-            scrollEventThrottle={100}
-            ListEmptyComponent={
+        {/* Stream / raw log output — rendered inline so everything scrolls together */}
+        {showRawLogs ? (
+          <View style={styles.logContent}>
+            {logs.length === 0 ? (
               <Text style={[styles.emptyLogs, { color: colors.textSecondary }]}>
                 Task output will appear here.
               </Text>
-            }
-          />
-          {!autoScroll ? (
-            <View style={styles.scrollButton}>
-              <BauhausButton compact onPress={handleScrollToBottom}>
-                Scroll To Bottom
-              </BauhausButton>
-            </View>
-          ) : null}
-        </>
-      ) : (
-        <TaskStreamer taskId={task.id} />
-      )}
+            ) : (
+              logs.map((line, i) => (
+                <Text key={i} style={[styles.logLine, { color: colors.text }]}>{line}</Text>
+              ))
+            )}
+          </View>
+        ) : (
+          <TaskStreamerInline taskId={task.id} />
+        )}
+      </ScrollView>
+
+      {!autoScroll ? (
+        <View style={styles.scrollButton}>
+          <BauhausButton compact onPress={handleScrollToBottom}>
+            Scroll To Bottom
+          </BauhausButton>
+        </View>
+      ) : null}
 
       {taskId ? <TaskInteractionSheet taskId={taskId} /> : null}
 
@@ -372,6 +417,12 @@ const styles = StyleSheet.create({
     ...typeStyles.meta,
     marginLeft: spacing[2],
   },
+  scrollArea: {
+    flex: 1,
+  },
+  scrollAreaContent: {
+    paddingBottom: spacing[6],
+  },
   promptCard: {
     marginHorizontal: spacing[3],
     marginVertical: spacing[2],
@@ -385,6 +436,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   promptText: {
+    ...typeStyles.body,
+  },
+  resultCard: {
+    marginHorizontal: spacing[3],
+    marginBottom: spacing[2],
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[3],
+    gap: spacing[2],
+  },
+  resultHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+  },
+  resultLabel: {
+    ...typeStyles.meta,
+    fontWeight: '700',
+  },
+  resultText: {
     ...typeStyles.body,
   },
   permissionCard: {

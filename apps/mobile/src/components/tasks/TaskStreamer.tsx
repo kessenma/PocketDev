@@ -97,6 +97,43 @@ export default function TaskStreamer({ taskId }: Props) {
   )
 }
 
+/**
+ * Inline variant — renders activity/log items without its own scroll container.
+ * Use inside a parent ScrollView so everything scrolls together.
+ */
+export function TaskStreamerInline({ taskId }: Props) {
+  const { colors } = useTheme()
+  const activitiesRaw = useTaskStore((s) => s.taskActivities.get(taskId))
+  const logsRaw = useTaskStore((s) => s.taskLogs.get(taskId))
+
+  const items: StreamItem[] = useMemo(() => {
+    const activities = activitiesRaw ?? []
+    const logs = logsRaw ?? []
+    if (activities.length > 0) {
+      return activities.map((a) => ({ kind: 'activity' as const, data: a }))
+    }
+    return logs.map((l) => ({ kind: 'log' as const, data: l }))
+  }, [activitiesRaw, logsRaw])
+
+  if (items.length === 0) {
+    return (
+      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+        Activity will appear here as the agent works.
+      </Text>
+    )
+  }
+
+  return (
+    <View style={styles.listContent}>
+      {items.map((item, i) =>
+        item.kind === 'activity'
+          ? <ActivityRow key={i} activity={item.data} />
+          : <LogLine key={i} line={item.data} />,
+      )}
+    </View>
+  )
+}
+
 function LogLine({ line }: { line: string }) {
   const { colors } = useTheme()
   return (

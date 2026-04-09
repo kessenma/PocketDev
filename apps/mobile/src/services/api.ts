@@ -158,6 +158,21 @@ export async function fetchTaskList(ip: string, port: number) {
   return response.json()
 }
 
+export async function fetchTaskLogs(
+  ip: string,
+  port: number,
+  taskId: string,
+  limit = 500,
+): Promise<{ taskId: string; logs: Array<{ stream: string; line: string; timestamp: string }>; total: number }> {
+  const response = await fetch(apiUrl(ip, port, `/tasks/${taskId}/logs?limit=${limit}`), {
+    headers: {
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch task logs (${response.status})`)
+  return response.json()
+}
+
 export async function fetchProjects(ip: string, port: number): Promise<ListProjectsResponse> {
   const response = await fetch(apiUrl(ip, port, '/projects'), {
     headers: {

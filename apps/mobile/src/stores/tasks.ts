@@ -1,13 +1,30 @@
 import { create } from 'zustand'
+import type { DB } from '@op-engineering/op-sqlite'
 import type { Task, TaskActivity, TaskQuestion } from '@pocketdev/shared/types'
 import type { TaskStatus, AgentType, TaskMode } from '@pocketdev/shared/schema'
-import { fetchTaskList } from '../services/api'
+import { fetchTaskList, fetchTaskLogs } from '../services/api'
+import {
+  upsertTasks,
+  getCachedTasks,
+  saveTaskLogs,
+  getCachedTaskLogs,
+  hasTaskLogs,
+  updateCachedTaskStatus,
+  deleteOldTasks,
+} from '../db/taskOperations'
 import { useConnectionStore } from './connection'
 
 export interface PermissionDenial {
   tool_name: string
   tool_use_id?: string
   tool_input?: Record<string, unknown>
+}
+
+// Module-level DB reference — set from TaskDatabaseProvider
+let _db: DB | null = null
+
+export function setTaskStoreDb(db: DB | null) {
+  _db = db
 }
 
 interface TaskState {
@@ -19,6 +36,7 @@ interface TaskState {
   pendingQuestions: Map<string, TaskQuestion[]>
   setTasks: (tasks: Task[]) => void
   refreshFromServer: () => Promise<void>
+  loadLogsForTask: (taskId: string) => Promise<void>
   startTask: (
     prompt: string,
     agentType: AgentType,
@@ -57,6 +75,17 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     const server = useConnectionStore.getState().server
     if (!server) return
 
+    // Load from local DB first for instant display (if in-memory is empty)
+    if (get().tasks.size === 0 && _db) {
+      try {
+        const cached = await getCachedTasks(_db)
+        if (cached.length > 0) {
+          get().setTasks(cached)
+        }
+      } catch { /* ignore cache failures */ }
+    }
+
+    // Then fetch from server and update both in-memory + local DB
     const taskList = await fetchTaskList(server.ip, server.port) as Task[]
     const activeTaskId = get().activeTaskId
     const nextActiveTaskId = activeTaskId && taskList.some((task) => task.id === activeTaskId)
@@ -65,6 +94,58 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     get().setTasks(taskList)
     set({ activeTaskId: nextActiveTaskId })
+
+    // Persist to local DB in background
+    if (_db) {
+      void upsertTasks(_db, taskList).catch(() => {})
+      void deleteOldTasks(_db, 100).catch(() => {})
+    }
+  },
+
+  loadLogsForTask: async (taskId: string) => {
+    // Already have logs in memory — skip
+    const existingLogs = get().taskLogs.get(taskId)
+    if (existingLogs && existingLogs.length > 0) return
+
+    // Try local DB first
+    if (_db) {
+      try {
+        const hasCached = await hasTaskLogs(_db, taskId)
+        if (hasCached) {
+          const cachedLogs = await getCachedTaskLogs(_db, taskId)
+          if (cachedLogs.length > 0) {
+            set((state) => {
+              const logs = new Map(state.taskLogs)
+              logs.set(taskId, cachedLogs)
+              return { taskLogs: logs }
+            })
+            return
+          }
+        }
+      } catch { /* fall through to server */ }
+    }
+
+    // Fetch from server
+    const server = useConnectionStore.getState().server
+    if (!server) return
+
+    try {
+      const result = await fetchTaskLogs(server.ip, server.port, taskId)
+      const lines = result.logs.map((l) => l.line)
+
+      set((state) => {
+        const logs = new Map(state.taskLogs)
+        logs.set(taskId, lines)
+        return { taskLogs: logs }
+      })
+
+      // Cache to local DB
+      if (_db) {
+        void saveTaskLogs(_db, taskId, result.logs).catch(() => {})
+      }
+    } catch {
+      // Silent fail — logs just won't show
+    }
   },
 
   startTask: (prompt: string, agentType: AgentType, workingDirectory = null, model = null, mode = 'default') => {
@@ -72,8 +153,6 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     if (!ws) return
 
     ws.send('task.start', { prompt, agentType, workingDirectory, model, mode })
-    // Refresh task list shortly after starting — retry once if the first attempt
-    // doesn't include the new task yet (server may still be spawning it)
     setTimeout(() => {
       void get().refreshFromServer().catch(() => {})
     }, 500)
@@ -120,6 +199,20 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       const task = tasks.get(taskId)
       if (task) {
         tasks.set(taskId, { ...task, status })
+
+        // On completion, cache logs to local DB after a short delay
+        const isTerminal = status === 'completed' || status === 'failed' || status === 'killed'
+        if (isTerminal && _db) {
+          const logs = state.taskLogs.get(taskId)
+          if (logs && logs.length > 0) {
+            const db = _db
+            setTimeout(() => {
+              void saveTaskLogs(db, taskId, logs.map((line) => ({ stream: 'stdout', line }))).catch(() => {})
+              void updateCachedTaskStatus(db, taskId, status).catch(() => {})
+            }, 500)
+          }
+        }
+
         return { tasks }
       }
 

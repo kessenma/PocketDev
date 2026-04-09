@@ -124,6 +124,9 @@ importers:
       '@noble/hashes':
         specifier: ^2.0.1
         version: 2.0.1
+      '@op-engineering/op-sqlite':
+        specifier: ^15.2.11
+        version: 15.2.11(react-native@0.83.0)(react@19.2.0)
       '@pocketdev/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -3752,6 +3755,20 @@ packages:
   /@oozcitak/util@10.0.0:
     resolution: {integrity: sha512-hAX0pT/73190NLqBPPWSdBVGtbY6VOhWYK3qqHqtXQ1gK7kS2yz4+ivsN07hpJ6I3aeMtKP6J6npsEKOAzuTLA==}
     engines: {node: '>=20.0'}
+    dev: false
+
+  /@op-engineering/op-sqlite@15.2.11(react-native@0.83.0)(react@19.2.0):
+    resolution: {integrity: sha512-2yvvhCGK7G52/9BZv8Oc1xF9yKCVI+S+6lxlVMh/4LmmuhOkKaUgKETzBdDgBjQSJKPocM9ny8Icv6QXby0jmA==}
+    peerDependencies:
+      '@sqlite.org/sqlite-wasm': '*'
+      react: '*'
+      react-native: '*'
+    peerDependenciesMeta:
+      '@sqlite.org/sqlite-wasm':
+        optional: true
+    dependencies:
+      react: 19.2.0
+      react-native: 0.83.0(@babel/core@7.29.0)(@react-native/metro-config@0.84.1)(@types/react@19.2.14)(react@19.2.0)
     dev: false
 
   /@open-draft/deferred-promise@2.2.0:

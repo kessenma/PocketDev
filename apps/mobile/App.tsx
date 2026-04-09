@@ -8,6 +8,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext'
 import { ToastProvider } from './src/hooks/useToast'
+import TaskDatabaseProvider from './src/db/TaskDatabaseProvider'
 import RootNavigator from './src/navigation/RootNavigator'
 import { useConnectionStore } from './src/stores/connection'
 import { AppState, StyleSheet } from 'react-native'
@@ -62,9 +63,11 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <ThemeProvider>
-        <ToastProvider>
-          <AppInner />
-        </ToastProvider>
+        <TaskDatabaseProvider>
+          <ToastProvider>
+            <AppInner />
+          </ToastProvider>
+        </TaskDatabaseProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   )
