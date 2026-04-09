@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { palette, borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
 import BauhausButton from './BauhausButton'
+import CopyButton from './CopyButton'
 import { typeStyles } from '../../theme/typography'
 import Animated, {
   Easing,
@@ -27,19 +28,45 @@ const PULSE_DURATION = 600
 const PULSE_STAGGER = 120
 const PULSE_PAUSE = 800
 
+// Don't hide the disconnected screen until connected for this long,
+// prevents rapid blink during connect/disconnect loops.
+const STABLE_CONNECTED_DELAY_MS = 2000
+
 export default function ServerDisconnected() {
   const { colors } = useTheme()
   const status = useConnectionStore((s) => s.status)
   const connect = useConnectionStore((s) => s.connect)
   const server = useConnectionStore((s) => s.server)
+  const connectionLog = useConnectionStore((s) => s.connectionLog)
+  const getConnectionLogText = useConnectionStore((s) => s.getConnectionLogText)
 
-  if (status === 'connected' || !server) return null
+  // Debounce: stay visible until connected for STABLE_CONNECTED_DELAY_MS
+  const [visible, setVisible] = useState(status !== 'connected')
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (status === 'connected') {
+      // Wait before hiding — if we disconnect again quickly, stay visible
+      hideTimer.current = setTimeout(() => setVisible(false), STABLE_CONNECTED_DELAY_MS)
+    } else if (status === 'disconnected' || status === 'error') {
+      // Show immediately on disconnect/error
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+      hideTimer.current = null
+      setVisible(true)
+    }
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current)
+    }
+  }, [status])
+
+  if (!visible || !server) return null
+  // Still hide during initial connecting if we haven't shown yet
+  if (status === 'connecting' && !visible) return null
 
   const isError = status === 'error'
-  const isDisconnected = status === 'disconnected'
 
-  // Only show for terminal states, not while actively connecting
-  if (!isError && !isDisconnected) return null
+  // Show last 30 log entries
+  const recentLog = connectionLog.slice(-30)
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -64,6 +91,42 @@ export default function ServerDisconnected() {
       <BauhausButton compact onPress={connect}>
         Retry Connection
       </BauhausButton>
+
+      {recentLog.length > 0 && (
+        <View style={[styles.logSection, { borderColor: colors.border }]}>
+          <View style={styles.logHeader}>
+            <Text style={[styles.logTitle, { color: colors.textSecondary }]}>
+              Connection Log ({connectionLog.length} events)
+            </Text>
+            <CopyButton
+              value={getConnectionLogText()}
+              label="Logs"
+              style={styles.copyButton}
+            />
+          </View>
+          <ScrollView style={styles.logScroll} nestedScrollEnabled>
+            {recentLog.map((entry, i) => {
+              const ts = new Date(entry.timestamp)
+              const timeStr = ts.toISOString().slice(11, 23) // HH:mm:ss.SSS
+              const isDisconnect = entry.event === 'status' && entry.detail === 'disconnected'
+              const isConnect = entry.event === 'status' && entry.detail === 'connected'
+              const isStale = entry.event === 'stale_ignored'
+              const logColor = isDisconnect
+                ? BAUHAUS.red
+                : isConnect
+                  ? '#22c55e'
+                  : isStale
+                    ? BAUHAUS.yellow
+                    : colors.textSecondary
+              return (
+                <Text key={i} style={[styles.logLine, { color: logColor }]}>
+                  {timeStr} {entry.event}{entry.detail ? ` ${entry.detail}` : ''}
+                </Text>
+              )
+            })}
+          </ScrollView>
+        </View>
+      )}
     </View>
   )
 }
@@ -165,5 +228,38 @@ const styles = StyleSheet.create({
     ...typeStyles.bodySmall,
     textAlign: 'center',
     maxWidth: 300,
+  },
+  logSection: {
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    marginTop: spacing[2],
+    overflow: 'hidden',
+  },
+  logHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  logTitle: {
+    ...typeStyles.meta,
+    fontWeight: '600',
+  },
+  copyButton: {
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[2],
+  },
+  logScroll: {
+    maxHeight: 200,
+    paddingHorizontal: spacing[3],
+    paddingBottom: spacing[3],
+  },
+  logLine: {
+    fontFamily: typeStyles.mono.fontFamily,
+    fontSize: 11,
+    lineHeight: 16,
   },
 })

@@ -11,24 +11,43 @@ import { usePlanStore } from './plan'
 import { useNewTaskDraftStore } from './new-task-draft'
 import { useScriptsStore } from './scripts'
 
+export interface ConnectionEvent {
+  timestamp: number
+  event: string
+  detail?: string
+}
+
+const CONNECTION_LOG_MAX = 100
+
 interface ConnectionState {
   status: ConnectionStatus
   server: StoredServer | null
   ws: PocketDevWebSocket | null
+  connectionLog: ConnectionEvent[]
   connect: () => void
   disconnect: () => void
   setPaired: (server: StoredServer) => void
   unpair: () => void
   loadFromStorage: () => void
+  getConnectionLogText: () => string
 }
 
 const _initialServer = getServer()
 if (_initialServer) setSecureMode(_initialServer.secure)
 
+function pushLog(set: Function, get: Function, event: string, detail?: string) {
+  const entry: ConnectionEvent = { timestamp: Date.now(), event, detail }
+  const log = get().connectionLog
+  const next = [...log, entry]
+  if (next.length > CONNECTION_LOG_MAX) next.splice(0, next.length - CONNECTION_LOG_MAX)
+  set({ connectionLog: next })
+}
+
 export const useConnectionStore = create<ConnectionState>((set, get) => ({
   status: 'disconnected',
   server: _initialServer,
   ws: null,
+  connectionLog: [],
 
   loadFromStorage: () => {
     const server = get().server
@@ -45,6 +64,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       return
     }
 
+    pushLog(set, get, 'connect()', `existingWs=${!!existingWs}`)
     console.log('[connection] connect() called:', {
       ip: server.ip,
       port: server.port,
@@ -54,6 +74,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     })
     if (existingWs) {
       console.log('[connection] disconnecting existing WS before creating new one')
+      pushLog(set, get, 'disconnect_existing')
     }
     existingWs?.disconnect()
 
@@ -68,9 +89,11 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         // Prevents stale WS instances from overwriting a newer connection's status.
         if (get().ws !== ws) {
           console.log('[connection] STALE WebSocket status ignored:', status)
+          pushLog(set, get, 'stale_ignored', status)
           return
         }
         console.log('[connection] WebSocket status:', status)
+        pushLog(set, get, 'status', status)
         set({ status })
         if (status === 'connected') {
           useNewTaskDraftStore.getState().loadCapabilities()
@@ -85,6 +108,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   },
 
   disconnect: () => {
+    pushLog(set, get, 'disconnect()')
     get().ws?.disconnect()
     set({ ws: null, status: 'disconnected' })
   },
@@ -92,6 +116,16 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   setPaired: (server: StoredServer) => {
     set({ server })
     get().connect()
+  },
+
+  getConnectionLogText: () => {
+    const { connectionLog, server, status } = get()
+    const header = `PocketDev Connection Log\nServer: ${server?.ip}:${server?.port} (secure=${server?.secure})\nDevice: ${server?.deviceId}\nCurrent status: ${status}\nTimestamp: ${new Date().toISOString()}\n${'─'.repeat(50)}\n`
+    const lines = connectionLog.map((e) => {
+      const ts = new Date(e.timestamp).toISOString()
+      return `[${ts}] ${e.event}${e.detail ? ` — ${e.detail}` : ''}`
+    })
+    return header + lines.join('\n')
   },
 
   unpair: () => {

@@ -100,12 +100,17 @@ export const wsRoutes = new Elysia()
 
       ;(ws as any)._deviceId = deviceId
 
-      // Close stale connection from the same device (e.g. mobile app reload)
+      // Close stale connection from the same device (e.g. mobile app reload).
+      // Deferred: closing a WS synchronously inside another WS's open handler
+      // can interfere with the new connection in Bun/Elysia, causing it to drop.
       const existing = clients.get(deviceId)
       if (existing) {
-        console.log(`[ws] open: closing stale WS for device=${deviceId}`)
+        console.log(`[ws] open: scheduling stale WS close for device=${deviceId}`)
         pushWsEvent({ type: 'stale_closed', deviceId, timestamp: Date.now(), detail: `connectedFor=${Date.now() - existing.connectedAt}ms` })
-        try { existing.close() } catch { /* already closed */ }
+        const staleClient = existing
+        setTimeout(() => {
+          try { staleClient.close() } catch { /* already closed */ }
+        }, 500)
         // Also clean up any container log follower for the old connection
         const follower = containerLogFollowers.get(deviceId)
         if (follower) {

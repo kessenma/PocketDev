@@ -139,6 +139,27 @@ The agent broadcasts events to all connected WebSocket clients. Key broadcast po
 - **Plan events**: Plan lifecycle changes broadcast `plan.*` events
 - **Prerequisites**: Check results broadcast `setup.prerequisites_result`
 
+## Reconnection & Stale Connection Handling
+
+### Mobile Side (`PocketDevWebSocket`)
+
+- Auto-reconnects up to 10 times with exponential backoff (1s, 2s, 4s, ..., 30s cap)
+- `reconnectAttempts` resets to 0 on each successful `onopen`
+- On `connect()`, **old raw WebSocket event handlers are detached** before creating a new one. Without this, the old WS's async `onclose` can fire after the new WS is created, nuking the new connection's timers and status
+- The connection store guards status updates: only the **current** `PocketDevWebSocket` instance can update the store (stale instance callbacks are ignored)
+
+### Server Side (stale client eviction)
+
+- When a new WS opens for a device that already has a connection, the old entry is replaced in the `clients` map immediately
+- The old WS is **closed after a 500ms delay** (via `setTimeout`). Closing synchronously inside another WS's `open` handler can interfere with the new connection in Bun/Elysia
+- The `close` handler only removes a client from the map if the closing WS **is the currently registered client** (identity check via `current.ws === ws`), preventing a stale close from evicting a newer connection
+
+### Known Pitfalls
+
+- **Stale raw WebSocket handlers**: If `PocketDevWebSocket.connect()` creates a new raw WS without detaching the old one's handlers, the old `onclose` fires asynchronously and calls `cleanup()` + `scheduleReconnect()` on the shared instance, creating a connect/disconnect loop
+- **Synchronous stale close in open handler**: Calling `existing.close()` synchronously inside the server's `open` handler can cause Bun to drop the new connection. Always defer stale closes
+- **Backoff reset**: Since `reconnectAttempts` resets on each successful `onopen`, a connect/disconnect loop stays at 1s backoff forever (never backs off). The above fixes prevent the loop from starting
+
 ## Error Handling
 
 - Invalid auth → WebSocket connection rejected (HTTP 401 before upgrade)

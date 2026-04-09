@@ -36,6 +36,20 @@ export class PocketDevWebSocket {
 
   async connect() {
     this.shouldReconnect = true
+
+    // Detach old raw WebSocket before creating a new one.
+    // Without this, the old WS's onclose/onerror handlers fire asynchronously
+    // and interfere with the new connection (clearing timers, setting status to
+    // 'disconnected', scheduling redundant reconnects).
+    if (this.ws) {
+      this.ws.onopen = null
+      this.ws.onclose = null
+      this.ws.onmessage = null
+      this.ws.onerror = null
+      try { this.ws.close() } catch { /* already closed */ }
+      this.ws = null
+    }
+
     this.onStatusChange('connecting')
 
     try {
