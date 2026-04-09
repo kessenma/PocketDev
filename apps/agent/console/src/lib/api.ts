@@ -375,6 +375,8 @@ export interface TaskDebugEntry {
   workingDirectory: string | null
   projectId: string | null
   projectName: string | null
+  sessionId: string | null
+  turnCount: number | null
   createdAt: string
   startedAt: string | null
   completedAt: string | null

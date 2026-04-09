@@ -1,6 +1,7 @@
 import type { Subprocess } from 'bun'
 import type { PlanStep, PlanQuestion, TaskActivity } from '@pocketdev/shared/types'
-import { insertTaskLog, updateTaskStatus, insertTaskTurn } from '../db/index.ts'
+import { insertTaskLog, updateTaskStatus, insertTaskTurn, getDb, schema } from '../db/index.ts'
+import { eq } from 'drizzle-orm'
 import { broadcast, makeMessage } from './ws.ts'
 import { detectDevServerPort, setDevServerPort } from './proxy.ts'
 import { proposePlan } from './plan-manager.ts'
@@ -466,6 +467,23 @@ export class ManagedProcess {
   }
 
   private collectFromStreamJson(parsed: Record<string, unknown>) {
+    // Capture session_id from init message (belt-and-suspenders with pre-assigned --session-id)
+    if (parsed.type === 'system' && (parsed as any).subtype === 'init') {
+      const sessionId = (parsed as any).session_id as string | undefined
+      if (sessionId) {
+        try {
+          getDb()
+            .update(schema.tasks)
+            .set({ sessionId })
+            .where(eq(schema.tasks.id, this.taskId))
+            .run()
+          console.log(`[managed-process] Captured session_id=${sessionId} for task ${this.taskId}`)
+        } catch (err) {
+          console.error(`[managed-process] Failed to save session_id for task ${this.taskId}:`, err)
+        }
+      }
+    }
+
     if (parsed.type !== 'assistant') return
     const message = parsed.message as Record<string, unknown> | undefined
     const content = message?.content as Array<Record<string, unknown>> | undefined

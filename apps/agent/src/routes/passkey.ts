@@ -1,4 +1,4 @@
-import { Elysia, t, type HTTPHeaders } from 'elysia'
+import { Elysia, t } from 'elysia'
 import {
   createRegistrationOptions,
   verifyAndStoreRegistration,
@@ -9,10 +9,11 @@ import {
   getAdminAccount,
   getPasskeysByAdminId,
   softDeletePasskey,
+  hasPasskeyCredentials,
 } from '../db/index.ts'
 import { validateSession, createSession, sessionCookieHeader } from '../services/console-auth.ts'
 
-function requireConsoleSession(request: Request, set: { status?: unknown; headers?: Record<string, string> | HTTPHeaders }) {
+function requireConsoleSession(request: Request, set: { status?: unknown; headers?: Record<string, string> }) {
   if (!validateSession(request.headers.get('cookie'))) {
     set.status = 401
     return null

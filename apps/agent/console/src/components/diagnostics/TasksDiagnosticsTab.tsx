@@ -1,13 +1,49 @@
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
 import { killTaskFromConsole, type TasksDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
-import { Zap, Square } from 'lucide-react'
+import claudeBlack from '../../../../../../packages/shared/assets/brands/claude-black.png'
+import codexBlack from '../../../../../../packages/shared/assets/brands/codex-black.png'
+import githubCopilotBlack from '../../../../../../packages/shared/assets/brands/github-copilot-black.png'
+import minimaxBlack from '../../../../../../packages/shared/assets/brands/minimax-black.png'
+import { Square, Zap } from 'lucide-react'
 
 interface Props {
   tasksInfo: TasksDebugInfo | null
   onRefresh?: () => void
 }
+
+type ProviderFilter = 'claude' | 'codex' | 'minimax' | 'copilot'
+type TaskModeFilter = 'default' | 'plan'
+type TaskStatusFilter = 'pending' | 'running' | 'completed' | 'failed' | 'killed'
+
+type ProviderMeta = {
+  id: ProviderFilter
+  label: string
+  iconSrc: string
+}
+
+const PROVIDERS: ProviderMeta[] = [
+  { id: 'claude', label: 'Claude', iconSrc: claudeBlack },
+  { id: 'codex', label: 'Codex', iconSrc: codexBlack },
+  { id: 'minimax', label: 'MiniMax', iconSrc: minimaxBlack },
+  { id: 'copilot', label: 'GitHub Copilot', iconSrc: githubCopilotBlack },
+]
+
+const STATUS_FILTERS: Array<{ id: TaskStatusFilter, label: string }> = [
+  { id: 'running', label: 'Running' },
+  { id: 'failed', label: 'Failed' },
+  { id: 'completed', label: 'Complete' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'killed', label: 'Killed' },
+]
+
+const MODE_FILTERS: Array<{ id: TaskModeFilter, label: string }> = [
+  { id: 'default', label: 'Execute' },
+  { id: 'plan', label: 'Plan' },
+]
 
 function statusColor(status: string): string {
   switch (status) {
@@ -28,14 +64,172 @@ function formatShortTime(iso: string) {
   })
 }
 
-export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
-  const runningCount = tasksInfo?.tasks.filter((t) => t.status === 'running').length ?? 0
-  const completedCount = tasksInfo?.tasks.filter((t) => t.status === 'completed').length ?? 0
-  const failedCount = tasksInfo?.tasks.filter((t) => t.status === 'failed').length ?? 0
+function formatFullTime(iso: string) {
+  return new Date(iso).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+}
+
+function toggleInSet<T>(current: Set<T>, value: T) {
+  const next = new Set(current)
+  if (next.has(value)) next.delete(value)
+  else next.add(value)
+  return next
+}
+
+function inferProvider(task: { agentType: string, model: string | null }): ProviderFilter | null {
+  const agent = task.agentType.toLowerCase()
+  const model = task.model?.toLowerCase() ?? ''
+
+  if (agent === 'copilot' || model.includes('copilot') || model.includes('github')) return 'copilot'
+  if (agent === 'claude' || model.includes('claude') || model.includes('opus') || model.includes('sonnet') || model.includes('haiku')) return 'claude'
+  if (agent === 'codex' || model.includes('codex') || model.includes('gpt-') || model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4')) return 'codex'
+  if (model.includes('minimax') || model.includes('mini-max') || model.includes('abab')) return 'minimax'
+
+  return null
+}
+
+function providerMetaForTask(task: { agentType: string, model: string | null }) {
+  const providerId = inferProvider(task)
+  return providerId ? PROVIDERS.find((provider) => provider.id === providerId) ?? null : null
+}
+
+function BrandAssetIcon({
+  src,
+  alt,
+  size = 15,
+  scale = 1.16,
+}: {
+  src: string
+  alt: string
+  size?: number
+  scale?: number
+}) {
+  const style = {
+    width: `${size}px`,
+    height: `${size}px`,
+    objectFit: 'contain',
+    transform: `scale(${scale})`,
+    transformOrigin: 'center',
+  } satisfies CSSProperties
 
   return (
-    <div className="grid h-full gap-3 xl:grid-cols-[minmax(280px,0.65fr)_minmax(0,1.35fr)]">
-      <div className="space-y-3">
+    <img
+      src={src}
+      alt={alt}
+      width={size}
+      height={size}
+      style={style}
+      className="dark:invert"
+    />
+  )
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors',
+        active
+          ? 'border-[#f0c419]/70 bg-[#f0c419] text-black'
+          : 'border-white/10 bg-white/5 text-[#f4f0e8]/70 hover:bg-white/10',
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [providerFilters, setProviderFilters] = useState<Set<ProviderFilter>>(new Set())
+  const [modelFilters, setModelFilters] = useState<Set<string>>(new Set())
+  const [modeFilters, setModeFilters] = useState<Set<TaskModeFilter>>(new Set())
+  const [statusFilters, setStatusFilters] = useState<Set<TaskStatusFilter>>(new Set())
+  const [search, setSearch] = useState('')
+
+  const tasks = tasksInfo?.tasks ?? []
+  const runningCount = tasks.filter((t) => t.status === 'running').length
+  const completedCount = tasks.filter((t) => t.status === 'completed').length
+  const failedCount = tasks.filter((t) => t.status === 'failed').length
+
+  const availableModels = useMemo(() => {
+    const seen = new Set<string>()
+    return tasks
+      .filter((task) => {
+        const provider = inferProvider(task)
+        return providerFilters.size === 0 || (provider !== null && providerFilters.has(provider))
+      })
+      .map((task) => task.model ?? 'default')
+      .filter((model) => {
+        if (seen.has(model)) return false
+        seen.add(model)
+        return true
+      })
+  }, [providerFilters, tasks])
+
+  const filteredTasks = useMemo(() => {
+    const query = search.trim().toLowerCase()
+
+    return tasks.filter((task) => {
+      const provider = inferProvider(task)
+      const model = task.model ?? 'default'
+
+      if (providerFilters.size > 0 && (!provider || !providerFilters.has(provider))) return false
+      if (modelFilters.size > 0 && !modelFilters.has(model)) return false
+      if (modeFilters.size > 0 && !modeFilters.has(task.mode as TaskModeFilter)) return false
+      if (statusFilters.size > 0 && !statusFilters.has(task.status as TaskStatusFilter)) return false
+      if (!query) return true
+
+      return [
+        task.prompt,
+        task.id,
+        task.agentType,
+        task.model ?? 'default',
+        task.projectName ?? '',
+        task.workingDirectory ?? '',
+        task.sessionId ?? '',
+      ].some((value) => value.toLowerCase().includes(query))
+    })
+  }, [modeFilters, modelFilters, providerFilters, search, statusFilters, tasks])
+
+  useEffect(() => {
+    if (modelFilters.size === 0) return
+
+    const next = new Set([...modelFilters].filter((model) => availableModels.includes(model)))
+    if (next.size !== modelFilters.size) setModelFilters(next)
+  }, [availableModels, modelFilters])
+
+  useEffect(() => {
+    if (!filteredTasks.length) {
+      setSelectedTaskId(null)
+      return
+    }
+
+    if (!selectedTaskId || !filteredTasks.some((task) => task.id === selectedTaskId)) {
+      setSelectedTaskId(filteredTasks[0].id)
+    }
+  }, [filteredTasks, selectedTaskId])
+
+  const selectedTask = filteredTasks.find((task) => task.id === selectedTaskId) ?? filteredTasks[0] ?? null
+
+  return (
+    <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(360px,0.88fr)_minmax(0,1.12fr)]">
+      <div className="flex min-h-0 flex-col gap-3">
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-[#f0c419]" />
@@ -82,86 +276,289 @@ export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
             )}
           </div>
         </div>
+
+        <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Filters</p>
+              <p className="mt-1 text-xs text-[#f4f0e8]/45">{filteredTasks.length} of {tasks.length} tasks shown</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-white/10 bg-white/5 text-xs text-[#f4f0e8]/75 hover:bg-white/10"
+              onClick={() => {
+                setProviderFilters(new Set())
+                setModelFilters(new Set())
+                setModeFilters(new Set())
+                setStatusFilters(new Set())
+                setSearch('')
+              }}
+            >
+              Clear
+            </Button>
+          </div>
+
+          <div className="mt-3 space-y-3">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search prompt, task id, project, cwd..."
+              className="border-white/10 bg-black/30 text-sm"
+            />
+
+            <div>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Providers</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {PROVIDERS.map((provider) => (
+                  <FilterChip
+                    key={provider.id}
+                    active={providerFilters.has(provider.id)}
+                    onClick={() => setProviderFilters((current) => toggleInSet(current, provider.id))}
+                  >
+                    <BrandAssetIcon src={provider.iconSrc} alt={provider.label} />
+                    <span>{provider.label}</span>
+                  </FilterChip>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Models</p>
+              <div className="mt-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
+                {availableModels.length ? availableModels.map((model) => (
+                  <FilterChip
+                    key={model}
+                    active={modelFilters.has(model)}
+                    onClick={() => setModelFilters((current) => toggleInSet(current, model))}
+                  >
+                    <span>{model}</span>
+                  </FilterChip>
+                )) : (
+                  <div className="rounded-full border border-dashed border-white/10 px-3 py-1.5 text-xs text-[#f4f0e8]/45">
+                    No models match the current provider filters
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Task Type</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {MODE_FILTERS.map((mode) => (
+                  <FilterChip
+                    key={mode.id}
+                    active={modeFilters.has(mode.id)}
+                    onClick={() => setModeFilters((current) => toggleInSet(current, mode.id))}
+                  >
+                    <span>{mode.label}</span>
+                  </FilterChip>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Status</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {STATUS_FILTERS.map((status) => (
+                  <FilterChip
+                    key={status.id}
+                    active={statusFilters.has(status.id)}
+                    onClick={() => setStatusFilters((current) => toggleInSet(current, status.id))}
+                  >
+                    <span>{status.label}</span>
+                  </FilterChip>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <p className="text-sm font-medium">Recent Tasks</p>
+            <p className="text-xs text-[#f4f0e8]/45">{filteredTasks.length} visible</p>
+          </div>
+
+          <div className="mt-3 h-full space-y-2 overflow-y-auto pr-1">
+            {filteredTasks.length ? (
+              filteredTasks.map((task) => {
+                const provider = providerMetaForTask(task)
+                const isSelected = selectedTask?.id === task.id
+
+                return (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => setSelectedTaskId(task.id)}
+                    className={cn(
+                      'block w-full rounded-[1.2rem] border p-3 text-left transition-colors',
+                      isSelected
+                        ? 'border-[#f0c419]/40 bg-[#f0c419]/10'
+                        : 'border-white/8 bg-black/30 hover:bg-white/5',
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 text-xs text-[#f4f0e8]/55">
+                          {provider ? (
+                            <>
+                              <BrandAssetIcon src={provider.iconSrc} alt={provider.label} size={14} />
+                              <span>{provider.label}</span>
+                            </>
+                          ) : (
+                            <span className="rounded-full border border-white/10 px-2 py-0.5">Unknown provider</span>
+                          )}
+                          <span>•</span>
+                          <span>{task.model ?? 'default'}</span>
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-sm font-medium text-[#f4f0e8]/90">
+                          {task.prompt}
+                        </p>
+                        <p className="mt-2 truncate font-mono text-[11px] text-[#f4f0e8]/38">{task.id}</p>
+                      </div>
+                      <Badge variant="outline" className={cn(statusColor(task.status), 'shrink-0')}>
+                        {task.status}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[#f4f0e8]/50">
+                      <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/70">
+                        {task.mode === 'plan' ? 'Plan' : 'Execute'}
+                      </Badge>
+                      <span>{formatShortTime(task.createdAt)}</span>
+                      <span>•</span>
+                      <span>{task.projectName ?? 'No project'}</span>
+                    </div>
+                  </button>
+                )
+              })
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                No tasks match the current filters.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
-        <p className="text-sm font-medium">Recent Tasks</p>
-        <div className="mt-3 space-y-3">
-          {tasksInfo?.tasks.length ? (
-            tasksInfo.tasks.map((task) => (
-              <div key={task.id} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-sm font-medium text-[#f4f0e8]/90">
-                      {task.prompt.length > 120 ? `${task.prompt.slice(0, 120)}...` : task.prompt}
-                    </p>
-                    <p className="mt-1 font-mono text-[11px] text-[#f4f0e8]/40">{task.id}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {task.status === 'running' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-6 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/20"
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          await killTaskFromConsole(task.id)
-                          onRefresh?.()
-                        }}
-                      >
-                        <Square className="mr-1 h-3 w-3" />
-                        Kill
-                      </Button>
+      <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+        <p className="text-sm font-medium">Task Details</p>
+        <div className="mt-3 h-full overflow-y-auto pr-1">
+          {selectedTask ? (
+            <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#f4f0e8]/55">
+                    {providerMetaForTask(selectedTask) ? (
+                      <>
+                        <BrandAssetIcon
+                          src={providerMetaForTask(selectedTask)!.iconSrc}
+                          alt={providerMetaForTask(selectedTask)!.label}
+                          size={16}
+                        />
+                        <span>{providerMetaForTask(selectedTask)!.label}</span>
+                      </>
+                    ) : (
+                      <span>Unknown provider</span>
                     )}
-                    <Badge variant="outline" className={cn(statusColor(task.status))}>
-                      {task.status}
-                    </Badge>
+                    <span>•</span>
+                    <span>{selectedTask.model ?? 'default'}</span>
                   </div>
+                  <p className="mt-2 text-sm font-medium text-[#f4f0e8]/92">{selectedTask.prompt}</p>
+                  <p className="mt-2 font-mono text-[11px] text-[#f4f0e8]/40">{selectedTask.id}</p>
                 </div>
-                <div className="mt-3 grid gap-x-4 gap-y-1 text-xs text-[#f4f0e8]/65 sm:grid-cols-2">
-                  <p>Agent: <span className="font-medium text-[#f4f0e8]/85">{task.agentType}</span></p>
-                  <p>Mode: <span className="font-medium capitalize text-[#f4f0e8]/85">{task.mode}</span></p>
-                  <p>Model: <span className="font-medium text-[#f4f0e8]/85">{task.model ?? 'default'}</span></p>
-                  <p>Project: {task.projectName ?? 'None'}</p>
-                  <p>Exit code: {task.exitCode ?? '—'}</p>
-                  <p>Created: {formatShortTime(task.createdAt)}</p>
-                  {task.startedAt && <p>Started: {formatShortTime(task.startedAt)}</p>}
-                  {task.completedAt && <p>Completed: {formatShortTime(task.completedAt)}</p>}
+                <div className="flex items-center gap-2">
+                  {selectedTask.status === 'running' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/20"
+                      onClick={async () => {
+                        await killTaskFromConsole(selectedTask.id)
+                        onRefresh?.()
+                      }}
+                    >
+                      <Square className="mr-1 h-3 w-3" />
+                      Kill
+                    </Button>
+                  )}
+                  <Badge variant="outline" className={cn(statusColor(selectedTask.status))}>
+                    {selectedTask.status}
+                  </Badge>
                 </div>
-                {tasksInfo?.taskCommands[task.id] && (
-                  <div className="mt-2">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Command</p>
-                    <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">
-                      {tasksInfo.taskCommands[task.id]}
-                    </p>
-                  </div>
-                )}
-                {task.workingDirectory && (
-                  <p className="mt-2 truncate font-mono text-[11px] text-[#f4f0e8]/40">
-                    cwd: {task.workingDirectory}
-                  </p>
-                )}
-                {tasksInfo?.taskLogs[task.id]?.length ? (
-                  <div className="mt-3">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output</p>
-                    <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-white/8 bg-black/40 p-3 font-mono text-xs">
-                      {tasksInfo.taskLogs[task.id].map((log, i) => (
-                        <span key={i} className={log.stream === 'stderr' ? 'text-red-400' : 'text-[#9df6cd]'}>
-                          {log.line}{'\n'}
-                        </span>
-                      ))}
-                    </pre>
-                  </div>
-                ) : null}
               </div>
-            ))
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <DetailStat label="Agent" value={selectedTask.agentType} />
+                <DetailStat label="Task Type" value={selectedTask.mode === 'plan' ? 'Plan' : 'Execute'} />
+                <DetailStat label="Model" value={selectedTask.model ?? 'default'} />
+                <DetailStat label="Project" value={selectedTask.projectName ?? 'None'} />
+                <DetailStat label="Exit Code" value={selectedTask.exitCode?.toString() ?? '—'} />
+                <DetailStat label="Turns" value={(selectedTask.turnCount ?? 1).toString()} />
+                <DetailStat label="Created" value={formatFullTime(selectedTask.createdAt)} />
+                <DetailStat label="Started" value={selectedTask.startedAt ? formatFullTime(selectedTask.startedAt) : '—'} />
+                <DetailStat label="Completed" value={selectedTask.completedAt ? formatFullTime(selectedTask.completedAt) : '—'} />
+              </div>
+
+              {selectedTask.sessionId && (
+                <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Session</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">{selectedTask.sessionId}</p>
+                </div>
+              )}
+
+              {!selectedTask.sessionId && selectedTask.agentType === 'claude' && (
+                <p className="mt-4 text-[11px] text-orange-400/70">
+                  No session_id. Chat continuation is unavailable for this task.
+                </p>
+              )}
+
+              {tasksInfo?.taskCommands[selectedTask.id] && (
+                <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Command</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">
+                    {tasksInfo.taskCommands[selectedTask.id]}
+                  </p>
+                </div>
+              )}
+
+              {selectedTask.workingDirectory && (
+                <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Working Directory</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-[#f4f0e8]/45">{selectedTask.workingDirectory}</p>
+                </div>
+              )}
+
+              {tasksInfo?.taskLogs[selectedTask.id]?.length ? (
+                <div className="mt-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output</p>
+                  <pre className="mt-2 max-h-[28rem] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-white/8 bg-black/40 p-3 font-mono text-xs">
+                    {tasksInfo.taskLogs[selectedTask.id].map((log, i) => (
+                      <span key={i} className={log.stream === 'stderr' ? 'text-red-400' : 'text-[#9df6cd]'}>
+                        {log.line}
+                        {'\n'}
+                      </span>
+                    ))}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
-              No tasks yet. Start a task from the mobile app to see it here.
+              No task selected. Start a task from the mobile app or adjust the current filters.
             </div>
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function DetailStat({ label, value }: { label: string, value: string }) {
+  return (
+    <div className="rounded-xl border border-white/8 bg-black/30 p-3">
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">{label}</p>
+      <p className="mt-1 text-sm text-[#f4f0e8]/82">{value}</p>
     </div>
   )
 }

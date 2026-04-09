@@ -46,6 +46,8 @@ export function validateSession(cookieHeader: string | null): boolean {
   try {
     const session = JSON.parse(raw) as { email: string; expiresAt: number }
     if (Date.now() > session.expiresAt) return false
+    // Ensure the admin account still exists (may have been reset via install script)
+    if (!hasAdminAccount()) return false
     return true
   } catch {
     return false

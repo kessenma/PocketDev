@@ -5,7 +5,7 @@ import {
   REPO_HISTORY_PATTERN_PRESETS,
   buildRepoHistoryMaskSvg,
   buildRepoHistoryVisualSvg,
-} from '../apps/web/src/components/architecture/sections/repo-history-pattern'
+} from '../apps/web/src/components/architecture/sections/repo-history-pattern.ts'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const outputDir = path.resolve(scriptDir, '../apps/web/public/assets/architecture')

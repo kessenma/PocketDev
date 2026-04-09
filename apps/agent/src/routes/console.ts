@@ -378,7 +378,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     const taskCommands: Record<string, string> = {}
     for (const task of tasks.slice(0, 10)) {
       try {
-        const cmd = buildCommand(task.agentType ?? 'claude', task.prompt, task.model ?? null, (task.mode ?? 'default') as 'default' | 'plan')
+        const cmd = buildCommand(task.agentType ?? 'claude', task.prompt, task.model ?? null, (task.mode ?? 'default') as 'default' | 'plan', task.sessionId ?? undefined)
         taskCommands[task.id] = cmd.map((c: string) => c.includes(' ') ? `"${c}"` : c).join(' ')
       } catch { /* ignore */ }
     }
