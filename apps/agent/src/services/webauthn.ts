@@ -72,13 +72,21 @@ export function getRpConfig(request: Request): { rpID: string; origin: string; r
   const host = request.headers.get('host') ?? 'localhost:4387'
   const hostname = host.replace(/:\d+$/, '')
 
+  // Allow overriding hostname for WebAuthn when accessed via IP address.
+  // Set POCKETDEV_HOSTNAME to a domain (e.g. "pocketdev.local") and add a
+  // matching /etc/hosts entry on the client machine pointing to the server IP.
+  const rpHostname = process.env.POCKETDEV_HOSTNAME || hostname
+  const port = host.includes(':') ? host.split(':').pop() : null
+
   // Determine protocol: if hostname is an IP or localhost, use http; otherwise https
-  const isLocalOrIp = hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)
+  const isLocalOrIp = rpHostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(rpHostname)
   const proto = isLocalOrIp ? 'http' : 'https'
 
+  const rpHost = port ? `${rpHostname}:${port}` : rpHostname
+
   return {
-    rpID: hostname,
-    origin: `${proto}://${host}`,
+    rpID: rpHostname,
+    origin: `${proto}://${rpHost}`,
     rpName: 'PocketDev Agent',
   }
 }

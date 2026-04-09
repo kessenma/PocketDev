@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { startAuthentication } from '@simplewebauthn/browser'
+import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser'
 import { Button } from '#/components/ui/button'
 import { getPasskeyAuthenticationOptions, verifyPasskeyAuthentication } from '#/lib/api'
 import { Fingerprint } from 'lucide-react'
@@ -11,6 +11,8 @@ interface Props {
 export function PasskeyButton({ onSuccess }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  if (!browserSupportsWebAuthn()) return null
 
   async function handlePasskeyLogin() {
     setError('')

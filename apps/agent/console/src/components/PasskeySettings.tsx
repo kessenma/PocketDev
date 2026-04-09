@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { startRegistration } from '@simplewebauthn/browser'
+import { browserSupportsWebAuthn, startRegistration } from '@simplewebauthn/browser'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -12,6 +12,10 @@ import {
 } from '#/lib/api'
 import { Fingerprint, Plus, Trash2 } from 'lucide-react'
 
+function isIpAddress(hostname: string): boolean {
+  return /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes(':') // IPv4 or IPv6
+}
+
 export function PasskeySettings() {
   const [passkeys, setPasskeys] = useState<PasskeyCredential[]>([])
   const [loading, setLoading] = useState(true)
@@ -20,7 +24,14 @@ export function PasskeySettings() {
   const [showNameInput, setShowNameInput] = useState(false)
   const [error, setError] = useState('')
 
+  const webAuthnAvailable = browserSupportsWebAuthn()
+  const accessedViaIp = isIpAddress(window.location.hostname)
+
   const load = useCallback(async () => {
+    if (!webAuthnAvailable) {
+      setLoading(false)
+      return
+    }
     try {
       const creds = await listPasskeys()
       setPasskeys(creds)
@@ -29,7 +40,7 @@ export function PasskeySettings() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [webAuthnAvailable])
 
   useEffect(() => { load() }, [load])
 
@@ -80,7 +91,7 @@ export function PasskeySettings() {
           <Fingerprint className="h-4 w-4" />
           Passkeys
         </CardTitle>
-        {!showNameInput && (
+        {!showNameInput && webAuthnAvailable && (
           <Button
             variant="outline"
             size="sm"
@@ -93,7 +104,25 @@ export function PasskeySettings() {
         )}
       </CardHeader>
       <CardContent className="space-y-3">
-        {showNameInput && (
+        {!webAuthnAvailable && (
+          <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-3">
+            <p className="text-sm text-muted-foreground">
+              Passkeys require a domain name — browsers don't support WebAuthn on IP addresses.
+            </p>
+            {accessedViaIp && (
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p className="font-medium text-[#f0c419]">Quick fix:</p>
+                <p>1. Add to <code className="rounded bg-[#12100d] px-1">/etc/hosts</code> on your computer:</p>
+                <code className="block rounded bg-[#12100d] px-2 py-1">
+                  {window.location.hostname} pocketdev.local
+                </code>
+                <p>2. Set on your server: <code className="rounded bg-[#12100d] px-1">POCKETDEV_HOSTNAME=pocketdev.local</code></p>
+                <p>3. Access via <code className="rounded bg-[#12100d] px-1">http://pocketdev.local:{window.location.port || '4387'}/PocketDev/console</code></p>
+              </div>
+            )}
+          </div>
+        )}
+        {showNameInput && webAuthnAvailable && (
           <div className="flex items-center gap-2">
             <Input
               placeholder="Device name (optional)"

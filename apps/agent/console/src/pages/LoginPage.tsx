@@ -7,6 +7,7 @@ import { Button } from '#/components/ui/button'
 import { Separator } from '#/components/ui/separator'
 import { login, checkHealth, signup } from '#/lib/api'
 import { PasskeyButton } from '#/components/PasskeyButton'
+import { browserSupportsWebAuthn } from '@simplewebauthn/browser'
 import { Server, LogIn, UserPlus } from 'lucide-react'
 
 export function LoginPage() {
@@ -148,7 +149,7 @@ export function LoginPage() {
                 </Button>
               </form>
 
-              {hasPasskeys && (
+              {hasPasskeys && browserSupportsWebAuthn() && (
                 <>
                   <div className="relative my-4">
                     <Separator />

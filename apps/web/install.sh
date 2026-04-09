@@ -193,6 +193,7 @@ Environment=POCKETDEV_DATA_DIR=${DATA_DIR}
 Environment=POCKETDEV_PORT=${PORT}
 Environment=POCKETDEV_HOST=127.0.0.1
 Environment=POCKETDEV_PROJECT_DIR=${HOME}
+Environment=POCKETDEV_HOSTNAME=pocketdev.local
 Environment=PATH=${BUN_PATH%/*}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=always
 RestartSec=5
@@ -356,6 +357,10 @@ if [ "$CADDY_ACTIVE" = true ]; then
   echo -e "  ${BOLD}HTTPS:${NC} Caddy is running with a self-signed certificate."
   echo -e "  Add a custom domain from the console for a trusted Let's Encrypt cert."
 fi
+echo ""
+echo -e "  ${BOLD}Passkeys:${NC} To enable passkey login, add this to ${CYAN}/etc/hosts${NC} on your computer:"
+echo -e "    ${CYAN}${PUBLIC_IP} pocketdev.local${NC}"
+echo -e "  Then access via: ${CYAN}http://pocketdev.local:${PORT}/PocketDev/console${NC}"
 echo ""
 echo -e "  ${BOLD}Health:${NC}  http://${PUBLIC_IP}:${PORT}/PocketDev/health"
 echo ""
