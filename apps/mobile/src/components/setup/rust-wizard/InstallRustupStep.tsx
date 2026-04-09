@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
@@ -11,6 +11,7 @@ import { AlertTriangle, ArrowRight, Download, RefreshCw } from 'lucide-react-nat
 import SetupCommandCard from '../shared/SetupCommandCard'
 import SetupProgressCard from '../shared/SetupProgressCard'
 import SetupTerminalPanel from '../shared/SetupTerminalPanel'
+import { playInstallSuccessHaptic } from '../shared/haptics'
 
 const INSTALL_CMD = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
 const SOURCE_CMD = '( [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env" ) || true'
@@ -34,6 +35,12 @@ export default function InstallRustupStep({ dispatch }: Props) {
   const [showOutput, setShowOutput] = useState(false)
   const [verifyError, setVerifyError] = useState<string | null>(null)
   const scrollRef = useRef<ScrollView>(null)
+
+  useEffect(() => {
+    if (installState === 'success') {
+      playInstallSuccessHaptic()
+    }
+  }, [installState])
 
   const {
     output, showSudoPrompt,

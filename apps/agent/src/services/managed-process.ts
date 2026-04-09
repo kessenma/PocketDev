@@ -203,6 +203,7 @@ export interface ManagedProcessOptions {
   mode: 'default' | 'plan'
   agentType: string
   turnNumber?: number
+  onComplete?: () => void
 }
 
 export class ManagedProcess {
@@ -218,6 +219,7 @@ export class ManagedProcess {
   private command: string[]
   private cwd: string | null
   private turnNumber: number
+  private onComplete?: () => void
 
   constructor(opts: ManagedProcessOptions) {
     this.taskId = opts.taskId
@@ -226,6 +228,7 @@ export class ManagedProcess {
     this.mode = opts.mode
     this.agentType = opts.agentType
     this.turnNumber = opts.turnNumber ?? 1
+    this.onComplete = opts.onComplete
   }
 
   get status(): TaskStatus {
@@ -306,6 +309,9 @@ export class ManagedProcess {
       if (this.mode === 'plan' && this.collectedToolUses.length > 0) {
         this.createPlanFromToolUses()
       }
+
+      // Free memory — remove from the active processes map
+      this.onComplete?.()
     })
   }
 

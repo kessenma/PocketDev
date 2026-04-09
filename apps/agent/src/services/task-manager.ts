@@ -3,7 +3,7 @@ import { ManagedProcess } from './managed-process.ts'
 import { ManagedTmuxProcess } from './managed-tmux-process.ts'
 import { getActiveProjectId } from './projects.ts'
 
-/** Active processes keyed by task ID */
+/** Active processes keyed by task ID — only holds running processes, cleaned up on completion */
 const processes = new Map<string, ManagedProcess | ManagedTmuxProcess>()
 
 type TaskMode = 'default' | 'plan'
@@ -66,17 +66,19 @@ export function startTask(
     insertTaskTurn(crypto.randomUUID(), taskId, 1, 'user', prompt)
   }
 
+  const onComplete = () => { processes.delete(taskId) }
+
   if (agentType === 'copilot') {
     console.log(`[task-manager] Starting copilot tmux task ${taskId}`)
     console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
-    const proc = new ManagedTmuxProcess({ taskId, prompt, cwd, mode, model })
+    const proc = new ManagedTmuxProcess({ taskId, prompt, cwd, mode, model, onComplete })
     processes.set(taskId, proc)
     proc.start()
   } else {
     const command = buildCommand(agentType, prompt, model, mode, sessionId ?? undefined)
     console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
     console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
-    const proc = new ManagedProcess({ taskId, command, cwd, mode, agentType })
+    const proc = new ManagedProcess({ taskId, command, cwd, mode, agentType, onComplete })
     processes.set(taskId, proc)
     proc.start()
   }
@@ -115,7 +117,7 @@ export function continueTask(taskId: string, prompt: string, model: string | nul
   const cwd = task.workingDirectory ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
   console.log(`[task-manager] Continuing task ${taskId} (turn ${newTurnCount}): ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
 
-  const proc = new ManagedProcess({ taskId, command, cwd, mode: 'default', agentType: 'claude', turnNumber: newTurnCount })
+  const proc = new ManagedProcess({ taskId, command, cwd, mode: 'default', agentType: 'claude', turnNumber: newTurnCount, onComplete: () => { processes.delete(taskId) } })
   processes.set(taskId, proc)
   proc.start()
 

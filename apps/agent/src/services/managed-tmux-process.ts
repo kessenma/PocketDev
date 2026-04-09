@@ -64,6 +64,7 @@ export interface ManagedTmuxProcessOptions {
   cwd: string
   mode: 'default' | 'plan'
   model?: string | null
+  onComplete?: () => void
 }
 
 export class ManagedTmuxProcess {
@@ -78,6 +79,7 @@ export class ManagedTmuxProcess {
   private pollTimer: ReturnType<typeof setTimeout> | null = null
   private promptSent = false
   private startedAt = 0
+  private onComplete?: () => void
 
   constructor(opts: ManagedTmuxProcessOptions) {
     this.taskId = opts.taskId
@@ -85,6 +87,7 @@ export class ManagedTmuxProcess {
     this.cwd = opts.cwd
     this.model = opts.model ?? null
     this.tmuxSession = `pocketdev-task-${opts.taskId.slice(0, 8)}`
+    this.onComplete = opts.onComplete
   }
 
   get status(): TaskStatus {
@@ -251,6 +254,8 @@ export class ManagedTmuxProcess {
         status,
       }),
     )
+    // Free memory — remove from the active processes map
+    this.onComplete?.()
   }
 
   private cleanup() {

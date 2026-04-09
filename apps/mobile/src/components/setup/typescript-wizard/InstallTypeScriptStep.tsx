@@ -12,6 +12,7 @@ import type { TypeScriptSetupStatus } from '@pocketdev/shared/types'
 import SetupCommandCard from '../shared/SetupCommandCard'
 import SetupProgressCard from '../shared/SetupProgressCard'
 import SetupTerminalPanel from '../shared/SetupTerminalPanel'
+import { playInstallSuccessHaptic } from '../shared/haptics'
 
 const DISPLAY_CMD = 'npm install -g typescript'
 const DONE_MARKER = '__TS_INSTALL_DONE__'
@@ -33,6 +34,12 @@ export default function InstallTypeScriptStep({ dispatch }: Props) {
   const [success, setSuccess] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
+
+  useEffect(() => {
+    if (success) {
+      playInstallSuccessHaptic()
+    }
+  }, [success])
 
   // Pre-check: is TypeScript already installed?
   useEffect(() => {

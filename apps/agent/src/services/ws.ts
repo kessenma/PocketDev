@@ -13,7 +13,7 @@ import { handleAnswer, handlePlanMessage, acceptPlan, denyPlan } from './plan-ma
 import type { PlanAnswerCommand, PlanMessageCommand, PlanAcceptCommand, PlanDenyCommand } from '@pocketdev/shared/types'
 
 /** Connected clients keyed by device ID */
-const clients = new Map<string, { send: (data: string) => void }>()
+const clients = new Map<string, { send: (data: string) => void; close: () => void }>()
 const containerLogFollowers = new Map<string, ContainerLogsFollower>()
 
 /** Send a WsMessage to all connected clients */
@@ -53,7 +53,24 @@ export const wsRoutes = new Elysia()
       const deviceId = parseDeviceIdFromAuthHeader(ws.data.request.headers.get('authorization')) ?? 'dev-device'
 
       ;(ws as any)._deviceId = deviceId
-      clients.set(deviceId, { send: (data: string) => ws.send(data) })
+
+      // Close stale connection from the same device (e.g. mobile app reload)
+      const existing = clients.get(deviceId)
+      if (existing) {
+        console.log(`Closing stale WS for device: ${deviceId}`)
+        try { existing.close() } catch { /* already closed */ }
+        // Also clean up any container log follower for the old connection
+        const follower = containerLogFollowers.get(deviceId)
+        if (follower) {
+          containerLogFollowers.delete(deviceId)
+          follower.stop()
+        }
+      }
+
+      clients.set(deviceId, {
+        send: (data: string) => ws.send(data),
+        close: () => ws.close(),
+      })
       console.log(`Device connected: ${deviceId}`)
     },
     async message(ws, raw) {

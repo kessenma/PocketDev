@@ -12,6 +12,7 @@ import type { GoSetupStatus } from '@pocketdev/shared/types'
 import SetupCommandCard from '../shared/SetupCommandCard'
 import SetupProgressCard from '../shared/SetupProgressCard'
 import SetupTerminalPanel from '../shared/SetupTerminalPanel'
+import { playInstallSuccessHaptic } from '../shared/haptics'
 
 const DISPLAY_CMD = 'apt-get install -y golang-go'
 const DONE_MARKER = '__GO_INSTALL_DONE__'
@@ -34,6 +35,12 @@ export default function InstallGoStep({ dispatch }: Props) {
   const [success, setSuccess] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
+
+  useEffect(() => {
+    if (success) {
+      playInstallSuccessHaptic()
+    }
+  }, [success])
 
   // Pre-check: is Go already installed? + fetch install command from server
   useEffect(() => {

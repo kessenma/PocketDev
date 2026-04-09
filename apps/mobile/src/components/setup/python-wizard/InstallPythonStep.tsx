@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
@@ -9,6 +9,7 @@ import { ArrowRight, Download, RefreshCw } from 'lucide-react-native'
 import SetupCommandCard from '../shared/SetupCommandCard'
 import SetupProgressCard from '../shared/SetupProgressCard'
 import SetupTerminalPanel from '../shared/SetupTerminalPanel'
+import { playInstallSuccessHaptic } from '../shared/haptics'
 
 const INSTALL_COMMANDS = [
   'sudo apt update',
@@ -31,6 +32,12 @@ export default function InstallPythonStep({ dispatch }: Props) {
   const [success, setSuccess] = useState(false)
   const [showOutput, setShowOutput] = useState(false)
   const scrollRef = useRef<ScrollView>(null)
+
+  useEffect(() => {
+    if (success) {
+      playInstallSuccessHaptic()
+    }
+  }, [success])
 
   const {
     output, hasError, showSudoPrompt,
