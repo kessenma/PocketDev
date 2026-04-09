@@ -15,6 +15,7 @@ import {
   postGitCheckout,
   postGitCommit,
   postGitPush,
+  postGitPull,
   fetchDetailedHistory,
   triggerHistorySync,
 } from '../services/api'
@@ -42,6 +43,7 @@ type GitState = {
   isRefreshing: boolean
   isCommitting: boolean
   isPushing: boolean
+  isPulling: boolean
   isSyncing: boolean
   error: string | null
   selectView: (view: GitView) => void
@@ -52,6 +54,7 @@ type GitState = {
   syncHistory: () => void
   commit: () => void
   push: () => void
+  pull: () => void
 }
 
 const emptyRemote: GitRemoteState = {
@@ -129,6 +132,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   isRefreshing: false,
   isCommitting: false,
   isPushing: false,
+  isPulling: false,
   isSyncing: false,
   error: null,
 
@@ -359,6 +363,42 @@ export const useGitStore = create<GitState>((set, get) => ({
         isPushing: false,
         lastActionMessage: 'Push failed.',
         error: err instanceof Error ? err.message : 'Push failed',
+      })
+    }
+  },
+
+  pull: async () => {
+    const state = get()
+    if (state.isPulling) return
+
+    const server = getServer()
+    if (!server) return
+
+    set({ isPulling: true, lastActionMessage: 'Pulling...' })
+
+    try {
+      const result = await postGitPull(server.ip, server.port)
+      if ('ok' in result && result.ok) {
+        set({
+          isPulling: false,
+          remote: summaryToRemote(result.summary),
+          lastActionMessage: `Pulled from ${result.summary.remote.upstream}.`,
+        })
+        // Refresh everything + sync history to pick up new commits
+        get().refresh()
+        get().syncHistory()
+      } else if ('error' in result) {
+        set({
+          isPulling: false,
+          lastActionMessage: result.error,
+          error: result.error,
+        })
+      }
+    } catch (err) {
+      set({
+        isPulling: false,
+        lastActionMessage: 'Pull failed.',
+        error: err instanceof Error ? err.message : 'Pull failed',
       })
     }
   },

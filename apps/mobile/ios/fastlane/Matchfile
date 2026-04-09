@@ -1,0 +1,23 @@
+git_url(ENV['MATCH_GIT_URL'] || "git@github.com:kessenma/pocketdev-certs.git")
+
+storage_mode("git")
+
+app_identifier(["run.pocketdev.mobile"])
+
+username(ENV['APPLE_ID'])
+
+team_id(ENV['TEAM_ID'])
+
+type("appstore")
+
+platform("ios")
+
+keychain_name(ENV['KEYCHAIN_NAME'] || "login.keychain")
+
+keychain_password(ENV['KEYCHAIN_PASSWORD'])
+
+shallow_clone(true)
+
+force_for_new_devices(true)
+
+generate_apple_certs(true)

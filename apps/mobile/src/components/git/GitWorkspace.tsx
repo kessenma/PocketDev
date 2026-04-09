@@ -37,6 +37,7 @@ export default function GitWorkspace() {
   const isRefreshing = useGitStore((state) => state.isRefreshing)
   const isCommitting = useGitStore((state) => state.isCommitting)
   const isPushing = useGitStore((state) => state.isPushing)
+  const isPulling = useGitStore((state) => state.isPulling)
   const selectView = useGitStore((state) => state.selectView)
   const selectFile = useGitStore((state) => state.selectFile)
   const selectBranch = useGitStore((state) => state.selectBranch)
@@ -44,6 +45,7 @@ export default function GitWorkspace() {
   const refresh = useGitStore((state) => state.refresh)
   const commit = useGitStore((state) => state.commit)
   const push = useGitStore((state) => state.push)
+  const pull = useGitStore((state) => state.pull)
 
   const currentBranch = branches.find((branch) => branch.current) ?? branches[0]
   const selectedFile = changes.find((change) => change.id === selectedFileId) ?? null
@@ -104,7 +106,7 @@ export default function GitWorkspace() {
               onChangeText={updateCommitMessage}
               onCommitPress={commit}
             />
-            <GitPushPanel remote={remote} isPushing={isPushing} onPushPress={push} />
+            <GitPushPanel remote={remote} isPushing={isPushing} isPulling={isPulling} onPushPress={push} onPullPress={pull} />
           </View>
         }
         leadingWidth={380}
@@ -126,21 +128,21 @@ export default function GitWorkspace() {
           onChangeText={updateCommitMessage}
           onCommitPress={commit}
         />
-        <GitPushPanel remote={remote} isPushing={isPushing} onPushPress={push} />
+        <GitPushPanel remote={remote} isPushing={isPushing} isPulling={isPulling} onPushPress={push} onPullPress={pull} />
       </View>
     )
 
   const historyView = (
     <View style={styles.stack}>
       <GitHistoryList commits={commits} />
-      <GitPushPanel remote={remote} isPushing={isPushing} onPushPress={push} />
+      <GitPushPanel remote={remote} isPushing={isPushing} isPulling={isPulling} onPushPress={push} onPullPress={pull} />
     </View>
   )
 
   const branchesView = (
     <View style={styles.stack}>
       <GitBranchList branches={branches} onSelectBranch={selectBranch} />
-      <GitPushPanel remote={remote} isPushing={isPushing} onPushPress={push} />
+      <GitPushPanel remote={remote} isPushing={isPushing} isPulling={isPulling} onPushPress={push} onPullPress={pull} />
     </View>
   )
 

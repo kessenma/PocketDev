@@ -35,6 +35,7 @@ interface SyncResult {
 export async function syncGitHistory(
   projectId: string,
   limit = DEFAULT_INITIAL_LIMIT,
+  origin: 'app' | 'task' | 'external' = 'external',
 ): Promise<SyncResult> {
   if (syncing.has(projectId)) {
     console.log(`[git-history] Sync already in progress for ${projectId}`)
@@ -164,6 +165,7 @@ export async function syncGitHistory(
             additions: totalAdd,
             deletions: totalDel,
             filesChanged: files.length,
+            origin,
           })
           .onConflictDoNothing()
           .run()
@@ -232,6 +234,11 @@ export function linkTaskCommits(taskId: string, projectId: string): number {
       tx.insert(schema.taskCommits)
         .values({ taskId, commitId: commit.id })
         .onConflictDoNothing()
+        .run()
+      // Mark these commits as task-originated
+      tx.update(schema.gitCommits)
+        .set({ origin: 'task' })
+        .where(eq(schema.gitCommits.id, commit.id))
         .run()
     }
   })

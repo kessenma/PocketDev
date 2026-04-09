@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS git_commits (
   additions INTEGER DEFAULT 0,
   deletions INTEGER DEFAULT 0,
   files_changed INTEGER DEFAULT 0,
+  origin TEXT DEFAULT 'external',
   synced_at TEXT DEFAULT (datetime('now'))
 );
 

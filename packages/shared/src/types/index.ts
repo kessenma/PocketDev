@@ -135,6 +135,7 @@ export type {
   GitErrorResponse,
   GitMutationResult,
   GitCommitFileEntry,
+  GitCommitOrigin,
   GitDetailedCommitEntry,
   GitHistorySyncStatus,
   GitHistorySyncResult,

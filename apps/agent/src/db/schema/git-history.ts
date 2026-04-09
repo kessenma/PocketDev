@@ -16,6 +16,7 @@ export const gitCommits = sqliteTable('git_commits', {
   additions: integer('additions').default(0),
   deletions: integer('deletions').default(0),
   filesChanged: integer('files_changed').default(0),
+  origin: text('origin').default('external'), // 'app' | 'task' | 'external'
   syncedAt: text('synced_at').default(sql`(datetime('now'))`),
 })
 

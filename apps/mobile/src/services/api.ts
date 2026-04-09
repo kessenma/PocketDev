@@ -454,6 +454,10 @@ export async function postGitPush(ip: string, port: number) {
   return postGitMutation(ip, port, 'push')
 }
 
+export async function postGitPull(ip: string, port: number) {
+  return postGitMutation(ip, port, 'pull')
+}
+
 // ─── Repo History ──────────────────────────────────────
 
 export async function fetchDetailedHistory(

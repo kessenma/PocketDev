@@ -1,0 +1,405 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+begin
+  require 'dotenv'
+  # Load both .env and .match.env files
+  # .match.env contains Apple ID and team settings for match
+  Dotenv.load(
+    File.join(__dir__, '.env'),
+    File.join(__dir__, '.match.env')
+  )
+rescue LoadError
+  UI.important("'dotenv' gem not available; ensure APP_STORE_CONNECT_API_PRIVATE_KEY_PATH is exported in your shell.")
+end
+
+EXPORT_OPTIONS_PATH = File.expand_path("../ExportOptions.plist", __dir__)
+
+def app_store_connect_key_path!
+  primary = ENV['APP_STORE_CONNECT_API_PRIVATE_KEY_PATH']
+  fallback = ENV['APP_STORE_CONNECT_API_KEY_PATH']
+  key_path = [primary, fallback].compact.map(&:strip).find { |value| !value.empty? }
+
+  UI.user_error!("Set APP_STORE_CONNECT_API_PRIVATE_KEY_PATH in ios/fastlane/.env or export it before running Fastlane.") unless key_path
+
+  absolute_path = File.expand_path(key_path, __dir__)
+  UI.user_error!("API key file not found at: #{absolute_path}") unless File.exist?(absolute_path)
+
+  absolute_path
+end
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and archive the app for development"
+  lane :build do
+    build_app(
+      scheme: "Mobile",
+      workspace: "Mobile.xcworkspace",
+      configuration: "Release",
+      export_method: "development",
+      output_directory: "./build",
+      output_name: "Mobile.ipa",
+      clean: true,
+      include_bitcode: false,
+      include_symbols: true,
+      export_xcargs: "-allowProvisioningUpdates"
+    )
+  end
+
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    # Bump version and build number via version script (keeps ios-version.json in sync)
+    sh("cd ../.. && node scripts/bump-ios-version.js bump patch")
+
+    # Archive the app with xcodebuild directly
+    archive_path = File.expand_path("./fastlane/build/Mobile.xcarchive")
+    export_path = File.expand_path("./fastlane/build/export")
+
+    sh("mkdir -p ./fastlane/build")
+    sh("rm -rf #{archive_path} #{export_path}")
+
+    sh("cd .. && xcodebuild -workspace Mobile.xcworkspace -scheme Mobile -configuration Release -destination 'generic/platform=iOS' -archivePath #{archive_path} CODE_SIGN_STYLE=Manual 'CODE_SIGN_IDENTITY=Apple Distribution' 'PROVISIONING_PROFILE_SPECIFIER=match AppStore run.pocketdev.mobile' DEVELOPMENT_TEAM=RHPLRY9X9P archive")
+
+    # Export the archive to a properly signed IPA using ExportOptions.plist
+    export_options_path = File.expand_path("../ExportOptions.plist", __dir__)
+    sh("mkdir -p #{export_path}")
+    sh("xcodebuild -exportArchive -archivePath #{archive_path} -exportPath #{export_path} -exportOptionsPlist #{export_options_path}")
+
+    ipa_path = "#{export_path}/Mobile.ipa"
+    UI.user_error!("IPA not found at #{ipa_path}") unless File.exist?(ipa_path)
+
+    # Upload to TestFlight with environment variable support
+    key_path = app_store_connect_key_path!
+    skip_waiting = ENV['SKIP_WAITING_FOR_BUILD_PROCESSING'] == 'true'
+    changelog_text = skip_waiting ? nil : "Automated build via Fastlane"
+
+    upload_to_testflight(
+      ipa: ipa_path,
+      api_key: {
+        key_id: ENV['APP_STORE_CONNECT_API_KEY_ID'],
+        issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
+        key: File.binread(key_path)
+      },
+      skip_waiting_for_build_processing: skip_waiting,
+      wait_for_uploaded_build: !skip_waiting,
+      skip_submission: true,
+      distribute_external: ENV['DISTRIBUTE_EXTERNAL'] == 'true',
+      notify_external_testers: ENV['NOTIFY_EXTERNAL_TESTERS'] == 'true',
+      changelog: changelog_text
+    )
+
+    puts "Successfully uploaded to TestFlight!"
+    puts "Build will be available for testing once processing is complete."
+  end
+
+  desc "Build and upload to App Store"
+  lane :release do
+    # Use custom version script to increment version and build number
+    sh("cd ../.. && node scripts/bump-ios-version.js bump patch")
+
+    # Build the app with manual signing
+    build_app(
+      scheme: "Mobile",
+      workspace: "Mobile.xcworkspace",
+      configuration: "Release",
+      export_method: "app-store",
+      export_options: EXPORT_OPTIONS_PATH,
+      xcargs: 'CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" PROVISIONING_PROFILE_SPECIFIER="match AppStore run.pocketdev.mobile"',
+      output_directory: "./build",
+      output_name: "Mobile.ipa",
+      clean: true,
+      include_bitcode: false,
+      include_symbols: true,
+      export_xcargs: "-allowProvisioningUpdates"
+    )
+
+    # Upload to App Store Connect with environment variable support
+    key_path = app_store_connect_key_path!
+
+    upload_to_app_store(
+      api_key: {
+        key_id: ENV['APP_STORE_CONNECT_API_KEY_ID'],
+        issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
+        key: File.binread(key_path)
+      },
+      force: true,
+      reject_if_possible: true,
+      skip_metadata: false,
+      skip_screenshots: true,
+      submit_for_review: false,
+      automatic_release: false
+    )
+
+    puts "Successfully uploaded to App Store Connect!"
+    puts "Your app is ready for review. You can submit it manually from App Store Connect."
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      workspace: "Mobile.xcworkspace",
+      scheme: "Mobile",
+      device: "iPhone 16",
+      clean: true
+    )
+  end
+
+  desc "Take screenshots for App Store"
+  lane :screenshots do
+    capture_screenshots(
+      workspace: "Mobile.xcworkspace",
+      scheme: "Mobile",
+      devices: [
+        "iPhone 16 Pro Max",
+        "iPhone 16",
+        "iPad Pro (12.9-inch) (6th generation)"
+      ],
+      languages: ["en-US"],
+      output_directory: "./screenshots",
+      clear_previous_screenshots: true,
+      override_status_bar: true,
+      localize_simulator: true
+    )
+  end
+
+  desc "Increment build number"
+  lane :bump_build do
+    sh("cd ../.. && node scripts/bump-ios-version.js bump patch")
+  end
+
+  desc "Increment version number (patch)"
+  lane :bump_version_patch do
+    sh("cd ../.. && node scripts/bump-ios-version.js bump patch")
+  end
+
+  desc "Increment version number (minor)"
+  lane :bump_version_minor do
+    sh("cd ../.. && node scripts/bump-ios-version.js bump minor")
+  end
+
+  desc "Increment version number (major)"
+  lane :bump_version_major do
+    sh("cd ../.. && node scripts/bump-ios-version.js bump major")
+  end
+
+  desc "Upload pre-built IPA from Rock to TestFlight"
+  lane :upload_rock_testflight do |options|
+    # Default to the Rock-generated IPA location, but allow override
+    ipa_path = options[:ipa_path] || "../../.rock/cache/ios/export/Mobile.ipa"
+
+    # Convert to absolute path for Fastlane
+    ipa_path = File.absolute_path(ipa_path)
+
+    # Check if IPA exists
+    unless File.exist?(ipa_path)
+      UI.user_error!("IPA not found at: #{ipa_path}. Make sure to run 'npm run build:ios:archive' first.")
+    end
+
+    UI.success("Found IPA at: #{ipa_path}")
+
+    # Read version information from ios-version.json
+    version_file_path = File.expand_path("../../ios-version.json", __dir__)
+    if File.exist?(version_file_path)
+      begin
+        version_data = JSON.parse(File.read(version_file_path))
+        marketing_version = "#{version_data['major']}.#{version_data['minor']}.#{version_data['patch']}"
+        build_number = version_data['build']
+
+        UI.success("App Version: #{marketing_version}")
+        UI.success("Build Number: #{build_number}")
+        puts ""
+        puts "Uploading build #{marketing_version} (#{build_number}) to TestFlight..."
+        puts ""
+      rescue JSON::ParserError => e
+        UI.important("Could not parse version file: #{e.message}")
+      end
+    else
+      UI.important("Version file not found at: #{version_file_path}")
+    end
+
+    # Upload to TestFlight with environment variable support
+    key_path = app_store_connect_key_path!
+    skip_waiting = ENV['SKIP_WAITING_FOR_BUILD_PROCESSING'] == 'true'
+    changelog_text = skip_waiting ? nil : (options[:changelog] || "Build created with Rock and uploaded via Fastlane")
+
+    upload_to_testflight(
+      ipa: ipa_path,
+      api_key: {
+        key_id: ENV['APP_STORE_CONNECT_API_KEY_ID'],
+        issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
+        key: File.binread(key_path)
+      },
+      skip_waiting_for_build_processing: skip_waiting,
+      wait_for_uploaded_build: !skip_waiting,
+      skip_submission: true,
+      distribute_external: ENV['DISTRIBUTE_EXTERNAL'] == 'true',
+      notify_external_testers: ENV['NOTIFY_EXTERNAL_TESTERS'] == 'true',
+      changelog: changelog_text
+    )
+
+    # Show final confirmation with version details
+    if defined?(marketing_version) && defined?(build_number)
+      puts ""
+      puts "Successfully uploaded build #{marketing_version} (#{build_number}) to TestFlight!"
+      puts "App Version: #{marketing_version}"
+      puts "Build Number: #{build_number}"
+      puts "IPA Location: #{ipa_path}"
+    else
+      puts "Successfully uploaded Rock-built IPA to TestFlight!"
+    end
+    puts "Build will be available for testing once processing is complete."
+    puts ""
+    puts "View your build in App Store Connect:"
+    puts "https://appstoreconnect.apple.com/"
+  end
+
+  desc "Upload pre-built IPA from Rock to App Store Connect"
+  lane :upload_rock_app_store do |options|
+    # Default to the Rock-generated IPA location, but allow override
+    ipa_path = options[:ipa_path] || "../../.rock/cache/ios/export/Mobile.ipa"
+
+    # Convert to absolute path for Fastlane
+    ipa_path = File.absolute_path(ipa_path)
+
+    # Check if IPA exists
+    unless File.exist?(ipa_path)
+      UI.user_error!("IPA not found at: #{ipa_path}. Make sure to run 'npm run build:ios:archive' first.")
+    end
+
+    UI.success("Found IPA at: #{ipa_path}")
+
+    # Upload to App Store Connect with environment variable support
+    key_path = app_store_connect_key_path!
+
+    upload_to_app_store(
+      ipa: ipa_path,
+      api_key: {
+        key_id: ENV['APP_STORE_CONNECT_API_KEY_ID'],
+        issuer_id: ENV['APP_STORE_CONNECT_ISSUER_ID'],
+        key: File.binread(key_path)
+      },
+      force: true,
+      reject_if_possible: true,
+      skip_metadata: false,
+      skip_screenshots: true,
+      submit_for_review: options[:submit_for_review] || false,
+      automatic_release: false
+    )
+
+    puts "Successfully uploaded Rock-built IPA to App Store Connect!"
+    puts "Your app is ready for review. You can submit it manually from App Store Connect."
+    puts ""
+    puts "View your build in App Store Connect:"
+    puts "https://appstoreconnect.apple.com/"
+  end
+
+  desc "Build with Rock and upload to TestFlight (end-to-end)"
+  lane :rock_beta do |options|
+    # Use custom version script to increment build number (and optionally marketing version)
+    if ENV['BUMP_MARKETING_VERSION'] == '1'
+      bump_type = ENV['BUMP_MARKETING_VERSION_BUMP_TYPE'] || 'patch'
+      sh("cd ../.. && node scripts/bump-ios-version.js bump #{bump_type}")
+    else
+      # Just increment build number by bumping patch (which increments build automatically)
+      sh("cd ../.. && node scripts/bump-ios-version.js bump patch")
+    end
+    build_number = get_build_number(xcodeproj: "Mobile.xcodeproj")
+    version_number = begin
+      get_version_number(xcodeproj: "Mobile.xcodeproj")
+    rescue StandardError => e
+      UI.important("Unable to read marketing version from Xcode project: #{e.message}")
+      ENV['MARKETING_VERSION'] || 'unknown'
+    end
+    UI.message("Preparing version #{version_number} (build #{build_number}) for TestFlight...")
+
+    # Clean any cached archives to ensure version bump is reflected
+    sh("rm -rf ../../.rock/cache/ios/archive/* ../../.rock/cache/ios/export/*")
+
+    # Build and archive with xcodebuild directly
+    sh("mkdir -p ../../.rock/cache/ios/archive")
+
+    sh("cd .. && xcodebuild -workspace Mobile.xcworkspace -scheme Mobile -configuration Release -destination 'generic/platform=iOS' -archivePath ../.rock/cache/ios/archive/Mobile.xcarchive CODE_SIGN_STYLE=Manual 'CODE_SIGN_IDENTITY=Apple Distribution' 'PROVISIONING_PROFILE_SPECIFIER=match AppStore run.pocketdev.mobile' DEVELOPMENT_TEAM=RHPLRY9X9P archive")
+
+    # Properly export the archive to IPA using xcodebuild -exportArchive with ExportOptions.plist
+    sh("mkdir -p ../../.rock/cache/ios/export")
+    sh("rm -f ../../.rock/cache/ios/export/Mobile.ipa")
+    export_options_path = File.expand_path("../ExportOptions.plist", __dir__)
+    sh("xcodebuild -exportArchive -archivePath ../../.rock/cache/ios/archive/Mobile.xcarchive -exportPath ../../.rock/cache/ios/export -exportOptionsPlist #{export_options_path}")
+
+    UI.success("IPA created successfully at: .rock/cache/ios/export/Mobile.ipa")
+
+    # Upload the built IPA to TestFlight
+    upload_rock_testflight()
+
+    UI.success("Uploaded version #{version_number} (build #{build_number}) to TestFlight.")
+    puts "Successfully built with Rock and uploaded to TestFlight!"
+  end
+
+  desc "Build with Rock and upload to App Store Connect (end-to-end)"
+  lane :rock_release do |options|
+    # Use custom version script to increment version and build numbers
+    if options[:bump_type] || ENV['BUMP_MARKETING_VERSION'] == '1'
+      bump_type = options[:bump_type] || ENV['BUMP_MARKETING_VERSION_BUMP_TYPE'] || 'patch'
+      sh("cd ../.. && node scripts/bump-ios-version.js bump #{bump_type}")
+    else
+      # Just increment build number by bumping patch (which increments build automatically)
+      sh("cd ../.. && node scripts/bump-ios-version.js bump patch")
+    end
+    build_number = get_build_number(xcodeproj: "Mobile.xcodeproj")
+    version_number = begin
+      get_version_number(xcodeproj: "Mobile.xcodeproj")
+    rescue StandardError => e
+      UI.important("Unable to read marketing version from Xcode project: #{e.message}")
+      ENV['MARKETING_VERSION'] || 'unknown'
+    end
+    UI.message("Preparing version #{version_number} (build #{build_number}) for App Store Connect...")
+
+    # Clean any cached archives to ensure version bump is reflected
+    sh("rm -rf ../../.rock/cache/ios/archive/* ../../.rock/cache/ios/export/*")
+
+    # Build and archive with xcodebuild directly
+    sh("mkdir -p ../../.rock/cache/ios/archive")
+
+    sh("cd .. && xcodebuild -workspace Mobile.xcworkspace -scheme Mobile -configuration Release -destination 'generic/platform=iOS' -archivePath ../.rock/cache/ios/archive/Mobile.xcarchive CODE_SIGN_STYLE=Manual 'CODE_SIGN_IDENTITY=Apple Distribution' 'PROVISIONING_PROFILE_SPECIFIER=match AppStore run.pocketdev.mobile' DEVELOPMENT_TEAM=RHPLRY9X9P archive")
+
+    # Properly export the archive to IPA using xcodebuild -exportArchive with ExportOptions.plist
+    sh("mkdir -p ../../.rock/cache/ios/export")
+    sh("rm -f ../../.rock/cache/ios/export/Mobile.ipa")
+    export_options_path = File.expand_path("../ExportOptions.plist", __dir__)
+    sh("xcodebuild -exportArchive -archivePath ../../.rock/cache/ios/archive/Mobile.xcarchive -exportPath ../../.rock/cache/ios/export -exportOptionsPlist #{export_options_path}")
+
+    UI.success("IPA created successfully at: .rock/cache/ios/export/Mobile.ipa")
+
+    # Upload the built IPA to App Store Connect
+    upload_rock_app_store(submit_for_review: options[:submit_for_review])
+
+    UI.success("Uploaded version #{version_number} (build #{build_number}) to App Store Connect.")
+    puts "Successfully built with Rock and uploaded to App Store Connect!"
+  end
+
+  desc "Clean build artifacts"
+  lane :clean do
+    clear_derived_data
+    sh "rm -rf ../build"
+    sh "rm -rf ../screenshots"
+  end
+
+  error do |lane, exception|
+    puts "Fastlane failed in lane: #{lane}"
+    puts "Error: #{exception.message}"
+    puts "Check the logs above for more details."
+  end
+end

@@ -3,7 +3,7 @@
 // Follows the same pattern as taskOperations.ts.
 
 import type { DB } from '@op-engineering/op-sqlite'
-import type { GitDetailedCommitEntry, GitCommitFileEntry } from '@pocketdev/shared/types'
+import type { GitDetailedCommitEntry, GitCommitFileEntry, GitCommitOrigin } from '@pocketdev/shared/types'
 
 // ─── Upsert commits from agent API ────────────────────
 
@@ -77,8 +77,8 @@ export async function upsertGitCommitsForProject(
       await db.execute(
         `INSERT OR REPLACE INTO git_commits
          (id, project_id, sha, short_sha, message, author_name, author_email,
-          committed_at, branch, additions, deletions, files_changed)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          committed_at, branch, additions, deletions, files_changed, origin)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           projectId,
@@ -92,6 +92,7 @@ export async function upsertGitCommitsForProject(
           c.files.reduce((sum, f) => sum + f.additions, 0),
           c.files.reduce((sum, f) => sum + f.deletions, 0),
           c.filesChanged,
+          c.origin ?? 'external',
         ],
       )
 
@@ -154,6 +155,7 @@ export async function getCachedGitCommits(
       authorEmail: (row.author_email as string) || undefined,
       committedAt: row.committed_at as string,
       branch: (row.branch as string) || undefined,
+      origin: ((row.origin as string) || 'external') as GitCommitOrigin,
       relativeTime: '',
       filesChanged: (row.files_changed as number) ?? 0,
       files,
@@ -207,6 +209,7 @@ export async function getFileHistory(
       authorEmail: (row.author_email as string) || undefined,
       committedAt: row.committed_at as string,
       branch: (row.branch as string) || undefined,
+      origin: ((row.origin as string) || 'external') as GitCommitOrigin,
       relativeTime: '',
       filesChanged: (row.files_changed as number) ?? 0,
       files,
@@ -257,6 +260,7 @@ export async function getTaskCommits(
       authorEmail: (row.author_email as string) || undefined,
       committedAt: row.committed_at as string,
       branch: (row.branch as string) || undefined,
+      origin: ((row.origin as string) || 'external') as GitCommitOrigin,
       relativeTime: '',
       filesChanged: (row.files_changed as number) ?? 0,
       files,

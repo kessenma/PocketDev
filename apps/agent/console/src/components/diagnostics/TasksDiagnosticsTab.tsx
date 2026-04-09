@@ -224,8 +224,8 @@ export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
   const selectedTask = filteredTasks.find((task) => task.id === selectedTaskId) ?? filteredTasks[0] ?? null
 
   return (
-    <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(360px,0.88fr)_minmax(0,1.12fr)]">
-      <div className="flex min-h-0 flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="grid gap-3 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]">
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-[#f0c419]" />
@@ -255,7 +255,7 @@ export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
 
         <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
           <p className="text-sm font-medium">Active Processes</p>
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             {tasksInfo?.activeProcesses.length ? (
               tasksInfo.activeProcesses.map((proc) => (
                 <div key={proc.taskId} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3">
@@ -272,104 +272,97 @@ export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
             )}
           </div>
         </div>
+      </div>
 
-        <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium">Filters</p>
-              <p className="mt-1 text-xs text-[#f4f0e8]/45">{filteredTasks.length} of {tasks.length} tasks shown</p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-white/10 bg-white/5 text-xs text-[#f4f0e8]/75 hover:bg-white/10"
-              onClick={() => {
-                setProviderFilters(new Set())
-                setModelFilters(new Set())
-                setModeFilters(new Set())
-                setStatusFilters(new Set())
-                setSearch('')
-              }}
-            >
-              Clear
-            </Button>
+      <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <p className="text-sm font-medium">Filters</p>
+            <p className="mt-1 text-xs text-[#f4f0e8]/45">{filteredTasks.length} of {tasks.length} tasks shown</p>
           </div>
-
-          <div className="mt-3 space-y-3">
+          <div className="flex flex-col gap-3 xl:min-w-[280px] xl:max-w-[360px] xl:flex-1">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search prompt, task id, project, cwd..."
               className="border-white/10 bg-black/30 text-sm"
             />
-
-            <div>
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Providers</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {PROVIDERS.map((provider) => (
-                  <FilterChip
-                    key={provider.id}
-                    active={providerFilters.has(provider.id)}
-                    onClick={() => setProviderFilters((current) => toggleInSet(current, provider.id))}
-                  >
-                    <BrandAssetIcon src={provider.iconSrc} alt={provider.label} />
-                    <span>{provider.label}</span>
-                  </FilterChip>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Models</p>
-              <div className="mt-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
-                {availableModels.length ? availableModels.map((model) => (
-                  <FilterChip
-                    key={model}
-                    active={modelFilters.has(model)}
-                    onClick={() => setModelFilters((current) => toggleInSet(current, model))}
-                  >
-                    <span>{model}</span>
-                  </FilterChip>
-                )) : (
-                  <div className="rounded-full border border-dashed border-white/10 px-3 py-1.5 text-xs text-[#f4f0e8]/45">
-                    No models match the current provider filters
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Task Type</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {MODE_FILTERS.map((mode) => (
-                  <FilterChip
-                    key={mode.id}
-                    active={modeFilters.has(mode.id)}
-                    onClick={() => setModeFilters((current) => toggleInSet(current, mode.id))}
-                  >
-                    <span>{mode.label}</span>
-                  </FilterChip>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Status</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {STATUS_FILTERS.map((status) => (
-                  <FilterChip
-                    key={status.id}
-                    active={statusFilters.has(status.id)}
-                    onClick={() => setStatusFilters((current) => toggleInSet(current, status.id))}
-                  >
-                    <span>{status.label}</span>
-                  </FilterChip>
-                ))}
-              </div>
+            <div className="flex justify-start xl:justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-white/10 bg-white/5 text-xs text-[#f4f0e8]/75 hover:bg-white/10"
+                onClick={() => {
+                  setProviderFilters(new Set())
+                  setModelFilters(new Set())
+                  setModeFilters(new Set())
+                  setStatusFilters(new Set())
+                  setSearch('')
+                }}
+              >
+                Clear
+              </Button>
             </div>
           </div>
         </div>
 
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1.25fr_1.25fr_0.8fr_1fr]">
+          <FilterGroup label="Providers">
+            {PROVIDERS.map((provider) => (
+              <FilterChip
+                key={provider.id}
+                active={providerFilters.has(provider.id)}
+                onClick={() => setProviderFilters((current) => toggleInSet(current, provider.id))}
+              >
+                <BrandAssetIcon src={provider.iconSrc} alt={provider.label} />
+                <span>{provider.label}</span>
+              </FilterChip>
+            ))}
+          </FilterGroup>
+
+          <FilterGroup label="Models">
+            {availableModels.length ? availableModels.map((model) => (
+              <FilterChip
+                key={model}
+                active={modelFilters.has(model)}
+                onClick={() => setModelFilters((current) => toggleInSet(current, model))}
+              >
+                <span>{model}</span>
+              </FilterChip>
+            )) : (
+              <div className="rounded-full border border-dashed border-white/10 px-3 py-1.5 text-xs text-[#f4f0e8]/45">
+                No models match the current provider filters
+              </div>
+            )}
+          </FilterGroup>
+
+          <FilterGroup label="Task Type">
+            {MODE_FILTERS.map((mode) => (
+              <FilterChip
+                key={mode.id}
+                active={modeFilters.has(mode.id)}
+                onClick={() => setModeFilters((current) => toggleInSet(current, mode.id))}
+              >
+                <span>{mode.label}</span>
+              </FilterChip>
+            ))}
+          </FilterGroup>
+
+          <FilterGroup label="Status">
+            {STATUS_FILTERS.map((status) => (
+              <FilterChip
+                key={status.id}
+                active={statusFilters.has(status.id)}
+                onClick={() => setStatusFilters((current) => toggleInSet(current, status.id))}
+              >
+                <span>{status.label}</span>
+              </FilterChip>
+            ))}
+          </FilterGroup>
+        </div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)]">
         <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
           <div className="flex items-center justify-between gap-3 px-1">
             <p className="text-sm font-medium">Recent Tasks</p>
@@ -435,139 +428,139 @@ export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
             )}
           </div>
         </div>
-      </div>
 
-      <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
-        <p className="text-sm font-medium">Task Details</p>
-        <div className="mt-3 h-full overflow-y-auto pr-1">
-          {selectedTask ? (
-            <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#f4f0e8]/55">
-                    {providerMetaForTask(selectedTask) ? (
-                      <>
-                        <BrandAssetIcon
-                          src={providerMetaForTask(selectedTask)!.iconSrc}
-                          alt={providerMetaForTask(selectedTask)!.label}
-                          size={16}
-                        />
-                        <span>{providerMetaForTask(selectedTask)!.label}</span>
-                      </>
-                    ) : (
-                      <span>Unknown provider</span>
+        <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+          <p className="text-sm font-medium">Task Details</p>
+          <div className="mt-3 h-full overflow-y-auto pr-1">
+            {selectedTask ? (
+              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#f4f0e8]/55">
+                      {providerMetaForTask(selectedTask) ? (
+                        <>
+                          <BrandAssetIcon
+                            src={providerMetaForTask(selectedTask)!.iconSrc}
+                            alt={providerMetaForTask(selectedTask)!.label}
+                            size={16}
+                          />
+                          <span>{providerMetaForTask(selectedTask)!.label}</span>
+                        </>
+                      ) : (
+                        <span>Unknown provider</span>
+                      )}
+                      <span>•</span>
+                      <span>{selectedTask.model ?? 'default'}</span>
+                    </div>
+                    <p className="mt-2 text-sm font-medium text-[#f4f0e8]/92">{selectedTask.prompt}</p>
+                    <p className="mt-2 font-mono text-[11px] text-[#f4f0e8]/40">{selectedTask.id}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectedTask.status === 'running' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/20"
+                        onClick={async () => {
+                          await killTaskFromConsole(selectedTask.id)
+                          onRefresh?.()
+                        }}
+                      >
+                        <Square className="mr-1 h-3 w-3" />
+                        Kill
+                      </Button>
                     )}
-                    <span>•</span>
-                    <span>{selectedTask.model ?? 'default'}</span>
+                    <Badge variant="outline" className={cn(statusColor(selectedTask.status))}>
+                      {selectedTask.status}
+                    </Badge>
                   </div>
-                  <p className="mt-2 text-sm font-medium text-[#f4f0e8]/92">{selectedTask.prompt}</p>
-                  <p className="mt-2 font-mono text-[11px] text-[#f4f0e8]/40">{selectedTask.id}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {selectedTask.status === 'running' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/20"
-                      onClick={async () => {
-                        await killTaskFromConsole(selectedTask.id)
-                        onRefresh?.()
-                      }}
-                    >
-                      <Square className="mr-1 h-3 w-3" />
-                      Kill
-                    </Button>
-                  )}
-                  <Badge variant="outline" className={cn(statusColor(selectedTask.status))}>
-                    {selectedTask.status}
-                  </Badge>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <DetailStat label="Agent" value={selectedTask.agentType} />
+                  <DetailStat label="Task Type" value={selectedTask.mode === 'plan' ? 'Plan' : 'Execute'} />
+                  <DetailStat label="Model" value={selectedTask.model ?? 'default'} />
+                  <DetailStat label="Project" value={selectedTask.projectName ?? 'None'} />
+                  <DetailStat label="Exit Code" value={selectedTask.exitCode?.toString() ?? '—'} />
+                  <DetailStat label="Turns" value={(selectedTask.turnCount ?? 1).toString()} />
+                  <DetailStat label="Created" value={formatFullTime(selectedTask.createdAt)} />
+                  <DetailStat label="Started" value={selectedTask.startedAt ? formatFullTime(selectedTask.startedAt) : '—'} />
+                  <DetailStat label="Completed" value={selectedTask.completedAt ? formatFullTime(selectedTask.completedAt) : '—'} />
                 </div>
-              </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <DetailStat label="Agent" value={selectedTask.agentType} />
-                <DetailStat label="Task Type" value={selectedTask.mode === 'plan' ? 'Plan' : 'Execute'} />
-                <DetailStat label="Model" value={selectedTask.model ?? 'default'} />
-                <DetailStat label="Project" value={selectedTask.projectName ?? 'None'} />
-                <DetailStat label="Exit Code" value={selectedTask.exitCode?.toString() ?? '—'} />
-                <DetailStat label="Turns" value={(selectedTask.turnCount ?? 1).toString()} />
-                <DetailStat label="Created" value={formatFullTime(selectedTask.createdAt)} />
-                <DetailStat label="Started" value={selectedTask.startedAt ? formatFullTime(selectedTask.startedAt) : '—'} />
-                <DetailStat label="Completed" value={selectedTask.completedAt ? formatFullTime(selectedTask.completedAt) : '—'} />
-              </div>
+                {selectedTask.sessionId && (
+                  <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Session</p>
+                    <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">{selectedTask.sessionId}</p>
+                  </div>
+                )}
 
-              {selectedTask.sessionId && (
-                <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Session</p>
-                  <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">{selectedTask.sessionId}</p>
-                </div>
-              )}
-
-              {!selectedTask.sessionId && selectedTask.agentType === 'claude' && (
-                <p className="mt-4 text-[11px] text-orange-400/70">
-                  No session_id. Chat continuation is unavailable for this task.
-                </p>
-              )}
-
-              {tasksInfo?.taskCommands[selectedTask.id] && (
-                <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Command</p>
-                  <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">
-                    {tasksInfo.taskCommands[selectedTask.id]}
+                {!selectedTask.sessionId && selectedTask.agentType === 'claude' && (
+                  <p className="mt-4 text-[11px] text-orange-400/70">
+                    No session_id. Chat continuation is unavailable for this task.
                   </p>
-                </div>
-              )}
+                )}
 
-              {selectedTask.workingDirectory && (
-                <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Working Directory</p>
-                  <p className="mt-1 break-all font-mono text-[11px] text-[#f4f0e8]/45">{selectedTask.workingDirectory}</p>
-                </div>
-              )}
+                {tasksInfo?.taskCommands[selectedTask.id] && (
+                  <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Command</p>
+                    <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">
+                      {tasksInfo.taskCommands[selectedTask.id]}
+                    </p>
+                  </div>
+                )}
 
-              {tasksInfo?.taskFiles[selectedTask.id]?.length ? (
-                <div className="mt-4">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">
-                    Files Touched ({tasksInfo.taskFiles[selectedTask.id].length})
-                  </p>
-                  <div className="mt-2 max-h-60 space-y-1 overflow-y-auto rounded-xl border border-white/8 bg-black/30 p-3">
-                    {tasksInfo.taskFiles[selectedTask.id].map((touch, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
-                        <span className={cn(
-                          'inline-block w-12 shrink-0 rounded-full border px-1.5 py-0.5 text-center text-[10px] font-semibold uppercase',
-                          touch.action === 'edit' && 'border-yellow-500/40 text-yellow-400',
-                          touch.action === 'create' && 'border-green-500/40 text-green-400',
-                          touch.action === 'read' && 'border-blue-500/40 text-blue-400',
-                          touch.action === 'search' && 'border-purple-500/40 text-purple-400',
-                        )}>
-                          {touch.action}
+                {selectedTask.workingDirectory && (
+                  <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Working Directory</p>
+                    <p className="mt-1 break-all font-mono text-[11px] text-[#f4f0e8]/45">{selectedTask.workingDirectory}</p>
+                  </div>
+                )}
+
+                {tasksInfo?.taskFiles[selectedTask.id]?.length ? (
+                  <div className="mt-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">
+                      Files Touched ({tasksInfo.taskFiles[selectedTask.id].length})
+                    </p>
+                    <div className="mt-2 max-h-60 space-y-1 overflow-y-auto rounded-xl border border-white/8 bg-black/30 p-3">
+                      {tasksInfo.taskFiles[selectedTask.id].map((touch, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <span className={cn(
+                            'inline-block w-12 shrink-0 rounded-full border px-1.5 py-0.5 text-center text-[10px] font-semibold uppercase',
+                            touch.action === 'edit' && 'border-yellow-500/40 text-yellow-400',
+                            touch.action === 'create' && 'border-green-500/40 text-green-400',
+                            touch.action === 'read' && 'border-blue-500/40 text-blue-400',
+                            touch.action === 'search' && 'border-purple-500/40 text-purple-400',
+                          )}>
+                            {touch.action}
+                          </span>
+                          <span className="min-w-0 truncate font-mono text-[11px] text-[#f4f0e8]/70">{touch.filePath}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {tasksInfo?.taskLogs[selectedTask.id]?.length ? (
+                  <div className="mt-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output</p>
+                    <pre className="mt-2 max-h-[28rem] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-white/8 bg-black/40 p-3 font-mono text-xs">
+                      {tasksInfo.taskLogs[selectedTask.id].map((log, i) => (
+                        <span key={i} className={log.stream === 'stderr' ? 'text-red-400' : 'text-[#9df6cd]'}>
+                          {log.line}
+                          {'\n'}
                         </span>
-                        <span className="min-w-0 truncate font-mono text-[11px] text-[#f4f0e8]/70">{touch.filePath}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </pre>
                   </div>
-                </div>
-              ) : null}
-
-              {tasksInfo?.taskLogs[selectedTask.id]?.length ? (
-                <div className="mt-4">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output</p>
-                  <pre className="mt-2 max-h-[28rem] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-white/8 bg-black/40 p-3 font-mono text-xs">
-                    {tasksInfo.taskLogs[selectedTask.id].map((log, i) => (
-                      <span key={i} className={log.stream === 'stderr' ? 'text-red-400' : 'text-[#9df6cd]'}>
-                        {log.line}
-                        {'\n'}
-                      </span>
-                    ))}
-                  </pre>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
-              No task selected. Start a task from the mobile app or adjust the current filters.
-            </div>
-          )}
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                No task selected. Start a task from the mobile app or adjust the current filters.
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -579,6 +572,17 @@ function DetailStat({ label, value }: { label: string, value: string }) {
     <div className="rounded-xl border border-white/8 bg-black/30 p-3">
       <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">{label}</p>
       <p className="mt-1 text-sm text-[#f4f0e8]/82">{value}</p>
+    </div>
+  )
+}
+
+function FilterGroup({ label, children }: { label: string, children: ReactNode }) {
+  return (
+    <div>
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">{label}</p>
+      <div className="mt-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
+        {children}
+      </div>
     </div>
   )
 }

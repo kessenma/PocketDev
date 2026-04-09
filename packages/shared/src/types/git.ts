@@ -89,11 +89,14 @@ export interface GitCommitFileEntry {
   deletions: number
 }
 
+export type GitCommitOrigin = 'app' | 'task' | 'external'
+
 export interface GitDetailedCommitEntry extends GitCommitEntry {
   fullSha: string
   authorEmail?: string
   committedAt: string // ISO 8601 (not relative)
   branch?: string
+  origin?: GitCommitOrigin
   files: GitCommitFileEntry[]
 }
 

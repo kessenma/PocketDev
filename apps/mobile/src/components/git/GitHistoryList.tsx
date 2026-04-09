@@ -1,7 +1,10 @@
 import React from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import type { RootStackParamList } from '../../navigation/types'
 import GitBadge from './GitBadge'
 import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
 import type { GitCommitEntry } from './model'
@@ -12,6 +15,7 @@ type Props = {
 
 export default function GitHistoryList({ commits }: Props) {
   const { colors } = useTheme()
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
   return (
     <GitCard>
@@ -33,6 +37,13 @@ export default function GitHistoryList({ commits }: Props) {
             </Text>
           </View>
         ))}
+
+        <Pressable
+          onPress={() => navigation.navigate('GitHistory')}
+          style={({ pressed }) => [styles.viewAll, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Text style={[styles.viewAllText, { color: colors.primary }]}>View Full History →</Text>
+        </Pressable>
       </GitCardContent>
     </GitCard>
   )
@@ -59,5 +70,13 @@ const styles = StyleSheet.create({
   },
   meta: {
     ...typographyScale.xs,
+  },
+  viewAll: {
+    alignItems: 'center',
+    paddingVertical: spacing[3],
+  },
+  viewAllText: {
+    ...typographyScale.sm,
+    fontWeight: '700',
   },
 })

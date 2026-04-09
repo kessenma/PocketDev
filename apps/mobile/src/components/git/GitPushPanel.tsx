@@ -9,17 +9,20 @@ import type { GitRemoteState } from './model'
 type Props = {
   remote: GitRemoteState
   isPushing: boolean
+  isPulling: boolean
   onPushPress: () => void
+  onPullPress: () => void
 }
 
-export default function GitPushPanel({ remote, isPushing, onPushPress }: Props) {
+export default function GitPushPanel({ remote, isPushing, isPulling, onPushPress, onPullPress }: Props) {
   const { colors } = useTheme()
-  const canPush = !remote.requiresAuth && remote.behind === 0 && remote.ahead > 0 && !isPushing
+  const canPush = !remote.requiresAuth && remote.behind === 0 && remote.ahead > 0 && !isPushing && !isPulling
+  const canPull = !remote.requiresAuth && remote.behind > 0 && !isPulling && !isPushing
   const summary =
     remote.requiresAuth
-      ? 'Authentication is still needed before push can run on the server.'
+      ? 'Authentication is still needed before git transport can run on the server.'
       : remote.behind > 0
-        ? 'Remote has newer commits. Pull or rebase will need a real git transport.'
+        ? `Remote is ${remote.behind} commit${remote.behind !== 1 ? 's' : ''} ahead. Pull to update.`
         : remote.ahead > 0
           ? `${remote.ahead} local commits are ready to publish.`
           : 'Branch is already in sync with the remote.'
@@ -49,6 +52,21 @@ export default function GitPushPanel({ remote, isPushing, onPushPress }: Props) 
             </Text>
           </View>
         </View>
+
+        {canPull && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            disabled={!canPull}
+            onPress={onPullPress}
+            style={[styles.button, { backgroundColor: colors.primary }]}
+          >
+            {isPulling ? (
+              <ActivityIndicator color={colors.primaryText} size="small" />
+            ) : (
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Pull from {remote.upstream}</Text>
+            )}
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           activeOpacity={0.7}

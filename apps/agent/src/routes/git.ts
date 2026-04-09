@@ -10,6 +10,7 @@ import {
   checkoutBranch,
   commitStaged,
   pushCurrent,
+  pullCurrent,
 } from '../services/git.ts'
 import {
   syncGitHistory,
@@ -122,6 +123,13 @@ export const gitRoutes = new Elysia({ prefix: '/git' })
 
     try {
       const summary = await commitStaged(body.message)
+      // Sync the new commit into history with 'app' origin
+      const projectId = getActiveProjectId()
+      if (projectId) {
+        syncGitHistory(projectId, 10, 'app').catch((e) =>
+          console.warn('[git] Post-commit history sync failed:', e),
+        )
+      }
       return { ok: true, summary }
     } catch (error) {
       return handleError(error, set)
@@ -138,6 +146,19 @@ export const gitRoutes = new Elysia({ prefix: '/git' })
 
     try {
       const summary = await pushCurrent()
+      return { ok: true, summary }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  })
+
+  .post('/pull', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      console.log('[git] POST /git/pull')
+      const summary = await pullCurrent()
       return { ok: true, summary }
     } catch (error) {
       return handleError(error, set)
@@ -244,6 +265,7 @@ function toDetailedCommitEntry(c: DetailedCommit): GitDetailedCommitEntry {
     committedAt: c.committedAt,
     branch: c.branch ?? undefined,
     filesChanged: c.filesChanged ?? 0,
+    origin: (c.origin as GitDetailedCommitEntry['origin']) ?? 'external',
     files: c.files.map((f): GitCommitFileEntry => ({
       path: f.path,
       oldPath: f.oldPath ?? undefined,

@@ -1,0 +1,1 @@
+ALTER TABLE `git_commits` ADD `origin` text DEFAULT 'external';

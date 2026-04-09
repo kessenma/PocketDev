@@ -52,6 +52,11 @@ yarn-error.log
 **/fastlane/Preview.html
 **/fastlane/screenshots
 **/fastlane/test_output
+**/fastlane/.env
+**/fastlane/*.p8
+**/fastlane/.fastlane_session
+**/fastlane/.match.env
+ios/fastlane/build/
 
 # Bundle artifact
 *.jsbundle

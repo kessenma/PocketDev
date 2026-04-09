@@ -317,6 +317,30 @@ export async function pushCurrent(): Promise<GitSummary> {
   return getGitSummary()
 }
 
+export async function pullCurrent(): Promise<GitSummary> {
+  await ensureRepo()
+
+  const { exitCode, stderr } = await exec('git pull --ff-only')
+
+  if (exitCode !== 0) {
+    if (stderr.includes('Authentication') || stderr.includes('Permission denied') || stderr.includes('could not read Username')) {
+      throw new GitServiceError('Pull requires authentication', 'auth_required')
+    }
+    if (stderr.includes('Not possible to fast-forward') || stderr.includes('fatal: Not possible')) {
+      throw new GitServiceError('Cannot fast-forward — local and remote have diverged. Rebase or merge manually.', 'push_rejected')
+    }
+    if (stderr.includes('no tracking information') || stderr.includes('no upstream')) {
+      throw new GitServiceError('No upstream branch configured', 'upstream_missing')
+    }
+    if (stderr.includes('uncommitted changes') || stderr.includes('local changes')) {
+      throw new GitServiceError('Cannot pull with uncommitted changes — commit or stash first', 'dirty_worktree_blocked')
+    }
+    throw new GitServiceError(stderr || 'Pull failed', 'command_failed')
+  }
+
+  return getGitSummary()
+}
+
 // ─── Helpers ─────────────────────────────────────────────
 
 function statusToKind(status: string): GitFileChangeKind {
