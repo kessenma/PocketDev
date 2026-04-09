@@ -559,18 +559,6 @@ function cubicPoint(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Poin
   return { x, y }
 }
 
-function cubicAngle(p0: Point, p1: Point, p2: Point, p3: Point, t: number) {
-  const mt = 1 - t
-  const dx =
-    3 * mt * mt * (p1.x - p0.x) +
-    6 * mt * t * (p2.x - p1.x) +
-    3 * t * t * (p3.x - p2.x)
-  const dy =
-    3 * mt * mt * (p1.y - p0.y) +
-    6 * mt * t * (p2.y - p1.y) +
-    3 * t * t * (p3.y - p2.y)
-  return (Math.atan2(dy, dx) * 180) / Math.PI
-}
 
 function segmentProgress(value: number, start: number, end: number) {
   if (end <= start) return value >= end ? 1 : 0
