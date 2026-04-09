@@ -47,6 +47,7 @@ COPY --from=deps /app/apps/agent/console/node_modules ./apps/agent/console/node_
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY apps/agent/console/ ./apps/agent/console/
 COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/shared/assets ./packages/shared/assets
 COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
 COPY package.json ./
 RUN cd apps/agent/console && npx vite build

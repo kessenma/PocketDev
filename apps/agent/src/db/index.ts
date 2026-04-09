@@ -207,6 +207,18 @@ export function getDb() {
         created_at TEXT DEFAULT (datetime('now'))
       );
     `)
+
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS task_file_touches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id TEXT NOT NULL REFERENCES tasks(id),
+        file_path TEXT NOT NULL,
+        action TEXT NOT NULL,
+        turn_number INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+    `)
+    sqlite.exec(`CREATE INDEX IF NOT EXISTS idx_task_file_touches_task_id ON task_file_touches(task_id);`)
   }
   return _db
 }
@@ -224,6 +236,7 @@ export type PlanStepRow = typeof schema.planSteps.$inferSelect
 export type PlanQuestionRow = typeof schema.planQuestions.$inferSelect
 export type PlanMessageRow = typeof schema.planMessages.$inferSelect
 export type TaskTurnRow = typeof schema.taskTurns.$inferSelect
+export type TaskFileTouchRow = typeof schema.taskFileTouches.$inferSelect
 export type ToolPathRow = typeof schema.toolPaths.$inferSelect
 export type AdminAccountRow = typeof schema.adminAccounts.$inferSelect
 export type PasskeyCredentialRow = typeof schema.passkeyCredentials.$inferSelect
@@ -394,6 +407,26 @@ export function resetTaskForContinuation(taskId: string, newTurnCount: number) {
     })
     .where(eq(schema.tasks.id, taskId))
     .run()
+}
+
+// ─── Task file touch operations ────────────────────────
+
+export function insertTaskFileTouch(
+  taskId: string,
+  filePath: string,
+  action: string,
+  turnNumber: number = 1,
+) {
+  getDb().insert(schema.taskFileTouches).values({ taskId, filePath, action, turnNumber }).run()
+}
+
+export function getTaskFileTouches(taskId: string): TaskFileTouchRow[] {
+  return getDb()
+    .select()
+    .from(schema.taskFileTouches)
+    .where(eq(schema.taskFileTouches.taskId, taskId))
+    .orderBy(schema.taskFileTouches.id)
+    .all()
 }
 
 // ─── Project operations ─────────────────────────────────

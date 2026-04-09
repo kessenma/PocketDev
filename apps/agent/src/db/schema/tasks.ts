@@ -28,6 +28,15 @@ export const taskTurns = sqliteTable('task_turns', {
   createdAt: text('created_at').default(sql`(datetime('now'))`),
 })
 
+export const taskFileTouches = sqliteTable('task_file_touches', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  taskId: text('task_id').notNull().references(() => tasks.id),
+  filePath: text('file_path').notNull(),
+  action: text('action').notNull(),
+  turnNumber: integer('turn_number').default(1),
+  createdAt: text('created_at').default(sql`(datetime('now'))`),
+})
+
 export const taskLogs = sqliteTable('task_logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   taskId: text('task_id').notNull().references(() => tasks.id),

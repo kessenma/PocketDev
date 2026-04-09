@@ -389,6 +389,12 @@ export interface TaskLogEntry {
   timestamp: string | null
 }
 
+export interface TaskFileTouchEntry {
+  filePath: string
+  action: string
+  turnNumber: number | null
+}
+
 export interface TasksDebugInfo {
   tasks: TaskDebugEntry[]
   activeProcesses: Array<{
@@ -399,6 +405,7 @@ export interface TasksDebugInfo {
   totalCount: number
   taskLogs: Record<string, TaskLogEntry[]>
   taskCommands: Record<string, string>
+  taskFiles: Record<string, TaskFileTouchEntry[]>
 }
 
 export async function fetchTasksDebug(): Promise<TasksDebugInfo> {

@@ -1,13 +1,9 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { killTaskFromConsole, type TasksDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
-import claudeBlack from '../../../../../../packages/shared/assets/brands/claude-black.png'
-import codexBlack from '../../../../../../packages/shared/assets/brands/codex-black.png'
-import githubCopilotBlack from '../../../../../../packages/shared/assets/brands/github-copilot-black.png'
-import minimaxBlack from '../../../../../../packages/shared/assets/brands/minimax-black.png'
 import { Square, Zap } from 'lucide-react'
 
 interface Props {
@@ -26,10 +22,10 @@ type ProviderMeta = {
 }
 
 const PROVIDERS: ProviderMeta[] = [
-  { id: 'claude', label: 'Claude', iconSrc: claudeBlack },
-  { id: 'codex', label: 'Codex', iconSrc: codexBlack },
-  { id: 'minimax', label: 'MiniMax', iconSrc: minimaxBlack },
-  { id: 'copilot', label: 'GitHub Copilot', iconSrc: githubCopilotBlack },
+  { id: 'claude', label: 'Claude', iconSrc: new URL('../../../../../../packages/shared/assets/brands/claude-black.png', import.meta.url).href },
+  { id: 'codex', label: 'Codex', iconSrc: new URL('../../../../../../packages/shared/assets/brands/codex-black.png', import.meta.url).href },
+  { id: 'minimax', label: 'MiniMax', iconSrc: new URL('../../../../../../packages/shared/assets/brands/minimax-black.png', import.meta.url).href },
+  { id: 'copilot', label: 'GitHub Copilot', iconSrc: new URL('../../../../../../packages/shared/assets/brands/github-copilot-black.png', import.meta.url).href },
 ]
 
 const STATUS_FILTERS: Array<{ id: TaskStatusFilter, label: string }> = [
@@ -136,7 +132,7 @@ function FilterChip({
 }: {
   active: boolean
   onClick: () => void
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <button
@@ -528,6 +524,30 @@ export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
                   <p className="mt-1 break-all font-mono text-[11px] text-[#f4f0e8]/45">{selectedTask.workingDirectory}</p>
                 </div>
               )}
+
+              {tasksInfo?.taskFiles[selectedTask.id]?.length ? (
+                <div className="mt-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">
+                    Files Touched ({tasksInfo.taskFiles[selectedTask.id].length})
+                  </p>
+                  <div className="mt-2 max-h-60 space-y-1 overflow-y-auto rounded-xl border border-white/8 bg-black/30 p-3">
+                    {tasksInfo.taskFiles[selectedTask.id].map((touch, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className={cn(
+                          'inline-block w-12 shrink-0 rounded-full border px-1.5 py-0.5 text-center text-[10px] font-semibold uppercase',
+                          touch.action === 'edit' && 'border-yellow-500/40 text-yellow-400',
+                          touch.action === 'create' && 'border-green-500/40 text-green-400',
+                          touch.action === 'read' && 'border-blue-500/40 text-blue-400',
+                          touch.action === 'search' && 'border-purple-500/40 text-purple-400',
+                        )}>
+                          {touch.action}
+                        </span>
+                        <span className="min-w-0 truncate font-mono text-[11px] text-[#f4f0e8]/70">{touch.filePath}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {tasksInfo?.taskLogs[selectedTask.id]?.length ? (
                 <div className="mt-4">

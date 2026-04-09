@@ -14,7 +14,7 @@ import {
   sessionCookieHeader,
 } from '../services/console-auth.ts'
 import { hasDevices } from '../services/setup.ts'
-import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName, getToolRecord, getTaskLogs, hasPasskeyCredentials } from '../db/index.ts'
+import { hasAdminAccount, getDevices, deleteDevice, updateDeviceName, getToolRecord, getTaskLogs, getTaskFileTouches, hasPasskeyCredentials } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
 import { getTerminalDebugLog } from '../services/terminal-ws.ts'
 import { getCodexAuthDebug } from '../services/codex-setup.ts'
@@ -383,7 +383,16 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       } catch { /* ignore */ }
     }
 
-    return { tasks, activeProcesses, totalCount: tasks.length, taskLogs, taskCommands }
+    // Include file touches for recent tasks
+    const taskFiles: Record<string, Array<{ filePath: string; action: string; turnNumber: number | null }>> = {}
+    for (const task of tasks.slice(0, 10)) {
+      const touches = getTaskFileTouches(task.id)
+      if (touches.length > 0) {
+        taskFiles[task.id] = touches.map((t) => ({ filePath: t.filePath, action: t.action, turnNumber: t.turnNumber }))
+      }
+    }
+
+    return { tasks, activeProcesses, totalCount: tasks.length, taskLogs, taskCommands, taskFiles }
   })
 
   // ─── Kill task (requires session) ──────────────────────

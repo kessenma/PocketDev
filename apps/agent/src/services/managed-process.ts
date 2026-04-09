@@ -1,6 +1,6 @@
 import type { Subprocess } from 'bun'
 import type { PlanStep, PlanQuestion, TaskActivity } from '@pocketdev/shared/types'
-import { insertTaskLog, updateTaskStatus, insertTaskTurn, getDb, schema } from '../db/index.ts'
+import { insertTaskLog, updateTaskStatus, insertTaskTurn, insertTaskFileTouch, getDb, schema } from '../db/index.ts'
 import { eq } from 'drizzle-orm'
 import { broadcast, makeMessage } from './ws.ts'
 import { detectDevServerPort, setDevServerPort } from './proxy.ts'
@@ -217,6 +217,7 @@ export class ManagedProcess {
   private collectedToolUses: CollectedToolUse[] = []
   private collectedThinking = ''
   private collectedText = ''
+  private seenFileTouches = new Set<string>()
   private command: string[]
   private cwd: string | null
   private turnNumber: number
@@ -495,12 +496,43 @@ export class ManagedProcess {
       } else if (block.type === 'text' && block.text) {
         this.collectedText += (block.text as string) + '\n'
       } else if (block.type === 'tool_use') {
+        const toolName = block.name as string
+        const toolInput = (block.input as Record<string, unknown>) ?? {}
         this.collectedToolUses.push({
-          name: block.name as string,
+          name: toolName,
           id: block.id as string,
-          input: (block.input as Record<string, unknown>) ?? {},
+          input: toolInput,
         })
+
+        // Track file touches
+        this.recordFileTouch(toolName, toolInput)
       }
+    }
+  }
+
+  private recordFileTouch(toolName: string, input: Record<string, unknown>) {
+    const filePath = (input.file_path ?? input.path) as string | undefined
+    if (!filePath) return
+
+    let action: string
+    switch (toolName) {
+      case 'Edit': action = 'edit'; break
+      case 'Write': action = 'create'; break
+      case 'Read': action = 'read'; break
+      case 'Glob': action = 'search'; break
+      case 'Grep': action = 'search'; break
+      default: return // skip tools without file paths
+    }
+
+    // Deduplicate: same file + action in same task
+    const key = `${action}:${filePath}`
+    if (this.seenFileTouches.has(key)) return
+    this.seenFileTouches.add(key)
+
+    try {
+      insertTaskFileTouch(this.taskId, filePath, action, this.turnNumber)
+    } catch (err) {
+      console.error(`[managed-process] Failed to record file touch for task ${this.taskId}:`, err)
     }
   }
 
