@@ -72,9 +72,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     if (!ws) return
 
     ws.send('task.start', { prompt, agentType, workingDirectory, model, mode })
+    // Refresh task list shortly after starting — retry once if the first attempt
+    // doesn't include the new task yet (server may still be spawning it)
     setTimeout(() => {
       void get().refreshFromServer().catch(() => {})
-    }, 250)
+    }, 500)
+    setTimeout(() => {
+      void get().refreshFromServer().catch(() => {})
+    }, 2000)
   },
 
   killTask: (id: string) => {

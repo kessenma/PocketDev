@@ -62,7 +62,12 @@ The rollback dropdown lists all versions available in `agent-versions/` on pocke
 
 ## Non-Interactive Updates
 
-When the agent triggers an update, `install.sh` would normally prompt "Reset admin account? [y/N]". The `POCKETDEV_UPDATE=1` environment variable skips this prompt so the script can run non-interactively.
+The install script no longer prompts interactively. Admin reset is opt-in via `--admin-reset` flag:
+
+```bash
+curl -fsSL https://pocketdev.run/install.sh | bash                       # normal install/update
+curl -fsSL https://pocketdev.run/install.sh | bash -s -- --admin-reset   # reset admin account
+```
 
 ## Version API Response
 

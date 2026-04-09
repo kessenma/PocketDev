@@ -12,6 +12,7 @@ import type { MainTabParamList } from './types'
 import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import WorkspaceNavigation from '../components/navigation/WorkspaceNavigation'
 import RunningScriptsSheet from '../components/scripts/RunningScriptsSheet'
+import ServerDisconnected from '../components/shared/ServerDisconnected'
 import { renderTabIcon } from './tab-icons'
 import { typeStyles } from '../theme/typography'
 
@@ -56,6 +57,12 @@ export default function MainTabs() {
     return count
   })
   const [scriptsSheetVisible, setScriptsSheetVisible] = useState(false)
+  const connectionStatus = useConnectionStore((s) => s.status)
+  const showDisconnected = connectionStatus === 'error' || connectionStatus === 'disconnected'
+
+  if (showDisconnected) {
+    return <ServerDisconnected />
+  }
 
   return (
     <>

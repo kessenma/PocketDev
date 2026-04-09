@@ -24,6 +24,14 @@ warn()  { echo -e "  ${YELLOW}!${NC} $1"; }
 fail()  { echo -e "  ${RED}✗${NC} $1"; exit 1; }
 step()  { echo -e "\n${BOLD}$1${NC}"; }
 
+# ─── Parse flags ─────────────────────────────────────────────────
+ADMIN_RESET=false
+for arg in "$@"; do
+  case "$arg" in
+    --admin-reset) ADMIN_RESET=true ;;
+  esac
+done
+
 echo ""
 echo -e "${BOLD}============================================${NC}"
 echo -e "${BOLD}  PocketDev Installer v${POCKETDEV_VERSION}${NC}"
@@ -154,27 +162,19 @@ tar -xzf "$BUNDLE_TMP" -C "$INSTALL_DIR" --strip-components=1
 rm -f "$BUNDLE_TMP"
 ok "Agent installed to $INSTALL_DIR"
 
-# If reinstalling, offer to reset the admin account
+# If reinstalling with --admin-reset, reset the admin account
 DB_FILE="${DATA_DIR}/pocketdev.db"
-if [ -f "$DB_FILE" ] && [ "$POCKETDEV_UPDATE" != "1" ]; then
-  info "Existing database found — this is a reinstall."
-  printf "  Reset admin account? [y/N]: "
-  read -r RESET_ADMIN </dev/tty || RESET_ADMIN=""
-  RESET_ADMIN="$(echo "$RESET_ADMIN" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
-  if [ "$RESET_ADMIN" = "y" ] || [ "$RESET_ADMIN" = "yes" ]; then
-    # Use sqlite3 if available, otherwise try bun
-    if command -v sqlite3 >/dev/null 2>&1; then
-      sqlite3 "$DB_FILE" "DELETE FROM admin_accounts;" 2>/dev/null || true
-      sqlite3 "$DB_FILE" "DELETE FROM passkey_credentials;" 2>/dev/null || true
-    elif command -v bun >/dev/null 2>&1; then
-      bun -e "const db = require('bun:sqlite').open('${DB_FILE}'); db.run('DELETE FROM admin_accounts'); try { db.run('DELETE FROM passkey_credentials'); } catch {} db.close();" 2>/dev/null || true
-    else
-      warn "Could not reset admin — no sqlite3 or bun available"
-    fi
-    ok "Admin account reset — you can create a new one after setup"
+if [ -f "$DB_FILE" ] && [ "$ADMIN_RESET" = true ]; then
+  info "Resetting admin account..."
+  if command -v sqlite3 >/dev/null 2>&1; then
+    sqlite3 "$DB_FILE" "DELETE FROM admin_accounts;" 2>/dev/null || true
+    sqlite3 "$DB_FILE" "DELETE FROM passkey_credentials;" 2>/dev/null || true
+  elif command -v bun >/dev/null 2>&1; then
+    bun -e "const db = require('bun:sqlite').open('${DB_FILE}'); db.run('DELETE FROM admin_accounts'); try { db.run('DELETE FROM passkey_credentials'); } catch {} db.close();" 2>/dev/null || true
   else
-    ok "Keeping existing admin account"
+    warn "Could not reset admin — no sqlite3 or bun available"
   fi
+  ok "Admin account reset — you can create a new one after setup"
 fi
 
 # Resolve bun path for systemd (must be absolute)

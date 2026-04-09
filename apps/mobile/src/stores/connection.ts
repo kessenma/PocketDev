@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { ConnectionStatus } from '../services/websocket'
 import { PocketDevWebSocket } from '../services/websocket'
 import { buildWsUrl, unpairFromServer, setSecureMode } from '../services/api'
-import { getServer, clearAll, type StoredServer } from '../services/storage'
+import { getServer, clearAll, savePrerequisitesReport, type StoredServer } from '../services/storage'
 import type { WsMessage } from '@pocketdev/shared/types'
 import { useTaskStore } from './tasks'
 import { useContainerStore } from './containers'
@@ -22,16 +22,18 @@ interface ConnectionState {
   loadFromStorage: () => void
 }
 
+const _initialServer = getServer()
+if (_initialServer) setSecureMode(_initialServer.secure)
+
 export const useConnectionStore = create<ConnectionState>((set, get) => ({
   status: 'disconnected',
-  server: null,
+  server: _initialServer,
   ws: null,
 
   loadFromStorage: () => {
-    const server = getServer()
+    const server = get().server
     console.log('[connection] loadFromStorage:', server ? { ip: server.ip, port: server.port, deviceId: server.deviceId } : 'no server stored')
     if (server) {
-      set({ server })
       get().connect()
     }
   },
@@ -57,6 +59,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         set({ status })
         if (status === 'connected') {
           useNewTaskDraftStore.getState().loadCapabilities()
+          void useTaskStore.getState().refreshFromServer().catch(() => {})
         }
       },
       (message: WsMessage) => handleWsMessage(message),
@@ -131,6 +134,7 @@ function handleWsMessage(message: WsMessage) {
       containers.handleLogsStopped(message.payload as any)
       break
     case 'setup.prerequisites_result':
+      savePrerequisitesReport(message.payload)
       useSetupStore.setState({
         report: message.payload as any,
         loading: false,

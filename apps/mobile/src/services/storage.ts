@@ -25,6 +25,7 @@ const KEYS = {
   ONDEVICE_AI_MODEL_STATUS: 'ondeviceai.modelStatus',
   ONDEVICE_AI_DOWNLOADED_AT: 'ondeviceai.downloadedAt',
   ONDEVICE_AI_INDEX_CACHE_PREFIX: 'ondeviceai.indexCache',
+  PREREQUISITES_REPORT: 'setup.prerequisitesReport',
 } as const
 
 // --- Keypair ---
@@ -248,6 +249,22 @@ export function saveCachedFileIndex(index: CachedFileIndex) {
   getStorage().set(key, JSON.stringify(index))
 }
 
+// --- Prerequisites Report ---
+
+export function savePrerequisitesReport(report: unknown) {
+  getStorage().set(KEYS.PREREQUISITES_REPORT, JSON.stringify(report))
+}
+
+export function getPrerequisitesReport(): unknown | null {
+  const raw = getStorage().getString(KEYS.PREREQUISITES_REPORT)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
 // --- Clear All ---
 
 export function clearAll() {
@@ -255,6 +272,7 @@ export function clearAll() {
   clearServer()
   getStorage().remove(KEYS.RECENT_PROMPTS)
   getStorage().remove(KEYS.NEW_TASK_DRAFT)
+  getStorage().remove(KEYS.PREREQUISITES_REPORT)
 }
 
 // --- Helpers ---

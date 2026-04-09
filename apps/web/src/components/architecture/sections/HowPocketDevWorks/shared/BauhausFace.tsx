@@ -3,7 +3,7 @@ import { palette } from '@pocketdev/shared/theme'
 /**
  * Generates SVG path data for an Archimedean spiral.
  */
-function spiralPath(cx: number, cy: number, turns: number, maxR: number, steps = 200): string {
+export function spiralPath(cx: number, cy: number, turns: number, maxR: number, steps = 200): string {
   const points: string[] = []
   for (let i = 0; i <= steps; i++) {
     const t = i / steps
@@ -120,8 +120,8 @@ export function BauhausFace({
           Pulsing spiral — rendered ON TOP of the figure paths.
           ── To reposition, adjust spiralCx / spiralCy below (in the 0–1000 viewbox). ──
         */}
-        {pulseColor && (
-          <BrainSpiral cx={650} cy={250} color={pulseColor} rotation={spiralRotation} />
+        {pulseColor && !spiralRotation && (
+          <BrainSpiral cx={650} cy={250} color={pulseColor} rotation={0} />
         )}
       </g>
     </g>

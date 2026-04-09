@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import Clipboard from '@react-native-clipboard/clipboard'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { Code, Info, ShieldAlert } from 'lucide-react-native'
+import type { TaskActivity } from '@pocketdev/shared/types'
+import { Check, Code, Copy, FileText, Info, Layers, ShieldAlert, Terminal } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
+import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import TaskStreamer from './TaskStreamer'
@@ -39,9 +42,58 @@ export default function TaskDetailPane({
   const clearPermissions = useTaskStore((s) => s.clearPermissions)
   const startTask = useTaskStore((s) => s.startTask)
 
+  const activitiesRaw = useTaskStore((s) => (taskId ? s.taskActivities.get(taskId) : undefined))
+  const activities = useMemo(() => activitiesRaw ?? [], [activitiesRaw])
+  const { toast } = useToast()
+
   const flatListRef = useRef<FlatList>(null)
   const [autoScroll, setAutoScroll] = useState(true)
   const [showRawLogs, setShowRawLogs] = useState(false)
+  const [showCopyMenu, setShowCopyMenu] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  function buildHeader(): string {
+    const provider = task?.agent_type ?? 'unknown'
+    const model = task?.model ?? 'default'
+    return `Provider: ${provider}\nModel: ${model}`
+  }
+
+  function buildPromptText(): string {
+    return task ? extractUserRequest(task.prompt) : ''
+  }
+
+  function buildOutputText(): string {
+    if (activities.length > 0) return activities.map(activityToText).filter(Boolean).join('\n')
+    return logs.join('\n')
+  }
+
+  function handleCopyOption(option: 'prompt' | 'output' | 'both') {
+    const header = buildHeader()
+    let body = ''
+    let label = ''
+
+    switch (option) {
+      case 'prompt':
+        body = `${header}\n\nPrompt:\n${buildPromptText()}`
+        label = 'Prompt'
+        break
+      case 'output':
+        body = `${header}\n\nOutput:\n${buildOutputText()}`
+        label = 'Output'
+        break
+      case 'both':
+        body = `${header}\n\nPrompt:\n${buildPromptText()}\n\nOutput:\n${buildOutputText()}`
+        label = 'Prompt + Output'
+        break
+    }
+
+    if (!body.trim()) return
+    Clipboard.setString(body)
+    setShowCopyMenu(false)
+    setCopied(true)
+    toast({ title: 'Copied!', description: `${label} copied to clipboard.`, variant: 'success' })
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   useEffect(() => {
     if (autoScroll && logs.length > 0) {
@@ -81,6 +133,15 @@ export default function TaskDetailPane({
           <Text style={[styles.elapsed, { color: colors.textTertiary }]}>{elapsed}</Text>
         </View>
         <View style={styles.statusActions}>
+          <TouchableOpacity
+            onPress={() => setShowCopyMenu(true)}
+            activeOpacity={0.7}
+            style={[styles.logToggle, { backgroundColor: copied ? '#22c55e18' : 'transparent', borderColor: copied ? '#22c55e' : colors.border }]}
+          >
+            {copied
+              ? <Check color="#22c55e" size={14} strokeWidth={2.25} />
+              : <Copy color={colors.textTertiary} size={14} strokeWidth={2.25} />}
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setShowRawLogs((v) => !v)}
             activeOpacity={0.7}
@@ -181,6 +242,29 @@ export default function TaskDetailPane({
       )}
 
       {taskId ? <TaskInteractionSheet taskId={taskId} /> : null}
+
+      {/* Copy option menu */}
+      <Modal visible={showCopyMenu} transparent animationType="fade" onRequestClose={() => setShowCopyMenu(false)}>
+        <Pressable style={styles.copyMenuBackdrop} onPress={() => setShowCopyMenu(false)}>
+          <View style={[styles.copyMenu, { backgroundColor: colors.panel, borderColor: colors.border }]}>
+            <Text style={[styles.copyMenuTitle, { color: colors.textSecondary }]}>Copy</Text>
+            {COPY_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                activeOpacity={0.7}
+                style={[styles.copyMenuItem, { borderBottomColor: colors.border }]}
+                onPress={() => handleCopyOption(opt.key)}
+              >
+                <opt.Icon color={colors.text} size={16} strokeWidth={2.25} />
+                <View style={styles.copyMenuItemText}>
+                  <Text style={[styles.copyMenuItemLabel, { color: colors.text }]}>{opt.label}</Text>
+                  <Text style={[styles.copyMenuItemHint, { color: colors.textTertiary }]}>{opt.hint}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   )
 }
@@ -191,6 +275,36 @@ function extractUserRequest(prompt: string): string {
   const idx = prompt.indexOf(marker)
   if (idx !== -1) return prompt.slice(idx + marker.length).trim()
   return prompt
+}
+
+const COPY_OPTIONS: Array<{
+  key: 'prompt' | 'output' | 'both'
+  label: string
+  hint: string
+  Icon: typeof FileText
+}> = [
+  { key: 'prompt', label: 'Prompt', hint: 'Copy the task prompt', Icon: FileText },
+  { key: 'output', label: 'Output', hint: 'Copy the agent output', Icon: Terminal },
+  { key: 'both', label: 'Both', hint: 'Copy prompt + output', Icon: Layers },
+]
+
+function activityToText(activity: TaskActivity): string {
+  switch (activity.type) {
+    case 'tool_use': {
+      const detail = activity.filePath ?? activity.command ?? activity.pattern ?? activity.description ?? ''
+      return `[${activity.tool}] ${detail}`
+    }
+    case 'tool_result':
+      return activity.isError ? `[error] ${activity.preview}` : activity.preview
+    case 'thinking':
+      return `(thinking) ${activity.preview}`
+    case 'text':
+      return activity.content
+    case 'status':
+      return `--- ${activity.message} ---`
+    default:
+      return ''
+  }
 }
 
 function formatElapsed(startedAt: string, completedAt: string | null): string {
@@ -345,5 +459,44 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: spacing[4],
     alignSelf: 'center',
+  },
+
+  // ── Copy Menu ──
+  copyMenuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  copyMenu: {
+    width: 260,
+    borderWidth: 2,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    paddingVertical: spacing[2],
+  },
+  copyMenuTitle: {
+    ...typeStyles.meta,
+    fontWeight: '700',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
+  },
+  copyMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  copyMenuItemText: {
+    flex: 1,
+    gap: 2,
+  },
+  copyMenuItemLabel: {
+    ...typeStyles.bodyStrong,
+  },
+  copyMenuItemHint: {
+    ...typeStyles.meta,
   },
 })

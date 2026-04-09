@@ -3,6 +3,7 @@ import type { PrerequisitesReport } from '@pocketdev/shared/types'
 import { fetchPrerequisites } from '../services/api'
 import { useConnectionStore } from './connection'
 import { useNewTaskDraftStore } from './new-task-draft'
+import { getPrerequisitesReport, savePrerequisitesReport } from '../services/storage'
 
 interface SetupState {
   report: PrerequisitesReport | null
@@ -12,7 +13,7 @@ interface SetupState {
 }
 
 export const useSetupStore = create<SetupState>((set) => ({
-  report: null,
+  report: (getPrerequisitesReport() as PrerequisitesReport) ?? null,
   loading: false,
   error: null,
 
@@ -27,6 +28,7 @@ export const useSetupStore = create<SetupState>((set) => ({
 
     try {
       const report = (await fetchPrerequisites(server.ip, server.port)) as PrerequisitesReport
+      savePrerequisitesReport(report)
       set({ report, loading: false })
       useNewTaskDraftStore.getState().loadCapabilities()
     } catch (e) {

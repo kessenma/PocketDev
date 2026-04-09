@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { palette } from '@pocketdev/shared/theme'
 import { architectureTokens } from '../../../shared/theme'
-import { BauhausFace } from '../shared/BauhausFace'
+import { BauhausFace, spiralPath } from '../shared/BauhausFace'
 
 type Point = { x: number; y: number }
 type LaneSpec = {
@@ -56,7 +56,7 @@ export function MobileAiTaskCallScene({
     y: isDesktopLayout ? vpSize.h * 0.53 : vpSize.h * 0.3,
     scale: isDesktopLayout ? 6.2 : 3.9,
     clipW: isDesktopLayout ? vpSize.w * 0.31 : vpSize.w * 0.42,
-    clipH: isDesktopLayout ? vpSize.h * 0.62 : vpSize.h * 0.26,
+    clipH: isDesktopLayout ? vpSize.h * 0.76 : vpSize.h * 0.26,
   }
   const faceClipLeft = face.x - face.clipW / 2
   const faceClipTop = face.y - face.clipH / 2
@@ -119,7 +119,7 @@ export function MobileAiTaskCallScene({
         fontWeight="600"
         letterSpacing={isDesktopLayout ? '0.34em' : '0.22em'}
       >
-        TASK START
+        THEN YOUR TASK STARTS
       </text>
 
       <defs>
@@ -148,7 +148,7 @@ export function MobileAiTaskCallScene({
           cx={face.x}
           cy={face.y}
           scale={face.scale}
-          pulseColor={faceReveal < 0.72 ? palette.bauhaus.yellow : palette.bauhaus.blue}
+          pulseColor={spiralSpin > 0 ? palette.bauhaus.yellow : faceReveal < 0.72 ? palette.bauhaus.yellow : palette.bauhaus.blue}
           fillColor="#ffffff"
           spiralRotation={spiralRotation}
         />
@@ -218,8 +218,27 @@ export function MobileAiTaskCallScene({
         letterSpacing={isDesktopLayout ? '0.18em' : '0.12em'}
         opacity="0.75"
       >
-        THOUGHTS BECOME STRUCTURED TASKS
+        ON THE GO
       </text>
+
+      {spiralSpin > 0 && (() => {
+        const svgScale = 0.05 * face.scale
+        const sCx = face.x + 150 * svgScale
+        const sCy = face.y - 250 * svgScale
+        const sMaxR = 50 * svgScale
+        const sStroke = 6 * svgScale
+        return (
+          <g transform={`rotate(${spiralRotation} ${sCx} ${sCy})`}>
+            <path
+              d={spiralPath(sCx, sCy, 3.5, sMaxR)}
+              fill="none"
+              stroke={palette.bauhaus.yellow}
+              strokeWidth={sStroke}
+              strokeLinecap="round"
+            />
+          </g>
+        )
+      })()}
     </svg>
   )
 }

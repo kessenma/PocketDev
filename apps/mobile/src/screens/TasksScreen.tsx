@@ -32,7 +32,13 @@ export default function TasksScreen({ navigation }: Props) {
   const setTasks = useTaskStore((s) => s.setTasks)
   const setActiveTask = useTaskStore((s) => s.setActiveTask)
   const server = useConnectionStore((s) => s.server)
+  const refreshFromServer = useTaskStore((s) => s.refreshFromServer)
   const [refreshing, setRefreshing] = useState(false)
+
+  // Fetch tasks on mount and when server changes
+  React.useEffect(() => {
+    void refreshFromServer().catch(() => {})
+  }, [refreshFromServer, server])
 
   const taskList = React.useMemo(
     () =>
