@@ -253,6 +253,14 @@ export class ManagedProcess {
       env: { ...process.env, FORCE_COLOR: '0' },
     })
 
+    // Close stdin for non-interactive agents (codex exec) so they don't block waiting for input
+    if (this.agentType === 'codex') {
+      try {
+        const stdin = this.proc.stdin
+        if (stdin && typeof stdin !== 'number') stdin.end()
+      } catch { /* ignore */ }
+    }
+
     // Stream stdout
     this.streamLines(this.proc.stdout as ReadableStream<Uint8Array> | null, 'stdout')
     // Stream stderr
