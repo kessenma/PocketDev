@@ -53,7 +53,17 @@ export async function syncGitHistory(
     const { exitCode } = await exec('git rev-parse --show-toplevel', cwd)
     if (exitCode !== 0) throw new Error('Not a git repository')
 
-    const lastSha = project.lastSyncedSha
+    let lastSha = project.lastSyncedSha
+
+    // Validate watermark — if it's not a valid hex SHA, treat as unsynced
+    if (lastSha && !/^[0-9a-f]{7,40}$/i.test(lastSha)) {
+      console.warn(`[git-history] Invalid lastSyncedSha "${lastSha}" for project ${projectId} — resetting`)
+      lastSha = null
+      db.update(schema.projects)
+        .set({ lastSyncedSha: null })
+        .where(eq(schema.projects.id, projectId))
+        .run()
+    }
 
     // Build git log command — oldest first (--reverse) so we insert in chronological order
     const format = '%H%x1f%h%x1f%s%x1f%an%x1f%ae%x1f%aI'

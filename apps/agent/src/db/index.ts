@@ -34,12 +34,19 @@ export function getDb() {
     console.log('[db] Migrations folder exists:', existsSync(migrationsFolder))
     console.log('[db] Journal exists:', existsSync(join(migrationsFolder, 'meta/_journal.json')))
 
+    // Legacy DB migration: stamp Drizzle so it only runs migrations for tables
+    // that don't exist yet. Migration 0001 (when=1775429725360) is the last one
+    // whose tables (devices, tasks, projects, etc.) exist in pre-Drizzle installs.
+    // By stamping with 0001's timestamp, Drizzle will run 0002+ which add new
+    // tables like git_commits, git_commit_files, task_commits, etc.
+    const LEGACY_CUTOFF_TIMESTAMP = 1775429725360 // 0001_new_peter_parker.sql
+
     const hasLegacyTables = existingTables.some((t) => t.name === 'devices')
     const hasDrizzleMeta = existingTables.some((t) => t.name === '__drizzle_migrations')
 
     if (hasLegacyTables && !hasDrizzleMeta) {
       console.log('[db] Legacy DB detected (no __drizzle_migrations). Bootstrapping...')
-      // Add new tables the old schema didn't have
+      // Create tables that existed in legacy schema but weren't in migration 0000/0001
       sqlite.exec(`
         CREATE TABLE IF NOT EXISTS admin_accounts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,9 +55,7 @@ export function getDb() {
           created_at TEXT DEFAULT (datetime('now'))
         );
       `)
-      sqlite.exec(`
-        CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
-      `)
+      sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);`)
       sqlite.exec(`
         CREATE TABLE IF NOT EXISTS passkey_credentials (
           id TEXT PRIMARY KEY NOT NULL,
@@ -69,51 +74,8 @@ export function getDb() {
           updated_at TEXT DEFAULT (datetime('now'))
         );
       `)
-      sqlite.exec(`
-        CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);
-      `)
-      // Create git history tables
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS git_commits (
-          id TEXT PRIMARY KEY NOT NULL,
-          project_id TEXT NOT NULL,
-          sha TEXT NOT NULL,
-          short_sha TEXT NOT NULL,
-          message TEXT NOT NULL,
-          author_name TEXT NOT NULL,
-          author_email TEXT,
-          committed_at TEXT NOT NULL,
-          branch TEXT,
-          additions INTEGER DEFAULT 0,
-          deletions INTEGER DEFAULT 0,
-          files_changed INTEGER DEFAULT 0,
-          origin TEXT DEFAULT 'external',
-          synced_at TEXT DEFAULT (datetime('now')),
-          FOREIGN KEY (project_id) REFERENCES projects(id)
-        );
-      `)
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS git_commit_files (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          commit_id TEXT NOT NULL,
-          path TEXT NOT NULL,
-          old_path TEXT,
-          kind TEXT NOT NULL,
-          additions INTEGER DEFAULT 0,
-          deletions INTEGER DEFAULT 0,
-          FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
-        );
-      `)
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS task_commits (
-          task_id TEXT NOT NULL,
-          commit_id TEXT NOT NULL,
-          PRIMARY KEY (task_id, commit_id),
-          FOREIGN KEY (task_id) REFERENCES tasks(id),
-          FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
-        );
-      `)
-      // Create the Drizzle tracking table and stamp with far-future timestamp
+      sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);`)
+      // Stamp at legacy cutoff so Drizzle runs all subsequent migrations
       sqlite.exec(`
         CREATE TABLE IF NOT EXISTS __drizzle_migrations (
           id SERIAL PRIMARY KEY,
@@ -123,22 +85,22 @@ export function getDb() {
       `)
       sqlite.exec(`
         INSERT INTO __drizzle_migrations (hash, created_at)
-        VALUES ('legacy_stamp', 9999999999999);
+        VALUES ('legacy_bootstrap', ${LEGACY_CUTOFF_TIMESTAMP});
       `)
-      console.log('[db] Legacy bootstrap complete')
+      console.log('[db] Legacy bootstrap complete — Drizzle will run migrations after 0001')
     } else if (hasLegacyTables && hasDrizzleMeta) {
-      // Fix up any bad stamps from prior migration attempts
-      const stamps = sqlite.query('SELECT id, hash, created_at FROM __drizzle_migrations').all()
+      // Fix far-future stamps from prior bootstrap that blocked all migrations
+      const stamps = sqlite.query('SELECT id, hash, created_at FROM __drizzle_migrations').all() as { id: number; hash: string; created_at: number }[]
       console.log('[db] Existing migration stamps:', JSON.stringify(stamps))
-      const maxCreatedAt = stamps.reduce((max: number, s: any) => Math.max(max, Number(s.created_at ?? 0)), 0)
-      if (maxCreatedAt < 9999999999000) {
-        console.log('[db] Bad stamps detected, fixing...')
+      const maxCreatedAt = stamps.reduce((max, s) => Math.max(max, Number(s.created_at ?? 0)), 0)
+      if (maxCreatedAt > 9999999999000) {
+        console.log('[db] Far-future stamp detected — replacing with legacy cutoff so new migrations can run')
         sqlite.exec(`DELETE FROM __drizzle_migrations;`)
         sqlite.exec(`
           INSERT INTO __drizzle_migrations (hash, created_at)
-          VALUES ('legacy_stamp', 9999999999999);
+          VALUES ('legacy_bootstrap', ${LEGACY_CUTOFF_TIMESTAMP});
         `)
-        // Add new tables
+        // Ensure admin tables exist (were created by the old bootstrap)
         sqlite.exec(`
           CREATE TABLE IF NOT EXISTS admin_accounts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,9 +109,7 @@ export function getDb() {
             created_at TEXT DEFAULT (datetime('now'))
           );
         `)
-        sqlite.exec(`
-          CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);
-        `)
+        sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);`)
         sqlite.exec(`
           CREATE TABLE IF NOT EXISTS passkey_credentials (
             id TEXT PRIMARY KEY NOT NULL,
@@ -168,113 +128,14 @@ export function getDb() {
             updated_at TEXT DEFAULT (datetime('now'))
           );
         `)
-        sqlite.exec(`
-          CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);
-        `)
-        // Create git history tables
-        sqlite.exec(`
-          CREATE TABLE IF NOT EXISTS git_commits (
-            id TEXT PRIMARY KEY NOT NULL,
-            project_id TEXT NOT NULL,
-            sha TEXT NOT NULL,
-            short_sha TEXT NOT NULL,
-            message TEXT NOT NULL,
-            author_name TEXT NOT NULL,
-            author_email TEXT,
-            committed_at TEXT NOT NULL,
-            branch TEXT,
-            additions INTEGER DEFAULT 0,
-            deletions INTEGER DEFAULT 0,
-            files_changed INTEGER DEFAULT 0,
-            origin TEXT DEFAULT 'external',
-            synced_at TEXT DEFAULT (datetime('now')),
-            FOREIGN KEY (project_id) REFERENCES projects(id)
-          );
-        `)
-        sqlite.exec(`
-          CREATE TABLE IF NOT EXISTS git_commit_files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            commit_id TEXT NOT NULL,
-            path TEXT NOT NULL,
-            old_path TEXT,
-            kind TEXT NOT NULL,
-            additions INTEGER DEFAULT 0,
-            deletions INTEGER DEFAULT 0,
-            FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
-          );
-        `)
-        sqlite.exec(`
-          CREATE TABLE IF NOT EXISTS task_commits (
-            task_id TEXT NOT NULL,
-            commit_id TEXT NOT NULL,
-            PRIMARY KEY (task_id, commit_id),
-            FOREIGN KEY (task_id) REFERENCES tasks(id),
-            FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
-          );
-        `)
-        console.log('[db] Stamps fixed')
+        sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);`)
+        console.log('[db] Stamp fixed — Drizzle will now run migrations after 0001')
       }
     }
 
     console.log('[db] Running Drizzle migrate...')
     migrate(_db, { migrationsFolder })
     console.log('[db] Migration complete')
-
-    // Ensure git history tables exist (may be missing on legacy-stamped DBs)
-    const tablesAfterMigrate = sqlite.query(
-      "SELECT name FROM sqlite_master WHERE type='table'",
-    ).all() as { name: string }[]
-    if (!tablesAfterMigrate.some((t) => t.name === 'git_commits')) {
-      console.log('[db] git_commits table missing — creating git history tables...')
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS git_commits (
-          id TEXT PRIMARY KEY NOT NULL,
-          project_id TEXT NOT NULL,
-          sha TEXT NOT NULL,
-          short_sha TEXT NOT NULL,
-          message TEXT NOT NULL,
-          author_name TEXT NOT NULL,
-          author_email TEXT,
-          committed_at TEXT NOT NULL,
-          branch TEXT,
-          additions INTEGER DEFAULT 0,
-          deletions INTEGER DEFAULT 0,
-          files_changed INTEGER DEFAULT 0,
-          origin TEXT DEFAULT 'external',
-          synced_at TEXT DEFAULT (datetime('now')),
-          FOREIGN KEY (project_id) REFERENCES projects(id)
-        );
-      `)
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS git_commit_files (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          commit_id TEXT NOT NULL,
-          path TEXT NOT NULL,
-          old_path TEXT,
-          kind TEXT NOT NULL,
-          additions INTEGER DEFAULT 0,
-          deletions INTEGER DEFAULT 0,
-          FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
-        );
-      `)
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS task_commits (
-          task_id TEXT NOT NULL,
-          commit_id TEXT NOT NULL,
-          PRIMARY KEY (task_id, commit_id),
-          FOREIGN KEY (task_id) REFERENCES tasks(id),
-          FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
-        );
-      `)
-      console.log('[db] Git history tables created')
-    }
-
-    // Ensure origin column exists on git_commits (added in 0005)
-    const gitCommitColumns = sqlite.query(`PRAGMA table_info(git_commits)`).all() as { name: string }[]
-    if (gitCommitColumns.length > 0 && !gitCommitColumns.some((c) => c.name === 'origin')) {
-      sqlite.exec(`ALTER TABLE git_commits ADD COLUMN origin TEXT DEFAULT 'external';`)
-      console.log('[db] Added origin column to git_commits')
-    }
 
     const adminAccountColumns = sqlite.query(`PRAGMA table_info(admin_accounts)`).all() as { name: string }[]
     if (!adminAccountColumns.some((column) => column.name === 'role')) {
