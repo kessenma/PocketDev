@@ -25,10 +25,12 @@ import type { GitDetailedCommitEntry, GitCommitFileEntry } from '@pocketdev/shar
 
 function handleError(error: unknown, set: { status?: number | string }) {
   const message = error instanceof Error ? error.message : 'Git operation failed'
+  const stack = error instanceof Error ? error.stack : undefined
   if (error instanceof GitServiceError) {
     set.status = error.statusCode
     return { error: message, code: error.code }
   }
+  console.error('[git] Unhandled error:', message, stack)
   set.status = 500
   return { error: message, code: 'command_failed' }
 }
@@ -177,12 +179,22 @@ export const gitRoutes = new Elysia({ prefix: '/git' })
 
       const limit = query.limit ? parseInt(query.limit, 10) : 50
       const offset = query.offset ? parseInt(query.offset, 10) : 0
-      const result = getDetailedCommits(projectId, limit, offset)
+
+      // Auto-sync if no history exists yet
+      let result = getDetailedCommits(projectId, limit, offset)
+      if (result.commits.length === 0) {
+        await syncGitHistory(projectId).catch((e) =>
+          console.error('[git] Auto-sync failed in /history/detailed:', e),
+        )
+        result = getDetailedCommits(projectId, limit, offset)
+      }
+
       return {
         commits: result.commits.map(toDetailedCommitEntry),
         hasMore: result.hasMore,
       }
     } catch (error) {
+      console.error('[git] /history/detailed error:', error)
       return handleError(error, set)
     }
   }, {
@@ -221,9 +233,12 @@ export const gitRoutes = new Elysia({ prefix: '/git' })
       const projectId = getActiveProjectId()
       if (!projectId) { set.status = 400; return { error: 'No active project' } }
 
+      console.log('[git] POST /git/history/sync for project:', projectId)
       const result = await syncGitHistory(projectId)
+      console.log('[git] Sync result:', result)
       return result
     } catch (error) {
+      console.error('[git] /history/sync error:', error)
       return handleError(error, set)
     }
   })

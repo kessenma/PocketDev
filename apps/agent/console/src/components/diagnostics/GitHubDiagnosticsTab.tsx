@@ -161,20 +161,25 @@ export function GitHubDiagnosticsTab({ githubInfo, projectsInfo, gitHistoryInfo 
         </div>
 
         {/* ── Sync status ──────────────────────────────── */}
-        {gitHistoryInfo?.syncStatus && (
-          <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
-            <div className="flex items-center gap-2">
-              <GitCommitHorizontal className="h-4 w-4 text-[#f0c419]" />
-              <p className="text-sm font-medium">History Sync</p>
-            </div>
-            <div className="mt-3 rounded-[1.2rem] border border-white/8 bg-black/30 p-3 text-sm text-[#f4f0e8]/78">
-              <p>HEAD: <span className="font-mono text-[#9df6cd]">{gitHistoryInfo.syncStatus.headSha.slice(0, 10)}</span></p>
-              <p>Last synced: <span className="font-mono text-[#9df6cd]">{gitHistoryInfo.syncStatus.lastSyncedSha?.slice(0, 10) ?? 'Never'}</span></p>
-              <p>Pending commits: {gitHistoryInfo.syncStatus.pendingCommits}</p>
-              <p>Commits in DB: {gitHistoryInfo.commits.length}{gitHistoryInfo.hasMore ? '+' : ''}</p>
-            </div>
+        <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+          <div className="flex items-center gap-2">
+            <GitCommitHorizontal className="h-4 w-4 text-[#f0c419]" />
+            <p className="text-sm font-medium">History Sync</p>
           </div>
-        )}
+          <div className="mt-3 rounded-[1.2rem] border border-white/8 bg-black/30 p-3 text-sm text-[#f4f0e8]/78">
+            <p>Project: <span className="font-mono text-[#9df6cd]">{gitHistoryInfo?.projectId ?? 'None'}</span></p>
+            {gitHistoryInfo?.syncStatus ? (
+              <>
+                <p>HEAD: <span className="font-mono text-[#9df6cd]">{gitHistoryInfo.syncStatus.headSha.slice(0, 10)}</span></p>
+                <p>Last synced: <span className="font-mono text-[#9df6cd]">{gitHistoryInfo.syncStatus.lastSyncedSha?.slice(0, 10) ?? 'Never'}</span></p>
+                <p>Pending commits: {gitHistoryInfo.syncStatus.pendingCommits}</p>
+              </>
+            ) : (
+              <p className="text-[#f4f0e8]/45">No sync status available</p>
+            )}
+            <p>Commits in DB: {gitHistoryInfo?.commits.length ?? 0}{gitHistoryInfo?.hasMore ? '+' : ''}</p>
+          </div>
+        </div>
       </div>
 
       {/* ── Right panels ───────────────────────────────── */}
