@@ -948,6 +948,22 @@ export async function removePasskey(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to remove passkey')
 }
 
+// ─── Projects ─────────────────────────────────────────────────────────────────
+
+export interface ConsoleProject {
+  id: string
+  name: string
+  absolutePath: string
+  remoteUrl: string | null
+}
+
+export async function fetchConsoleProjects(): Promise<ConsoleProject[]> {
+  const res = await get('/projects')
+  if (!res.ok) throw new Error('Failed to fetch projects')
+  const data = await res.json() as { projects: ConsoleProject[] }
+  return data.projects
+}
+
 // ─── Env Vars ──────────────────────────────────────────────────────────────────
 
 export interface EnvVar {

@@ -6,8 +6,10 @@ import {
   createConsoleEnvVar,
   deleteConsoleEnvVar,
   fetchConsoleEnvVars,
+  fetchConsoleProjects,
   fetchRepoSummary,
   updateConsoleEnvVar,
+  type ConsoleProject,
   type EnvVar,
 } from '#/lib/api'
 import {
@@ -19,7 +21,6 @@ import {
   Plus,
   Trash2,
   Upload,
-  X,
 } from 'lucide-react'
 
 function parseDotEnv(text: string) {
@@ -50,6 +51,7 @@ type EditingRow = {
 }
 
 export function EnvVarsPanel() {
+  const [projects, setProjects] = useState<ConsoleProject[]>([])
   const [projectPath, setProjectPath] = useState<string | null>(null)
   const [envVars, setEnvVars] = useState<EnvVar[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,6 +69,7 @@ export function EnvVarsPanel() {
   const [importText, setImportText] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const parsedImport = parseDotEnv(importText)
 
@@ -87,15 +90,27 @@ export function EnvVarsPanel() {
 
   useEffect(() => {
     setLoading(true)
-    fetchRepoSummary()
-      .then((summary) => {
-        setProjectPath(summary.repoPath)
-        return fetchConsoleEnvVars(summary.repoPath)
+    Promise.all([fetchConsoleProjects(), fetchRepoSummary().catch(() => null)])
+      .then(([projs, summary]) => {
+        setProjects(projs)
+        const activePath = summary?.repoPath ?? projs[0]?.absolutePath ?? null
+        setProjectPath(activePath)
+        if (activePath) {
+          return fetchConsoleEnvVars(activePath).then(setEnvVars)
+        }
       })
-      .then(setEnvVars)
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
+
+  async function handleProjectChange(path: string) {
+    setProjectPath(path)
+    setEditing(null)
+    setShowImport(false)
+    setImportText('')
+    setRevealedIds(new Set())
+    await refresh(path)
+  }
 
   function startAdd() {
     setEditing({ id: null, key: '', value: '', comment: '', isSecret: false, isMultiline: false })
@@ -173,6 +188,22 @@ export function EnvVarsPanel() {
     }
   }
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const text = ev.target?.result
+      if (typeof text === 'string') {
+        setImportText(text)
+        setShowImport(true)
+      }
+    }
+    reader.readAsText(file)
+    // Reset so the same file can be re-selected
+    e.target.value = ''
+  }
+
   function toggleReveal(id: string) {
     setRevealedIds((prev) => {
       const next = new Set(prev)
@@ -182,12 +213,14 @@ export function EnvVarsPanel() {
     })
   }
 
+  const activeProject = projects.find((p) => p.absolutePath === projectPath)
+
   return (
     <div className="overflow-hidden rounded-[1.1rem] border-2 border-[var(--border)] bg-[#1a1713] text-[#f5eedf] shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-[0.45rem] border-2 border-black/75 bg-[#22c55e] text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.28)]">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.45rem] border-2 border-black/75 bg-[#22c55e] text-black shadow-[3px_3px_0_0_rgba(0,0,0,0.28)]">
             <span className="text-sm font-bold">{'{ }'}</span>
           </div>
           <div>
@@ -200,17 +233,47 @@ export function EnvVarsPanel() {
             </span>
           )}
         </div>
+
+        {/* Project selector */}
+        {projects.length > 0 && (
+          <select
+            value={projectPath ?? ''}
+            onChange={(e) => { void handleProjectChange(e.target.value) }}
+            className="rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-1.5 text-sm text-[#f5eedf] focus:outline-none focus:ring-1 focus:ring-[#22c55e]"
+          >
+            {projects.map((p) => (
+              <option key={p.id} value={p.absolutePath}>{p.name}</option>
+            ))}
+          </select>
+        )}
+
         <div className="flex items-center gap-2">
           {!collapsed && (
             <>
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".env,.txt,text/plain"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                Upload .env
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
                 className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
                 onClick={() => { setShowImport(!showImport); setImportError(null) }}
               >
-                <Upload className="mr-1.5 h-3.5 w-3.5" />
-                Import .env
+                Paste .env
               </Button>
               <Button
                 variant="outline"
@@ -234,9 +297,16 @@ export function EnvVarsPanel() {
         </div>
       </div>
 
+      {/* Active project path hint */}
+      {!collapsed && activeProject && (
+        <div className="border-t border-[var(--border)] px-5 py-1.5">
+          <p className="font-mono text-[0.65rem] text-[#f5eedf]/30">{activeProject.absolutePath}</p>
+        </div>
+      )}
+
       {!collapsed && (
         <div className="border-t border-[var(--border)]">
-          {/* Import panel */}
+          {/* Import panel (paste) */}
           {showImport && (
             <div className="border-b border-[var(--border)] bg-[#1a1713] p-4">
               <p className="mb-2 text-xs text-[#f5eedf]/50">
@@ -351,7 +421,9 @@ export function EnvVarsPanel() {
           )}
 
           {/* Content */}
-          {loading ? (
+          {!projectPath ? (
+            <div className="p-6 text-center text-sm text-[#f5eedf]/40">No project selected.</div>
+          ) : loading ? (
             <div className="p-6 text-center text-sm text-[#f5eedf]/40">Loading…</div>
           ) : error ? (
             <div className="p-4 text-sm text-red-400">{error}</div>

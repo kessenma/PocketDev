@@ -18,12 +18,18 @@ type EnvBar = {
 }
 
 const BAR_DEFS: EnvBar[] = [
-  { offset: -86 },
-  { offset: -52 },
-  { offset: -18 },
-  { offset: 16 },
-  { offset: 50 },
-  { offset: 84 },
+  { offset: -94 },
+  { offset: -74 },
+  { offset: -54 },
+  { offset: -34 },
+  { offset: -14 },
+  { offset: 6 },
+  { offset: 26 },
+  { offset: 46 },
+  { offset: 66 },
+  { offset: 86 },
+  { offset: 106 },
+  { offset: 126 },
 ]
 
 function circleLineExitPoint(
@@ -80,8 +86,8 @@ export function EnvInjectionTakeoverStage({
   const offsetX = (vpSize.w - vbW * scale) / 2
   const offsetY = (vpSize.h - vbH * scale) / 2
 
-  const ballTravel = mapProgress(progress, 0.0, 0.64)
-  const barsTravel = mapProgress(progress, 0.34, 0.82)
+  const ballTravel = mapProgress(progress, 0.0, 0.8)
+  const barsTravel = mapProgress(progress, 0.44, 0.9)
   const settle = mapProgress(progress, 0.78, 0.94)
   const impactPulse = mapProgress(progress, 0.36, 0.56)
 
@@ -91,7 +97,7 @@ export function EnvInjectionTakeoverStage({
   const ballScaleX = 1 + impactPulse * 0.045 - settle * 0.02
   const ballScaleY = 1 - impactPulse * 0.06 + settle * 0.025
   const lineLength = isDesktopLayout ? 980 : 1080
-  const lineStroke = 16
+  const lineStroke = 8
   const lineAngle = 0.42
   const unit = {
     x: Math.sin(lineAngle),
@@ -107,7 +113,7 @@ export function EnvInjectionTakeoverStage({
   }
   const lineTravel = mix(-1420, 1320, barsTravel)
 
-  const titleX = isDesktopLayout ? vpSize.w * 0.06 : vpSize.w * 0.07
+  const titleX = isDesktopLayout ? vpSize.w * 0.72 : vpSize.w * 0.62
   const titleY = vpSize.h * (isDesktopLayout ? 0.12 : 0.08)
   const titleSize = isDesktopLayout
     ? Math.min(vpSize.w * 0.04, 56)
@@ -117,6 +123,7 @@ export function EnvInjectionTakeoverStage({
     : Math.min(vpSize.w * 0.04, 18)
   const subLH = Math.round(subFontSize * 1.55)
   const subY = vpSize.h * (isDesktopLayout ? 0.88 : 0.8)
+  const subX = isDesktopLayout ? vpSize.w * 0.06 : vpSize.w * 0.07
 
   return (
     <svg
@@ -137,12 +144,13 @@ export function EnvInjectionTakeoverStage({
         fontSize={titleSize}
         fontWeight="700"
         letterSpacing="-0.03em"
+        textAnchor="middle"
       >
-        <tspan x={titleX} dy="0">Attach environment</tspan>
+        <tspan x={titleX} dy="0">Attach env variables</tspan>
       </text>
 
       <text
-        x={titleX}
+        x={subX}
         y={subY}
         fill={architectureTokens.colors.textSecondary}
         fontFamily="var(--font-sans), sans-serif"
@@ -150,16 +158,15 @@ export function EnvInjectionTakeoverStage({
       >
         {isDesktopLayout ? (
           <>
-            <tspan x={titleX} dy="0">Per-project env vars stream into the remote workspace before scripts, tasks,</tspan>
-            <tspan x={titleX} dy={subLH}>and agent runs. Raw inputs arrive black, then turn blue once PocketDev absorbs them.</tspan>
+            <tspan x={subX} dy="0">Per-project env vars can be attached either from inside the web app or in the</tspan>
+            <tspan x={subX} dy={subLH}>mobile app once a repo is cloned.</tspan>
           </>
         ) : (
           <>
-            <tspan x={titleX} dy="0">Per-project env vars stream into the</tspan>
-            <tspan x={titleX} dy={subLH}>remote workspace before scripts,</tspan>
-            <tspan x={titleX} dy={subLH}>tasks, and agent runs. Raw inputs</tspan>
-            <tspan x={titleX} dy={subLH}>arrive black, then turn blue once</tspan>
-            <tspan x={titleX} dy={subLH}>PocketDev absorbs them.</tspan>
+            <tspan x={subX} dy="0">Per-project env vars can be attached</tspan>
+            <tspan x={subX} dy={subLH}>either from inside the web app or in</tspan>
+            <tspan x={subX} dy={subLH}>the mobile app once a repo is</tspan>
+            <tspan x={subX} dy={subLH}>cloned.</tspan>
           </>
         )}
       </text>

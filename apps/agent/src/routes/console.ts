@@ -32,6 +32,7 @@ import {
   getAdminAccountById,
   updateAdminAccountStatus,
   updateAdminAccountRole,
+  getProjects,
   type AdminAccountRow,
 } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/prerequisites.ts'
@@ -1104,6 +1105,18 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     body: t.Optional(t.Object({
       version: t.Optional(t.String()),
     })),
+  })
+  // ─── Projects ──────────────────────────────────────────
+  .get('/projects', ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    return {
+      projects: getProjects().map((p) => ({
+        id: p.id,
+        name: p.name,
+        absolutePath: p.absolutePath,
+        remoteUrl: p.remoteUrl,
+      })),
+    }
   })
   // ─── Env vars ──────────────────────────────────────────
   .get('/envs', ({ request, query, set }) => {
