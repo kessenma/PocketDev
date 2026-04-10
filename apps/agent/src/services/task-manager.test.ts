@@ -12,4 +12,10 @@ describe('task-manager copilot command building', () => {
     expect(command).toHaveLength(1)
     expect(command[0].includes('copilot')).toBe(true)
   })
+
+  test('uses json output for codex tasks', () => {
+    const command = buildCommand('codex', 'hello', 'gpt-5.4', 'default')
+    expect(command.slice(0, 5)).toEqual([command[0], 'exec', '--json', '--color', 'never'])
+    expect(command.at(-1)).toBe('hello')
+  })
 })

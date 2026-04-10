@@ -149,3 +149,51 @@ body {
     font-family: var(--font-mono);
   }
 }
+
+@layer components {
+  .prose {
+    @apply max-w-3xl leading-7;
+  }
+  .prose h1 {
+    @apply text-3xl font-bold tracking-tight mb-4 mt-8 first:mt-0;
+    font-family: var(--font-display);
+  }
+  .prose h2 {
+    @apply text-xl font-semibold tracking-tight mt-10 mb-4 pb-2;
+    border-bottom: 1px solid var(--border);
+  }
+  .prose h3 {
+    @apply text-lg font-semibold mt-8 mb-3;
+  }
+  .prose p {
+    @apply mb-4 text-muted-foreground;
+  }
+  .prose ul {
+    @apply mb-4 ml-6 list-disc text-muted-foreground;
+  }
+  .prose ol {
+    @apply mb-4 ml-6 list-decimal text-muted-foreground;
+  }
+  .prose li {
+    @apply mb-1;
+  }
+  .prose code {
+    @apply rounded-sm bg-muted px-1.5 py-0.5 text-sm;
+    font-family: var(--font-mono);
+  }
+  .prose pre {
+    @apply mb-4 rounded-lg bg-muted p-4 overflow-x-auto;
+  }
+  .prose pre code {
+    @apply bg-transparent p-0;
+  }
+  .prose a {
+    @apply text-primary underline underline-offset-4 hover:opacity-80;
+  }
+  .prose hr {
+    @apply my-8 border-border;
+  }
+  .prose strong {
+    @apply text-foreground font-semibold;
+  }
+}

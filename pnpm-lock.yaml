@@ -151,6 +151,9 @@ importers:
       '@react-navigation/native-stack':
         specifier: ^7.14.10
         version: 7.14.10(@react-native-masked-view/masked-view@0.3.2)(@react-navigation/native@7.2.2)(react-native-safe-area-context@5.7.0)(react-native-screens@4.24.0)(react-native@0.83.0)(react@19.2.0)
+      '@shopify/flash-list':
+        specifier: ^2.3.1
+        version: 2.3.1(@babel/runtime@7.29.2)(react-native@0.83.0)(react@19.2.0)
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
@@ -4841,6 +4844,18 @@ packages:
 
   /@sec-ant/readable-stream@0.4.1:
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
+    dev: false
+
+  /@shopify/flash-list@2.3.1(@babel/runtime@7.29.2)(react-native@0.83.0)(react@19.2.0):
+    resolution: {integrity: sha512-7oktg2NQR7KAODjFoDaWe8/OBzyYbdTE3zQTrUBMxjIbxHTHN7UXRX1hX3DHk8KvtkgQdRfZOV8Gjj2l4fGrXw==}
+    peerDependencies:
+      '@babel/runtime': '*'
+      react: '*'
+      react-native: '*'
+    dependencies:
+      '@babel/runtime': 7.29.2
+      react: 19.2.0
+      react-native: 0.83.0(@babel/core@7.29.0)(@react-native/metro-config@0.84.1)(@types/react@19.2.14)(react@19.2.0)
     dev: false
 
   /@sideway/address@4.1.5:

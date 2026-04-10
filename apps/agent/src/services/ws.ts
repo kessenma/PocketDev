@@ -174,9 +174,13 @@ export const wsRoutes = new Elysia()
           }
 
           case 'task.answer': {
-            const { taskId, answer } = msg.payload as { taskId: string; questionId: string; answer: string }
+            const { taskId, questionId, answer } = msg.payload as { taskId: string; questionId: string; answer: string }
             const proc = getProcess(taskId)
-            if (proc) proc.sendInput(answer + '\n')
+            if (proc instanceof Object && 'answerQuestion' in proc && typeof proc.answerQuestion === 'function') {
+              void proc.answerQuestion(questionId, answer)
+            } else if (proc) {
+              proc.sendInput(answer + '\n')
+            }
             break
           }
 

@@ -1,6 +1,5 @@
 import React from 'react'
 import {
-  FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -8,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { Task } from '@pocketdev/shared/types'
 import type { TaskStatus } from '@pocketdev/shared/schema'
@@ -67,9 +67,10 @@ export default function TaskListPane({
   }
 
   return (
-    <FlatList
+    <FlashList
       data={tasks}
       keyExtractor={(item) => item.id}
+      estimatedItemSize={100}
       renderItem={({ item }) => {
         const statusColor = STATUS_COLORS[item.status]
         const isActive = item.id === activeTaskId
@@ -100,6 +101,7 @@ export default function TaskListPane({
         )
       }}
       contentContainerStyle={styles.list}
+      ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       ListHeaderComponent={
         recentPrompts.length > 0 && onRecentPromptPress ? (
@@ -119,7 +121,7 @@ export default function TaskListPane({
           </View>
         ) : null
       }
-    />
+    </FlashList>
   )
 }
 
@@ -137,7 +139,9 @@ function formatTime(iso: string): string {
 const styles = StyleSheet.create({
   list: {
     padding: spacing[4],
-    gap: spacing[3],
+  },
+  listSeparator: {
+    height: spacing[3],
   },
   taskCard: {
     borderWidth: 2,

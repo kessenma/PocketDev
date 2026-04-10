@@ -27,7 +27,7 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
     }
     case 'codex': {
       const codexPath = getToolPath('codex_cli') ?? 'codex'
-      const cmd = [codexPath, 'exec']
+      const cmd = [codexPath, 'exec', '--json', '--color', 'never']
       if (model) cmd.push('--model', model)
       if (mode === 'plan') cmd.push('-c', 'collaboration_mode="plan"')
       cmd.push(prompt)

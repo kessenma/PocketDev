@@ -5,10 +5,12 @@ import {
   FileEdit,
   FilePlus,
   FileSearch,
+  ListTodo,
   MessageSquare,
   Search,
   Terminal,
   Users,
+  WandSparkles,
 } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
@@ -17,6 +19,7 @@ import { useTaskStore } from '../../stores/tasks'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
+import { getToolPresentation } from './task-stream-utils'
 
 type StreamItem =
   | { kind: 'activity'; data: TaskActivity }
@@ -161,46 +164,59 @@ function ActivityRow({ activity }: { activity: TaskActivity }) {
 }
 
 function ToolUseRow({ activity, colors }: { activity: Extract<TaskActivity, { type: 'tool_use' }>; colors: any }) {
-  const tool = activity.tool
-  const isWrite = tool === 'Edit' || tool === 'Write'
-  const isCreate = tool === 'Write'
-  const isRead = tool === 'Read' || tool === 'Glob' || tool === 'Grep'
-  const isBash = tool === 'Bash'
-  const isAgent = tool === 'Agent'
+  const presentation = getToolPresentation(activity)
 
   let Icon = FileSearch
   let accentColor = colors.textSecondary
-  let label = tool
-  let detail = ''
 
-  if (isWrite || isCreate) {
-    Icon = isCreate ? FilePlus : FileEdit
-    accentColor = colors.accentYellow ?? '#f59e0b'
-    label = isCreate ? 'Creating' : 'Editing'
-    detail = activity.filePath ?? ''
-  } else if (isRead) {
-    Icon = tool === 'Grep' ? Search : FileSearch
-    accentColor = colors.accentBlue ?? '#3b82f6'
-    label = tool === 'Grep' ? 'Searching' : tool === 'Glob' ? 'Finding' : 'Reading'
-    detail = activity.filePath ?? activity.pattern ?? ''
-  } else if (isBash) {
-    Icon = Terminal
-    accentColor = colors.accentGreen ?? '#22c55e'
-    label = 'Running'
-    detail = activity.command ?? ''
-  } else if (isAgent) {
-    Icon = Users
-    accentColor = colors.accentPurple ?? '#a855f7'
-    label = 'Sub-agent'
-    detail = activity.description ?? ''
+  switch (presentation.kind) {
+    case 'create':
+      Icon = FilePlus
+      accentColor = colors.accentYellow ?? '#f59e0b'
+      break
+    case 'write':
+      Icon = FileEdit
+      accentColor = colors.accentYellow ?? '#f59e0b'
+      break
+    case 'read':
+      Icon = FileSearch
+      accentColor = colors.accentBlue ?? '#3b82f6'
+      break
+    case 'search':
+    case 'web':
+      Icon = Search
+      accentColor = colors.accentBlue ?? '#3b82f6'
+      break
+    case 'run':
+      Icon = Terminal
+      accentColor = colors.accentGreen ?? '#22c55e'
+      break
+    case 'agent':
+      Icon = Users
+      accentColor = colors.accentPurple ?? '#a855f7'
+      break
+    case 'plan':
+      Icon = ListTodo
+      accentColor = colors.primary
+      break
+    case 'image':
+      Icon = WandSparkles
+      accentColor = colors.primary
+      break
+    case 'mcp':
+      Icon = MessageSquare
+      accentColor = colors.primary
+      break
+    default:
+      break
   }
 
   return (
     <View style={[styles.row, { borderLeftColor: accentColor }]}>
       <Icon color={accentColor} size={14} strokeWidth={2.25} style={styles.rowIcon} />
-      <Text style={[styles.rowLabel, { color: accentColor }]}>{label}</Text>
+      <Text style={[styles.rowLabel, { color: accentColor }]}>{presentation.label}</Text>
       <Text style={[styles.rowDetail, { color: colors.text }]} numberOfLines={2}>
-        {detail}
+        {presentation.detail}
       </Text>
     </View>
   )

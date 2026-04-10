@@ -13,6 +13,7 @@ import BauhausChatInput from '../shared/BauhausChatInput'
 import { TaskStreamerInline } from './TaskStreamer'
 import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
+import { getToolUseDetail } from './task-stream-utils'
 import { typeStyles } from '../../theme/typography'
 
 type Props = {
@@ -248,7 +249,7 @@ export default function TaskDetailPane({
               <Text style={[styles.permissionTitle, { color: colors.text }]}>Permissions Required</Text>
             </View>
             <Text style={[styles.permissionBody, { color: colors.textSecondary }]}>
-              Claude requested {pendingPermissions.length} tool{pendingPermissions.length > 1 ? 's' : ''} that need approval. The task exited — re-run with auto-approve to allow these tools.
+              The agent requested {pendingPermissions.length} tool{pendingPermissions.length > 1 ? 's' : ''} that still need approval. The task exited, so you can re-run it with broader approvals or dismiss the request.
             </Text>
             {pendingPermissions.map((denial, i) => (
               <View key={`${denial.tool_use_id ?? i}`} style={[styles.permissionItem, { borderColor: colors.border }]}>
@@ -371,7 +372,7 @@ const COPY_OPTIONS: Array<{
 function activityToText(activity: TaskActivity): string {
   switch (activity.type) {
     case 'tool_use': {
-      const detail = activity.filePath ?? activity.command ?? activity.pattern ?? activity.description ?? ''
+      const detail = getToolUseDetail(activity)
       return `[${activity.tool}] ${detail}`
     }
     case 'tool_result':

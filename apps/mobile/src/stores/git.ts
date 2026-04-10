@@ -241,8 +241,10 @@ export const useGitStore = create<GitState>((set, get) => ({
           : `Working tree is clean on ${branchName}.`,
       })
 
-      // Background: fetch detailed history and cache to SQLite
-      fetchDetailedHistory(server.ip, server.port, 50, 0)
+      // Background: sync + fetch detailed history and cache to SQLite
+      triggerHistorySync(server.ip, server.port)
+        .catch(() => {}) // sync is best-effort
+        .then(() => fetchDetailedHistory(server.ip, server.port, 50, 0))
         .then(async (result) => {
           set({ detailedCommits: result.commits })
           if (db && summary.repoPath && result.commits.length > 0) {

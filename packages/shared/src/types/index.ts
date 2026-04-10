@@ -165,6 +165,7 @@ export type {
 } from './scripts.js'
 export type {
   TaskActivity,
+  TaskToolKind,
   ToolUseActivity,
   ToolResultActivity,
   ThinkingActivity,
@@ -172,6 +173,8 @@ export type {
   StatusActivity,
   TaskActivityEvent,
   QuestionType,
+  TaskQuestionOption,
+  TaskQuestionField,
   TaskQuestion,
 } from './activity.js'
 export type {

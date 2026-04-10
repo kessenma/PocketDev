@@ -1,123 +1,130 @@
 # Task System
 
-Core feature of PocketDev — launching AI coding tasks (Claude, Codex, Copilot) on remote servers and streaming their output to mobile.
+PocketDev tasks run AI CLI providers on the agent server and stream a normalized event model to mobile. Claude and Codex now share the same task activity, question, and completion flow.
 
 ## Screens
 
 | Screen | File | Purpose |
 |---|---|---|
-| TasksScreen | `screens/TasksScreen.tsx` | Task list with FAB to create new tasks. Phone: `TaskListPane`, tablet: `TaskWorkspace` (split view) |
-| NewTaskScreen | `screens/NewTaskScreen.tsx` | Thin wrapper around `NewTaskForm` |
-| TaskDetailScreen | `screens/TaskDetailScreen.tsx` | Full-screen task output view (phone stack route) |
+| TasksScreen | `screens/TasksScreen.tsx` | Task list with FAB to create new tasks. Phone uses `TaskListPane`; tablet uses `TaskWorkspace`. |
+| NewTaskScreen | `screens/NewTaskScreen.tsx` | Thin wrapper around `NewTaskForm`. |
+| TaskDetailScreen | `screens/TaskDetailScreen.tsx` | Full-screen task output view for phone navigation. |
 
 ## Components
 
 | Component | File | Purpose |
 |---|---|---|
-| TaskListPane | `tasks/TaskListPane.tsx` | FlatList of task cards with pull-to-refresh, recent prompts header |
-| TaskWorkspace | `tasks/TaskWorkspace.tsx` | Tablet split view — TaskListPane (leading) + TaskDetailPane (trailing) |
-| TaskDetailPane | `tasks/TaskDetailPane.tsx` | Main task view: status bar, prompt card, result card, permissions, stream output |
-| TaskStreamer | `tasks/TaskStreamer.tsx` | Renders structured activities or raw logs as icon-coded rows. Has `TaskStreamerInline` for embedding in ScrollView |
-| TaskInteractionSheet | `tasks/TaskInteractionSheet.tsx` | Bottom sheet for AI CLI questions: permission grant, yes/no, multiple choice, free response |
-| NewTaskForm | `tasks/NewTaskForm.tsx` | Prompt input, model selector, file context picker, task mode, AI file suggestions |
-| AISuggestions | `tasks/AISuggestions.tsx` | On-device AI file suggestions for the prompt |
-| FindFilesButton | `tasks/FindFilesButton.tsx` | Button to trigger on-device file search |
+| TaskListPane | `tasks/TaskListPane.tsx` | FlatList of task cards with pull-to-refresh and recent prompts. |
+| TaskWorkspace | `tasks/TaskWorkspace.tsx` | Tablet split view with list and detail panes. |
+| TaskDetailPane | `tasks/TaskDetailPane.tsx` | Status bar, prompt, result, approvals, and live stream. |
+| TaskStreamer | `tasks/TaskStreamer.tsx` | Renders normalized activities or raw logs with provider-neutral tool categories. |
+| TaskInteractionSheet | `tasks/TaskInteractionSheet.tsx` | Bottom sheet for approvals and structured agent questions. |
+| NewTaskForm | `tasks/NewTaskForm.tsx` | Prompt input, provider selector, context picker, task mode, and AI file suggestions. |
+| AISuggestions | `tasks/AISuggestions.tsx` | On-device file suggestions for the prompt. |
+| FindFilesButton | `tasks/FindFilesButton.tsx` | Trigger for local file search. |
 
 ## Data Flow
 
 ### Live Task Execution
 ```
-NewTaskForm → startTask() → WebSocket 'task.start'
-                                    ↓
-                          Agent spawns CLI process
-                                    ↓
+NewTaskForm -> startTask() -> WebSocket 'task.start'
+                                   |
+                                   v
+                     Agent runner + provider adapter
+                                   |
+                                   v
                     WebSocket events stream back:
-                    ├── task.output    → appendLog() → raw logs
-                    ├── task.activity  → appendActivity() → structured activities
-                    ├── task.status_changed → updateTaskStatus()
-                    ├── task.permission_request → addPermissionRequest()
-                    ├── task.question  → addQuestion() → TaskInteractionSheet
-                    └── task.completed → final status
-                                    ↓
-                    TaskDetailPane / TaskStreamer renders
+                    |- task.output            raw fallback logs
+                    |- task.activity          normalized activities
+                    |- task.status_changed    task state updates
+                    |- task.permission_request approval prompts
+                    |- task.question          structured input prompts
+                    '- task.completed         terminal status
+                                   |
+                                   v
+                    TaskDetailPane / TaskStreamer render
 ```
 
 ### Historical Task Viewing
 ```
-App opens → refreshFromServer()
-         ├── Load cached tasks from local SQLite (instant)
-         └── Fetch from server API (background update)
-                    ↓
-Tap into completed task → loadLogsForTask()
-         ├── Check local SQLite for cached logs
-         ├── If cached → populate taskLogs map → render
-         └── If not → GET /tasks/:id/logs → cache to SQLite → render
+App opens -> refreshFromServer()
+         |- Load cached tasks from local SQLite
+         '- Fetch task list from server
+
+Open completed task -> loadLogsForTask()
+         |- Load cached raw logs from local SQLite if present
+         '- Otherwise fetch /tasks/:id/logs and cache locally
 ```
 
-## Task Store (`stores/tasks.ts`)
+Structured activities and pending questions stay in memory for the active session. Historical replay still uses raw logs.
 
-### State
+## Store Model
+
+Task state lives in `stores/tasks.ts`.
+
 | Field | Type | Persistence |
 |---|---|---|
-| tasks | `Map<string, Task>` | SQLite (local DB) + server |
-| taskLogs | `Map<string, string[]>` | SQLite (on completion) + server |
-| taskActivities | `Map<string, TaskActivity[]>` | In-memory only (live streaming) |
-| pendingPermissions | `Map<string, PermissionDenial[]>` | In-memory only |
-| pendingQuestions | `Map<string, TaskQuestion[]>` | In-memory only |
-| activeTaskId | `string \| null` | In-memory only |
-
-### Key Actions
-- `refreshFromServer()` — fetch task list, cache to SQLite, update in-memory
-- `loadLogsForTask(taskId)` — load logs from SQLite cache or fetch from server
-- `startTask(prompt, agentType, ...)` — send via WebSocket, refresh after delay
-- `appendLog / appendActivity` — called by WebSocket handler during streaming
-- `updateTaskStatus` — on terminal state, caches logs to SQLite
+| `tasks` | `Map<string, Task>` | Local SQLite plus server refresh |
+| `taskLogs` | `Map<string, string[]>` | Local SQLite plus server |
+| `taskActivities` | `Map<string, TaskActivity[]>` | In-memory only |
+| `pendingPermissions` | `Map<string, PermissionDenial[]>` | In-memory only |
+| `pendingQuestions` | `Map<string, TaskQuestion[]>` | In-memory only |
+| `activeTaskId` | `string \| null` | In-memory only |
 
 ## Wire Protocol
 
-### Commands (mobile → server)
+### Commands
+
 | Type | Payload | Purpose |
 |---|---|---|
-| task.start | `{ prompt, agentType, workingDirectory?, model?, mode? }` | Start a new task |
-| task.kill | `{ taskId }` | Kill running task |
-| task.input | `{ taskId, data }` | Send stdin to process |
-| task.answer | `{ taskId, questionId, answer }` | Answer an AI CLI question |
+| `task.start` | `{ prompt, agentType, workingDirectory?, model?, mode? }` | Start a task with the selected provider. |
+| `task.kill` | `{ taskId }` | Kill a running task. |
+| `task.input` | `{ taskId, data }` | Send raw stdin to the process. |
+| `task.answer` | `{ taskId, questionId, answer }` | Answer a provider prompt via the registered responder. |
 
-### Events (server → mobile)
+### Events
+
 | Type | Payload | Purpose |
 |---|---|---|
-| task.output | `{ taskId, stream, line }` | Raw log line |
-| task.activity | `{ taskId, activity, timestamp }` | Structured activity event |
-| task.status_changed | `{ taskId, status }` | Status update |
-| task.permission_request | `{ taskId, denials[] }` | Tool permission denied |
-| task.question | `{ questionId, taskId, prompt, type, options?, toolDetails? }` | AI CLI asking a question |
-| task.completed | `{ taskId, exitCode, status }` | Task finished |
+| `task.output` | `{ taskId, stream, line }` | Raw log line fallback. |
+| `task.activity` | `{ taskId, activity, timestamp }` | Normalized task activity. |
+| `task.status_changed` | `{ taskId, status }` | Status transition. |
+| `task.permission_request` | `{ taskId, denials[] }` | Approval request details. |
+| `task.question` | `{ questionId, taskId, prompt, type, options?, fields?, toolDetails? }` | Structured agent question. |
+| `task.completed` | `{ taskId, exitCode, status }` | Task finished. |
 
-## TaskActivity Types
+## Normalized Activity Model
 
-Discriminated union — each type renders differently in TaskStreamer:
+`TaskStreamer` renders a provider-neutral activity union:
 
-| Type | Icon | Display |
-|---|---|---|
-| tool_use (Edit/Write) | FileEdit/FilePlus | Yellow accent, file path |
-| tool_use (Read/Glob/Grep) | FileSearch/Search | Blue accent, path/pattern |
-| tool_use (Bash) | Terminal | Green accent, command preview |
-| tool_use (Agent) | Users | Purple accent, description |
-| tool_result | (indented) | Error: red tint, otherwise dimmed |
-| thinking | Brain | Italic, dimmed preview |
-| text | MessageSquare | Full body text (AI's response) |
-| status | BauhausBadge | Status pill |
+| Type | Purpose |
+|---|---|
+| `tool_use` | A tool call with provider metadata, normalized kind, title, and detail text. |
+| `tool_result` | The result of a tool call, including error state when available. |
+| `thinking` | Reasoning or planning text. |
+| `text` | User-visible assistant output. |
+| `status` | Status markers emitted during task execution. |
 
-## TaskDetailPane Layout
+Tool presentation groups provider-specific names into shared categories such as read, search, write, create, run, plan, agent, MCP, and image work.
 
-Everything inside a single ScrollView for unified scrolling:
-1. **Status bar** (fixed top): status badge, elapsed time, copy button, raw log toggle, kill button
-2. **Prompt card**: extracted user request (strips PocketDev context preamble)
-3. **Result card** (completed tasks only): AI's text response prominently displayed
-4. **Permission card** (if denied): tool list + re-run with auto-approve
-5. **Stream output**: TaskStreamerInline (activities or raw logs)
-6. **TaskInteractionSheet**: auto-shows as modal when AI asks questions
+## Questions And Approvals
+
+The interaction sheet renders one queue of normalized prompts:
+
+| Type | Use |
+|---|---|
+| `permission` | Approval for command execution, file changes, or elevated actions. |
+| `yes_no` | Simple confirmation. |
+| `multiple_choice` | Single-question option selection. |
+| `free_response` | Text answer. |
+| `form` | Multi-field structured input, used when a provider asks several questions at once. |
+
+Providers own how answers are sent back to the running CLI. Mobile only sends `task.answer` with `questionId` and the user response.
+
+## Result Rendering
+
+`TaskDetailPane` prefers normalized `text` activities when showing the task result. If no structured text exists, it falls back to raw logs.
 
 ## Persistence
 
-See `db/CLAUDE.md` for the local SQLite database architecture. Tasks and logs are cached locally for offline access, with server as source of truth.
+See `db/CLAUDE.md` for local SQLite caching details. The local database stores tasks and raw logs for offline access; normalized streaming data is transient and rebuilt live from the current run.

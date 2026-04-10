@@ -18,6 +18,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
 import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
+import { getQuestionOptionLabel } from './task-stream-utils'
 
 type Props = {
   taskId: string
@@ -100,6 +101,8 @@ function QuestionCard({
       return <MultipleChoiceCard question={question} onAnswer={onAnswer} colors={colors} />
     case 'free_response':
       return <FreeResponseCard question={question} onAnswer={onAnswer} colors={colors} />
+    case 'form':
+      return <FormCard question={question} onAnswer={onAnswer} colors={colors} />
     default:
       return <FreeResponseCard question={question} onAnswer={onAnswer} colors={colors} />
   }
@@ -129,6 +132,11 @@ function PermissionCard({
           {question.toolDetails.toolInput?.file_path != null ? (
             <Text style={[styles.toolInput, { color: colors.textTertiary }]} numberOfLines={2}>
               {String(question.toolDetails.toolInput.file_path)}
+            </Text>
+          ) : null}
+          {question.toolDetails.detail ? (
+            <Text style={[styles.toolInput, { color: colors.textTertiary }]} numberOfLines={4}>
+              {question.toolDetails.detail}
             </Text>
           ) : null}
         </View>
@@ -185,15 +193,20 @@ function MultipleChoiceCard({
       <View style={styles.optionsList}>
         {(question.options ?? []).map((option, i) => (
           <TouchableOpacity
-            key={i}
+            key={option.value}
             activeOpacity={0.7}
-            onPress={() => onAnswer(option)}
+            onPress={() => onAnswer(option.value)}
             style={[styles.optionCard, { borderColor: colors.border, backgroundColor: colors.panelAlt }]}
           >
             <View style={[styles.optionIndex, { backgroundColor: colors.primary }]}>
               <Text style={[styles.optionIndexText, { color: colors.primaryText }]}>{i + 1}</Text>
             </View>
-            <Text style={[styles.optionText, { color: colors.text }]}>{option}</Text>
+            <View style={styles.optionTextWrap}>
+              <Text style={[styles.optionText, { color: colors.text }]}>{getQuestionOptionLabel(option)}</Text>
+              {option.description ? (
+                <Text style={[styles.optionDescription, { color: colors.textTertiary }]}>{option.description}</Text>
+              ) : null}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -230,6 +243,90 @@ function FreeResponseCard({
         }}
         disabled={!input.trim()}
       >
+        Send
+      </BauhausButton>
+    </View>
+  )
+}
+
+function FormCard({
+  question,
+  onAnswer,
+  colors,
+}: {
+  question: TaskQuestion
+  onAnswer: (answer: string) => void
+  colors: any
+}) {
+  const fields = question.fields ?? []
+  const initialValues = React.useMemo(
+    () => Object.fromEntries(fields.map((field) => [field.id, ''])),
+    [fields],
+  )
+  const [values, setValues] = useState<Record<string, string>>(initialValues)
+
+  React.useEffect(() => {
+    setValues(initialValues)
+  }, [initialValues])
+
+  const canSubmit = fields.every((field) => (values[field.id] ?? '').trim().length > 0)
+
+  return (
+    <View style={styles.cardContent}>
+      <Text style={[styles.questionPrompt, { color: colors.text }]}>{question.prompt}</Text>
+      <View style={styles.formFields}>
+        {fields.map((field) => (
+          <View key={field.id} style={styles.formField}>
+            {field.header ? (
+              <Text style={[styles.formFieldHeader, { color: colors.textTertiary }]}>{field.header}</Text>
+            ) : null}
+            <Text style={[styles.formFieldPrompt, { color: colors.text }]}>{field.prompt}</Text>
+            {field.options?.length ? (
+              <View style={styles.optionsList}>
+                {field.options.map((option, i) => {
+                  const selected = values[field.id] === option.value
+                  return (
+                    <TouchableOpacity
+                      key={option.value}
+                      activeOpacity={0.7}
+                      onPress={() => setValues((state) => ({ ...state, [field.id]: option.value }))}
+                      style={[
+                        styles.optionCard,
+                        {
+                          borderColor: selected ? colors.primary : colors.border,
+                          backgroundColor: colors.panelAlt,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.optionIndex, { backgroundColor: selected ? colors.primary : colors.border }]}>
+                        <Text style={[styles.optionIndexText, { color: selected ? colors.primaryText : colors.textTertiary }]}>{i + 1}</Text>
+                      </View>
+                      <View style={styles.optionTextWrap}>
+                        <Text style={[styles.optionText, { color: colors.text }]}>{getQuestionOptionLabel(option)}</Text>
+                        {option.description ? (
+                          <Text style={[styles.optionDescription, { color: colors.textTertiary }]}>{option.description}</Text>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            ) : (
+              <TextInput
+                style={[styles.freeInput, { backgroundColor: colors.panelAlt, color: colors.text, borderColor: colors.border }]}
+                value={values[field.id] ?? ''}
+                onChangeText={(text) => setValues((state) => ({ ...state, [field.id]: text }))}
+                placeholder="Type your response..."
+                placeholderTextColor={colors.textTertiary}
+                secureTextEntry={field.isSecret}
+                multiline={!field.isSecret}
+                textAlignVertical="top"
+              />
+            )}
+          </View>
+        ))}
+      </View>
+      <BauhausButton onPress={() => onAnswer(JSON.stringify(values))} disabled={!canSubmit}>
         Send
       </BauhausButton>
     </View>
@@ -336,6 +433,13 @@ const styles = StyleSheet.create({
     ...typeStyles.body,
     flex: 1,
   },
+  optionTextWrap: {
+    flex: 1,
+  },
+  optionDescription: {
+    ...typeStyles.meta,
+    marginTop: spacing[1],
+  },
   freeInput: {
     ...typeStyles.body,
     borderWidth: 2,
@@ -343,5 +447,17 @@ const styles = StyleSheet.create({
     padding: spacing[3],
     minHeight: 80,
     maxHeight: 200,
+  },
+  formFields: {
+    gap: spacing[4],
+  },
+  formField: {
+    gap: spacing[2],
+  },
+  formFieldHeader: {
+    ...typeStyles.meta,
+  },
+  formFieldPrompt: {
+    ...typeStyles.body,
   },
 })

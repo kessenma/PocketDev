@@ -47,7 +47,7 @@ import { checkGoStatus } from '../services/go-setup.ts'
 import { checkTypeScriptStatus } from '../services/typescript-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
-import { getDetailedCommits, detectNewCommits } from '../services/git-history-sync.ts'
+import { getDetailedCommits, detectNewCommits, syncGitHistory } from '../services/git-history-sync.ts'
 import { getWsDebugInfo } from '../services/ws.ts'
 import { createBrowserSession } from '../services/proxy.ts'
 import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/version.ts'
@@ -559,10 +559,14 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     try {
-      const [historyResult, syncStatus] = await Promise.all([
-        Promise.resolve(getDetailedCommits(projectId, 30, 0)),
-        detectNewCommits(projectId).catch(() => null),
-      ])
+      // Auto-sync if no commits exist yet
+      let historyResult = getDetailedCommits(projectId, 30, 0)
+      if (historyResult.commits.length === 0) {
+        await syncGitHistory(projectId).catch(() => {})
+        historyResult = getDetailedCommits(projectId, 30, 0)
+      }
+
+      const syncStatus = await detectNewCommits(projectId).catch(() => null)
 
       return {
         projectId,
