@@ -72,6 +72,47 @@ export function getDb() {
       sqlite.exec(`
         CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);
       `)
+      // Create git history tables
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS git_commits (
+          id TEXT PRIMARY KEY NOT NULL,
+          project_id TEXT NOT NULL,
+          sha TEXT NOT NULL,
+          short_sha TEXT NOT NULL,
+          message TEXT NOT NULL,
+          author_name TEXT NOT NULL,
+          author_email TEXT,
+          committed_at TEXT NOT NULL,
+          branch TEXT,
+          additions INTEGER DEFAULT 0,
+          deletions INTEGER DEFAULT 0,
+          files_changed INTEGER DEFAULT 0,
+          origin TEXT DEFAULT 'external',
+          synced_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (project_id) REFERENCES projects(id)
+        );
+      `)
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS git_commit_files (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          commit_id TEXT NOT NULL,
+          path TEXT NOT NULL,
+          old_path TEXT,
+          kind TEXT NOT NULL,
+          additions INTEGER DEFAULT 0,
+          deletions INTEGER DEFAULT 0,
+          FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
+        );
+      `)
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS task_commits (
+          task_id TEXT NOT NULL,
+          commit_id TEXT NOT NULL,
+          PRIMARY KEY (task_id, commit_id),
+          FOREIGN KEY (task_id) REFERENCES tasks(id),
+          FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
+        );
+      `)
       // Create the Drizzle tracking table and stamp with far-future timestamp
       sqlite.exec(`
         CREATE TABLE IF NOT EXISTS __drizzle_migrations (
@@ -130,6 +171,47 @@ export function getDb() {
         sqlite.exec(`
           CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);
         `)
+        // Create git history tables
+        sqlite.exec(`
+          CREATE TABLE IF NOT EXISTS git_commits (
+            id TEXT PRIMARY KEY NOT NULL,
+            project_id TEXT NOT NULL,
+            sha TEXT NOT NULL,
+            short_sha TEXT NOT NULL,
+            message TEXT NOT NULL,
+            author_name TEXT NOT NULL,
+            author_email TEXT,
+            committed_at TEXT NOT NULL,
+            branch TEXT,
+            additions INTEGER DEFAULT 0,
+            deletions INTEGER DEFAULT 0,
+            files_changed INTEGER DEFAULT 0,
+            origin TEXT DEFAULT 'external',
+            synced_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (project_id) REFERENCES projects(id)
+          );
+        `)
+        sqlite.exec(`
+          CREATE TABLE IF NOT EXISTS git_commit_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            commit_id TEXT NOT NULL,
+            path TEXT NOT NULL,
+            old_path TEXT,
+            kind TEXT NOT NULL,
+            additions INTEGER DEFAULT 0,
+            deletions INTEGER DEFAULT 0,
+            FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
+          );
+        `)
+        sqlite.exec(`
+          CREATE TABLE IF NOT EXISTS task_commits (
+            task_id TEXT NOT NULL,
+            commit_id TEXT NOT NULL,
+            PRIMARY KEY (task_id, commit_id),
+            FOREIGN KEY (task_id) REFERENCES tasks(id),
+            FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
+          );
+        `)
         console.log('[db] Stamps fixed')
       }
     }
@@ -137,6 +219,62 @@ export function getDb() {
     console.log('[db] Running Drizzle migrate...')
     migrate(_db, { migrationsFolder })
     console.log('[db] Migration complete')
+
+    // Ensure git history tables exist (may be missing on legacy-stamped DBs)
+    const tablesAfterMigrate = sqlite.query(
+      "SELECT name FROM sqlite_master WHERE type='table'",
+    ).all() as { name: string }[]
+    if (!tablesAfterMigrate.some((t) => t.name === 'git_commits')) {
+      console.log('[db] git_commits table missing — creating git history tables...')
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS git_commits (
+          id TEXT PRIMARY KEY NOT NULL,
+          project_id TEXT NOT NULL,
+          sha TEXT NOT NULL,
+          short_sha TEXT NOT NULL,
+          message TEXT NOT NULL,
+          author_name TEXT NOT NULL,
+          author_email TEXT,
+          committed_at TEXT NOT NULL,
+          branch TEXT,
+          additions INTEGER DEFAULT 0,
+          deletions INTEGER DEFAULT 0,
+          files_changed INTEGER DEFAULT 0,
+          origin TEXT DEFAULT 'external',
+          synced_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (project_id) REFERENCES projects(id)
+        );
+      `)
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS git_commit_files (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          commit_id TEXT NOT NULL,
+          path TEXT NOT NULL,
+          old_path TEXT,
+          kind TEXT NOT NULL,
+          additions INTEGER DEFAULT 0,
+          deletions INTEGER DEFAULT 0,
+          FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
+        );
+      `)
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS task_commits (
+          task_id TEXT NOT NULL,
+          commit_id TEXT NOT NULL,
+          PRIMARY KEY (task_id, commit_id),
+          FOREIGN KEY (task_id) REFERENCES tasks(id),
+          FOREIGN KEY (commit_id) REFERENCES git_commits(id) ON DELETE CASCADE
+        );
+      `)
+      console.log('[db] Git history tables created')
+    }
+
+    // Ensure origin column exists on git_commits (added in 0005)
+    const gitCommitColumns = sqlite.query(`PRAGMA table_info(git_commits)`).all() as { name: string }[]
+    if (gitCommitColumns.length > 0 && !gitCommitColumns.some((c) => c.name === 'origin')) {
+      sqlite.exec(`ALTER TABLE git_commits ADD COLUMN origin TEXT DEFAULT 'external';`)
+      console.log('[db] Added origin column to git_commits')
+    }
 
     const adminAccountColumns = sqlite.query(`PRAGMA table_info(admin_accounts)`).all() as { name: string }[]
     if (!adminAccountColumns.some((column) => column.name === 'role')) {
