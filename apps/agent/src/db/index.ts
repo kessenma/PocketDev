@@ -125,9 +125,11 @@ export function getDb() {
         stampSet.clear()
       }
 
-      // Stamp any migration whose artifacts exist but whose stamp is missing
+      // Run all checks (which may do repair work like adding missing columns),
+      // and stamp any migration whose artifacts exist but whose stamp is missing
       for (const [timestamp, tag, check] of migrationChecks) {
-        if (!stampSet.has(timestamp) && check()) {
+        const applied = check()
+        if (!stampSet.has(timestamp) && applied) {
           sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${tag}', ${timestamp});`)
           console.log(`[db] Stamped migration ${tag} (already applied)`)
         }
