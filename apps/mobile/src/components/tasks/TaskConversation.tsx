@@ -1,5 +1,6 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import type { TaskTurn } from '@pocketdev/shared/types'
 import { MessageSquare, User } from 'lucide-react-native'
@@ -47,15 +48,24 @@ export default function TaskConversation({ turns }: Props) {
                 Turn {turn.turn_number}
               </Text>
             </View>
-            <Text
-              style={[
-                styles.content,
-                { color: isUser ? colors.primaryText : colors.text },
-              ]}
-              numberOfLines={isUser ? 4 : 8}
-            >
-              {turn.content}
-            </Text>
+            {isUser ? (
+              <Text
+                style={[styles.content, { color: colors.primaryText }]}
+                numberOfLines={4}
+              >
+                {turn.content}
+              </Text>
+            ) : (
+              <EnrichedMarkdownText
+                markdown={turn.content}
+                markdownStyle={{
+                  paragraph: { color: colors.text, fontSize: 14, lineHeight: 20 },
+                  strong: { color: colors.text },
+                  link: { color: colors.primary },
+                  code: { color: colors.primary, backgroundColor: colors.panelAlt },
+                }}
+              />
+            )}
           </View>
         )
       })}

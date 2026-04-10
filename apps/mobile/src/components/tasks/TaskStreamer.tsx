@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
+import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import {
   Brain,
   FileEdit,
@@ -12,6 +13,7 @@ import {
   Users,
   WandSparkles,
 } from 'lucide-react-native'
+import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -21,7 +23,7 @@ import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
 import { getToolPresentation } from './task-stream-utils'
 
-type StreamItem =
+export type StreamItem =
   | { kind: 'activity'; data: TaskActivity }
   | { kind: 'log'; data: string }
 
@@ -47,7 +49,7 @@ export default function TaskStreamer({ taskId }: Props) {
     return logs.map((l) => ({ kind: 'log' as const, data: l }))
   }, [activitiesRaw, logsRaw])
 
-  const flatListRef = useRef<FlatList<StreamItem>>(null)
+  const flatListRef = useRef<FlashListRef<StreamItem>>(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
   useEffect(() => {
@@ -69,17 +71,18 @@ export default function TaskStreamer({ taskId }: Props) {
 
   return (
     <View style={styles.container}>
-      <FlatList
+      <FlashList
         ref={flatListRef}
         data={items}
         keyExtractor={(_, i) => String(i)}
+        getItemType={(item) => item.kind}
         renderItem={({ item }) =>
           item.kind === 'activity'
             ? <ActivityRow activity={item.data} />
             : <LogLine line={item.data} />
         }
-        style={styles.list}
         contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
         onScroll={handleScroll}
         scrollEventThrottle={100}
         ListEmptyComponent={
@@ -127,7 +130,7 @@ export function TaskStreamerInline({ taskId }: Props) {
   }
 
   return (
-    <View style={styles.listContent}>
+    <View style={styles.inlineContent}>
       {items.map((item, i) =>
         item.kind === 'activity'
           ? <ActivityRow key={i} activity={item.data} />
@@ -137,14 +140,14 @@ export function TaskStreamerInline({ taskId }: Props) {
   )
 }
 
-function LogLine({ line }: { line: string }) {
+export function LogLine({ line }: { line: string }) {
   const { colors } = useTheme()
   return (
     <Text style={[styles.logLine, { color: colors.text }]}>{line}</Text>
   )
 }
 
-function ActivityRow({ activity }: { activity: TaskActivity }) {
+export function ActivityRow({ activity }: { activity: TaskActivity }) {
   const { colors } = useTheme()
 
   switch (activity.type) {
@@ -251,9 +254,18 @@ function TextRow({ activity, colors }: { activity: Extract<TaskActivity, { type:
   return (
     <View style={[styles.row, { borderLeftColor: colors.primary }]}>
       <MessageSquare color={colors.primary} size={14} strokeWidth={2.25} style={styles.rowIcon} />
-      <Text style={[styles.textContent, { color: colors.text }]}>
-        {activity.content}
-      </Text>
+      <View style={styles.textContent}>
+        <EnrichedMarkdownText
+          markdown={activity.content}
+          streamingAnimation
+          markdownStyle={{
+            paragraph: { color: colors.text, fontSize: 14, lineHeight: 20 },
+            strong: { color: colors.text },
+            link: { color: colors.primary },
+            code: { color: colors.primary, backgroundColor: colors.panelAlt },
+          }}
+        />
+      </View>
     </View>
   )
 }
@@ -270,10 +282,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  list: {
-    flex: 1,
-  },
   listContent: {
+    paddingHorizontal: spacing[3],
+    paddingBottom: spacing[6],
+  },
+  itemSeparator: {
+    height: spacing[1],
+  },
+  inlineContent: {
     paddingHorizontal: spacing[3],
     paddingBottom: spacing[6],
     gap: spacing[1],
@@ -325,7 +341,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   textContent: {
-    ...typeStyles.body,
     flex: 1,
   },
   statusRow: {

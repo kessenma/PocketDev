@@ -13,7 +13,8 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
     >
       <button
         onClick={onMenuToggle}
-        className="rounded-md p-2 transition-colors hover:bg-muted lg:hidden"
+        className="rounded-md p-2 transition-colors lg:hidden"
+        style={{ color: docsTokens.colors.text }}
       >
         <Menu size={18} />
       </button>

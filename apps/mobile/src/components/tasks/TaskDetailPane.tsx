@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
+import { FlashList, type FlashListRef } from '@shopify/flash-list'
+import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
 import { Check, Code, Copy, FileText, Info, Layers, MessageSquare, ShieldAlert, Terminal } from 'lucide-react-native'
@@ -10,7 +12,7 @@ import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import BauhausChatInput from '../shared/BauhausChatInput'
-import { TaskStreamerInline } from './TaskStreamer'
+import { ActivityRow, LogLine, type StreamItem } from './TaskStreamer'
 import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
 import { getToolUseDetail } from './task-stream-utils'
@@ -28,6 +30,111 @@ const STATUS_COLORS: Record<string, string> = {
   completed: '#22c55e',
   failed: '#ef4444',
   killed: '#737373',
+}
+
+function DetailHeader({
+  task,
+  isRunning,
+  isMultiTurn,
+  turns,
+  resultText,
+  pendingPermissions,
+  colors,
+  taskId,
+  clearPermissions,
+  startTask,
+}: {
+  task: any
+  isRunning: boolean
+  isMultiTurn: boolean
+  turns: any[]
+  resultText: string | null
+  pendingPermissions: any[]
+  colors: any
+  taskId: string | null
+  clearPermissions: (id: string) => void
+  startTask: (...args: any[]) => void
+}) {
+  return (
+    <>
+      {/* For multi-turn tasks, show conversation thread instead of single prompt card */}
+      {isMultiTurn && turns.length > 0 ? (
+        <TaskConversation turns={turns} />
+      ) : (
+        <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
+          <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
+          <Text style={[styles.promptText, { color: colors.text }]} numberOfLines={3}>
+            {extractUserRequest(task.prompt)}
+          </Text>
+        </View>
+      )}
+
+      {/* Only show result card for single-turn completed tasks (multi-turn has results in conversation) */}
+      {!isRunning && !isMultiTurn && resultText ? (
+        <View style={[styles.resultCard, { backgroundColor: colors.panelAlt, borderColor: colors.primary }]}>
+          <View style={styles.resultHeader}>
+            <MessageSquare color={colors.primary} size={14} strokeWidth={2.25} />
+            <Text style={[styles.resultLabel, { color: colors.primary }]}>Result</Text>
+          </View>
+          <EnrichedMarkdownText
+            markdown={resultText}
+            markdownStyle={{
+              paragraph: { color: colors.text, fontSize: 14, lineHeight: 20 },
+              strong: { color: colors.text },
+              link: { color: colors.primary },
+              code: { color: colors.primary, backgroundColor: colors.panelAlt },
+            }}
+          />
+        </View>
+      ) : null}
+
+      {pendingPermissions.length > 0 && (
+        <View style={[styles.permissionCard, { backgroundColor: colors.panelAlt, borderColor: '#f59e0b' }]}>
+          <View style={styles.permissionHeader}>
+            <ShieldAlert color="#f59e0b" size={18} strokeWidth={2.25} />
+            <Text style={[styles.permissionTitle, { color: colors.text }]}>Permissions Required</Text>
+          </View>
+          <Text style={[styles.permissionBody, { color: colors.textSecondary }]}>
+            The agent requested {pendingPermissions.length} tool{pendingPermissions.length > 1 ? 's' : ''} that still need approval. The task exited, so you can re-run it with broader approvals or dismiss the request.
+          </Text>
+          {pendingPermissions.map((denial: any, i: number) => (
+            <View key={`${denial.tool_use_id ?? i}`} style={[styles.permissionItem, { borderColor: colors.border }]}>
+              <Text style={[styles.permissionTool, { color: colors.text }]}>{denial.tool_name}</Text>
+              {denial.tool_input?.command ? (
+                <Text style={[styles.permissionInput, { color: colors.textTertiary }]} numberOfLines={3}>
+                  {String(denial.tool_input.command)}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+          <View style={styles.permissionActions}>
+            <BauhausButton
+              compact
+              onPress={() => {
+                if (!task) return
+                clearPermissions(task.id)
+                startTask(task.prompt, task.agent_type, task.working_directory, task.model, 'default')
+              }}
+            >
+              Re-run with Auto-Approve
+            </BauhausButton>
+            <BauhausButton compact variant="quiet" onPress={() => { if (taskId) clearPermissions(taskId) }}>
+              Dismiss
+            </BauhausButton>
+          </View>
+        </View>
+      )}
+
+      {task.agent_type === 'copilot' && (
+        <View style={[styles.copilotBanner, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
+          <Info color={colors.textTertiary} size={16} strokeWidth={2.25} />
+          <Text style={[styles.copilotBannerText, { color: colors.textSecondary }]}>
+            Copilot runs as a TUI session in tmux. {task.model ? `Selected model: ${task.model}. ` : ''}Task completion is auto-detected when the agent returns to idle.
+          </Text>
+        </View>
+      )}
+    </>
+  )
 }
 
 export default function TaskDetailPane({
@@ -53,7 +160,7 @@ export default function TaskDetailPane({
   const loadTurnsForTask = useTaskStore((s) => s.loadTurnsForTask)
   const { toast } = useToast()
 
-  const scrollViewRef = useRef<ScrollView>(null)
+  const flashListRef = useRef<FlashListRef<StreamItem>>(null)
   const [autoScroll, setAutoScroll] = useState(true)
   const [showRawLogs, setShowRawLogs] = useState(false)
   const [showCopyMenu, setShowCopyMenu] = useState(false)
@@ -121,10 +228,16 @@ export default function TaskDetailPane({
     }
   }, [task?.turn_count, taskId, turns.length, loadTurnsForTask])
 
-  const itemCount = activities.length + logs.length
+  const streamItems: StreamItem[] = useMemo(() => {
+    if (showRawLogs) return logs.map((l) => ({ kind: 'log' as const, data: l }))
+    if (activities.length > 0) return activities.map((a) => ({ kind: 'activity' as const, data: a }))
+    return logs.map((l) => ({ kind: 'log' as const, data: l }))
+  }, [showRawLogs, activities, logs])
+
+  const itemCount = streamItems.length
   useEffect(() => {
     if (autoScroll && itemCount > 0) {
-      scrollViewRef.current?.scrollToEnd({ animated: false })
+      flashListRef.current?.scrollToEnd({ animated: false })
     }
   }, [itemCount, autoScroll])
 
@@ -135,7 +248,7 @@ export default function TaskDetailPane({
   }
 
   function handleScrollToBottom() {
-    scrollViewRef.current?.scrollToEnd({ animated: true })
+    flashListRef.current?.scrollToEnd({ animated: true })
     setAutoScroll(true)
   }
 
@@ -210,101 +323,40 @@ export default function TaskDetailPane({
         </View>
       </View>
 
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollArea}
+      <FlashList
+        ref={flashListRef}
+        data={streamItems}
+        keyExtractor={(_, i) => String(i)}
+        getItemType={(item) => item.kind}
+        renderItem={({ item }) =>
+          item.kind === 'activity'
+            ? <ActivityRow activity={item.data} />
+            : <LogLine line={item.data} />
+        }
         contentContainerStyle={styles.scrollAreaContent}
+        ItemSeparatorComponent={() => <View style={styles.streamSeparator} />}
         onScroll={handleScroll}
         scrollEventThrottle={100}
-      >
-        {/* For multi-turn tasks, show conversation thread instead of single prompt card */}
-        {isMultiTurn && turns.length > 0 ? (
-          <TaskConversation turns={turns} />
-        ) : (
-          <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
-            <Text style={[styles.promptLabel, { color: colors.textTertiary }]}>Prompt</Text>
-            <Text style={[styles.promptText, { color: colors.text }]} numberOfLines={3}>
-              {extractUserRequest(task.prompt)}
-            </Text>
-          </View>
-        )}
-
-        {/* Only show result card for single-turn completed tasks (multi-turn has results in conversation) */}
-        {!isRunning && !isMultiTurn && resultText ? (
-          <View style={[styles.resultCard, { backgroundColor: colors.panelAlt, borderColor: colors.primary }]}>
-            <View style={styles.resultHeader}>
-              <MessageSquare color={colors.primary} size={14} strokeWidth={2.25} />
-              <Text style={[styles.resultLabel, { color: colors.primary }]}>Result</Text>
-            </View>
-            <Text style={[styles.resultText, { color: colors.text }]} selectable>
-              {resultText}
-            </Text>
-          </View>
-        ) : null}
-
-        {pendingPermissions.length > 0 && (
-          <View style={[styles.permissionCard, { backgroundColor: colors.panelAlt, borderColor: '#f59e0b' }]}>
-            <View style={styles.permissionHeader}>
-              <ShieldAlert color="#f59e0b" size={18} strokeWidth={2.25} />
-              <Text style={[styles.permissionTitle, { color: colors.text }]}>Permissions Required</Text>
-            </View>
-            <Text style={[styles.permissionBody, { color: colors.textSecondary }]}>
-              The agent requested {pendingPermissions.length} tool{pendingPermissions.length > 1 ? 's' : ''} that still need approval. The task exited, so you can re-run it with broader approvals or dismiss the request.
-            </Text>
-            {pendingPermissions.map((denial, i) => (
-              <View key={`${denial.tool_use_id ?? i}`} style={[styles.permissionItem, { borderColor: colors.border }]}>
-                <Text style={[styles.permissionTool, { color: colors.text }]}>{denial.tool_name}</Text>
-                {denial.tool_input?.command ? (
-                  <Text style={[styles.permissionInput, { color: colors.textTertiary }]} numberOfLines={3}>
-                    {String(denial.tool_input.command)}
-                  </Text>
-                ) : null}
-              </View>
-            ))}
-            <View style={styles.permissionActions}>
-              <BauhausButton
-                compact
-                onPress={() => {
-                  if (!task) return
-                  clearPermissions(task.id)
-                  startTask(task.prompt, task.agent_type, task.working_directory, task.model, 'default')
-                }}
-              >
-                Re-run with Auto-Approve
-              </BauhausButton>
-              <BauhausButton compact variant="quiet" onPress={() => { if (taskId) clearPermissions(taskId) }}>
-                Dismiss
-              </BauhausButton>
-            </View>
-          </View>
-        )}
-
-        {task.agent_type === 'copilot' && (
-          <View style={[styles.copilotBanner, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
-            <Info color={colors.textTertiary} size={16} strokeWidth={2.25} />
-            <Text style={[styles.copilotBannerText, { color: colors.textSecondary }]}>
-              Copilot runs as a TUI session in tmux. {task.model ? `Selected model: ${task.model}. ` : ''}Task completion is auto-detected when the agent returns to idle.
-            </Text>
-          </View>
-        )}
-
-        {/* Stream / raw log output — rendered inline so everything scrolls together */}
-        {showRawLogs ? (
-          <View style={styles.logContent}>
-            {logs.length === 0 ? (
-              <Text style={[styles.emptyLogs, { color: colors.textSecondary }]}>
-                Task output will appear here.
-              </Text>
-            ) : (
-              logs.map((line, i) => (
-                <Text key={i} style={[styles.logLine, { color: colors.text }]}>{line}</Text>
-              ))
-            )}
-          </View>
-        ) : (
-          <TaskStreamerInline taskId={task.id} />
-        )}
-      </ScrollView>
+        ListHeaderComponent={
+          <DetailHeader
+            task={task}
+            isRunning={isRunning}
+            isMultiTurn={isMultiTurn}
+            turns={turns}
+            resultText={resultText}
+            pendingPermissions={pendingPermissions}
+            colors={colors}
+            taskId={taskId}
+            clearPermissions={clearPermissions}
+            startTask={startTask}
+          />
+        }
+        ListEmptyComponent={
+          <Text style={[styles.emptyLogs, { color: colors.textSecondary }]}>
+            Task output will appear here.
+          </Text>
+        }
+      />
 
       {!autoScroll ? (
         <View style={styles.scrollButton}>
@@ -453,11 +505,11 @@ const styles = StyleSheet.create({
     ...typeStyles.meta,
     marginLeft: spacing[2],
   },
-  scrollArea: {
-    flex: 1,
-  },
   scrollAreaContent: {
     paddingBottom: spacing[6],
+  },
+  streamSeparator: {
+    height: spacing[1],
   },
   promptCard: {
     marginHorizontal: spacing[3],
@@ -546,17 +598,6 @@ const styles = StyleSheet.create({
   copilotBannerText: {
     ...typeStyles.bodySmall,
     flex: 1,
-  },
-  logList: {
-    flex: 1,
-  },
-  logContent: {
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[6],
-  },
-  logLine: {
-    ...typeStyles.mono,
-    maxWidth: 900,
   },
   emptyLogs: {
     ...typeStyles.bodySmall,

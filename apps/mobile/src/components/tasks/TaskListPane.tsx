@@ -1,7 +1,6 @@
 import React from 'react'
 import {
   Pressable,
-  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -70,7 +69,6 @@ export default function TaskListPane({
     <FlashList
       data={tasks}
       keyExtractor={(item) => item.id}
-      estimatedItemSize={100}
       renderItem={({ item }) => {
         const statusColor = STATUS_COLORS[item.status]
         const isActive = item.id === activeTaskId
@@ -102,7 +100,8 @@ export default function TaskListPane({
       }}
       contentContainerStyle={styles.list}
       ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
       ListHeaderComponent={
         recentPrompts.length > 0 && onRecentPromptPress ? (
           <View style={[styles.recentSection, { borderColor: colors.border }]}>
@@ -121,7 +120,7 @@ export default function TaskListPane({
           </View>
         ) : null
       }
-    </FlashList>
+    />
   )
 }
 
