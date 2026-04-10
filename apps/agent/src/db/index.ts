@@ -94,7 +94,16 @@ export function getDb() {
       const migrationChecks: [number, string, () => boolean][] = [
         [1775155268676, '0000_military_surge', () => existingTables.some((t) => t.name === 'server_config')],
         [1775429725360, '0001_new_peter_parker', () => existingTables.some((t) => t.name === 'devices')],
-        [1775745487970, '0002_cold_winter_soldier', () => existingTables.some((t) => t.name === 'git_commits')],
+        [1775745487970, '0002_cold_winter_soldier', () => {
+          if (!existingTables.some((t) => t.name === 'git_commits')) return false
+          // 0002 also ALTERs projects — ensure the column exists (partial migration recovery)
+          const projCols = sqlite.query('PRAGMA table_info(projects)').all() as { name: string }[]
+          if (!projCols.some((c) => c.name === 'last_synced_sha')) {
+            sqlite.exec('ALTER TABLE projects ADD COLUMN last_synced_sha text;')
+            console.log('[db] Recovered missing last_synced_sha column from partial 0002 migration')
+          }
+          return true
+        }],
         [1775748378639, '0003_colorful_penance', () => existingTables.some((t) => t.name === 'task_turns')],
         [1775764134200, '0004_unusual_jigsaw', () => existingTables.some((t) => t.name === 'task_file_touches')],
         [1775765355602, '0005_slippery_madripoor', () => {
