@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { InstallCommand } from '#/components/landing/InstallCommand'
 
-export const Route = createFileRoute('/docs/get-started')({
+export const Route = createFileRoute('/get-started')({
   component: GetStartedPage,
 })
 
@@ -30,20 +30,16 @@ function GetStartedPage() {
         The installer will set up the PocketDev agent as a systemd service on port <code>4387</code>.
       </p>
 
-            <h2>Logging into the PocketDev Agent web app</h2>
+      <h2>Logging into the PocketDev Agent web app</h2>
       <ol>
-        <li>Open the PocketDev app on port `<code>4387</code>/PocketDev/console` of your server in a web browser</li>
+        <li>Open the PocketDev app on port <code>4387</code>/PocketDev/console of your server in a web browser</li>
         <li>Setup your admin account</li>
         <li>Login</li>
         <li>Navigate to the Pairing section</li>
         <li>Copy the setup code</li>
-        <p>
-          example code:
-        </p>
-        <pre>
-          pocketdev://123.123.12.123:4387/DCCU-6451
-        </pre>
       </ol>
+      <p>Example code:</p>
+      <pre>pocketdev://123.123.12.123:4387/DCCU-6451</pre>
 
       <h2>Pairing Your Device</h2>
       <ol>
@@ -172,7 +168,7 @@ function GetStartedPage() {
       <h2>Next Steps</h2>
       <p>
         More documentation is coming soon. In the meantime, check out the{' '}
-        <a href="/architecture">architecture overview</a> for a deeper look at how PocketDev works.
+        <a href="https://pocketdev.run/architecture">architecture overview</a> for a deeper look at how PocketDev works.
       </p>
     </>
   )

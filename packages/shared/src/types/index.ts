@@ -122,6 +122,7 @@ export type {
   ServerCapabilities,
 } from './capabilities.js'
 export type {
+  GitDiffHunk,
   GitFileChangeKind,
   GitRemoteStatus,
   GitErrorCode,
@@ -177,6 +178,15 @@ export type {
   TaskQuestionField,
   TaskQuestion,
 } from './activity.js'
+export type {
+  EnvVar,
+  ListEnvVarsResponse,
+  CreateEnvVarRequest,
+  UpdateEnvVarRequest,
+  BulkEnvVarItem,
+  BulkUpsertEnvVarsRequest,
+  BulkUpsertEnvVarsResponse,
+} from './environment-variables.js'
 export type {
   ContainerStatus,
   ContainerLogsDirection,

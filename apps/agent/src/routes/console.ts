@@ -52,6 +52,13 @@ import { getWsDebugInfo } from '../services/ws.ts'
 import { createBrowserSession } from '../services/proxy.ts'
 import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/version.ts'
 import { disableManagedSwap, enableManagedSwap, getSwapMetrics, getSwapStatus } from '../services/swap.ts'
+import {
+  listEnvVars,
+  createEnvVar,
+  updateEnvVarById,
+  deleteEnvVarById,
+  bulkUpsertEnvVars,
+} from '../services/env-vars.ts'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
@@ -1097,6 +1104,73 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     body: t.Optional(t.Object({
       version: t.Optional(t.String()),
     })),
+  })
+  // ─── Env vars ──────────────────────────────────────────
+  .get('/envs', ({ request, query, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    return { envVars: listEnvVars(query.projectPath) }
+  }, {
+    query: t.Object({ projectPath: t.String() }),
+  })
+  .post('/envs', ({ request, body, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    try {
+      return createEnvVar(body)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create env var'
+      if (message.includes('UNIQUE')) {
+        set.status = 409
+        return { error: 'A variable with this key already exists for this project' }
+      }
+      set.status = 500
+      return { error: message }
+    }
+  }, {
+    body: t.Object({
+      projectPath: t.String(),
+      key: t.String(),
+      value: t.Optional(t.Nullable(t.String())),
+      comment: t.Optional(t.Nullable(t.String())),
+      isSecret: t.Optional(t.Boolean()),
+      isMultiline: t.Optional(t.Boolean()),
+    }),
+  })
+  // /envs/bulk MUST be before /envs/:id
+  .patch('/envs/bulk', ({ request, body, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    return { envVars: bulkUpsertEnvVars(body.projectPath, body.data) }
+  }, {
+    body: t.Object({
+      projectPath: t.String(),
+      data: t.Array(t.Object({
+        key: t.String(),
+        value: t.Optional(t.Nullable(t.String())),
+        comment: t.Optional(t.Nullable(t.String())),
+        isSecret: t.Optional(t.Boolean()),
+        isMultiline: t.Optional(t.Boolean()),
+      })),
+    }),
+  })
+  .patch('/envs/:id', ({ request, params, body, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    const result = updateEnvVarById(params.id, body)
+    if (!result) { set.status = 404; return { error: 'Env var not found' } }
+    return result
+  }, {
+    body: t.Object({
+      key: t.Optional(t.String()),
+      value: t.Optional(t.Nullable(t.String())),
+      comment: t.Optional(t.Nullable(t.String())),
+      isSecret: t.Optional(t.Boolean()),
+      isMultiline: t.Optional(t.Boolean()),
+      order: t.Optional(t.Number()),
+    }),
+  })
+  .delete('/envs/:id', ({ request, params, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    deleteEnvVarById(params.id)
+    set.status = 204
+    return null
   })
 
 // ─── Static file serving for console SPA ────────────────

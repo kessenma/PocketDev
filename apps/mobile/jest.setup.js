@@ -87,3 +87,13 @@ jest.mock('react-native-mmkv', () => {
     }),
   }
 })
+
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react')
+
+  return {
+    FlashList: function FlashList(props) {
+      return React.createElement('FlashList', props, props.ListEmptyComponent ?? props.children)
+    },
+  }
+})

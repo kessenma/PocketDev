@@ -27,6 +27,7 @@ import { planRoutes } from './routes/plans.ts'
 import { taskRoutes } from './routes/tasks.ts'
 import { projectRoutes } from './routes/projects.ts'
 import { scriptRoutes } from './routes/scripts.ts'
+import { envRoutes } from './routes/envs.ts'
 import { screenshotRoutes } from './services/preview-screenshot.ts'
 import { consoleRoutes, consoleStaticRoutes } from './routes/console.ts'
 import { passkeyRoutes } from './routes/passkey.ts'
@@ -88,6 +89,7 @@ new Elysia()
       .use(taskRoutes)
       .use(projectRoutes)
       .use(scriptRoutes)
+      .use(envRoutes)
       .use(fileRoutes)
     )
     // WebSocket routes

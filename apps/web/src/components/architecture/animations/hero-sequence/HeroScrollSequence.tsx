@@ -81,7 +81,7 @@ export function HeroScrollSequence({
   const headerY = useTransform(
     scrollYProgress,
     [0.25, 0.42],
-    [0, -300],
+    [0, -Math.max(vpSize.h, 420)],
   )
   const pillsOpacity = useTransform(scrollYProgress, [0.78, 0.86, 0.88, 0.94], [0, 1, 1, 0])
   const pillsY = useTransform(scrollYProgress, [0.78, 0.86], [20, 0])

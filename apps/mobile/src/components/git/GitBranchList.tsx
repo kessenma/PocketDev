@@ -13,15 +13,26 @@ type Props = {
 
 export default function GitBranchList({ branches, onSelectBranch }: Props) {
   const { colors } = useTheme()
+  const currentBranch = branches.find((branch) => branch.current) ?? null
 
   return (
     <GitCard>
       <GitCardHeader>
-        <GitCardTitle>Branches</GitCardTitle>
-        <GitCardDescription>Designed for quick branch context on a phone before any live checkout command exists.</GitCardDescription>
+        <GitCardTitle>Branch Switcher</GitCardTitle>
+        <GitCardDescription>Switch branches here, then review changes and history in the other git views.</GitCardDescription>
       </GitCardHeader>
 
       <GitCardContent>
+        {currentBranch ? (
+          <View style={[styles.currentBranchCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+            <Text style={[styles.currentBranchLabel, { color: colors.textTertiary }]}>Current branch</Text>
+            <Text style={[styles.currentBranchName, { color: colors.text }]}>{currentBranch.name}</Text>
+            <Text style={[styles.meta, { color: colors.textTertiary }]}>
+              ahead {currentBranch.ahead} · behind {currentBranch.behind}
+            </Text>
+          </View>
+        ) : null}
+
         {branches.map((branch) => (
           <TouchableOpacity
             key={branch.name}
@@ -45,9 +56,14 @@ export default function GitBranchList({ branches, onSelectBranch }: Props) {
 
             <Text style={[styles.description, { color: colors.textSecondary }]}>{branch.description}</Text>
 
-            <Text style={[styles.meta, { color: colors.textTertiary }]}>
-              ahead {branch.ahead} · behind {branch.behind}
-            </Text>
+            <View style={styles.rowFooter}>
+              <Text style={[styles.meta, { color: colors.textTertiary }]}>
+                ahead {branch.ahead} · behind {branch.behind}
+              </Text>
+              {!branch.current ? (
+                <Text style={[styles.switchLabel, { color: colors.primary }]}>Switch</Text>
+              ) : null}
+            </View>
           </TouchableOpacity>
         ))}
       </GitCardContent>
@@ -56,6 +72,21 @@ export default function GitBranchList({ branches, onSelectBranch }: Props) {
 }
 
 const styles = StyleSheet.create({
+  currentBranchCard: {
+    borderWidth: 1,
+    borderRadius: borderRadius.lg,
+    padding: spacing[3],
+    gap: spacing[1],
+  },
+  currentBranchLabel: {
+    ...typographyScale.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  currentBranchName: {
+    ...typographyScale.base,
+    fontWeight: '700',
+  },
   row: {
     borderWidth: 1,
     borderRadius: borderRadius.lg,
@@ -80,8 +111,18 @@ const styles = StyleSheet.create({
   description: {
     ...typographyScale.sm,
   },
+  rowFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[2],
+  },
   meta: {
     ...typographyScale.xs,
     fontWeight: '600',
+  },
+  switchLabel: {
+    ...typographyScale.xs,
+    fontWeight: '700',
   },
 })

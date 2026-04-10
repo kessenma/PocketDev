@@ -3,6 +3,7 @@ import type {
   GitSummary,
   GitFileChange,
   GitDiffResponse,
+  GitDiffHunk,
   GitCommitEntry,
   GitBranchEntry,
   GitErrorCode,
@@ -146,6 +147,9 @@ export async function getGitChanges(): Promise<GitFileChange[]> {
         staged: true,
         additions: stats?.additions ?? 0,
         deletions: stats?.deletions ?? 0,
+        changedLines: stats?.changedLines ?? null,
+        hasLineStats: stats?.hasLineStats ?? false,
+        isBinary: stats?.isBinary ?? false,
       })
     }
 
@@ -161,6 +165,9 @@ export async function getGitChanges(): Promise<GitFileChange[]> {
         staged: false,
         additions: stats?.additions ?? 0,
         deletions: stats?.deletions ?? 0,
+        changedLines: stats?.changedLines ?? null,
+        hasLineStats: stats?.hasLineStats ?? false,
+        isBinary: stats?.isBinary ?? false,
       })
     }
   }
@@ -181,10 +188,24 @@ export async function getGitDiff(path: string, staged: boolean): Promise<GitDiff
     if (!staged) {
       const repoPath = await getActiveProjectPath()
       const { stdout: content } = await exec(`git show :${escapeShellArg(path)} 2>/dev/null || cat ${escapeShellArg(resolve(repoPath, path))} 2>/dev/null || echo ""`, repoPath)
+      const lineCount = content.length === 0 ? 0 : content.split('\n').length
       const diff = content
-        ? content.split('\n').map((l) => `+${l}`).join('\n')
+        ? [
+            `diff --git a/${path} b/${path}`,
+            'new file mode 100644',
+            '--- /dev/null',
+            `+++ b/${path}`,
+            `@@ -0,0 +1,${lineCount} @@`,
+            ...content.split('\n').map((l) => `+${l}`),
+          ].join('\n')
         : ''
-      return { path, diff: truncateDiff(diff), truncated: diff.length > MAX_DIFF_BYTES }
+      return {
+        path,
+        diff: truncateDiff(diff),
+        truncated: diff.length > MAX_DIFF_BYTES,
+        hunks: parseDiffHunks(diff),
+        isBinary: false,
+      }
     }
   }
 
@@ -192,6 +213,8 @@ export async function getGitDiff(path: string, staged: boolean): Promise<GitDiff
     path,
     diff: truncateDiff(stdout),
     truncated: stdout.length > MAX_DIFF_BYTES,
+    hunks: parseDiffHunks(stdout),
+    isBinary: isBinaryDiff(stdout),
   }
 }
 
@@ -352,20 +375,83 @@ function statusToKind(status: string): GitFileChangeKind {
   }
 }
 
-function parseNumstat(output: string): Map<string, { additions: number; deletions: number }> {
-  const map = new Map<string, { additions: number; deletions: number }>()
+function parseNumstat(output: string): Map<string, {
+  additions: number
+  deletions: number
+  changedLines: number | null
+  hasLineStats: boolean
+  isBinary: boolean
+}> {
+  const map = new Map<string, {
+    additions: number
+    deletions: number
+    changedLines: number | null
+    hasLineStats: boolean
+    isBinary: boolean
+  }>()
   for (const line of output.split('\n')) {
     if (!line) continue
     const [add, del, ...pathParts] = line.split('\t')
-    const path = pathParts.join('\t')
-    if (path) {
+    const rawPath = pathParts.join('\t')
+    const paths = expandNumstatPaths(rawPath)
+    if (paths.length === 0) continue
+
+    const isBinary = add === '-' || del === '-'
+    const additions = isBinary ? 0 : parseInt(add, 10) || 0
+    const deletions = isBinary ? 0 : parseInt(del, 10) || 0
+    const changedLines = isBinary ? null : additions + deletions
+
+    for (const path of paths) {
       map.set(path, {
-        additions: add === '-' ? 0 : parseInt(add, 10) || 0,
-        deletions: del === '-' ? 0 : parseInt(del, 10) || 0,
+        additions,
+        deletions,
+        changedLines,
+        hasLineStats: !isBinary,
+        isBinary,
       })
     }
   }
   return map
+}
+
+function expandNumstatPaths(rawPath: string): string[] {
+  if (!rawPath) return []
+
+  if (rawPath.includes(' => ')) {
+    const renamed = rawPath.replace(/^[^{}]*\{/, '{').replace(/\}[^{}]*$/, '}')
+    const braceMatch = renamed.match(/^(.*)\{(.+?) => (.+?)\}(.*)$/)
+    if (braceMatch) {
+      const [, prefix, oldPart, newPart, suffix] = braceMatch
+      return [`${prefix}${oldPart}${suffix}`, `${prefix}${newPart}${suffix}`]
+    }
+
+    const [oldPath, newPath] = rawPath.split(' => ')
+    return [oldPath, newPath].filter(Boolean)
+  }
+
+  return [rawPath]
+}
+
+function parseDiffHunks(diff: string): GitDiffHunk[] {
+  const hunks: GitDiffHunk[] = []
+
+  for (const line of diff.split('\n')) {
+    const match = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/)
+    if (!match) continue
+
+    hunks.push({
+      oldStart: parseInt(match[1], 10),
+      oldLines: parseInt(match[2] ?? '1', 10),
+      newStart: parseInt(match[3], 10),
+      newLines: parseInt(match[4] ?? '1', 10),
+    })
+  }
+
+  return hunks
+}
+
+function isBinaryDiff(diff: string): boolean {
+  return diff.includes('Binary files ') || diff.includes('GIT binary patch')
 }
 
 function truncateDiff(diff: string): string {

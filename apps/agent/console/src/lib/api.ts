@@ -25,6 +25,16 @@ async function del(path: string) {
   return response
 }
 
+async function patch(path: string, body?: unknown) {
+  const response = await fetch(`${BASE}${path}`, {
+    method: 'PATCH',
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    credentials: 'same-origin',
+  })
+  return response
+}
+
 async function readError(response: Response, fallback: string) {
   const data = await response.json().catch(() => ({ error: fallback }))
   return data.error || fallback
@@ -936,4 +946,70 @@ export async function listPasskeys(): Promise<PasskeyCredential[]> {
 export async function removePasskey(id: string): Promise<void> {
   const res = await del(`/passkey/credentials/${id}`)
   if (!res.ok) throw new Error('Failed to remove passkey')
+}
+
+// ─── Env Vars ──────────────────────────────────────────────────────────────────
+
+export interface EnvVar {
+  id: string
+  projectPath: string
+  key: string
+  value: string | null
+  comment: string | null
+  isSecret: boolean
+  isMultiline: boolean
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+export async function fetchConsoleEnvVars(projectPath: string): Promise<EnvVar[]> {
+  const res = await get(`/envs?projectPath=${encodeURIComponent(projectPath)}`)
+  if (!res.ok) throw new Error('Failed to fetch env vars')
+  const data = await res.json() as { envVars: EnvVar[] }
+  return data.envVars
+}
+
+export async function createConsoleEnvVar(input: {
+  projectPath: string
+  key: string
+  value?: string | null
+  comment?: string | null
+  isSecret?: boolean
+  isMultiline?: boolean
+}): Promise<EnvVar> {
+  const res = await post('/envs', input)
+  if (!res.ok) throw new Error(await readError(res, 'Failed to create env var'))
+  return res.json() as Promise<EnvVar>
+}
+
+export async function updateConsoleEnvVar(id: string, data: {
+  key?: string
+  value?: string | null
+  comment?: string | null
+  isSecret?: boolean
+  isMultiline?: boolean
+  order?: number
+}): Promise<EnvVar> {
+  const res = await patch(`/envs/${id}`, data)
+  if (!res.ok) throw new Error(await readError(res, 'Failed to update env var'))
+  return res.json() as Promise<EnvVar>
+}
+
+export async function deleteConsoleEnvVar(id: string): Promise<void> {
+  const res = await del(`/envs/${id}`)
+  if (!res.ok) throw new Error('Failed to delete env var')
+}
+
+export async function bulkUpsertConsoleEnvVars(projectPath: string, data: {
+  key: string
+  value?: string | null
+  comment?: string | null
+  isSecret?: boolean
+  isMultiline?: boolean
+}[]): Promise<EnvVar[]> {
+  const res = await patch('/envs/bulk', { projectPath, data })
+  if (!res.ok) throw new Error(await readError(res, 'Failed to import env vars'))
+  const result = await res.json() as { envVars: EnvVar[] }
+  return result.envVars
 }

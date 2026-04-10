@@ -1,14 +1,14 @@
-import React, { useState, useRef, useCallback, useImperativeHandle, forwardRef } from 'react'
+import React, { useState, useRef, useMemo, useCallback, useImperativeHandle, forwardRef } from 'react'
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Modal,
   Animated,
 } from 'react-native'
+import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import RNClipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
@@ -89,23 +89,23 @@ const TerminalView = forwardRef<TerminalViewRef, Props>(function TerminalView(
   const [aiPromptText, setAiPromptText] = useState('')
   const aiInputRef = useRef<TextInput>(null)
 
-  const scrollRef = useRef<ScrollView>(null)
+  const listRef = useRef<FlashListRef<string>>(null)
 
   // ─── Imperative handle ───────────────────────────────────────────────
 
   useImperativeHandle(ref, () => ({
     appendOutput: (text: string) => {
       setInternalOutput((prev) => prev + text)
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50)
     },
     clearOutput: () => setInternalOutput(''),
     getOutput: () => controlledOutput ?? internalOutput,
-    scrollToEnd: () => scrollRef.current?.scrollToEnd({ animated: true }),
+    scrollToEnd: () => listRef.current?.scrollToEnd({ animated: true }),
   }))
 
   // ─── Copy logic ─────────────────────────────────────────────────────
 
-  const lines = output.split('\n')
+  const lines = useMemo(() => output.split('\n'), [output])
 
   const handleCopy = useCallback(
     (mode: CopyMode) => {
@@ -138,37 +138,6 @@ const TerminalView = forwardRef<TerminalViewRef, Props>(function TerminalView(
     setAiPromptText('')
     setShowAiPrompt(false)
   }, [aiPromptText, onAiAssist, output])
-
-  // ─── Rendered lines (with optional line numbers) ────────────────────
-
-  const renderOutput = () => {
-    if (!output) {
-      return (
-        <Text style={[styles.terminalText, { color: termColors.lineNumber }]}>
-          {placeholder}
-        </Text>
-      )
-    }
-
-    if (!showLineNumbers) {
-      return (
-        <Text style={[styles.terminalText, { color: termColors.text }]} selectable>
-          {output}
-        </Text>
-      )
-    }
-
-    return lines.map((line, i) => (
-      <View key={i} style={styles.lineRow}>
-        <Text style={[styles.lineNumber, { color: termColors.lineNumber }]}>
-          {String(i + 1).padStart(3)}
-        </Text>
-        <Text style={[styles.terminalText, { color: termColors.text, flex: 1 }]} selectable>
-          {line}
-        </Text>
-      </View>
-    ))
-  }
 
   // ─── Render ─────────────────────────────────────────────────────────
 
@@ -237,13 +206,35 @@ const TerminalView = forwardRef<TerminalViewRef, Props>(function TerminalView(
       </View>
 
       {/* Terminal output area */}
-      <ScrollView
-        ref={scrollRef}
-        style={[styles.terminal, { backgroundColor: termColors.bg }]}
-        contentContainerStyle={styles.terminalContent}
-      >
-        {renderOutput()}
-      </ScrollView>
+      <View style={[styles.terminal, { backgroundColor: termColors.bg }]}>
+        <FlashList
+          ref={listRef}
+          data={lines}
+          keyExtractor={(_, i) => String(i)}
+          renderItem={({ item, index }) =>
+            showLineNumbers ? (
+              <View style={styles.lineRow}>
+                <Text style={[styles.lineNumber, { color: termColors.lineNumber }]}>
+                  {String(index + 1).padStart(3)}
+                </Text>
+                <Text style={[styles.terminalText, { color: termColors.text, flex: 1 }]} selectable>
+                  {item}
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.terminalText, { color: termColors.text }]} selectable>
+                {item}
+              </Text>
+            )
+          }
+          contentContainerStyle={styles.terminalContent}
+          ListEmptyComponent={
+            <Text style={[styles.terminalText, { color: termColors.lineNumber }]}>
+              {placeholder}
+            </Text>
+          }
+        />
+      </View>
 
       {/* ── Copy Menu Modal ──────────────────────────────────────────── */}
       <Modal visible={showCopyMenu} transparent animationType="fade" onRequestClose={() => setShowCopyMenu(false)}>

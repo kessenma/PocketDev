@@ -20,8 +20,8 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
       </button>
 
       <div className="flex items-center gap-3">
-        <Link
-          to="/"
+        <a
+          href="https://pocketdev.run"
           className="text-sm font-semibold transition-colors hover:opacity-80"
           style={{
             fontFamily: docsFonts.display,
@@ -29,19 +29,20 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
           }}
         >
           PocketDev
-        </Link>
+        </a>
         <span
           className="text-xs"
           style={{ color: docsTokens.colors.textTertiary }}
         >
           /
         </span>
-        <span
-          className="text-sm"
+        <Link
+          to="/"
+          className="text-sm transition-colors hover:opacity-80"
           style={{ color: docsTokens.colors.textSecondary }}
         >
           Docs
-        </span>
+        </Link>
       </div>
     </header>
   )

@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Geist Variable", system-ui, -apple-system, sans-serif;
+  --font-display: "Avenir Next Condensed", "Arial Narrow", sans-serif;
+  --font-mono: ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+}
+
+.dark {
+  --background: #12100d;
+  --foreground: #f5eedf;
+  --muted: #1a1713;
+  --muted-foreground: #998d79;
+  --border: #7d7468;
+  --primary: #4c79f0;
+  --primary-foreground: #ffffff;
+  --radius: 0.625rem;
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+  }
+}
+
+@layer components {
+  .prose {
+    --prose-heading: #f5eedf;
+    --prose-body: #d1c4af;
+    --prose-muted: #998d79;
+    --prose-border: #7d7468;
+    --prose-surface: #1a1713;
+    --prose-link: #4c79f0;
+    max-width: 48rem;
+    line-height: 1.75;
+    color: var(--prose-body);
+  }
+  .prose h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+    margin-top: 2rem;
+    color: var(--prose-heading);
+    font-family: var(--font-display);
+  }
+  .prose h1:first-child {
+    margin-top: 0;
+  }
+  .prose h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--prose-border);
+    color: var(--prose-heading);
+  }
+  .prose h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    color: var(--prose-heading);
+  }
+  .prose p {
+    margin-bottom: 1rem;
+  }
+  .prose ul {
+    margin-bottom: 1rem;
+    margin-left: 1.5rem;
+    list-style-type: disc;
+  }
+  .prose ol {
+    margin-bottom: 1rem;
+    margin-left: 1.5rem;
+    list-style-type: decimal;
+  }
+  .prose li {
+    margin-bottom: 0.25rem;
+  }
+  .prose code {
+    border-radius: 0.25rem;
+    background-color: var(--prose-surface);
+    padding: 0.125rem 0.375rem;
+    font-size: 0.875rem;
+    font-family: var(--font-mono);
+    color: var(--prose-heading);
+  }
+  .prose pre {
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+    background-color: var(--prose-surface);
+    padding: 1rem;
+    overflow-x: auto;
+  }
+  .prose pre code {
+    background-color: transparent;
+    padding: 0;
+  }
+  .prose a {
+    color: var(--prose-link);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .prose a:hover {
+    opacity: 0.8;
+  }
+  .prose hr {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    border-color: var(--prose-border);
+  }
+  .prose strong {
+    color: var(--prose-heading);
+    font-weight: 600;
+  }
+}

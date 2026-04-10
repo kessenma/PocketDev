@@ -94,7 +94,33 @@ function branchEntryToOption(entry: GitBranchEntry): GitBranchOption {
   }
 }
 
-function changeToMobile(change: { id: string; path: string; oldPath?: string; kind: string; staged: boolean; additions: number; deletions: number }): GitFileChange {
+function describeChange(change: {
+  kind: string
+  changedLines: number | null
+  hasLineStats: boolean
+  isBinary: boolean
+}) {
+  if (change.isBinary) return 'Binary or generated file'
+  if (change.hasLineStats && change.changedLines != null) {
+    if (change.changedLines === 1) return '1 changed line'
+    return `${change.changedLines} changed lines`
+  }
+  if (change.kind === 'renamed') return 'Renamed file'
+  return 'File changed'
+}
+
+function changeToMobile(change: {
+  id: string
+  path: string
+  oldPath?: string
+  kind: string
+  staged: boolean
+  additions: number
+  deletions: number
+  changedLines: number | null
+  hasLineStats: boolean
+  isBinary: boolean
+}): GitFileChange {
   return {
     id: change.id,
     path: change.path,
@@ -103,6 +129,10 @@ function changeToMobile(change: { id: string; path: string; oldPath?: string; ki
     staged: change.staged,
     additions: change.additions,
     deletions: change.deletions,
+    changedLines: change.changedLines,
+    hasLineStats: change.hasLineStats,
+    isBinary: change.isBinary,
+    summary: describeChange(change),
   }
 }
 
@@ -153,7 +183,7 @@ export const useGitStore = create<GitState>((set, get) => ({
         const result = await fetchGitDiff(server.ip, server.port, change.path, change.staged)
         set((state) => ({
           changes: state.changes.map((c) =>
-            c.id === fileId ? { ...c, diff: result.diff } : c,
+            c.id === fileId ? { ...c, diff: result.diff, hunks: result.hunks } : c,
           ),
         }))
       } catch {

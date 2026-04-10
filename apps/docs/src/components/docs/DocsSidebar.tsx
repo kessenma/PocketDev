@@ -64,7 +64,8 @@ export function DocsSidebar({
             <div className="flex items-center justify-end p-4">
               <button
                 onClick={onClose}
-                className="rounded-md p-2 transition-colors hover:bg-muted"
+                className="rounded-md p-2 transition-colors"
+                style={{ color: docsTokens.colors.text }}
               >
                 <X size={18} />
               </button>

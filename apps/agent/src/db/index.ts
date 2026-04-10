@@ -114,6 +114,7 @@ export function getDb() {
           const cols = sqlite.query('PRAGMA table_info(admin_accounts)').all() as { name: string }[]
           return cols.some((c) => c.name === 'role')
         }],
+        [1775851998660, '0007_amusing_medusa', () => existingTables.some((t) => t.name === 'env_vars')],
       ]
 
       // Clear any bogus stamps (far-future, legacy_bootstrap, etc.)
@@ -281,6 +282,7 @@ export type TaskFileTouchRow = typeof schema.taskFileTouches.$inferSelect
 export type ToolPathRow = typeof schema.toolPaths.$inferSelect
 export type AdminAccountRow = typeof schema.adminAccounts.$inferSelect
 export type PasskeyCredentialRow = typeof schema.passkeyCredentials.$inferSelect
+export type EnvVarRow = typeof schema.envVars.$inferSelect
 export type ConsoleUserRole = 'owner' | 'admin' | 'member'
 export type ConsoleUserStatus = 'active' | 'pending' | 'denied' | 'revoked'
 
@@ -899,4 +901,103 @@ export function hasPasskeyCredentials(): boolean {
     .where(eq(schema.passkeyCredentials.isActive, 1))
     .get()
   return (row?.count ?? 0) > 0
+}
+
+// ─── Env var operations ─────────────────────────────────
+
+export function getEnvVars(projectPath: string): EnvVarRow[] {
+  return getDb()
+    .select()
+    .from(schema.envVars)
+    .where(eq(schema.envVars.projectPath, projectPath))
+    .orderBy(schema.envVars.order, schema.envVars.createdAt)
+    .all()
+}
+
+export function getEnvVar(id: string): EnvVarRow | undefined {
+  return getDb().select().from(schema.envVars).where(eq(schema.envVars.id, id)).get()
+}
+
+export function getEnvVarByProjectAndKey(projectPath: string, key: string): EnvVarRow | undefined {
+  return getDb()
+    .select()
+    .from(schema.envVars)
+    .where(eq(schema.envVars.projectPath, projectPath) && eq(schema.envVars.key, key))
+    .get()
+}
+
+export function insertEnvVar(input: {
+  id: string
+  projectPath: string
+  key: string
+  value: string | null
+  comment: string | null
+  isSecret: number
+  isMultiline: number
+  order: number
+}) {
+  getDb().insert(schema.envVars).values(input).run()
+}
+
+export function updateEnvVar(
+  id: string,
+  patch: {
+    key?: string
+    value?: string | null
+    comment?: string | null
+    isSecret?: number
+    isMultiline?: number
+    order?: number
+  },
+) {
+  getDb()
+    .update(schema.envVars)
+    .set({ ...patch, updatedAt: sql`datetime('now')` })
+    .where(eq(schema.envVars.id, id))
+    .run()
+}
+
+export function deleteEnvVar(id: string) {
+  getDb().delete(schema.envVars).where(eq(schema.envVars.id, id)).run()
+}
+
+export function upsertEnvVar(input: {
+  id: string
+  projectPath: string
+  key: string
+  value?: string | null
+  comment?: string | null
+  isSecret?: number
+  isMultiline?: number
+  order?: number
+}) {
+  getDb()
+    .insert(schema.envVars)
+    .values({
+      id: input.id,
+      projectPath: input.projectPath,
+      key: input.key,
+      value: input.value ?? null,
+      comment: input.comment ?? null,
+      isSecret: input.isSecret ?? 0,
+      isMultiline: input.isMultiline ?? 0,
+      order: input.order ?? 0,
+    })
+    .onConflictDoUpdate({
+      target: [schema.envVars.projectPath, schema.envVars.key],
+      set: {
+        value: input.value ?? null,
+        ...(input.comment !== undefined ? { comment: input.comment } : {}),
+        ...(input.isSecret !== undefined ? { isSecret: input.isSecret } : {}),
+        ...(input.isMultiline !== undefined ? { isMultiline: input.isMultiline } : {}),
+        ...(input.order !== undefined ? { order: input.order } : {}),
+        updatedAt: sql`datetime('now')`,
+      },
+    })
+    .run()
+  return getDb()
+    .select()
+    .from(schema.envVars)
+    .where(eq(schema.envVars.projectPath, input.projectPath) && eq(schema.envVars.key, input.key))
+    .get()!
 }

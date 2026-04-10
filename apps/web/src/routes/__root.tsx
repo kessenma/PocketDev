@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { HeadContent, Scripts, Outlet, createRootRoute } from '@tanstack/react-router'
+import { NavBar } from '#/components/landing/NavBar'
 import { webFontStacks } from '@pocketdev/shared/theme'
 import appCss from '../styles.css?url'
 
@@ -21,7 +22,12 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
-  return <Outlet />
+  return (
+    <>
+      <NavBar />
+      <Outlet />
+    </>
+  )
 }
 
 function RootShell({ children }: { children: React.ReactNode }) {

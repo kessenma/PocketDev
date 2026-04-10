@@ -64,6 +64,11 @@ import type {
   PkgInstallResult,
   DockerSetupStatus,
   ScriptsResponse,
+  ListEnvVarsResponse,
+  CreateEnvVarRequest,
+  UpdateEnvVarRequest,
+  BulkUpsertEnvVarsRequest,
+  BulkUpsertEnvVarsResponse,
 } from '@pocketdev/shared/types'
 
 // Module-level HTTPS flag — set once when connection is established
@@ -1101,4 +1106,83 @@ export async function postVerifyDocker(ip: string, port: number): Promise<Docker
   })
   if (!response.ok) throw new Error(`Failed to verify Docker (${response.status})`)
   return response.json() as Promise<DockerSetupStatus>
+}
+
+// ─── Env Vars ──────────────────────────────────────────────────────
+
+export async function fetchEnvVars(
+  ip: string,
+  port: number,
+  projectPath: string,
+): Promise<ListEnvVarsResponse> {
+  const query = new URLSearchParams({ projectPath })
+  const response = await fetch(apiUrl(ip, port, `/envs?${query.toString()}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch env vars (${response.status})`)
+  return response.json() as Promise<ListEnvVarsResponse>
+}
+
+export async function postCreateEnvVar(
+  ip: string,
+  port: number,
+  input: CreateEnvVarRequest,
+) {
+  const response = await fetch(apiUrl(ip, port, '/envs'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify(input),
+  })
+  if (!response.ok) throw new Error(`Failed to create env var (${response.status})`)
+  return response.json()
+}
+
+export async function patchEnvVar(
+  ip: string,
+  port: number,
+  id: string,
+  patch: UpdateEnvVarRequest,
+) {
+  const response = await fetch(apiUrl(ip, port, `/envs/${id}`), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify(patch),
+  })
+  if (!response.ok) throw new Error(`Failed to update env var (${response.status})`)
+  return response.json()
+}
+
+export async function deleteEnvVarById(
+  ip: string,
+  port: number,
+  id: string,
+): Promise<void> {
+  const response = await fetch(apiUrl(ip, port, `/envs/${id}`), {
+    method: 'DELETE',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to delete env var (${response.status})`)
+}
+
+export async function patchBulkEnvVars(
+  ip: string,
+  port: number,
+  req: BulkUpsertEnvVarsRequest,
+): Promise<BulkUpsertEnvVarsResponse> {
+  const response = await fetch(apiUrl(ip, port, '/envs/bulk'), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify(req),
+  })
+  if (!response.ok) throw new Error(`Failed to bulk upsert env vars (${response.status})`)
+  return response.json() as Promise<BulkUpsertEnvVarsResponse>
 }

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -8,12 +9,20 @@ import FileBreadcrumbs from './FileBreadcrumbs'
 import FileViewerToolbar from './FileViewerToolbar'
 import type { CodeLanguage, FileNode } from './model'
 
+type LineHighlightRange = {
+  start: number
+  end: number
+}
+
 type Props = {
   file: FileNode | null
   content: string | null
   isLoading: boolean
   wrapLines: boolean
   onToggleWrap: () => void
+  variant?: 'card' | 'plain'
+  lineHighlights?: LineHighlightRange[]
+  highlightLabel?: string
   onBack?: () => void
   isContextSelected?: boolean
   onToggleContext?: () => void
@@ -54,6 +63,9 @@ export default function CodeViewer({
   isLoading,
   wrapLines,
   onToggleWrap,
+  variant = 'card',
+  lineHighlights = [],
+  highlightLabel,
   onBack,
   isContextSelected = false,
   onToggleContext,
@@ -68,47 +80,62 @@ export default function CodeViewer({
     }
   }, [showSyntaxInfo, file?.path])
 
+  const header = (
+    <>
+      <FileViewerToolbar
+        wrapLines={wrapLines}
+        onToggleWrap={onToggleWrap}
+        onBack={onBack}
+        contextSelected={isContextSelected}
+        onToggleContext={file ? onToggleContext : undefined}
+        showSyntaxInfo={showSyntaxInfo}
+        syntaxInfoVisible={syntaxInfoVisible}
+        onToggleSyntaxInfo={() => setSyntaxInfoVisible((current) => !current)}
+      />
+      {showSyntaxInfo && syntaxInfoVisible ? (
+        <View style={[styles.infoCallout, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+          <Text style={[styles.infoCalloutTitle, { color: colors.text }]}>Syntax colors</Text>
+          <Text style={[styles.infoCalloutBody, { color: colors.textSecondary }]}>
+            Highlighting here is intentionally lightweight and regex-based. It helps readability, but it is not parser-grade.
+          </Text>
+        </View>
+      ) : null}
+      <View style={styles.headerCopy}>
+        <FileCardTitle>Code Viewer</FileCardTitle>
+        <FileCardDescription>
+          {file
+            ? highlightLabel ?? 'Read-only source preview from the paired server.'
+            : 'Select a file from the browser to preview it.'}
+        </FileCardDescription>
+      </View>
+      {file ? <FileBreadcrumbs path={file.path} /> : null}
+    </>
+  )
+
+  const preview = file ? renderPreview(file, content, isLoading, wrapLines, colors, lineHighlights) : (
+    <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No file selected</Text>
+      <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
+        Use the browser to open a source file.
+      </Text>
+    </View>
+  )
+
+  if (variant === 'plain') {
+    return (
+      <View style={styles.plainContainer}>
+        <View style={styles.plainHeader}>{header}</View>
+        <View style={styles.content}>{preview}</View>
+      </View>
+    )
+  }
+
   return (
     <FileCard style={styles.card}>
-      <FileCardHeader>
-        <FileViewerToolbar
-          wrapLines={wrapLines}
-          onToggleWrap={onToggleWrap}
-          onBack={onBack}
-          contextSelected={isContextSelected}
-          onToggleContext={file ? onToggleContext : undefined}
-          showSyntaxInfo={showSyntaxInfo}
-          syntaxInfoVisible={syntaxInfoVisible}
-          onToggleSyntaxInfo={() => setSyntaxInfoVisible((current) => !current)}
-        />
-        {showSyntaxInfo && syntaxInfoVisible ? (
-          <View style={[styles.infoCallout, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
-            <Text style={[styles.infoCalloutTitle, { color: colors.text }]}>Syntax colors</Text>
-            <Text style={[styles.infoCalloutBody, { color: colors.textSecondary }]}>
-              Highlighting here is intentionally lightweight and regex-based. It helps readability, but it is not parser-grade.
-            </Text>
-          </View>
-        ) : null}
-        <View style={styles.headerCopy}>
-          <FileCardTitle>Code Viewer</FileCardTitle>
-          <FileCardDescription>
-            {file
-              ? 'Read-only source preview from the paired server.'
-              : 'Select a file from the browser to preview it.'}
-          </FileCardDescription>
-        </View>
-        {file ? <FileBreadcrumbs path={file.path} /> : null}
-      </FileCardHeader>
+      <FileCardHeader>{header}</FileCardHeader>
 
       <FileCardContent style={styles.content}>
-        {file ? renderPreview(file, content, isLoading, wrapLines, colors) : (
-          <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No file selected</Text>
-            <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-              Use the browser to open a source file.
-            </Text>
-          </View>
-        )}
+        {preview}
       </FileCardContent>
     </FileCard>
   )
@@ -120,6 +147,7 @@ function renderPreview(
   isLoading: boolean,
   wrapLines: boolean,
   colors: ReturnType<typeof useTheme>['colors'],
+  lineHighlights: LineHighlightRange[],
 ) {
   if (isLoading) {
     return (
@@ -189,34 +217,62 @@ function renderPreview(
   const lines = content.split('\n')
   const shouldHighlight = file.language ? HIGHLIGHTABLE_LANGUAGES.has(file.language) : false
 
+  const renderLine = ({ item: line, index }: { item: string; index: number }) => (
+    <View
+      style={[
+        styles.lineRow,
+        isLineHighlighted(index + 1, lineHighlights) && {
+          backgroundColor: colors.primary + '14',
+          borderLeftColor: colors.primary,
+        },
+      ]}
+    >
+      <Text style={[styles.lineNumber, { color: colors.textTertiary }]}>
+        {index + 1}
+      </Text>
+      <Text
+        style={[
+          styles.codeLine,
+          { color: colors.text },
+          wrapLines ? styles.codeLineWrapped : styles.codeLineUnwrapped,
+        ]}
+      >
+        {line
+          ? renderCodeLine(line, file.language ?? 'text', colors, shouldHighlight)
+          : ' '}
+      </Text>
+    </View>
+  )
+
+  if (wrapLines) {
+    return (
+      <FlashList
+        data={lines}
+        renderItem={renderLine}
+        keyExtractor={(_, i) => `${file.id}-${i}`}
+        getItemType={() => 'line'}
+        style={[styles.outerScroll, { backgroundColor: colors.backgroundSecondary }]}
+        contentContainerStyle={styles.outerContent}
+      />
+    )
+  }
+
+  // Non-wrapping: horizontal ScrollView for panning + FlashList for vertical virtualization
   return (
     <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator
+      nestedScrollEnabled
       style={[styles.outerScroll, { backgroundColor: colors.backgroundSecondary }]}
-      contentContainerStyle={styles.outerContent}
-      showsVerticalScrollIndicator={false}
     >
-      <ScrollView horizontal={!wrapLines} showsHorizontalScrollIndicator={!wrapLines}>
-        <View style={[styles.codeContainer, wrapLines && styles.wrappedCodeContainer]}>
-          {lines.map((line, index) => (
-            <View key={`${file.id}-${index + 1}`} style={styles.lineRow}>
-              <Text style={[styles.lineNumber, { color: colors.textTertiary }]}>
-                {index + 1}
-              </Text>
-              <Text
-                style={[
-                  styles.codeLine,
-                  { color: colors.text },
-                  wrapLines ? styles.codeLineWrapped : styles.codeLineUnwrapped,
-                ]}
-              >
-                {line
-                  ? renderCodeLine(line, file.language ?? 'text', colors, shouldHighlight)
-                  : ' '}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+      <FlashList
+        data={lines}
+        renderItem={renderLine}
+        keyExtractor={(_, i) => `${file.id}-${i}`}
+        getItemType={() => 'line'}
+        style={styles.nonWrapList}
+        contentContainerStyle={styles.outerContent}
+      />
     </ScrollView>
   )
 }
@@ -234,6 +290,16 @@ function renderCodeLine(
       {segment.value}
     </Text>
   ))
+}
+
+function isLineHighlighted(lineNumber: number, lineHighlights: LineHighlightRange[]) {
+  for (const range of lineHighlights) {
+    if (lineNumber >= range.start && lineNumber <= range.end) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function tokenizeLine(line: string, language: CodeLanguage): Array<{ value: string; type: TokenType }> {
@@ -346,6 +412,13 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 320,
   },
+  plainContainer: {
+    flex: 1,
+    gap: spacing[3],
+  },
+  plainHeader: {
+    gap: spacing[3],
+  },
   headerCopy: {
     gap: spacing[1],
   },
@@ -378,17 +451,19 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     minHeight: '100%',
   },
-  codeContainer: {
-    gap: spacing[1],
-    minWidth: '100%',
-  },
-  wrappedCodeContainer: {
+  nonWrapList: {
     flex: 1,
+    minWidth: 1200,
   },
   lineRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing[3],
+    borderLeftWidth: 2,
+    borderLeftColor: 'transparent',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 2,
   },
   lineNumber: {
     width: 28,

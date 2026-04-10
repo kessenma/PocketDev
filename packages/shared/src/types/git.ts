@@ -38,12 +38,24 @@ export interface GitFileChange {
   staged: boolean
   additions: number
   deletions: number
+  changedLines: number | null
+  hasLineStats: boolean
+  isBinary: boolean
+}
+
+export interface GitDiffHunk {
+  oldStart: number
+  oldLines: number
+  newStart: number
+  newLines: number
 }
 
 export interface GitDiffResponse {
   path: string
   diff: string
   truncated: boolean
+  hunks: GitDiffHunk[]
+  isBinary: boolean
 }
 
 export interface GitCommitEntry {

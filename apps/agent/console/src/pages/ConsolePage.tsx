@@ -8,6 +8,7 @@ import { PasskeySettings } from '#/components/PasskeySettings'
 import { ServerTerminal } from '#/components/ServerTerminal'
 import { DiagnosticsPanel } from '#/components/DiagnosticsPanel'
 import { RepoInspectorPanel } from '#/components/RepoInspectorPanel'
+import { EnvVarsPanel } from '#/components/EnvVarsPanel'
 import { UserManagementPanel } from '#/components/UserManagementPanel'
 import { UpdateBanner } from '#/components/UpdateBanner'
 import { Modal } from '#/components/ui/modal'
@@ -158,6 +159,10 @@ export function ConsolePage() {
                   }
                 }}
               />
+            </div>
+
+            <div className="lg:col-span-12">
+              <EnvVarsPanel />
             </div>
 
             <div className="lg:col-span-12">

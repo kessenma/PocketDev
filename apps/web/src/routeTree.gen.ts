@@ -10,19 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ArchitectureRouteImport } from './routes/architecture'
-import { Route as DocsRouteRouteImport } from './routes/docs/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DocsIndexRouteImport } from './routes/docs/index'
-import { Route as DocsGetStartedRouteImport } from './routes/docs/get-started'
 
 const ArchitectureRoute = ArchitectureRouteImport.update({
   id: '/architecture',
   path: '/architecture',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocsRouteRoute = DocsRouteRouteImport.update({
-  id: '/docs',
-  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -30,55 +22,30 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DocsIndexRoute = DocsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DocsRouteRoute,
-} as any)
-const DocsGetStartedRoute = DocsGetStartedRouteImport.update({
-  id: '/get-started',
-  path: '/get-started',
-  getParentRoute: () => DocsRouteRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/docs': typeof DocsRouteRouteWithChildren
   '/architecture': typeof ArchitectureRoute
-  '/docs/get-started': typeof DocsGetStartedRoute
-  '/docs/': typeof DocsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/architecture': typeof ArchitectureRoute
-  '/docs/get-started': typeof DocsGetStartedRoute
-  '/docs': typeof DocsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/docs': typeof DocsRouteRouteWithChildren
   '/architecture': typeof ArchitectureRoute
-  '/docs/get-started': typeof DocsGetStartedRoute
-  '/docs/': typeof DocsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/docs' | '/architecture' | '/docs/get-started' | '/docs/'
+  fullPaths: '/' | '/architecture'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/architecture' | '/docs/get-started' | '/docs'
-  id:
-    | '__root__'
-    | '/'
-    | '/docs'
-    | '/architecture'
-    | '/docs/get-started'
-    | '/docs/'
+  to: '/' | '/architecture'
+  id: '__root__' | '/' | '/architecture'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DocsRouteRoute: typeof DocsRouteRouteWithChildren
   ArchitectureRoute: typeof ArchitectureRoute
 }
 
@@ -91,13 +58,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ArchitectureRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/docs': {
-      id: '/docs'
-      path: '/docs'
-      fullPath: '/docs'
-      preLoaderRoute: typeof DocsRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -105,40 +65,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/docs/': {
-      id: '/docs/'
-      path: '/'
-      fullPath: '/docs/'
-      preLoaderRoute: typeof DocsIndexRouteImport
-      parentRoute: typeof DocsRouteRoute
-    }
-    '/docs/get-started': {
-      id: '/docs/get-started'
-      path: '/get-started'
-      fullPath: '/docs/get-started'
-      preLoaderRoute: typeof DocsGetStartedRouteImport
-      parentRoute: typeof DocsRouteRoute
-    }
   }
 }
 
-interface DocsRouteRouteChildren {
-  DocsGetStartedRoute: typeof DocsGetStartedRoute
-  DocsIndexRoute: typeof DocsIndexRoute
-}
-
-const DocsRouteRouteChildren: DocsRouteRouteChildren = {
-  DocsGetStartedRoute: DocsGetStartedRoute,
-  DocsIndexRoute: DocsIndexRoute,
-}
-
-const DocsRouteRouteWithChildren = DocsRouteRoute._addFileChildren(
-  DocsRouteRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DocsRouteRoute: DocsRouteRouteWithChildren,
   ArchitectureRoute: ArchitectureRoute,
 }
 export const routeTree = rootRouteImport

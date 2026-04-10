@@ -1,3 +1,25 @@
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react')
+  return {
+    FlashList: function FlashList({ data, renderItem, ListEmptyComponent, style, contentContainerStyle }) {
+      if (!data || data.length === 0) {
+        const empty = typeof ListEmptyComponent === 'function'
+          ? React.createElement(ListEmptyComponent)
+          : ListEmptyComponent
+        return React.createElement('View', { style }, empty)
+      }
+      return React.createElement(
+        'View',
+        { style },
+        data.map((item, index) => {
+          const el = renderItem({ item, index, target: 'Cell' })
+          return el ? React.cloneElement(el, { key: String(index) }) : null
+        }),
+      )
+    },
+  }
+})
+
 jest.mock('react-native', () => {
   const React = require('react')
 
@@ -160,5 +182,23 @@ describe('CodeViewer', () => {
     })
 
     expect(collectText(tree)).toContain('Preview not available')
+  })
+
+  it('renders plain variant without the outer file card wrapper', () => {
+    let tree
+
+    renderer.act(() => {
+      tree = renderer.create(React.createElement(CodeViewer, {
+        file: { id: 'main.py', name: 'main.py', path: 'main.py', kind: 'file', language: 'python' },
+        content: 'def main():\n    return 1',
+        isLoading: false,
+        wrapLines: false,
+        onToggleWrap: jest.fn(),
+        variant: 'plain',
+      }))
+    })
+
+    expect(() => tree.root.findByType('FileCard')).toThrow()
+    expect(collectText(tree).join(' ')).toContain('def')
   })
 })

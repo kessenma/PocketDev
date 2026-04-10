@@ -4,11 +4,13 @@
  *
  * - Scene 0→1: Laptop + blue circle bridge ConsoleSetup → Connect slide.
  * - Scene 1→2: Blue circle (only) bridges Connect → Setup slide.
+ * - Scene 3→4→5: Blue circle bridges RepoClone → EnvInjection → RemoteAi.
  */
 import { palette } from '@pocketdev/shared/theme'
 import { architectureFonts } from '../../../shared/theme'
 import { BauhausLaptop } from './BauhausLaptop'
 import type { SceneRange } from '../timeline-types'
+import { sceneProgress } from '../timeline-utils'
 
 function mix(a: number, b: number, t: number) {
   return a + (b - a) * t
@@ -211,6 +213,52 @@ function repoCloneCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): C
   return repoCloneCircleStartPose(vpW, vpH, isDesktop)
 }
 
+/** Circle at start of EnvInjection scene — entering from the left on the center line. */
+function envInjectionCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const vbW = 960
+  const vbH = 1200
+  const s = Math.max(vpW / vbW, vpH / vbH)
+  const offsetX = (vpW - vbW * s) / 2
+  const offsetY = (vpH - vbH * s) / 2
+
+  return {
+    cx: -180 * s + offsetX,
+    cy: (isDesktop ? 620 : 640) * s + offsetY,
+    r: (isDesktop ? 146 : 156) * s,
+  }
+}
+
+/** Circle at end of EnvInjection scene — settled in the center after interception. */
+function envInjectionCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const vbW = 960
+  const vbH = 1200
+  const s = Math.max(vpW / vbW, vpH / vbH)
+  const offsetX = (vpW - vbW * s) / 2
+  const offsetY = (vpH - vbH * s) / 2
+
+  return {
+    cx: 480 * s + offsetX,
+    cy: (isDesktop ? 620 : 640) * s + offsetY,
+    r: (isDesktop ? 146 : 156) * s,
+  }
+}
+
+function envInjectionCirclePose(
+  vpW: number,
+  vpH: number,
+  isDesktop: boolean,
+  progress: number,
+): CirclePose {
+  const start = envInjectionCircleStartPose(vpW, vpH, isDesktop)
+  const end = envInjectionCircleEndPose(vpW, vpH, isDesktop)
+  const travel = clamp(progress / 0.64, 0, 1)
+  return {
+    cx: mix(start.cx, end.cx, travel),
+    cy: mix(start.cy, end.cy, travel),
+    r: mix(start.r, end.r, travel),
+  }
+}
+
 /**
  * Circle at start of RemoteAi scene — left of the phone.
  * RemoteAi uses viewBox (1200×1200 or 750×1200) with xMidYMid slice,
@@ -261,6 +309,7 @@ export function PersistentTransitionOverlay({
   const range0 = ranges[0]
   const range1 = ranges[1]
   const range2 = ranges[2]
+  const range4 = ranges[4]
   if (!range0) return null
 
   // --- Scene 0→1 slide transition ---
@@ -335,12 +384,37 @@ export function PersistentTransitionOverlay({
 
   if (inSlide3) {
     const from = repoCloneCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
-    const to = remoteAiCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = envInjectionCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
     circlePose = {
       cx: mix(from.cx, to.cx, slideP3),
       cy: mix(from.cy, to.cy, slideP3),
       r: mix(from.r, to.r, slideP3),
     }
+  }
+
+  // --- Scene 4→5 slide transition (circle only) ---
+  const inSlide4 = range4 && railProgress > range4.holdEnd && railProgress <= range4.end
+  const slideP4 = inSlide4
+    ? clamp((railProgress - range4.holdEnd) / (range4.end - range4.holdEnd), 0, 1)
+    : 0
+
+  if (inSlide4) {
+    const from = envInjectionCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = remoteAiCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    circlePose = {
+      cx: mix(from.cx, to.cx, slideP4),
+      cy: mix(from.cy, to.cy, slideP4),
+      r: mix(from.r, to.r, slideP4),
+    }
+  }
+
+  const envSceneActive = range4 && railProgress >= range4.start && railProgress <= range4.end
+  const envSceneProgress = envSceneActive && range4
+    ? sceneProgress(railProgress, range4)
+    : 0
+
+  if (!circlePose && envSceneActive && range4) {
+    circlePose = envInjectionCirclePose(vpSize.w, vpSize.h, isDesktopLayout, envSceneProgress)
   }
 
   // Nothing to render
@@ -361,7 +435,7 @@ export function PersistentTransitionOverlay({
           cy={circlePose.cy}
           r={Math.max(circlePose.r, 0.1)}
           fill={palette.bauhaus.blue}
-          opacity={0.96}
+          opacity={envSceneActive ? 1 : 0.96}
         />
       )}
       {laptopPose && (
@@ -440,6 +514,7 @@ export function shouldHideBlueCircle(
   const range1 = ranges[1]
   const range2 = ranges[2]
   const range3 = ranges[3]
+  const range4 = ranges[4]
 
   // Scene 0→1 slide: scenes 0 and 1 hide their circles
   if (sceneIndex === 0 || sceneIndex === 1) {
@@ -459,6 +534,16 @@ export function shouldHideBlueCircle(
   // Scene 3→4 slide: scenes 3 and 4 hide their circles
   if (range3 && (sceneIndex === 3 || sceneIndex === 4)) {
     if (railProgress > range3.holdEnd && railProgress <= range3.end) return true
+  }
+
+  // EnvInjection scene: overlay owns the circle throughout the scene
+  if (range4 && sceneIndex === 4) {
+    if (railProgress >= range4.start && railProgress <= range4.end) return true
+  }
+
+  // Scene 4→5 slide: scenes 4 and 5 hide their circles
+  if (range4 && (sceneIndex === 4 || sceneIndex === 5)) {
+    if (railProgress > range4.holdEnd && railProgress <= range4.end) return true
   }
 
   return false

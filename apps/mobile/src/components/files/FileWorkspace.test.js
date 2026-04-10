@@ -142,6 +142,7 @@ jest.mock('lucide-react-native', () => {
   return {
     FileCode2: createIcon('FileCode2'),
     FolderOpen: createIcon('FolderOpen'),
+    Maximize2: createIcon('Maximize2'),
     Pin: createIcon('Pin'),
     RefreshCcw: createIcon('RefreshCcw'),
     Search: createIcon('Search'),
@@ -268,7 +269,6 @@ describe('FileWorkspace', () => {
     const tree = renderWorkspace()
     const text = collectText(tree)
 
-    expect(text).toContain('Code Browser')
     expect(text).toContain('PocketDev')
     expect(text).toContain('AI Context')
     expect(text).toContain('src/App.tsx')

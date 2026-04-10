@@ -1,4 +1,4 @@
-export type { GitFileChangeKind, GitRemoteStatus } from '@pocketdev/shared/types'
+export type { GitDiffHunk, GitFileChangeKind, GitRemoteStatus } from '@pocketdev/shared/types'
 import type { GitRemoteStatus } from '@pocketdev/shared/types'
 
 export type GitView = 'changes' | 'history' | 'branches'
@@ -11,8 +11,17 @@ export interface GitFileChange {
   staged: boolean
   additions: number
   deletions: number
+  changedLines: number | null
+  hasLineStats: boolean
+  isBinary: boolean
   summary?: string
   diff?: string
+  hunks?: Array<{
+    oldStart: number
+    oldLines: number
+    newStart: number
+    newLines: number
+  }>
 }
 
 export interface GitCommitEntry {

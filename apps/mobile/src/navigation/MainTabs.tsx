@@ -8,6 +8,7 @@ import CodeScreen from '../screens/CodeScreen'
 import SettingsScreen from '../screens/SettingsScreen'
 import { useConnectionStore } from '../stores/connection'
 import { useScriptsStore } from '../stores/scripts'
+import { useFilesStore } from '../stores/files'
 import type { MainTabParamList } from './types'
 import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import WorkspaceNavigation from '../components/navigation/WorkspaceNavigation'
@@ -105,11 +106,19 @@ export default function MainTabs() {
         component={CodeScreen}
         options={{
           title: 'Code',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => renderTabIcon('Code', { color, size }),
           tabBarBadge: runningCount > 0 ? runningCount : undefined,
           tabBarBadgeStyle: { backgroundColor: '#22c55e' },
         }}
         listeners={{
+          tabPress: (e) => {
+            const filesState = useFilesStore.getState()
+            if (filesState.activePhoneView === 'viewer') {
+              e.preventDefault()
+              filesState.goBackToBrowser()
+            }
+          },
           tabLongPress: () => {
             if (runningCount > 0) setScriptsSheetVisible(true)
           },

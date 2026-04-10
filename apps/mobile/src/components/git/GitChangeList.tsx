@@ -52,8 +52,25 @@ export default function GitChangeList({ changes, selectedFileId, onSelect }: Pro
                 </Text>
 
                 <View style={styles.metaRow}>
-                  <Text style={[styles.meta, { color: colors.success }]}>+{change.additions}</Text>
-                  <Text style={[styles.meta, { color: colors.error }]}>-{change.deletions}</Text>
+                  {change.hasLineStats ? (
+                    <>
+                      {change.additions > 0 ? (
+                        <Text style={[styles.meta, { color: colors.success }]}>+{change.additions}</Text>
+                      ) : null}
+                      {change.deletions > 0 ? (
+                        <Text style={[styles.meta, { color: colors.error }]}>-{change.deletions}</Text>
+                      ) : null}
+                      {change.changedLines != null ? (
+                        <Text style={[styles.meta, { color: colors.textSecondary }]}>
+                          {change.changedLines} line{change.changedLines === 1 ? '' : 's'}
+                        </Text>
+                      ) : null}
+                    </>
+                  ) : (
+                    <Text style={[styles.meta, { color: colors.textSecondary }]}>
+                      {change.isBinary ? 'binary' : 'no line stats'}
+                    </Text>
+                  )}
                   <Text style={[styles.meta, { color: colors.textTertiary }]}>
                     {change.staged ? 'staged' : 'unstaged'}
                   </Text>
