@@ -27,11 +27,7 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
     }
     case 'codex': {
       const codexPath = getToolPath('codex_cli') ?? 'codex'
-      const cmd = [codexPath, 'exec', '--json', '--color', 'never']
-      if (model) cmd.push('--model', model)
-      if (mode === 'plan') cmd.push('-c', 'collaboration_mode="plan"')
-      cmd.push(prompt)
-      return cmd
+      return [codexPath, 'app-server', '--listen', 'stdio://']
     }
     case 'copilot': {
       const copilotPath = getToolPath('copilot_cli') ?? 'copilot'
@@ -78,7 +74,7 @@ export function startTask(
     const command = buildCommand(agentType, prompt, model, mode, sessionId ?? undefined)
     console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
     console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
-    const proc = new ManagedProcess({ taskId, command, cwd, mode, agentType, onComplete })
+    const proc = new ManagedProcess({ taskId, command, cwd, mode, agentType, prompt, model, onComplete })
     processes.set(taskId, proc)
     proc.start()
   }

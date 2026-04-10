@@ -48,6 +48,7 @@ export async function syncGitHistory(
     if (!project) throw new Error(`Project not found: ${projectId}`)
 
     const cwd = project.absolutePath
+    const db = getDb()
 
     // Verify it's a git repo
     const { exitCode } = await exec('git rev-parse --show-toplevel', cwd)
@@ -87,7 +88,6 @@ export async function syncGitHistory(
     // Get current branch name
     const { stdout: branchName } = await exec('git branch --show-current', cwd)
 
-    const db = getDb()
     let latestSha: string | null = null
     let insertedCount = 0
 

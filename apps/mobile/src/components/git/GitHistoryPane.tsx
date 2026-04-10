@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect } from 'react'
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 import { ArrowDownToLine, History } from 'lucide-react-native'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import type { GitDetailedCommitEntry } from '@pocketdev/shared/types'
@@ -52,10 +53,11 @@ export default function GitHistoryPane() {
   const canPull = remote.behind > 0 && !isPulling && !remote.requiresAuth
 
   return (
-    <FlatList
+    <FlashList
       data={detailedCommits}
       renderItem={renderItem}
       keyExtractor={(item) => item.fullSha}
+      getItemType={() => 'commit'}
       contentContainerStyle={styles.list}
       ItemSeparatorComponent={() => <View style={{ height: spacing[2] }} />}
       ListHeaderComponent={
