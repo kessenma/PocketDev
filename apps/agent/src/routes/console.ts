@@ -559,14 +559,25 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     try {
+      let syncError: string | null = null
+
       // Auto-sync if no commits exist yet
       let historyResult = getDetailedCommits(projectId, 30, 0)
       if (historyResult.commits.length === 0) {
-        await syncGitHistory(projectId).catch(() => {})
+        try {
+          console.log('[git-history] Console auto-sync for:', projectId)
+          await syncGitHistory(projectId)
+        } catch (e) {
+          syncError = e instanceof Error ? e.message : String(e)
+          console.error('[git-history] Console auto-sync failed:', syncError)
+        }
         historyResult = getDetailedCommits(projectId, 30, 0)
       }
 
-      const syncStatus = await detectNewCommits(projectId).catch(() => null)
+      const syncStatus = await detectNewCommits(projectId).catch((e) => {
+        console.error('[git-history] detectNewCommits failed:', e instanceof Error ? e.message : e)
+        return null
+      })
 
       return {
         projectId,
@@ -592,9 +603,12 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
         })),
         hasMore: historyResult.hasMore,
         syncStatus,
+        syncError,
       }
-    } catch {
-      return { commits: [], syncStatus: null, projectId }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[git-history] Console git-history endpoint error:', msg)
+      return { commits: [], syncStatus: null, projectId, syncError: msg }
     }
   })
 

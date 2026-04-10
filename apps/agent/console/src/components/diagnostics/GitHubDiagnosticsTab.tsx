@@ -178,6 +178,9 @@ export function GitHubDiagnosticsTab({ githubInfo, projectsInfo, gitHistoryInfo 
               <p className="text-[#f4f0e8]/45">No sync status available</p>
             )}
             <p>Commits in DB: {gitHistoryInfo?.commits.length ?? 0}{gitHistoryInfo?.hasMore ? '+' : ''}</p>
+            {gitHistoryInfo?.syncError && (
+              <p className="mt-2 text-[#f87171]">Error: {gitHistoryInfo.syncError}</p>
+            )}
           </div>
         </div>
       </div>

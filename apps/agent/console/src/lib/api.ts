@@ -468,6 +468,7 @@ export interface GitHistoryDebugInfo {
     headSha: string
     pendingCommits: number
   } | null
+  syncError: string | null
 }
 
 export async function fetchGitHistoryDebug(): Promise<GitHistoryDebugInfo> {
