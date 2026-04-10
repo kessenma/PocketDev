@@ -94,12 +94,9 @@ export function getDb() {
       console.log('[db] Existing migration stamps:', JSON.stringify(stamps))
       const maxCreatedAt = stamps.reduce((max, s) => Math.max(max, Number(s.created_at ?? 0)), 0)
       if (maxCreatedAt > 9999999999000) {
-        console.log('[db] Far-future stamp detected — replacing with legacy cutoff so new migrations can run')
+        console.log('[db] Far-future stamp detected — rebuilding migration stamps based on existing tables')
         sqlite.exec(`DELETE FROM __drizzle_migrations;`)
-        sqlite.exec(`
-          INSERT INTO __drizzle_migrations (hash, created_at)
-          VALUES ('legacy_bootstrap', ${LEGACY_CUTOFF_TIMESTAMP});
-        `)
+
         // Ensure admin tables exist (were created by the old bootstrap)
         sqlite.exec(`
           CREATE TABLE IF NOT EXISTS admin_accounts (
@@ -129,7 +126,35 @@ export function getDb() {
           );
         `)
         sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);`)
-        console.log('[db] Stamp fixed — Drizzle will now run migrations after 0001')
+
+        // Detect which migrations already ran by checking for tables/columns they create.
+        // Each entry: [migration_timestamp, hash_tag, check_fn]
+        const migrationChecks: [number, string, () => boolean][] = [
+          [1775155268676, '0000_military_surge', () => existingTables.some((t) => t.name === 'server_config')],
+          [1775429725360, '0001_new_peter_parker', () => existingTables.some((t) => t.name === 'devices')],
+          [1775745487970, '0002_cold_winter_soldier', () => existingTables.some((t) => t.name === 'git_commits')],
+          [1775748378639, '0003_colorful_penance', () => existingTables.some((t) => t.name === 'task_turns')],
+          [1775764134200, '0004_unusual_jigsaw', () => existingTables.some((t) => t.name === 'task_file_touches')],
+          [1775765355602, '0005_slippery_madripoor', () => {
+            const cols = sqlite.query('PRAGMA table_info(git_commits)').all() as { name: string }[]
+            return cols.some((c) => c.name === 'origin')
+          }],
+          [1775767076009, '0006_worried_arachne', () => {
+            const cols = sqlite.query('PRAGMA table_info(admin_accounts)').all() as { name: string }[]
+            return cols.some((c) => c.name === 'role')
+          }],
+        ]
+
+        for (const [timestamp, tag, check] of migrationChecks) {
+          if (check()) {
+            sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${tag}', ${timestamp});`)
+            console.log(`[db] Stamped migration ${tag} (already applied)`)
+          } else {
+            break // Stop at the first migration that hasn't been applied
+          }
+        }
+
+        console.log('[db] Stamp rebuild complete — Drizzle will run remaining migrations')
       }
     }
 
