@@ -53,10 +53,30 @@ Migrations are stored in `apps/agent/drizzle/` with metadata in `drizzle/meta/_j
 | `server_config` | Server keypair, session tokens, custom settings |
 | `tasks` | Task history (prompts, status, exit codes) |
 | `task_logs` | Streaming output lines from tasks |
+| `task_turns` | Multi-turn conversation history per task |
+| `task_file_touches` | Files read/written by tasks |
+| `task_commits` | Junction linking tasks to git commits made during execution |
 | `plans` | Agent-proposed plans |
 | `plan_steps`, `plan_questions`, `plan_messages` | Plan details |
 | `tool_paths` | Detected CLI tools and their paths |
-| `admin_accounts` | Web console admin (email + hashed password) |
+| `admin_accounts` | Web console admin (email + hashed password, role, status) |
+| `passkey_credentials` | WebAuthn passkeys for console login |
+| `git_commits` | Synced git commit history per project |
+| `git_commit_files` | Per-file stats (additions, deletions, kind) for each commit |
+| `projects` | Registered project directories with git sync watermark |
+
+## Legacy DB Reconciliation
+
+Pre-Drizzle installs and servers that hit previous migration bugs may have `__drizzle_migrations` stamps that are out of sync with reality (e.g., far-future timestamps, missing stamps for migrations that already ran). On every startup, `getDb()` in `src/db/index.ts` runs a reconciliation pass:
+
+1. Checks if legacy tables exist (`devices`) — skips entirely for fresh installs
+2. Ensures `admin_accounts` and `passkey_credentials` tables exist (these predate Drizzle migrations)
+3. For each migration (0000–0006), checks whether its artifacts (tables/columns) already exist in the DB
+4. Clears any bogus stamps (far-future, `legacy_bootstrap`, etc.)
+5. Stamps any migration whose artifacts exist but whose stamp is missing
+6. Lets `migrate()` run only the truly un-applied migrations
+
+This is idempotent and safe to run every startup. When adding a new migration, add a corresponding check to the `migrationChecks` array in `getDb()`.
 
 ## Future: Mobile SQLite Migrations
 

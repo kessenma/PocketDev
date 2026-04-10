@@ -34,19 +34,14 @@ export function getDb() {
     console.log('[db] Migrations folder exists:', existsSync(migrationsFolder))
     console.log('[db] Journal exists:', existsSync(join(migrationsFolder, 'meta/_journal.json')))
 
-    // Legacy DB migration: stamp Drizzle so it only runs migrations for tables
-    // that don't exist yet. Migration 0001 (when=1775429725360) is the last one
-    // whose tables (devices, tasks, projects, etc.) exist in pre-Drizzle installs.
-    // By stamping with 0001's timestamp, Drizzle will run 0002+ which add new
-    // tables like git_commits, git_commit_files, task_commits, etc.
-    const LEGACY_CUTOFF_TIMESTAMP = 1775429725360 // 0001_new_peter_parker.sql
-
+    // Legacy DB handling: ensure Drizzle migration stamps match actual DB state.
+    // This covers fresh installs (no-op), legacy pre-Drizzle DBs, and DBs where
+    // previous bootstrap bugs left stamps out of sync with reality.
     const hasLegacyTables = existingTables.some((t) => t.name === 'devices')
     const hasDrizzleMeta = existingTables.some((t) => t.name === '__drizzle_migrations')
 
-    if (hasLegacyTables && !hasDrizzleMeta) {
-      console.log('[db] Legacy DB detected (no __drizzle_migrations). Bootstrapping...')
-      // Create tables that existed in legacy schema but weren't in migration 0000/0001
+    if (hasLegacyTables) {
+      // Ensure tables that existed in legacy schema but aren't in any migration
       sqlite.exec(`
         CREATE TABLE IF NOT EXISTS admin_accounts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,61 +70,69 @@ export function getDb() {
         );
       `)
       sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);`)
-      // Stamp at legacy cutoff so Drizzle runs all subsequent migrations
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS __drizzle_migrations (
-          id SERIAL PRIMARY KEY,
-          hash text NOT NULL,
-          created_at numeric
-        );
-      `)
-      sqlite.exec(`
-        INSERT INTO __drizzle_migrations (hash, created_at)
-        VALUES ('legacy_bootstrap', ${LEGACY_CUTOFF_TIMESTAMP});
-      `)
-      console.log('[db] Legacy bootstrap complete — Drizzle will run migrations after 0001')
-    } else if (hasLegacyTables && hasDrizzleMeta) {
-      // Fix far-future stamps from prior bootstrap that blocked all migrations
-      const stamps = sqlite.query('SELECT id, hash, created_at FROM __drizzle_migrations').all() as { id: number; hash: string; created_at: number }[]
+
+      if (!hasDrizzleMeta) {
+        sqlite.exec(`
+          CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+            id SERIAL PRIMARY KEY,
+            hash text NOT NULL,
+            created_at numeric
+          );
+        `)
+      }
+
+      // Rebuild stamps from scratch based on what actually exists in the DB.
+      // This is idempotent — safe to run every startup on legacy/migrated DBs.
+      const stamps = hasDrizzleMeta
+        ? sqlite.query('SELECT hash, created_at FROM __drizzle_migrations').all() as { hash: string; created_at: number }[]
+        : []
       console.log('[db] Existing migration stamps:', JSON.stringify(stamps))
-      const maxCreatedAt = stamps.reduce((max, s) => Math.max(max, Number(s.created_at ?? 0)), 0)
-      if (maxCreatedAt > 9999999999000) {
-        console.log('[db] Far-future stamp detected — replacing with legacy cutoff so new migrations can run')
+
+      const stampSet = new Set(stamps.map((s) => Number(s.created_at)))
+
+      // Each migration: [timestamp, tag, check if already applied]
+      const migrationChecks: [number, string, () => boolean][] = [
+        [1775155268676, '0000_military_surge', () => existingTables.some((t) => t.name === 'server_config')],
+        [1775429725360, '0001_new_peter_parker', () => existingTables.some((t) => t.name === 'devices')],
+        [1775745487970, '0002_cold_winter_soldier', () => {
+          if (!existingTables.some((t) => t.name === 'git_commits')) return false
+          // 0002 also ALTERs projects — ensure the column exists (partial migration recovery)
+          const projCols = sqlite.query('PRAGMA table_info(projects)').all() as { name: string }[]
+          if (!projCols.some((c) => c.name === 'last_synced_sha')) {
+            sqlite.exec('ALTER TABLE projects ADD COLUMN last_synced_sha text;')
+            console.log('[db] Recovered missing last_synced_sha column from partial 0002 migration')
+          }
+          return true
+        }],
+        [1775748378639, '0003_colorful_penance', () => existingTables.some((t) => t.name === 'task_turns')],
+        [1775764134200, '0004_unusual_jigsaw', () => existingTables.some((t) => t.name === 'task_file_touches')],
+        [1775765355602, '0005_slippery_madripoor', () => {
+          const cols = sqlite.query('PRAGMA table_info(git_commits)').all() as { name: string }[]
+          return cols.some((c) => c.name === 'origin')
+        }],
+        [1775767076009, '0006_worried_arachne', () => {
+          const cols = sqlite.query('PRAGMA table_info(admin_accounts)').all() as { name: string }[]
+          return cols.some((c) => c.name === 'role')
+        }],
+      ]
+
+      // Clear any bogus stamps (far-future, legacy_bootstrap, etc.)
+      const validTimestamps = new Set(migrationChecks.map(([ts]) => ts))
+      const hasBogusStamps = stamps.some((s) => !validTimestamps.has(Number(s.created_at)))
+      if (hasBogusStamps) {
+        console.log('[db] Clearing bogus migration stamps')
         sqlite.exec(`DELETE FROM __drizzle_migrations;`)
-        sqlite.exec(`
-          INSERT INTO __drizzle_migrations (hash, created_at)
-          VALUES ('legacy_bootstrap', ${LEGACY_CUTOFF_TIMESTAMP});
-        `)
-        // Ensure admin tables exist (were created by the old bootstrap)
-        sqlite.exec(`
-          CREATE TABLE IF NOT EXISTS admin_accounts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-          );
-        `)
-        sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS admin_accounts_email_unique ON admin_accounts (email);`)
-        sqlite.exec(`
-          CREATE TABLE IF NOT EXISTS passkey_credentials (
-            id TEXT PRIMARY KEY NOT NULL,
-            admin_id INTEGER NOT NULL,
-            credential_id TEXT NOT NULL,
-            public_key TEXT NOT NULL,
-            counter INTEGER DEFAULT 0 NOT NULL,
-            credential_device_type TEXT,
-            credential_backed_up INTEGER DEFAULT 0,
-            transports TEXT,
-            device_name TEXT,
-            aaguid TEXT,
-            is_active INTEGER DEFAULT 1 NOT NULL,
-            last_used_at TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now'))
-          );
-        `)
-        sqlite.exec(`CREATE UNIQUE INDEX IF NOT EXISTS passkey_credentials_credential_id_unique ON passkey_credentials (credential_id);`)
-        console.log('[db] Stamp fixed — Drizzle will now run migrations after 0001')
+        stampSet.clear()
+      }
+
+      // Run all checks (which may do repair work like adding missing columns),
+      // and stamp any migration whose artifacts exist but whose stamp is missing
+      for (const [timestamp, tag, check] of migrationChecks) {
+        const applied = check()
+        if (!stampSet.has(timestamp) && applied) {
+          sqlite.exec(`INSERT INTO __drizzle_migrations (hash, created_at) VALUES ('${tag}', ${timestamp});`)
+          console.log(`[db] Stamped migration ${tag} (already applied)`)
+        }
       }
     }
 

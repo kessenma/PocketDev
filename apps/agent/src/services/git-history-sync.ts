@@ -60,7 +60,7 @@ export async function syncGitHistory(
     if (lastSha && !/^[0-9a-f]{7,40}$/i.test(lastSha)) {
       console.warn(`[git-history] Invalid lastSyncedSha "${lastSha}" for project ${projectId} — resetting`)
       lastSha = null
-      db.update(schema.projects)
+      getDb().update(schema.projects)
         .set({ lastSyncedSha: null })
         .where(eq(schema.projects.id, projectId))
         .run()
