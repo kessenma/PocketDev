@@ -22,6 +22,9 @@ dist/
 # Example apps (reference only, not part of the project)
 apps/0-examples/
 
+# Fastlane certs repo (separate git repo, managed by fastlane match)
+apps/pocketdev-certs/
+
 # React Native
 apps/mobile/ios/build/
 apps/mobile/ios/Pods/
@@ -39,6 +42,9 @@ apps/web/public/agent-bundle.tar.gz
 
 # MCP config (local tool setup)
 .mcp.json
+
+# Build logs (deploy script output)
+apps/mobile/build-logs/
 
 # IDE
 .idea/

@@ -24,7 +24,9 @@
     "db:studio": "export $(grep -v '^#' .env | xargs) && pnpm --filter @pocketdev/db exec drizzle-kit studio",
     "icons:generate": "pnpm --filter @pocketdev/app-icon generate",
     "icons:distribute": "pnpm --filter @pocketdev/app-icon distribute",
-    "icons": "pnpm --filter @pocketdev/app-icon icons"
+    "icons": "pnpm --filter @pocketdev/app-icon icons",
+    "deploy:ios:beta": "pnpm --filter mobile run deploy:ios:beta",
+    "deploy:ios:release": "pnpm --filter mobile run deploy:ios:release"
   },
   "devDependencies": {
     "turbo": "^2.5.0",

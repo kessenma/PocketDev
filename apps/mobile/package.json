@@ -9,7 +9,9 @@
     "test": "jest",
     "ios": "rock run:ios",
     "android": "rock run:android",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "deploy:ios:beta": "node scripts/deploy-testflight.js beta",
+    "deploy:ios:release": "node scripts/deploy-testflight.js release"
   },
   "dependencies": {
     "@noble/ed25519": "^2.2.3",
@@ -49,6 +51,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@babel/plugin-syntax-typescript": "^7.25.9",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
     "@callstack/repack": "^5.2.0",
@@ -74,5 +77,9 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "op-sqlite": {
+    "sqlcipher": true,
+    "fts5": true
   }
 }

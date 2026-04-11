@@ -294,6 +294,9 @@ importers:
       '@babel/core':
         specifier: ^7.25.2
         version: 7.29.0
+      '@babel/plugin-syntax-typescript':
+        specifier: ^7.25.9
+        version: 7.28.6(@babel/core@7.29.0)
       '@babel/preset-env':
         specifier: ^7.25.3
         version: 7.29.2(@babel/core@7.29.0)

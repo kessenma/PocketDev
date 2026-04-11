@@ -1,3 +1,15 @@
+# Fix for CocoaPods "pathname contains null byte" with pnpm symlinks
+# https://github.com/CocoaPods/CocoaPods/issues/12798
+require 'pathname'
+module PathnameNullByteFix
+  def realdirpath(*args)
+    super
+  rescue ArgumentError
+    self
+  end
+end
+Pathname.prepend(PathnameNullByteFix)
+
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
 # Inspired from https://github.com/expo/expo/blob/main/templates/expo-template-bare-minimum/ios/Podfile

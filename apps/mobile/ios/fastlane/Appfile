@@ -7,5 +7,5 @@ apple_id(ENV['APPLE_ID'] || "kessen@umich.edu")
 # Team ID from Apple Developer Portal
 team_id(ENV['TEAM_ID'] || "RHPLRY9X9P")
 
-# iTunes Connect Team ID (usually same as Developer Portal Team ID)
-itc_team_id(ENV['ITUNES_CONNECT_TEAM_ID'] || ENV['TEAM_ID'] || "RHPLRY9X9P")
+# iTunes Connect Team ID (numeric, different from Developer Portal alphanumeric ID)
+itc_team_id(ENV['ITUNES_CONNECT_TEAM_ID'] || "124074455")

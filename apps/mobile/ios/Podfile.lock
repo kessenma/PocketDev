@@ -80,6 +80,7 @@ PODS:
     - Yoga
   - op-sqlite (15.2.11):
     - hermes-engine
+    - OpenSSL-Universal
     - RCTRequired
     - RCTTypeSafety
     - React-Core
@@ -101,6 +102,7 @@ PODS:
     - ReactNativeDependencies
     - Yoga
   - opencv-rne (4.11.0)
+  - OpenSSL-Universal (3.3.3001)
   - Pulsar (1.0.2):
     - hermes-engine
     - RCTRequired
@@ -2484,6 +2486,7 @@ SPEC REPOS:
     - JWTDecode
     - MMKVCore
     - opencv-rne
+    - OpenSSL-Universal
     - SwiftyRSA
 
 EXTERNAL SOURCES:
@@ -2688,8 +2691,9 @@ SPEC CHECKSUMS:
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroMmkv: ca741ca3e53a3dfa9e2c9ad7082fca3de70a3afb
   NitroModules: 113b4a704e0d6a436d2c5600d5af41f847b0fdd1
-  op-sqlite: 7e5c7666a5202c0b77c554db80ad70bd1cdc946d
+  op-sqlite: e8a107e249c4a78265c11ca4c2e5251d6d9719e6
   opencv-rne: 2305807573b6e29c8c87e3416ab096d09047a7a0
+  OpenSSL-Universal: 6082b0bf950e5636fe0d78def171184e2b3899c2
   Pulsar: b5198f5f221996c0bc0d28ef92e92748a1d49caa
   RCTDeprecation: dbbb85eae640e3b43cc16462d0476b00ca5959ae
   RCTRequired: 7047b18af29a76069818fd3fa0f4df423483abab
@@ -2781,6 +2785,6 @@ SPEC CHECKSUMS:
   VisionCamera: 3ea10c46a5c612f5f89fb46a54bef4a0de8b58a7
   Yoga: 21f482cbc18b56cdc477cd3a0c5b8c2c83ac27ce
 
-PODFILE CHECKSUM: 1f9eee9403c79e0cf070b9a8dccdabe919cf4207
+PODFILE CHECKSUM: bce4653ec47876180e849f97d1d6671eba147448
 
 COCOAPODS: 1.15.2
