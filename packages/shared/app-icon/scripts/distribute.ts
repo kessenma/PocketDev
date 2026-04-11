@@ -73,6 +73,12 @@ const copies: CopySpec[] = [
     to: join(MONOREPO, "apps/agent/console/public"),
     mode: "dir-contents",
   },
+  {
+    label: "Docs app favicons",
+    from: join(GENERATED, "web"),
+    to: join(MONOREPO, "apps/docs/public"),
+    mode: "dir-contents",
+  },
 ];
 
 // ---------------------------------------------------------------------------

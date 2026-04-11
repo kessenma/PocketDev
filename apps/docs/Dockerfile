@@ -23,7 +23,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/docs/node_modules ./apps/docs/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY apps/docs/src ./apps/docs/src
-COPY apps/docs/public ./apps/docs/public
 COPY apps/docs/server.ts ./apps/docs/server.ts
 COPY apps/docs/package.json ./apps/docs/package.json
 COPY apps/docs/tsconfig.json ./apps/docs/tsconfig.json

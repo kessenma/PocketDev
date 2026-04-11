@@ -13,54 +13,74 @@ const OUT = join(ROOT, "generated");
 // iOS
 // ---------------------------------------------------------------------------
 
-const IOS_ICONS = [
-  { size: 20, scale: 2 },
-  { size: 20, scale: 3 },
-  { size: 29, scale: 2 },
-  { size: 29, scale: 3 },
-  { size: 40, scale: 2 },
-  { size: 40, scale: 3 },
-  { size: 60, scale: 2 },
-  { size: 60, scale: 3 },
-  { size: 1024, scale: 1 },
-] as const;
-
-function iosFilename(size: number, scale: number) {
-  return `AppIcon-${size}@${scale}x.png`;
+interface IosIconSpec {
+  size: number;      // logical size in points (e.g. 83.5)
+  scale: number;     // scale factor (@1x, @2x, @3x)
+  idiom: string;     // "iphone" | "ipad" | "ios-marketing"
+  filename: string;  // output filename
+  px: number;        // pixel dimension
 }
+
+function makeIosSpec(size: number, scale: number, idiom: string): IosIconSpec {
+  return {
+    size,
+    scale,
+    idiom,
+    filename: `AppIcon-${size}@${scale}x.png`,
+    px: Math.round(size * scale),
+  };
+}
+
+const IOS_ICONS: IosIconSpec[] = [
+  // iPhone
+  makeIosSpec(20, 2, "iphone"),
+  makeIosSpec(20, 3, "iphone"),
+  makeIosSpec(29, 2, "iphone"),
+  makeIosSpec(29, 3, "iphone"),
+  makeIosSpec(40, 2, "iphone"),
+  makeIosSpec(40, 3, "iphone"),
+  makeIosSpec(60, 2, "iphone"),
+  makeIosSpec(60, 3, "iphone"),
+  // iPad (includes sizes shared with iPhone — same file, separate Contents.json entry)
+  makeIosSpec(20, 1, "ipad"),
+  makeIosSpec(20, 2, "ipad"),
+  makeIosSpec(29, 1, "ipad"),
+  makeIosSpec(29, 2, "ipad"),
+  makeIosSpec(40, 1, "ipad"),
+  makeIosSpec(40, 2, "ipad"),
+  makeIosSpec(76, 1, "ipad"),
+  makeIosSpec(76, 2, "ipad"),
+  { size: 83.5, scale: 2, idiom: "ipad", filename: "AppIcon-83.5@2x.png", px: 167 },
+  // App Store / marketing
+  makeIosSpec(1024, 1, "ios-marketing"),
+];
 
 async function generateIos(source: sharp.Sharp) {
   const dir = join(OUT, "ios");
   await mkdir(dir, { recursive: true });
 
-  const images: Array<{
-    filename: string;
-    idiom: string;
-    scale: string;
-    size: string;
-  }> = [];
+  // Deduplicate by filename so shared sizes (e.g. 20@2x used by both iphone + ipad)
+  // are only written once to disk.
+  const uniqueFiles = new Map<string, number>();
+  for (const spec of IOS_ICONS) {
+    if (!uniqueFiles.has(spec.filename)) {
+      uniqueFiles.set(spec.filename, spec.px);
+    }
+  }
 
   await Promise.all(
-    IOS_ICONS.map(async ({ size, scale }) => {
-      const px = size * scale;
-      const filename = iosFilename(size, scale);
+    Array.from(uniqueFiles.entries()).map(async ([filename, px]) => {
       await source.clone().resize(px, px).png().toFile(join(dir, filename));
-      images.push({
-        filename,
-        idiom: size === 1024 ? "ios-marketing" : "iphone",
-        scale: `${scale}x`,
-        size: `${size}x${size}`,
-      });
     })
   );
 
-  // Sort to match Xcode ordering (by size, then scale)
-  images.sort((a, b) => {
-    const sizeA = parseInt(a.size);
-    const sizeB = parseInt(b.size);
-    if (sizeA !== sizeB) return sizeA - sizeB;
-    return a.scale.localeCompare(b.scale);
-  });
+  // Contents.json includes one entry per (idiom, size, scale) — not deduplicated
+  const images = IOS_ICONS.map((spec) => ({
+    filename: spec.filename,
+    idiom: spec.idiom,
+    scale: `${spec.scale}x`,
+    size: `${spec.size}x${spec.size}`,
+  }));
 
   const contents = {
     images,
@@ -68,7 +88,7 @@ async function generateIos(source: sharp.Sharp) {
   };
   await writeFile(join(dir, "Contents.json"), JSON.stringify(contents, null, 2) + "\n");
 
-  console.log(`  iOS: ${images.length} icons + Contents.json`);
+  console.log(`  iOS: ${uniqueFiles.size} image files, ${images.length} Contents.json entries (iPhone + iPad)`);
 }
 
 // ---------------------------------------------------------------------------
