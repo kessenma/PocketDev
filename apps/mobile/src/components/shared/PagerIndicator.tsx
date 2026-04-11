@@ -25,8 +25,6 @@ type Props = {
   compact?: Animated.AnimatedInterpolation<number>
 }
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity)
-
 function IndicatorItem({
   page,
   index,
@@ -60,50 +58,47 @@ function IndicatorItem({
   })
 
   // RN Animated — height + label collapse driven by scroll
-  const itemPadV = compact
-    ? compact.interpolate({ inputRange: [0, 1], outputRange: [spacing[3], spacing[2]], extrapolate: 'clamp' })
-    : spacing[3]
-
-  const labelMaxWidth = compact
-    ? compact.interpolate({ inputRange: [0, 0.7], outputRange: [160, 0], extrapolate: 'clamp' })
-    : 160
-
   const labelOpacity = compact
-    ? compact.interpolate({ inputRange: [0, 0.4], outputRange: [1, 0], extrapolate: 'clamp' })
+    ? compact.interpolate({ inputRange: [0, 0.55, 1], outputRange: [1, 0.65, 0], extrapolate: 'clamp' })
     : 1
 
-  const labelGap = compact
-    ? compact.interpolate({ inputRange: [0, 0.7], outputRange: [spacing[2], 0], extrapolate: 'clamp' })
+  const labelWidth = compact
+    ? compact.interpolate({ inputRange: [0, 1], outputRange: [72, 0], extrapolate: 'clamp' })
+    : 72
+
+  const labelMarginLeft = compact
+    ? compact.interpolate({ inputRange: [0, 1], outputRange: [spacing[2], 0], extrapolate: 'clamp' })
     : spacing[2]
 
+  const labelTranslateX = compact
+    ? compact.interpolate({ inputRange: [0, 1], outputRange: [0, -8], extrapolate: 'clamp' })
+    : 0
+
   return (
-    <AnimatedTouchable
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={[styles.item, { paddingVertical: itemPadV, gap: labelGap }]}
-    >
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.item}>
       {/* Icon — always visible, reanimated drives active opacity */}
       <ReanimatedLib.View style={iconOpacityStyle}>
         <Icon size={16} strokeWidth={2.25} color={colors.text} />
       </ReanimatedLib.View>
 
-      {/* Marker + label — collapses horizontally then item shrinks vertically */}
+      {/* Label reveal stays layout-safe under Fabric; outer pager animates height. */}
       <Animated.View
-        style={{
-          maxWidth: labelMaxWidth,
-          opacity: labelOpacity,
-          overflow: 'hidden',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing[2],
-        }}
+        style={[
+          styles.labelWrap,
+          {
+            width: labelWidth,
+            marginLeft: labelMarginLeft,
+            opacity: labelOpacity,
+            transform: [{ translateX: labelTranslateX }],
+          },
+        ]}
       >
         <ReanimatedLib.View style={[styles.marker, markerColor]} />
         <ReanimatedLib.Text style={[typeStyles.meta, textColor]} numberOfLines={1}>
           {page.label}
         </ReanimatedLib.Text>
       </Animated.View>
-    </AnimatedTouchable>
+    </TouchableOpacity>
   )
 }
 
@@ -168,6 +163,7 @@ export default function PagerIndicator({ pages, activeIndex, onPress, compact }:
 
 const styles = StyleSheet.create({
   container: {
+    height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
@@ -185,13 +181,21 @@ const styles = StyleSheet.create({
   },
   itemWrapper: {
     flex: 1,
+    height: '100%',
   },
   item: {
     flex: 1,
+    height: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing[2],
+  },
+  labelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    overflow: 'hidden',
   },
   marker: {
     width: 8,

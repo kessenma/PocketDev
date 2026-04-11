@@ -1,11 +1,14 @@
 import React, { useCallback, useMemo } from 'react'
 import { StyleSheet, Text, TextInput, View } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
-import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { borderRadius, spacing, type SemanticTheme } from '@pocketdev/shared/theme'
 import type { ProjectSummary } from '@pocketdev/shared/types'
 import { useTheme } from '../contexts/ThemeContext'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import { useProjectsStore } from '../stores/projects'
+import { useGitStore } from '../stores/git'
+import { useOfflineStore } from '../stores/offline'
+import { useConnectionStore } from '../stores/connection'
 import ServerSegmentedControl from '../components/server-actions/ServerSegmentedControl'
 import { Globe, Lock, type LucideIcon } from 'lucide-react-native'
 import ProjectCloneCelebration from '../components/projects/ProjectCloneCelebration'
@@ -14,13 +17,14 @@ import { BauhausPanel } from '../components/shared/BauhausPanel'
 import BauhausBadge from '../components/shared/BauhausBadge'
 import { typeStyles } from '../theme/typography'
 
-type ProjectFilter = 'all' | 'local' | 'needsClone'
+type ProjectFilter = 'all' | 'local' | 'needsClone' | 'downloaded'
 type VisibilityFilter = 'all' | 'public' | 'private'
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'All' },
   { value: 'local', label: 'On Device' },
   { value: 'needsClone', label: 'Needs Clone' },
+  { value: 'downloaded', label: 'Downloaded' },
 ] as const
 
 const VISIBILITY_FILTER_OPTIONS = [
@@ -43,6 +47,14 @@ export default function ProjectsScreen() {
   const cloneCelebrationProjectId = useProjectsStore((state) => state.cloneCelebrationProjectId)
   const clearCloneCelebration = useProjectsStore((state) => state.clearCloneCelebration)
   const lastActionMessage = useProjectsStore((state) => state.lastActionMessage)
+  const currentBranch = useGitStore((state) => state.currentBranch)
+  const offlineSnapshots = useOfflineStore((state) => state.snapshots)
+  const downloadingKey = useOfflineStore((state) => state.downloadingKey)
+  const downloadProgress = useOfflineStore((state) => state.downloadProgress)
+  const startDownload = useOfflineStore((state) => state.startDownload)
+  const cancelDownload = useOfflineStore((state) => state.cancelDownload)
+  const clearOfflineData = useOfflineStore((state) => state.clearOfflineData)
+  const server = useConnectionStore((state) => state.server)
   const [branchDrafts, setBranchDrafts] = React.useState<Record<string, string>>({})
   const [filter, setFilter] = React.useState<ProjectFilter>('all')
   const [visibilityFilter, setVisibilityFilter] = React.useState<VisibilityFilter>('all')
@@ -58,6 +70,7 @@ export default function ProjectsScreen() {
     const filtered = projects.filter((project) => {
       if (filter === 'local') return project.isLocal
       if (filter === 'needsClone') return project.needsClone
+      if (filter === 'downloaded') return Object.keys(offlineSnapshots).some((k) => k.startsWith(project.id + ':'))
       return true
     })
 
@@ -85,8 +98,8 @@ export default function ProjectsScreen() {
   }, [filter, projects, search, visibilityFilter])
 
   const extraData = useMemo(
-    () => ({ branchDrafts, mutatingProjectId, mutatingAction, isMutating, cloneCelebrationProjectId, colors }),
-    [branchDrafts, mutatingProjectId, mutatingAction, isMutating, cloneCelebrationProjectId, colors],
+    () => ({ branchDrafts, mutatingProjectId, mutatingAction, isMutating, cloneCelebrationProjectId, colors, offlineSnapshots, downloadingKey, downloadProgress }),
+    [branchDrafts, mutatingProjectId, mutatingAction, isMutating, cloneCelebrationProjectId, colors, offlineSnapshots, downloadingKey, downloadProgress],
   )
 
   const renderItem = useCallback(({ item: project }: { item: ProjectSummary }) => {
@@ -94,6 +107,11 @@ export default function ProjectsScreen() {
     const isProjectCloning = mutatingAction === 'clone' && mutatingProjectId === project.id
     const isProjectSelecting = mutatingAction === 'select' && mutatingProjectId === project.id
     const showCloneCelebration = cloneCelebrationProjectId === project.id
+    const branchForDownload = project.isActive ? (currentBranch || (project.defaultBranch ?? '')) : (project.defaultBranch ?? '')
+    const offlineKey = `${project.id}:${branchForDownload}`
+    const offlineSnap = branchForDownload ? offlineSnapshots[offlineKey] : undefined
+    const isThisDownloading = downloadingKey === offlineKey
+    const isAnyDownloading = downloadingKey !== null
 
     return (
       <BauhausPanel
@@ -129,26 +147,75 @@ export default function ProjectsScreen() {
         </View>
 
         {project.isLocal ? (
-          <View style={styles.actionRow}>
-            <View style={styles.actionButton}>
-              <BauhausButton
-                loading={isProjectSelecting}
-                onPress={() => selectProject(project.id, false)}
-                disabled={isMutating}
-              >
-                Open
-              </BauhausButton>
+          <View style={styles.localSection}>
+            <View style={styles.actionRow}>
+              <View style={styles.actionButton}>
+                <BauhausButton
+                  loading={isProjectSelecting}
+                  onPress={() => selectProject(project.id, false)}
+                  disabled={isMutating}
+                >
+                  Open
+                </BauhausButton>
+              </View>
+              <View style={styles.actionButton}>
+                <BauhausButton
+                  variant="secondary"
+                  loading={isProjectSelecting}
+                  onPress={() => selectProject(project.id, true)}
+                  disabled={isMutating}
+                >
+                  Pull + Open
+                </BauhausButton>
+              </View>
             </View>
-            <View style={styles.actionButton}>
-              <BauhausButton
-                variant="secondary"
-                loading={isProjectSelecting}
-                onPress={() => selectProject(project.id, true)}
-                disabled={isMutating}
-              >
-                Pull + Open
-              </BauhausButton>
-            </View>
+
+            {offlineSnap ? (
+              <View style={styles.offlineBadgeRow}>
+                <BauhausBadge
+                  label={`Offline · ${offlineSnap.fileCount.toLocaleString()} files · ${branchForDownload}`}
+                  color={colors.success}
+                />
+              </View>
+            ) : null}
+
+            {isThisDownloading && downloadProgress ? (
+              <DownloadProgressBar progress={downloadProgress} colors={colors} />
+            ) : null}
+
+            {branchForDownload ? (
+              <View style={styles.actionRow}>
+                <View style={styles.actionButton}>
+                  <BauhausButton
+                    variant={offlineSnap ? 'secondary' : 'primary'}
+                    loading={isThisDownloading}
+                    disabled={isAnyDownloading && !isThisDownloading}
+                    onPress={() => {
+                      if (!server) return
+                      void startDownload(project.id, branchForDownload, server.ip, server.port, project.localPath ?? '.')
+                    }}
+                  >
+                    {offlineSnap ? 'Re-download' : 'Download for Offline'}
+                  </BauhausButton>
+                </View>
+                {isThisDownloading ? (
+                  <View style={styles.actionButton}>
+                    <BauhausButton variant="secondary" onPress={cancelDownload}>
+                      Cancel
+                    </BauhausButton>
+                  </View>
+                ) : offlineSnap ? (
+                  <View style={styles.actionButton}>
+                    <BauhausButton
+                      variant="danger"
+                      onPress={() => void clearOfflineData(project.id, branchForDownload)}
+                    >
+                      Remove Offline
+                    </BauhausButton>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         ) : (
           <View style={styles.remoteSection}>
@@ -283,6 +350,45 @@ function Badge({
   )
 }
 
+function DownloadProgressBar({
+  progress,
+  colors,
+}: {
+  progress: { fetched: number; total: number }
+  colors: SemanticTheme
+}) {
+  const pct = progress.total > 0 ? Math.round((progress.fetched / progress.total) * 100) : 0
+  return (
+    <View style={progressStyles.track}>
+      <View style={[progressStyles.fill, { width: `${pct}%` as any, backgroundColor: colors.primary }]} />
+      <Text style={[progressStyles.label, { color: colors.textSecondary }]}>
+        {pct}% · {progress.fetched.toLocaleString()} / {progress.total.toLocaleString()} files
+      </Text>
+    </View>
+  )
+}
+
+const progressStyles = StyleSheet.create({
+  track: {
+    height: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  fill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    borderRadius: borderRadius.full,
+  },
+  label: {
+    ...typeStyles.meta,
+    marginTop: spacing[1],
+  },
+})
+
 function formatLastUpdated(value: string | null): string {
   if (!value) return 'Updated date unavailable'
   const date = new Date(value)
@@ -375,6 +481,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     minWidth: 160,
+  },
+  localSection: {
+    gap: spacing[3],
+  },
+  offlineBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   remoteSection: {
     gap: spacing[3],

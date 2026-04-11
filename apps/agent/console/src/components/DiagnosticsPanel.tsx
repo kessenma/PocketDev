@@ -18,6 +18,7 @@ import {
   fetchTypeScriptDebug,
   fetchNetworkDebug,
   fetchGitHistoryDebug,
+  fetchOfflineSnapshots,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
@@ -33,6 +34,7 @@ import {
   type TypeScriptDebugInfo,
   type NetworkDebugInfo,
   type GitHistoryDebugInfo,
+  type OfflineSnapshot,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Bug, Maximize2, RefreshCw, Smartphone, Waves, Sparkles } from 'lucide-react'
@@ -74,6 +76,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [tsInfo, setTsInfo] = useState<TypeScriptDebugInfo | null>(null)
   const [networkInfo, setNetworkInfo] = useState<NetworkDebugInfo | null>(null)
   const [gitHistoryInfo, setGitHistoryInfo] = useState<GitHistoryDebugInfo | null>(null)
+  const [offlineSnapshots, setOfflineSnapshots] = useState<OfflineSnapshot[]>([])
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -99,11 +102,12 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
       fetchTypeScriptDebug(),
       fetchNetworkDebug(),
       fetchGitHistoryDebug(),
+      fetchOfflineSnapshots(),
     ])
 
     const failures: string[] = []
 
-    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult, rustResult, goResult, tsResult, networkResult, gitHistoryResult] = results
+    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult, rustResult, goResult, tsResult, networkResult, gitHistoryResult, offlineSnapshotsResult] = results
 
     if (authResult.status === 'fulfilled') setInfo(authResult.value)
     else failures.push(`auth: ${authResult.reason instanceof Error ? authResult.reason.message : 'failed'}`)
@@ -149,6 +153,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
     if (gitHistoryResult.status === 'fulfilled') setGitHistoryInfo(gitHistoryResult.value)
     else failures.push(`git-history: ${gitHistoryResult.reason instanceof Error ? gitHistoryResult.reason.message : 'failed'}`)
+
+    if (offlineSnapshotsResult.status === 'fulfilled') setOfflineSnapshots(offlineSnapshotsResult.value)
 
     setLastUpdated(new Date().toISOString())
     setError(failures.length ? `Partial refresh failure: ${failures.join(' | ')}` : null)
@@ -532,7 +538,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
             </div>
           </div>
         ) : activeTab === 'github' ? (
-          <GitHubDiagnosticsTab githubInfo={githubInfo} projectsInfo={projectsInfo} gitHistoryInfo={gitHistoryInfo} />
+          <GitHubDiagnosticsTab githubInfo={githubInfo} projectsInfo={projectsInfo} gitHistoryInfo={gitHistoryInfo} offlineSnapshots={offlineSnapshots} />
         ) : (
           <div className="grid h-full gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
             <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">

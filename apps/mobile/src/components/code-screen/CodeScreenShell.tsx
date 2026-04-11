@@ -13,7 +13,6 @@ import { useGitStore } from '../../stores/git'
 import { useProjectsStore } from '../../stores/projects'
 import { useScriptsStore } from '../../stores/scripts'
 import AdaptiveShell from '../layout/AdaptiveShell'
-import ProjectContextBanner from '../projects/ProjectContextBanner'
 import RunningScriptsSheet from '../scripts/RunningScriptsSheet'
 import SwipeablePager from '../shared/SwipeablePager'
 import CodeBrowseTab from './code-browse/CodeBrowseTab'
@@ -73,24 +72,6 @@ export default function CodeScreenShell({ navigation }: Props) {
     scrollY.setValue(0)
   }, [scrollY])
 
-  const bannerHeight = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [56, 0],
-    extrapolate: 'clamp',
-  })
-
-  const bannerOpacity = scrollY.interpolate({
-    inputRange: [0, 50],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  })
-
-  const bannerMargin = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [spacing[4], 0],
-    extrapolate: 'clamp',
-  })
-
   return (
     <>
       <AdaptiveShell
@@ -98,16 +79,9 @@ export default function CodeScreenShell({ navigation }: Props) {
         maxWidth={1360}
       >
         <View style={styles.container}>
-          <Animated.View style={{ height: bannerHeight, opacity: bannerOpacity, marginBottom: bannerMargin, overflow: 'hidden' }}>
-            <ProjectContextBanner onOpenProjects={() => navigation.navigate('Projects')} />
-          </Animated.View>
-
           <SwipeablePager pages={codePages} scrollY={scrollY} onPageChange={handlePageChange}>
-            <CodeBrowseTab
-              onOpenProjects={() => navigation.navigate('Projects')}
-              onScroll={onChildScroll}
-            />
-            <GitTab onScroll={onChildScroll} />
+            <CodeBrowseTab onScroll={onChildScroll} />
+            <GitTab onScroll={onChildScroll} onOpenProjects={() => navigation.navigate('Projects')} />
             <ScriptsTab onScroll={onChildScroll} />
           </SwipeablePager>
         </View>
@@ -134,7 +108,6 @@ export default function CodeScreenShell({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    gap: spacing[4],
   },
   runningFab: {
     position: 'absolute',

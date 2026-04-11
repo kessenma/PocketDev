@@ -146,11 +146,17 @@ function ArchitecturePage() {
         <li><strong>Tooling:</strong> Claude, Codex, and Copilot CLIs plus git, ripgrep, and local dev servers</li>
       </ul>
 
-      <h2>Separation Between Marketing and Docs</h2>
+      <h2>Future Development</h2>
       <p>
-        The public architecture page on the main site can stay focused on product positioning and
-        high-level explanation. This documentation page is intended to hold the more concrete
-        implementation details, protocol surface, and system model over time.
+        I am... going back and forth on open-sourcing PocketDev itself. There are parts of the system
+        that could be valuable to the community if released, but I also am weighing the security
+        implications of exposing the agent and protocol. Monetization and sustainability of the project
+        are also factors in deciding whether to open-source the codebase or keep it internal. App Store 
+        guidelines, publishing fees, and review requirements for the mobile client also influence how much
+        of the system can be exposed publicly versus kept behind the agent boundary. One idea I was thinking 
+        about was open sourcing the repo, adding a stipulation that the code cannot be used to create a competing 
+        mobile app, and charging a one-time fee to download the mobile app to cover App Store 
+        publishing costs and help support ongoing development of the project.
       </p>
     </>
   )

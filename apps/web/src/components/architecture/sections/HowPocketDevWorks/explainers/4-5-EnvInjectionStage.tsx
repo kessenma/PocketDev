@@ -32,33 +32,6 @@ const BAR_DEFS: EnvBar[] = [
   { offset: 126 },
 ]
 
-function circleLineExitPoint(
-  lineStart: { x: number; y: number },
-  unit: { x: number; y: number },
-  lineLength: number,
-  circle: { x: number; y: number; r: number },
-) {
-  const relX = circle.x - lineStart.x
-  const relY = circle.y - lineStart.y
-  const projection = relX * unit.x + relY * unit.y
-  const closestX = lineStart.x + unit.x * projection
-  const closestY = lineStart.y + unit.y * projection
-  const distX = circle.x - closestX
-  const distY = circle.y - closestY
-  const perpendicularSq = distX * distX + distY * distY
-
-  if (perpendicularSq >= circle.r * circle.r) return null
-
-  const travelInside = Math.sqrt(circle.r * circle.r - perpendicularSq)
-  const exitDistance = projection + travelInside
-  if (exitDistance <= 0 || exitDistance >= lineLength) return null
-
-  return {
-    x: lineStart.x + unit.x * exitDistance,
-    y: lineStart.y + unit.y * exitDistance,
-  }
-}
-
 export function EnvInjectionTakeoverStage({
   progress,
   isDesktopLayout,
@@ -87,7 +60,7 @@ export function EnvInjectionTakeoverStage({
   const offsetY = (vpSize.h - vbH * scale) / 2
 
   const ballTravel = mapProgress(progress, 0.0, 0.8)
-  const barsTravel = mapProgress(progress, 0.44, 0.9)
+  const barsTravel = mapProgress(progress, 0.44, isDesktopLayout ? 0.9 : 0.74)
   const settle = mapProgress(progress, 0.78, 0.94)
   const impactPulse = mapProgress(progress, 0.36, 0.56)
 
@@ -111,7 +84,7 @@ export function EnvInjectionTakeoverStage({
     x: isDesktopLayout ? 458 : 432,
     y: isDesktopLayout ? 500 : 520,
   }
-  const lineTravel = mix(-1420, 1320, barsTravel)
+  const lineTravel = mix(-1420, isDesktopLayout ? 1320 : 1760, barsTravel)
 
   const titleX = isDesktopLayout ? vpSize.w * 0.72 : vpSize.w * 0.62
   const titleY = vpSize.h * (isDesktopLayout ? 0.12 : 0.08)
@@ -124,6 +97,21 @@ export function EnvInjectionTakeoverStage({
   const subLH = Math.round(subFontSize * 1.55)
   const subY = vpSize.h * (isDesktopLayout ? 0.88 : 0.8)
   const subX = isDesktopLayout ? vpSize.w * 0.06 : vpSize.w * 0.07
+  const subPadX = isDesktopLayout ? 8 : 10
+  const subPadY = isDesktopLayout ? 10 : 10
+  const subLines = isDesktopLayout
+    ? [
+        'Per-project env vars can be attached either from inside the web app or in the',
+        'mobile app once a repo is cloned.',
+      ]
+    : [
+        'Per-project env vars can be attached',
+        'either from inside the web app or in',
+        'the mobile app once a repo is',
+        'cloned.',
+      ]
+  const approxCharWidth = subFontSize * (isDesktopLayout ? 0.47 : 0.46)
+  const subLineWidths = subLines.map((line) => line.length * approxCharWidth)
 
   return (
     <svg
@@ -147,28 +135,6 @@ export function EnvInjectionTakeoverStage({
         textAnchor="middle"
       >
         <tspan x={titleX} dy="0">Attach env variables</tspan>
-      </text>
-
-      <text
-        x={subX}
-        y={subY}
-        fill={architectureTokens.colors.textSecondary}
-        fontFamily="var(--font-sans), sans-serif"
-        fontSize={subFontSize}
-      >
-        {isDesktopLayout ? (
-          <>
-            <tspan x={subX} dy="0">Per-project env vars can be attached either from inside the web app or in the</tspan>
-            <tspan x={subX} dy={subLH}>mobile app once a repo is cloned.</tspan>
-          </>
-        ) : (
-          <>
-            <tspan x={subX} dy="0">Per-project env vars can be attached</tspan>
-            <tspan x={subX} dy={subLH}>either from inside the web app or in</tspan>
-            <tspan x={subX} dy={subLH}>the mobile app once a repo is</tspan>
-            <tspan x={subX} dy={subLH}>cloned.</tspan>
-          </>
-        )}
       </text>
 
       <g transform={`translate(${offsetX} ${offsetY}) scale(${scale})`}>
@@ -203,11 +169,6 @@ export function EnvInjectionTakeoverStage({
             x: centerX + unit.x * (lineLength / 2),
             y: centerY + unit.y * (lineLength / 2),
           }
-          const exitPoint = circleLineExitPoint(start, unit, lineLength, {
-            x: ballCx,
-            y: ballCy,
-            r: ballR,
-          })
 
           return (
             <g key={`${bar.offset}-${index}`}>
@@ -220,21 +181,40 @@ export function EnvInjectionTakeoverStage({
                 strokeWidth={lineStroke}
                 strokeLinecap="round"
               />
-              {exitPoint && (
-                <line
-                  x1={exitPoint.x}
-                  y1={exitPoint.y}
-                  x2={end.x}
-                  y2={end.y}
-                  stroke={architectureTokens.colors.blue}
-                  strokeWidth={lineStroke}
-                  strokeLinecap="round"
-                />
-              )}
             </g>
           )
         })}
       </g>
+
+      {subLines.map((_, index) => {
+        const lineY = subY + subLH * index
+        const rectY = lineY - subFontSize - subPadY + 2
+        return (
+          <rect
+            key={`sub-line-bg-${index}`}
+            x={subX - subPadX}
+            y={rectY}
+            width={subLineWidths[index] + subPadX * 2}
+            height={subLH + subPadY * 1.2}
+            rx={14}
+            fill={architectureTokens.colors.paper}
+          />
+        )
+      })}
+
+      <text
+        x={subX}
+        y={subY}
+        fill={architectureTokens.colors.textSecondary}
+        fontFamily="var(--font-sans), sans-serif"
+        fontSize={subFontSize}
+      >
+        {subLines.map((line, index) => (
+          <tspan key={`sub-line-${index}`} x={subX} dy={index === 0 ? 0 : subLH}>
+            {line}
+          </tspan>
+        ))}
+      </text>
     </svg>
   )
 }

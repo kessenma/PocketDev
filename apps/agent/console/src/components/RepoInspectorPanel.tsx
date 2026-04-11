@@ -4,10 +4,12 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import {
   createRepoPreviewSession,
+  fetchOfflineSnapshots,
   fetchRepoFile,
   fetchRepoList,
   fetchRepoSearch,
   fetchRepoSummary,
+  type OfflineSnapshot,
   type RepoEntry,
   type RepoFileRead,
   type RepoSearchMatch,
@@ -39,6 +41,7 @@ export function RepoInspectorPanel({ className }: Props) {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
   const [pinnedPaths, setPinnedPaths] = useState<string[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [offlineSnapshots, setOfflineSnapshots] = useState<OfflineSnapshot[]>([])
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
   const [previewing, setPreviewing] = useState(false)
@@ -48,13 +51,15 @@ export function RepoInspectorPanel({ className }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const [repoSummary, repoList] = await Promise.all([
+      const [repoSummary, repoList, snapshots] = await Promise.all([
         fetchRepoSummary(),
         fetchRepoList('.'),
+        fetchOfflineSnapshots(),
       ])
       setSummary(repoSummary)
       setCurrentPath(repoList.path)
       setEntries(repoList.entries)
+      setOfflineSnapshots(snapshots)
       if (selectedFilePath) {
         const file = await fetchRepoFile(selectedFilePath)
         setSelectedFile(file)
@@ -189,6 +194,11 @@ export function RepoInspectorPanel({ className }: Props) {
         <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/70">
           {pinnedPaths.length} pinned
         </Badge>
+        {offlineSnapshots.length > 0 ? (
+          <Badge variant="outline" className="border-emerald-500/35 text-emerald-300">
+            offline on {offlineSnapshots.length} device{offlineSnapshots.length !== 1 ? 's' : ''}
+          </Badge>
+        ) : null}
         {error ? <span className="text-red-400">{error}</span> : null}
       </div>
 

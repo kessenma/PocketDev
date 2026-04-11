@@ -115,6 +115,7 @@ export function getDb() {
           return cols.some((c) => c.name === 'role')
         }],
         [1775851998660, '0007_amusing_medusa', () => existingTables.some((t) => t.name === 'env_vars')],
+        [1775882114599, '0008_confused_phalanx', () => existingTables.some((t) => t.name === 'device_offline_snapshots')],
       ]
 
       // Clear any bogus stamps (far-future, legacy_bootstrap, etc.)
@@ -283,6 +284,7 @@ export type ToolPathRow = typeof schema.toolPaths.$inferSelect
 export type AdminAccountRow = typeof schema.adminAccounts.$inferSelect
 export type PasskeyCredentialRow = typeof schema.passkeyCredentials.$inferSelect
 export type EnvVarRow = typeof schema.envVars.$inferSelect
+export type DeviceOfflineSnapshotRow = typeof schema.deviceOfflineSnapshots.$inferSelect
 export type ConsoleUserRole = 'owner' | 'admin' | 'member'
 export type ConsoleUserStatus = 'active' | 'pending' | 'denied' | 'revoked'
 
@@ -959,6 +961,56 @@ export function updateEnvVar(
 
 export function deleteEnvVar(id: string) {
   getDb().delete(schema.envVars).where(eq(schema.envVars.id, id)).run()
+}
+
+// ─── Device offline snapshot operations ─────────────────
+
+export function upsertDeviceOfflineSnapshot(
+  deviceId: string,
+  projectId: string,
+  branch: string,
+  fileCount: number,
+  totalBytes: number,
+  downloadedAt: string,
+) {
+  const id = `${deviceId}:${projectId}:${branch}`
+  getDb()
+    .insert(schema.deviceOfflineSnapshots)
+    .values({ id, deviceId, projectId, branch, fileCount, totalBytes, downloadedAt })
+    .onConflictDoUpdate({
+      target: schema.deviceOfflineSnapshots.id,
+      set: { fileCount, totalBytes, downloadedAt },
+    })
+    .run()
+}
+
+export function deleteDeviceOfflineSnapshot(deviceId: string, projectId: string, branch: string) {
+  getDb()
+    .delete(schema.deviceOfflineSnapshots)
+    .where(
+      sql`${schema.deviceOfflineSnapshots.deviceId} = ${deviceId}
+        AND ${schema.deviceOfflineSnapshots.projectId} = ${projectId}
+        AND ${schema.deviceOfflineSnapshots.branch} = ${branch}`,
+    )
+    .run()
+}
+
+export function getDeviceOfflineSnapshots(): (DeviceOfflineSnapshotRow & { deviceName: string | null })[] {
+  return getDb()
+    .select({
+      id: schema.deviceOfflineSnapshots.id,
+      deviceId: schema.deviceOfflineSnapshots.deviceId,
+      projectId: schema.deviceOfflineSnapshots.projectId,
+      branch: schema.deviceOfflineSnapshots.branch,
+      fileCount: schema.deviceOfflineSnapshots.fileCount,
+      totalBytes: schema.deviceOfflineSnapshots.totalBytes,
+      downloadedAt: schema.deviceOfflineSnapshots.downloadedAt,
+      deviceName: schema.devices.name,
+    })
+    .from(schema.deviceOfflineSnapshots)
+    .leftJoin(schema.devices, eq(schema.deviceOfflineSnapshots.deviceId, schema.devices.id))
+    .orderBy(desc(schema.deviceOfflineSnapshots.downloadedAt))
+    .all()
 }
 
 export function upsertEnvVar(input: {

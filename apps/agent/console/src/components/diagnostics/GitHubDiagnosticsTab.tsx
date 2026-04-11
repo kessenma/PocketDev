@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { KeyRound, GitCommitHorizontal, ChevronDown, ChevronRight } from 'lucide-react'
-import type { GitHubAuthDebugInfo, ProjectsDebugInfo, GitHistoryDebugInfo, GitHistoryDebugCommit } from '#/lib/api'
+import type { GitHubAuthDebugInfo, OfflineSnapshot, ProjectsDebugInfo, GitHistoryDebugInfo, GitHistoryDebugCommit } from '#/lib/api'
 
 interface Props {
   githubInfo: GitHubAuthDebugInfo | null
   projectsInfo: ProjectsDebugInfo | null
   gitHistoryInfo: GitHistoryDebugInfo | null
+  offlineSnapshots: OfflineSnapshot[]
 }
 
 function formatShortTime(iso: string) {
@@ -110,7 +111,13 @@ function CommitRow({ commit }: { commit: GitHistoryDebugCommit }) {
   )
 }
 
-export function GitHubDiagnosticsTab({ githubInfo, projectsInfo, gitHistoryInfo }: Props) {
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1048576).toFixed(1)} MB`
+}
+
+export function GitHubDiagnosticsTab({ githubInfo, projectsInfo, gitHistoryInfo, offlineSnapshots }: Props) {
   return (
     <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
       {/* ── Left sidebar ───────────────────────────────── */}
@@ -180,6 +187,24 @@ export function GitHubDiagnosticsTab({ githubInfo, projectsInfo, gitHistoryInfo 
             <p>Commits in DB: {gitHistoryInfo?.commits.length ?? 0}{gitHistoryInfo?.hasMore ? '+' : ''}</p>
             {gitHistoryInfo?.syncError && (
               <p className="mt-2 text-[#f87171]">Error: {gitHistoryInfo.syncError}</p>
+            )}
+          </div>
+        </div>
+        <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+          <p className="text-sm font-medium">Mobile Offline Snapshots</p>
+          <div className="mt-3 space-y-2">
+            {offlineSnapshots.length > 0 ? (
+              offlineSnapshots.map((snap) => (
+                <div key={snap.id} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3 text-sm text-[#f4f0e8]/78">
+                  <p className="font-medium text-[#f4f0e8]/90">{snap.deviceName ?? snap.deviceId.slice(0, 12)}</p>
+                  <p className="font-mono text-xs text-[#9df6cd]">{snap.branch}</p>
+                  <p className="mt-1 text-xs text-[#f4f0e8]/55">
+                    {snap.fileCount} files · {formatBytes(snap.totalBytes)} · {formatRelativeTime(snap.downloadedAt)}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-[#f4f0e8]/45">No devices have offline snapshots.</p>
             )}
           </div>
         </div>

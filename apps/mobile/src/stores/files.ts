@@ -5,6 +5,26 @@ import { inferLanguage, treeEntryToFileNode, pathToName } from '../components/fi
 import { listDirectory, fetchFileContent, searchFiles } from '../services/api'
 import { getCachedDirectorySnapshot, saveCachedDirectorySnapshot } from '../services/storage'
 import { useConnectionStore } from './connection'
+import { getOfflineDb } from '../db/OfflineDatabaseProvider'
+import {
+  getOfflineDirectory,
+  getOfflineFileContent,
+  searchOfflineFiles,
+} from '../db/offlineOperations'
+import type { OfflineSnapshot } from './offline'
+
+function getActiveOfflineSnapshot(): OfflineSnapshot | null {
+  // Lazy-import to avoid circular dependencies at module load time
+  const { useProjectsStore } = require('./projects') as typeof import('./projects')
+  const { useGitStore } = require('./git') as typeof import('./git')
+  const { useOfflineStore } = require('./offline') as typeof import('./offline')
+
+  const active = useProjectsStore.getState().projects.find((p: { isActive: boolean }) => p.isActive)
+  if (!active) return null
+  const branch = useGitStore.getState().currentBranch
+  if (!branch) return null
+  return useOfflineStore.getState().getSnapshot(active.id, branch)
+}
 
 type FilesState = {
   rootLabel: string
@@ -22,10 +42,12 @@ type FilesState = {
   searchResults: FileSearchResult[]
   isSearching: boolean
   selectedContextPaths: string[]
+  offlineMode: boolean
   lastActionMessage: string
   isRefreshing: boolean
   error: string | null
   setSearchQuery: (query: string) => void
+  clearOfflineMode: () => void
   runSearch: () => Promise<void>
   clearSearch: () => void
   openDirectory: (path: string) => Promise<void>
@@ -55,9 +77,12 @@ export const useFilesStore = create<FilesState>((set, get) => ({
   searchResults: [],
   isSearching: false,
   selectedContextPaths: [],
+  offlineMode: false,
   lastActionMessage: 'Pull to refresh to load project files from the server.',
   isRefreshing: false,
   error: null,
+
+  clearOfflineMode: () => set({ offlineMode: false }),
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
@@ -70,6 +95,27 @@ export const useFilesStore = create<FilesState>((set, get) => ({
         lastActionMessage: 'Search cleared.',
       })
       return
+    }
+
+    // Try offline FTS first
+    const snap = getActiveOfflineSnapshot()
+    const offlineDb = getOfflineDb()
+    if (snap && offlineDb) {
+      set({ isSearching: true, lastActionMessage: `Searching offline cache for "${query}"...`, error: null })
+      try {
+        const results = await searchOfflineFiles(offlineDb, snap.id, query)
+        set({
+          searchResults: results,
+          isSearching: false,
+          offlineMode: true,
+          lastActionMessage: results.length > 0
+            ? `Found ${results.length} offline matches for "${query}".`
+            : `No offline matches for "${query}".`,
+        })
+        return
+      } catch {
+        // Fall through to server search
+      }
     }
 
     const server = useConnectionStore.getState().server
@@ -93,6 +139,7 @@ export const useFilesStore = create<FilesState>((set, get) => ({
       set({
         searchResults: result.results,
         isSearching: false,
+        offlineMode: false,
         lastActionMessage: result.results.length > 0
           ? `Found ${result.results.length} matches for "${query}".`
           : `No matches for "${query}".`,
@@ -133,6 +180,26 @@ export const useFilesStore = create<FilesState>((set, get) => ({
         lastActionMessage: `Opened ${path === '.' ? 'project root' : path}.`,
       })
       return
+    }
+
+    // Try offline cache before hitting the server
+    const snap = getActiveOfflineSnapshot()
+    const offlineDb = getOfflineDb()
+    if (snap && offlineDb) {
+      try {
+        const offlineEntries = await getOfflineDirectory(offlineDb, snap.id, path)
+        if (offlineEntries.length > 0) {
+          set((state) => ({
+            currentEntries: offlineEntries,
+            directoryEntriesByPath: { ...state.directoryEntriesByPath, [path]: offlineEntries },
+            offlineMode: true,
+            lastActionMessage: `Offline: ${path === '.' ? 'project root' : path}`,
+          }))
+          return
+        }
+      } catch {
+        // Fall through to server
+      }
     }
 
     if (!server) {
@@ -209,6 +276,27 @@ export const useFilesStore = create<FilesState>((set, get) => ({
       lastActionMessage: `Loading ${file.name}...`,
     })
 
+    // Try offline cache first
+    const snap = getActiveOfflineSnapshot()
+    const offlineDb = getOfflineDb()
+    if (snap && offlineDb) {
+      try {
+        const content = await getOfflineFileContent(offlineDb, snap.id, file.path)
+        if (content !== null) {
+          set({
+            selectedFileContent: content,
+            isLoadingContent: false,
+            offlineMode: true,
+            lastActionMessage: `Opened ${file.path} (offline cache)`,
+            error: null,
+          })
+          return
+        }
+      } catch {
+        // Fall through to server
+      }
+    }
+
     const server = useConnectionStore.getState().server
     if (!server) {
       set({
@@ -224,6 +312,7 @@ export const useFilesStore = create<FilesState>((set, get) => ({
       set({
         selectedFileContent: result.content,
         isLoadingContent: false,
+        offlineMode: false,
         lastActionMessage: `Opened ${file.path} (${formatSize(result.size)})`,
         error: null,
       })
@@ -281,6 +370,7 @@ export const useFilesStore = create<FilesState>((set, get) => ({
     searchResults: [],
     isSearching: false,
     selectedContextPaths: [],
+    offlineMode: false,
     lastActionMessage: 'Project changed. Reloading workspace files...',
     error: null,
   }),

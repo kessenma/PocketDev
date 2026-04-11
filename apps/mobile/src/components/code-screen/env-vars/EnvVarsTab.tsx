@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { Download, KeyRound, Plus } from 'lucide-react-native'
+import { KeyRound, Plus } from 'lucide-react-native'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import type { EnvVar } from '@pocketdev/shared/types'
 import { useTheme } from '../../../contexts/ThemeContext'
@@ -15,7 +15,6 @@ import { useEnvStore } from '../../../stores/env'
 import { useProjectsStore } from '../../../stores/projects'
 import EnvVarRow from './EnvVarRow'
 import EnvVarEditSheet from './EnvVarEditSheet'
-import DotEnvImportSheet from './DotEnvImportSheet'
 import type { CodeScreenTabProps } from '../navigation/types'
 
 export default function EnvVarsTab({ onScroll }: CodeScreenTabProps) {
@@ -32,7 +31,6 @@ export default function EnvVarsTab({ onScroll }: CodeScreenTabProps) {
 
   const [editTarget, setEditTarget] = useState<EnvVar | null>(null)
   const [showEdit, setShowEdit] = useState(false)
-  const [showImport, setShowImport] = useState(false)
 
   useEffect(() => {
     if (projectPath) {
@@ -75,22 +73,14 @@ export default function EnvVarsTab({ onScroll }: CodeScreenTabProps) {
   return (
     <>
       <View style={styles.container}>
-        <View style={[styles.toolbar, { borderColor: colors.border }]}>
-          <TouchableOpacity
-            onPress={() => setShowImport(true)}
-            activeOpacity={0.7}
-            style={[styles.toolbarBtn, { borderColor: colors.border }]}
-          >
-            <Download color={colors.textSecondary} size={16} strokeWidth={2.2} />
-            <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>Import .env</Text>
-          </TouchableOpacity>
+        <View style={styles.toolbar}>
           <TouchableOpacity
             onPress={handleAdd}
             activeOpacity={0.7}
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
           >
             <Plus color={colors.primaryText} size={16} strokeWidth={2.5} />
-            <Text style={[styles.addBtnText, { color: colors.primaryText }]}>Add</Text>
+            <Text style={[styles.addBtnText, { color: colors.primaryText }]}>Add / Import</Text>
           </TouchableOpacity>
         </View>
 
@@ -112,7 +102,7 @@ export default function EnvVarsTab({ onScroll }: CodeScreenTabProps) {
               <KeyRound color={colors.textTertiary} size={32} strokeWidth={1.8} />
               <Text style={[styles.emptyTitle, { color: colors.text }]}>No Variables</Text>
               <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-                Tap Add to create your first environment variable, or import from a .env file.
+                Tap Add / Import to create variables or paste a .env file.
               </Text>
             </View>
           </ScrollView>
@@ -142,12 +132,6 @@ export default function EnvVarsTab({ onScroll }: CodeScreenTabProps) {
         editTarget={editTarget}
         onClose={() => setShowEdit(false)}
       />
-
-      <DotEnvImportSheet
-        visible={showImport}
-        projectPath={projectPath}
-        onClose={() => setShowImport(false)}
-      />
     </>
   )
 }
@@ -159,22 +143,8 @@ const styles = StyleSheet.create({
   },
   toolbar: {
     flexDirection: 'row',
-    gap: spacing[2],
     alignItems: 'center',
     justifyContent: 'flex-end',
-  },
-  toolbarBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-  toolbarBtnText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
   },
   addBtn: {
     flexDirection: 'row',

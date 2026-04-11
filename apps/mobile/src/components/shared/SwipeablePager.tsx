@@ -44,6 +44,12 @@ export default function SwipeablePager({ pages, children, scrollY, onPageChange 
     extrapolate: 'clamp',
   })
 
+  const indicatorHeight = scrollY?.interpolate({
+    inputRange: [0, 80],
+    outputRange: [60, 40],
+    extrapolate: 'clamp',
+  }) ?? 60
+
   // Per-page title collapse animations
   const titleOpacity = scrollY?.interpolate({
     inputRange: [0, 50],
@@ -125,12 +131,14 @@ export default function SwipeablePager({ pages, children, scrollY, onPageChange 
         </ReanimatedLib.ScrollView>
       )}
 
-      <PagerIndicator
-        pages={pages}
-        activeIndex={activeIndex}
-        compact={compact}
-        onPress={handleIndicatorPress}
-      />
+      <Animated.View style={[styles.indicatorWrap, { height: indicatorHeight }]}>
+        <PagerIndicator
+          pages={pages}
+          activeIndex={activeIndex}
+          compact={compact}
+          onPress={handleIndicatorPress}
+        />
+      </Animated.View>
     </View>
   )
 }
@@ -145,5 +153,8 @@ const styles = StyleSheet.create({
   },
   page: {
     flex: 1,
+  },
+  indicatorWrap: {
+    overflow: 'hidden',
   },
 })

@@ -1029,3 +1029,21 @@ export async function bulkUpsertConsoleEnvVars(projectPath: string, data: {
   const result = await res.json() as { envVars: EnvVar[] }
   return result.envVars
 }
+
+export interface OfflineSnapshot {
+  id: string
+  deviceId: string
+  deviceName: string | null
+  projectId: string
+  branch: string
+  fileCount: number
+  totalBytes: number
+  downloadedAt: string
+}
+
+export async function fetchOfflineSnapshots(): Promise<OfflineSnapshot[]> {
+  const res = await get('/offline-snapshots')
+  if (!res.ok) return []
+  const result = await res.json() as { snapshots: OfflineSnapshot[] }
+  return result.snapshots
+}

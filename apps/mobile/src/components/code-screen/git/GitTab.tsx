@@ -1,6 +1,6 @@
 import React from 'react'
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { Ghost, GitBranch, RefreshCw, Shapes, Split } from 'lucide-react-native'
+import { FolderGit2, Ghost, GitBranch, RefreshCw, Shapes, Split } from 'lucide-react-native'
 import { borderRadius, palette, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../../hooks/useAdaptiveLayout'
@@ -26,7 +26,7 @@ const VIEW_OPTIONS: readonly CodeSubTabOption<GitView>[] = [
   { value: 'branches', label: 'Branches', icon: Shapes },
 ]
 
-export default function GitTab({ onScroll }: CodeScreenTabProps) {
+export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps) {
   const { colors } = useTheme()
   const { layoutMode } = useAdaptiveLayout()
   const [isChangeSheetVisible, setIsChangeSheetVisible] = React.useState(false)
@@ -193,6 +193,15 @@ export default function GitTab({ onScroll }: CodeScreenTabProps) {
             </Text>
           </View>
           <View style={styles.repoBadges}>
+            {onOpenProjects ? (
+              <TouchableOpacity
+                onPress={onOpenProjects}
+                activeOpacity={0.7}
+                style={[styles.refreshButton, { borderColor: colors.border }]}
+              >
+                <FolderGit2 color={colors.primary} size={14} strokeWidth={2.5} />
+              </TouchableOpacity>
+            ) : null}
             {currentBranch ? (
               <View style={[styles.branchBadge, { backgroundColor: 'rgba(26,26,26,0.05)', borderColor: colors.border }]}>
                 <GitBranch color={colors.textSecondary} size={12} strokeWidth={2.5} />

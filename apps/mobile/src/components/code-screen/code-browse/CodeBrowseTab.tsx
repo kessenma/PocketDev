@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlashList } from '@shopify/flash-list'
 import {
   ActivityIndicator,
@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { FileCode2, FolderOpen, Maximize2, Pin, RefreshCcw, Search, Waypoints } from 'lucide-react-native'
+import { FileCode2, FolderOpen, Maximize2, Pin, Search, Waypoints, WifiOff } from 'lucide-react-native'
 import { borderRadius, palette, spacing, typographyScale, type SemanticTheme } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../../hooks/useAdaptiveLayout'
@@ -25,6 +25,7 @@ import CodeScreenHeader from '../navigation/CodeScreenHeader'
 import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import EnvVarsTab from '../env-vars/EnvVarsTab'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
+import { subscribeToGitEvents } from '../../../services/gitEventBus'
 
 type BrowseView = 'browser' | 'env' | 'context'
 type EntryItem = { id: string; path: string; name: string; description: string; kind: 'file' | 'directory' }
@@ -35,7 +36,7 @@ const VIEW_OPTIONS: readonly CodeSubTabOption<BrowseView>[] = [
   { value: 'context', label: 'Context', icon: Pin },
 ]
 
-export default function CodeBrowseTab({ onOpenProjects, onScroll }: CodeScreenTabProps) {
+export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
   const { colors } = useTheme()
   const { layoutMode } = useAdaptiveLayout()
   const projects = useProjectsStore((state) => state.projects)
@@ -54,6 +55,8 @@ export default function CodeBrowseTab({ onOpenProjects, onScroll }: CodeScreenTa
   const selectedContextPaths = useFilesStore((state) => state.selectedContextPaths)
   const lastActionMessage = useFilesStore((state) => state.lastActionMessage)
   const isRefreshing = useFilesStore((state) => state.isRefreshing)
+  const offlineMode = useFilesStore((state) => state.offlineMode)
+  const clearOfflineMode = useFilesStore((state) => state.clearOfflineMode)
   const setSearchQuery = useFilesStore((state) => state.setSearchQuery)
   const runSearch = useFilesStore((state) => state.runSearch)
   const clearSearch = useFilesStore((state) => state.clearSearch)
@@ -62,7 +65,6 @@ export default function CodeBrowseTab({ onOpenProjects, onScroll }: CodeScreenTa
   const selectFile = useFilesStore((state) => state.selectFile)
   const goBackToBrowser = useFilesStore((state) => state.goBackToBrowser)
   const toggleWrapLines = useFilesStore((state) => state.toggleWrapLines)
-  const refresh = useFilesStore((state) => state.refresh)
   const toggleContextPath = useFilesStore((state) => state.toggleContextPath)
   const clearContextPaths = useFilesStore((state) => state.clearContextPaths)
   const previewVisible = usePreviewStore((state) => state.visible)
@@ -73,6 +75,12 @@ export default function CodeBrowseTab({ onOpenProjects, onScroll }: CodeScreenTa
   const markPreviewFailed = usePreviewStore((state) => state.markFailed)
   const [explorerExpanded, setExplorerExpanded] = useState(false)
   const [activeView, setActiveView] = useState<BrowseView>('browser')
+
+  useEffect(() => {
+    return subscribeToGitEvents((event) => {
+      if (event.type === 'branch_switched') clearOfflineMode()
+    })
+  }, [clearOfflineMode])
 
   const hasSearchResults = searchQuery.trim().length > 0
   const items = hasSearchResults
@@ -201,37 +209,6 @@ export default function CodeBrowseTab({ onOpenProjects, onScroll }: CodeScreenTa
       ) : (
         <>
           <View style={styles.browserStaticHeader}>
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                onPress={onOpenProjects}
-                activeOpacity={0.7}
-                style={[styles.secondaryAction, { borderColor: colors.border }]}
-              >
-                <Text style={[styles.secondaryActionText, { color: colors.text }]}>Switch Repo</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void refresh()
-                }}
-                activeOpacity={0.7}
-                style={[styles.secondaryAction, { borderColor: colors.border }]}
-              >
-                <RefreshCcw color={colors.text} size={16} strokeWidth={2.2} />
-                <Text style={[styles.secondaryActionText, { color: colors.text }]}>Refresh</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void openPreview()
-                }}
-                activeOpacity={0.7}
-                style={[styles.primaryAction, { backgroundColor: colors.primary }]}
-              >
-                <Text style={[styles.primaryActionText, { color: colors.primaryText }]}>Preview</Text>
-              </TouchableOpacity>
-            </View>
-
             <View style={styles.explorerControls}>
               <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Search color={colors.textTertiary} size={16} strokeWidth={2.2} />
@@ -253,6 +230,15 @@ export default function CodeBrowseTab({ onOpenProjects, onScroll }: CodeScreenTa
                   </Pressable>
                 ) : null}
               </View>
+
+              {offlineMode ? (
+                <View style={[styles.offlineBanner, { backgroundColor: colors.backgroundSecondary }]}>
+                  <WifiOff color={colors.textSecondary} size={14} strokeWidth={2.2} />
+                  <Text style={[styles.offlineBannerText, { color: colors.textSecondary }]}>
+                    Browsing offline cache
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.pathRow}>
                 <TouchableOpacity
@@ -324,6 +310,7 @@ export default function CodeBrowseTab({ onOpenProjects, onScroll }: CodeScreenTa
               onScroll={onScroll}
               scrollEventThrottle={16}
               contentContainerStyle={styles.browserListContent}
+              style={styles.browserList}
             />
           </View>
         </>
@@ -388,37 +375,7 @@ export default function CodeBrowseTab({ onOpenProjects, onScroll }: CodeScreenTa
     <>
       <View style={styles.container}>
         <CodeScreenHeader>
-          <View style={styles.summaryBlock}>
-            <Text style={[styles.summaryLabel, { color: colors.textTertiary }]}>Repository</Text>
-            <Text style={[styles.summaryValue, { color: colors.text }]}>
-              {rootLabel || 'Project root'}
-            </Text>
-          </View>
           <CodeSubTabNavigator value={activeView} options={VIEW_OPTIONS} onChange={setActiveView} />
-          <View style={[styles.contextSummary, { backgroundColor: colors.backgroundSecondary }]}>
-            <View style={styles.contextTrayHeader}>
-              <Text style={[styles.contextTrayLabel, { color: colors.textTertiary }]}>AI Context</Text>
-              {selectedContextPaths.length > 0 ? (
-                <TouchableOpacity onPress={() => setActiveView('context')} activeOpacity={0.7}>
-                  <Text style={[styles.clearText, { color: colors.primary }]}>Manage</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-            {selectedContextPaths.length > 0 ? (
-              <View style={styles.contextChipRow}>
-                {selectedContextPaths.map((path) => (
-                  <View key={path} style={[styles.contextChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Text style={[styles.contextChipText, { color: colors.text }]} numberOfLines={1}>
-                      {path}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-          </View>
-          <Text style={[styles.statusMessage, { color: colors.textTertiary }]} numberOfLines={2}>
-            {lastActionMessage}
-          </Text>
         </CodeScreenHeader>
 
         {activeView === 'browser' ? browserSection : null}
@@ -522,6 +479,9 @@ const styles = StyleSheet.create({
   browserListContent: {
     paddingBottom: spacing[8],
   },
+  browserList: {
+    flex: 1,
+  },
   expandRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -590,18 +550,6 @@ const styles = StyleSheet.create({
   },
   clearText: {
     ...typographyScale.sm,
-    fontWeight: '700',
-  },
-  summaryBlock: {
-    gap: 2,
-  },
-  summaryLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-  summaryValue: {
-    ...typographyScale.base,
     fontWeight: '700',
   },
   contextChipRow: {
@@ -741,5 +689,16 @@ const styles = StyleSheet.create({
   statusMessage: {
     ...typographyScale.sm,
     fontWeight: '500',
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  offlineBannerText: {
+    ...typographyScale.sm,
   },
 })

@@ -27,10 +27,12 @@ import {
   getCachedGitCommits,
   pruneOldCommits,
 } from '../db/gitHistoryOperations'
+import { emitGitEvent } from '../services/gitEventBus'
 
 type GitState = {
   repoName: string
   repoPath: string
+  currentBranch: string
   activeView: GitView
   selectedFileId: string | null
   commitMessage: string
@@ -150,6 +152,7 @@ function commitToMobile(commit: { sha: string; message: string; author: string; 
 export const useGitStore = create<GitState>((set, get) => ({
   repoName: '',
   repoPath: '',
+  currentBranch: '',
   activeView: 'changes',
   selectedFileId: null,
   commitMessage: '',
@@ -203,9 +206,11 @@ export const useGitStore = create<GitState>((set, get) => ({
       if ('ok' in result && result.ok) {
         set({
           repoName: result.summary.repoName,
+          currentBranch: branchName,
           remote: summaryToRemote(result.summary),
           lastActionMessage: `Switched to ${branchName}.`,
         })
+        emitGitEvent({ type: 'branch_switched', branchName })
         // Refresh all data after branch switch
         get().refresh()
       } else if ('error' in result) {
@@ -260,6 +265,7 @@ export const useGitStore = create<GitState>((set, get) => ({
       set({
         repoName: summary.repoName,
         repoPath: summary.repoPath,
+        currentBranch: branchName,
         changes: changes.map(changeToMobile),
         commits: commits.map(commitToMobile),
         branches: branches.map(branchEntryToOption),
@@ -270,6 +276,7 @@ export const useGitStore = create<GitState>((set, get) => ({
           ? `${changes.length} changes on ${branchName}.`
           : `Working tree is clean on ${branchName}.`,
       })
+      emitGitEvent({ type: 'refresh_completed', branchName })
 
       // Background: sync + fetch detailed history and cache to SQLite
       triggerHistorySync(server.ip, server.port)
@@ -336,12 +343,14 @@ export const useGitStore = create<GitState>((set, get) => ({
     try {
       const result = await postGitCommit(server.ip, server.port, message)
       if ('ok' in result && result.ok) {
+        const committedBranch = result.summary.currentBranch.name
         set({
           isCommitting: false,
           commitMessage: '',
           remote: summaryToRemote(result.summary),
-          lastActionMessage: `Committed to ${result.summary.currentBranch.name}.`,
+          lastActionMessage: `Committed to ${committedBranch}.`,
         })
+        emitGitEvent({ type: 'commit_made', branchName: committedBranch })
         // Refresh to get updated changes and history
         get().refresh()
       } else if ('error' in result) {
@@ -382,6 +391,7 @@ export const useGitStore = create<GitState>((set, get) => ({
           remote: summaryToRemote(result.summary),
           lastActionMessage: `Pushed to ${result.summary.remote.upstream}.`,
         })
+        emitGitEvent({ type: 'push_completed', branchName: get().currentBranch })
         get().refresh()
       } else if ('error' in result) {
         set({
@@ -416,6 +426,7 @@ export const useGitStore = create<GitState>((set, get) => ({
           remote: summaryToRemote(result.summary),
           lastActionMessage: `Pulled from ${result.summary.remote.upstream}.`,
         })
+        emitGitEvent({ type: 'pull_completed', branchName: get().currentBranch })
         // Refresh everything + sync history to pick up new commits
         get().refresh()
         get().syncHistory()

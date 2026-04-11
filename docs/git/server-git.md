@@ -1,6 +1,41 @@
-# Git Server Integration Plan
+# Git Server Integration
 
 > **Status**: Implemented. The git server integration described below is now complete and live. See [docs/mobile/stores.md](../mobile/stores.md) for the current store architecture and [docs/agent/task-system.md](../agent/task-system.md) for agent-side details.
+
+## Offline Snapshot API
+
+In addition to the real-time git endpoints, the agent exposes three console-facing routes so the server can track which mobile devices have cached a project branch offline.
+
+### Routes (`apps/agent/src/routes/offline-snapshots.ts`)
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `GET` | `/PocketDev/api/console/offline-snapshots` | Cookie session | List all device offline snapshots (joined with device name) |
+| `POST` | `/PocketDev/api/console/offline-snapshots` | Device Ed25519 | Upsert snapshot record for the requesting device |
+| `DELETE` | `/PocketDev/api/console/offline-snapshots/:projectId/:branch` | Device Ed25519 | Remove snapshot record for the requesting device |
+
+### Agent DB table (`device_offline_snapshots`)
+
+Drizzle schema in `apps/agent/src/db/schema/offline-snapshots.ts`. Migration: `drizzle/0008_confused_phalanx.sql`.
+
+| Column | Notes |
+|---|---|
+| `id` | `${deviceId}:${projectId}:${branch}` |
+| `device_id` | FK → `devices.id` ON DELETE CASCADE |
+| `project_id` | Project UUID from mobile |
+| `branch` | Branch name |
+| `file_count` | Number of cached files |
+| `total_bytes` | Total cached size |
+| `downloaded_at` | ISO timestamp from mobile |
+
+Unique index on `(device_id, project_id, branch)`. Upsert uses `onConflictDoUpdate` on the `id` column.
+
+### Console visibility
+
+- **RepoInspectorPanel** — "offline on N devices" badge in the info bar; populated during `refresh()`
+- **GitHubDiagnosticsTab** — "Mobile Offline Snapshots" panel in the left sidebar; shows device name, branch, file count, size, and relative download time
+
+For the mobile-side implementation see [docs/git/mobile_git.md — Offline Repo Caching](./mobile_git.md).
 
 The goal is to connect the mobile git workspace to the PocketDev agent so the UI can display real repository state and execute git actions on the paired server.
 
