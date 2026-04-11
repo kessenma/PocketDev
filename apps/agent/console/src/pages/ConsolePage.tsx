@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
@@ -12,8 +12,9 @@ import { EnvVarsPanel } from '#/components/EnvVarsPanel'
 import { UserManagementPanel } from '#/components/UserManagementPanel'
 import { UpdateBanner } from '#/components/UpdateBanner'
 import { Modal } from '#/components/ui/modal'
-import { checkHealth, fetchStatus, logout, type ConsoleStatus, type UpdateInfo } from '#/lib/api'
-import { Server, LogOut, Maximize2, Shield } from 'lucide-react'
+import { checkHealth, fetchStatus, logout, triggerUpdate, type ConsoleStatus, type UpdateInfo } from '#/lib/api'
+import { toast } from 'sonner'
+import { Server, LogOut, Maximize2, Shield, ArrowUpCircle, Loader2 } from 'lucide-react'
 
 export function ConsolePage() {
   const navigate = useNavigate()
@@ -22,6 +23,8 @@ export function ConsolePage() {
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [agentVersion, setAgentVersion] = useState<string>('unknown')
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [upgrading, setUpgrading] = useState(false)
+  const upgradePollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const loadStatus = useCallback(async () => {
     try {
@@ -47,6 +50,38 @@ export function ConsolePage() {
   useEffect(() => {
     loadStatus()
   }, [loadStatus])
+
+  async function handleUpgrade() {
+    setUpgrading(true)
+    try {
+      await triggerUpdate()
+      toast.info('Upgrade in progress — the agent will restart shortly...')
+      let attempts = 0
+      upgradePollRef.current = setInterval(async () => {
+        attempts++
+        try {
+          const health = await checkHealth()
+          if (health.version !== agentVersion || attempts > 5) {
+            clearInterval(upgradePollRef.current!)
+            upgradePollRef.current = null
+            toast.success(`Updated to v${health.version}`)
+            setTimeout(() => window.location.reload(), 1000)
+          }
+        } catch {
+          // still restarting
+        }
+        if (attempts >= 20) {
+          clearInterval(upgradePollRef.current!)
+          upgradePollRef.current = null
+          setUpgrading(false)
+          toast.error('Upgrade timed out — try refreshing the page.')
+        }
+      }, 3000)
+    } catch (err) {
+      setUpgrading(false)
+      toast.error(err instanceof Error ? err.message : 'Upgrade failed')
+    }
+  }
 
   async function handleLogout() {
     await logout()
@@ -109,6 +144,20 @@ export function ConsolePage() {
                 >
                   <Maximize2 className="mr-2 h-4 w-4" />
                   Terminal
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                  onClick={handleUpgrade}
+                  disabled={upgrading}
+                >
+                  {upgrading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUpCircle className="mr-2 h-4 w-4" />
+                  )}
+                  {upgrading ? 'Upgrading...' : 'Upgrade'}
                 </Button>
                 <Button variant="outline" size="sm" className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
