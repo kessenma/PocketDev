@@ -2,8 +2,8 @@ import { Elysia, t } from 'elysia'
 import { readdir, readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises'
 import { join, resolve, relative } from 'node:path'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
-import { authenticateRequest } from '../services/auth.ts'
-import { getActiveProjectPath } from '../services/projects.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { getActiveProjectPath } from '../services/system/projects.ts'
 
 /** Resolve and validate a path is within BASE_DIR */
 function safePath(baseDir: string, requestedPath: string): string | null {

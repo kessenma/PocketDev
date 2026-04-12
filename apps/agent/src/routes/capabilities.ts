@@ -1,8 +1,8 @@
 import { Elysia } from 'elysia'
 import type { ServerCapabilities, ServerProvider, ProviderAvailability, ServerProviderId } from '@pocketdev/shared/types'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import { getToolRecord, type ToolPathRow } from '../db/index.ts'
-import { discoverCopilotModels } from '../services/copilot-models.ts'
+import { discoverCopilotModels } from '../services/cli-setup/copilot-models.ts'
 
 function toAvailability(row: ToolPathRow | undefined): ProviderAvailability {
   if (!row?.path) return 'not_installed'

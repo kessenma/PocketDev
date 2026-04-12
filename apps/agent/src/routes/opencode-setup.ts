@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { checkOpenCodeStatus, getOpenCodeInstallCommand, installOpenCode, verifyOpenCode } from '../services/opencode-setup.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { checkOpenCodeStatus, getOpenCodeInstallCommand, installOpenCode, verifyOpenCode } from '../services/cli-setup/opencode-setup.ts'
 
 export const opencodeSetupRoutes = new Elysia({ prefix: '/opencode-setup' })
   .get('/status', async ({ request, set }) => {

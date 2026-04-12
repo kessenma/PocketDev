@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   checkCodexStatus,
   getCodexAuthStatus,
@@ -8,7 +8,7 @@ import {
   startCodexAuth,
   submitCodexAuthInput,
   verifyCodexAuth,
-} from '../services/codex-setup.ts'
+} from '../services/cli-setup/codex-setup.ts'
 
 export const codexSetupRoutes = new Elysia({ prefix: '/codex-setup' })
   .get('/status', async ({ request, set }) => {

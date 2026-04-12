@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   checkSshStatus,
   generateSshKey,
@@ -9,7 +9,7 @@ import {
   configureGitHubCliToken,
   startGitHubCliAuth,
   getGitHubCliAuthStatus,
-} from '../services/git-setup.ts'
+} from '../services/git/git-setup.ts'
 
 export const gitSetupRoutes = new Elysia({ prefix: '/git-setup' })
   .get('/ssh-status', async ({ request, set }) => {

@@ -4,13 +4,13 @@ import {
   verifyAndStoreRegistration,
   createAuthenticationOptions,
   verifyAuthenticationCredential,
-} from '../services/webauthn.ts'
+} from '../services/auth/webauthn.ts'
 import {
   getAdminAccountById,
   getPasskeysByAdminId,
   softDeletePasskey,
 } from '../db/index.ts'
-import { getSessionUser, createSession, sessionCookieHeader } from '../services/console-auth.ts'
+import { getSessionUser, createSession, sessionCookieHeader } from '../services/auth/console-auth.ts'
 
 function requireConsoleSession(request: Request, set: { status?: unknown; headers?: Record<string, string> | HTTPHeaders }) {
   const user = getSessionUser(request.headers.get('cookie'))

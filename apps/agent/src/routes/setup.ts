@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
-import { isSetupActive, pairDevice } from '../services/setup.ts'
-import { authenticateRequest } from '../services/auth.ts'
+import { isSetupActive, pairDevice } from '../services/auth/setup.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import { deleteDevice } from '../db/index.ts'
 
 export const setupRoutes = new Elysia()

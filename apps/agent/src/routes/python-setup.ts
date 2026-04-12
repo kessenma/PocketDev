@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { checkPythonStatus, verifyPython } from '../services/python-setup.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { checkPythonStatus, verifyPython } from '../services/cli-setup/python-setup.ts'
 
 export const pythonSetupRoutes = new Elysia({ prefix: '/python-setup' })
   .get('/status', async ({ request, set }) => {

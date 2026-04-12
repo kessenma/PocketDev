@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { checkPkgManagerStatus, installPkgTool, verifyPkgManagers } from '../services/pkg-setup.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { checkPkgManagerStatus, installPkgTool, verifyPkgManagers } from '../services/cli-setup/pkg-setup.ts'
 
 export const pkgSetupRoutes = new Elysia({ prefix: '/pkg-setup' })
   .get('/status', async ({ request, set }) => {

@@ -8,9 +8,9 @@
  */
 
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { lockPort, unlockPort, isLocked, isFirewallEnabled, isFirewallAvailable } from '../services/firewall.ts'
-import { broadcast, makeMessage, getConnectedClientCount, closeAllClients } from '../services/ws.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { lockPort, unlockPort, isLocked, isFirewallEnabled, isFirewallAvailable } from '../services/system/firewall.ts'
+import { broadcast, makeMessage, getConnectedClientCount, closeAllClients } from '../services/terminal/ws.ts'
 
 const WAKE_PORT = Number(process.env.POCKETDEV_WAKE_PORT ?? 4388)
 const AUTO_LOCK_MINUTES = Number(process.env.POCKETDEV_AUTO_LOCK_MINUTES ?? 0)

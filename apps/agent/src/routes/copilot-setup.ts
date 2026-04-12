@@ -1,12 +1,12 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   checkCopilotStatus,
   getCopilotTrustStatus,
   installCopilot,
   startCopilotTrust,
   verifyCopilotSetup,
-} from '../services/copilot-setup.ts'
+} from '../services/cli-setup/copilot-setup.ts'
 
 export const copilotSetupRoutes = new Elysia({ prefix: '/copilot-setup' })
   .get('/status', async ({ request, set }) => {

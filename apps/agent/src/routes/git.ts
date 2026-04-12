@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   GitServiceError,
   getGitSummary,
@@ -18,7 +18,7 @@ import {
   dropStash,
   getMergeState,
   abortMerge,
-} from '../services/git.ts'
+} from '../services/git/git.ts'
 import {
   syncGitHistory,
   detectNewCommits,
@@ -26,8 +26,8 @@ import {
   getFileCommitHistory,
   getTaskCommitHistory,
   type DetailedCommit,
-} from '../services/git-history-sync.ts'
-import { getActiveProjectId } from '../services/projects.ts'
+} from '../services/git/git-history-sync.ts'
+import { getActiveProjectId } from '../services/system/projects.ts'
 import type { GitDetailedCommitEntry, GitCommitFileEntry } from '@pocketdev/shared/types'
 
 function handleError(error: unknown, set: { status?: number | string }) {

@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   ServerActionsError,
   getSystemSummary,
@@ -8,7 +8,7 @@ import {
   getRecentErrors,
   getActionCatalog,
   runNamedAction,
-} from '../services/server-actions.ts'
+} from '../services/tasks/server-actions.ts'
 
 function handleError(error: unknown, set: { status?: number | string }) {
   const message = error instanceof Error ? error.message : 'Server actions operation failed'

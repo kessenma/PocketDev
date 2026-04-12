@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { getSessionUser } from '../services/console-auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { getSessionUser } from '../services/auth/console-auth.ts'
 import {
   upsertDeviceOfflineSnapshot,
   deleteDeviceOfflineSnapshot,

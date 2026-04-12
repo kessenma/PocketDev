@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { checkDockerStatus, verifyDocker } from '../services/docker-setup.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { checkDockerStatus, verifyDocker } from '../services/cli-setup/docker-setup.ts'
 
 export const dockerSetupRoutes = new Elysia({ prefix: '/docker-setup' })
   .get('/status', async ({ request, set }) => {

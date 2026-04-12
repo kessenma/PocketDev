@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { checkTypeScriptStatus, verifyTypeScript } from '../services/typescript-setup.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { checkTypeScriptStatus, verifyTypeScript } from '../services/cli-setup/typescript-setup.ts'
 
 export const typescriptSetupRoutes = new Elysia({ prefix: '/typescript-setup' })
   .get('/status', async ({ request, set }) => {

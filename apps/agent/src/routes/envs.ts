@@ -1,12 +1,12 @@
 import { Elysia, t } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   listEnvVars,
   createEnvVar,
   updateEnvVarById,
   deleteEnvVarById,
   bulkUpsertEnvVars,
-} from '../services/env-vars.ts'
+} from '../services/system/env-vars.ts'
 
 export const envRoutes = new Elysia({ prefix: '/envs' })
   .get('', async ({ request, query, set }) => {

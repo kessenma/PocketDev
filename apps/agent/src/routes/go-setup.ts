@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { checkGoStatus, verifyGo, getGoInstallCommand } from '../services/go-setup.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { checkGoStatus, verifyGo, getGoInstallCommand } from '../services/cli-setup/go-setup.ts'
 
 export const goSetupRoutes = new Elysia({ prefix: '/go-setup' })
   .get('/status', async ({ request, set }) => {

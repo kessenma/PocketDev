@@ -1,12 +1,12 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   checkClaudeStatus,
   verifyClaudeAuth,
   startClaudeAuth,
   getClaudeAuthStatus,
   submitClaudeAuthInput,
-} from '../services/claude-setup.ts'
+} from '../services/cli-setup/claude-setup.ts'
 
 export const claudeSetupRoutes = new Elysia({ prefix: '/claude-setup' })
   .get('/status', async ({ request, set }) => {

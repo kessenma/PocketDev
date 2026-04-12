@@ -1,8 +1,8 @@
 import { Elysia } from 'elysia'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join, basename } from 'node:path'
-import { authenticateRequest } from '../services/auth.ts'
-import { getActiveProjectPath } from '../services/projects.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { getActiveProjectPath } from '../services/system/projects.ts'
 import type { ScriptPackageInfo, ScriptsResponse } from '@pocketdev/shared/types'
 
 async function detectPackageManager(projectDir: string): Promise<ScriptPackageInfo['packageManager']> {

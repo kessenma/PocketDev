@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia'
 import type { ContainerLogsFilter, ContainerLogsDirection } from '@pocketdev/shared/types'
-import { authenticateRequest } from '../services/auth.ts'
-import { DockerServiceError, getContainerLogs, listContainers } from '../services/docker.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { DockerServiceError, getContainerLogs, listContainers } from '../services/system/docker.ts'
 
 function normalizeDirection(value: unknown): ContainerLogsDirection {
   return value === 'head' ? 'head' : 'tail'

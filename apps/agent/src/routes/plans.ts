@@ -1,10 +1,10 @@
 import { Elysia, t } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   proposePlan,
   getActivePlanEntry,
   getPlanHistoryEntries,
-} from '../services/plan-manager.ts'
+} from '../services/tasks/plan-manager.ts'
 
 export const planRoutes = new Elysia({ prefix: '/plans' })
   .get('/active', async ({ request, set }) => {

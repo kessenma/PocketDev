@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia'
-import { hasDevices } from '../services/setup.ts'
+import { hasDevices } from '../services/auth/setup.ts'
 
 export const healthRoutes = new Elysia()
   .get('/health', () => ({

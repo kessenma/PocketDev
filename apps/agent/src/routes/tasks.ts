@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { getTaskList } from '../services/task-manager.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { getTaskList } from '../services/tasks/task-manager.ts'
 import { getTaskLogs, getTaskTurns } from '../db/index.ts'
 
 export const taskRoutes = new Elysia({ prefix: '/tasks' })

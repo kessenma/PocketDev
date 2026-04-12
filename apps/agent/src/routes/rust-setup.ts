@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
-import { checkRustStatus, verifyRust } from '../services/rust-setup.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
+import { checkRustStatus, verifyRust } from '../services/cli-setup/rust-setup.ts'
 
 export const rustSetupRoutes = new Elysia({ prefix: '/rust-setup' })
   .get('/status', async ({ request, set }) => {

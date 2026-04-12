@@ -6,7 +6,7 @@ import {
   stopDatabase,
   removeDatabase,
   fillDefaultPasswords,
-} from '../services/databases.ts'
+} from '../services/system/databases.ts'
 import type { DatabaseCreateRequest } from '@pocketdev/shared/types'
 
 export const databaseRoutes = new Elysia({ prefix: '/databases' })

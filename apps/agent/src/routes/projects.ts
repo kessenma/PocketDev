@@ -1,12 +1,12 @@
 import { Elysia, t } from 'elysia'
-import { authenticateRequest } from '../services/auth.ts'
+import { authenticateRequest } from '../services/auth/auth.ts'
 import {
   cloneProject,
   createBranchForProject,
   listProjects,
   selectProject,
-} from '../services/projects.ts'
-import { GitServiceError } from '../services/git.ts'
+} from '../services/system/projects.ts'
+import { GitServiceError } from '../services/git/git.ts'
 
 function handleError(error: unknown, set: { status?: number | string }) {
   const message = error instanceof Error ? error.message : 'Project operation failed'

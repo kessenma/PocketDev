@@ -17,8 +17,8 @@ import {
   isConsoleSignupEnabled,
   setConsoleSignupEnabled,
   canManageTargetUser,
-} from '../services/console-auth.ts'
-import { hasDevices } from '../services/setup.ts'
+} from '../services/auth/console-auth.ts'
+import { hasDevices } from '../services/auth/setup.ts'
 import {
   hasAdminAccount,
   getDevices,
@@ -35,32 +35,32 @@ import {
   getProjects,
   type AdminAccountRow,
 } from '../db/index.ts'
-import { checkAllPrerequisites } from '../services/prerequisites.ts'
-import { getTerminalDebugLog } from '../services/terminal-ws.ts'
-import { getCodexAuthDebug } from '../services/codex-setup.ts'
-import { getClaudeAuthDebug } from '../services/claude-setup.ts'
-import { getCopilotAuthDebug } from '../services/copilot-setup.ts'
-import { getGitHubAuthDebug } from '../services/git-setup.ts'
-import { getActiveProjectId, getActiveProjectPath, getProjectsDebug } from '../services/projects.ts'
-import { checkPythonStatus } from '../services/python-setup.ts'
-import { checkRustStatus } from '../services/rust-setup.ts'
-import { checkGoStatus } from '../services/go-setup.ts'
-import { checkTypeScriptStatus } from '../services/typescript-setup.ts'
-import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
-import { getGitSummary } from '../services/git.ts'
-import { getDetailedCommits, detectNewCommits, syncGitHistory } from '../services/git-history-sync.ts'
-import { getWsDebugInfo, getConnectedClientCount, closeAllClients, broadcast, makeMessage } from '../services/ws.ts'
-import { lockPort, unlockPort, isLocked, isFirewallEnabled, isFirewallAvailable, setFirewallEnabled } from '../services/firewall.ts'
-import { createBrowserSession } from '../services/proxy.ts'
-import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/version.ts'
-import { disableManagedSwap, enableManagedSwap, getSwapMetrics, getSwapStatus } from '../services/swap.ts'
+import { checkAllPrerequisites } from '../services/cli-setup/prerequisites.ts'
+import { getTerminalDebugLog } from '../services/terminal/terminal-ws.ts'
+import { getCodexAuthDebug } from '../services/cli-setup/codex-setup.ts'
+import { getClaudeAuthDebug } from '../services/cli-setup/claude-setup.ts'
+import { getCopilotAuthDebug } from '../services/cli-setup/copilot-setup.ts'
+import { getGitHubAuthDebug } from '../services/git/git-setup.ts'
+import { getActiveProjectId, getActiveProjectPath, getProjectsDebug } from '../services/system/projects.ts'
+import { checkPythonStatus } from '../services/cli-setup/python-setup.ts'
+import { checkRustStatus } from '../services/cli-setup/rust-setup.ts'
+import { checkGoStatus } from '../services/cli-setup/go-setup.ts'
+import { checkTypeScriptStatus } from '../services/cli-setup/typescript-setup.ts'
+import { getTaskList, getProcess, buildCommand, killTask } from '../services/tasks/task-manager.ts'
+import { getGitSummary } from '../services/git/git.ts'
+import { getDetailedCommits, detectNewCommits, syncGitHistory } from '../services/git/git-history-sync.ts'
+import { getWsDebugInfo, getConnectedClientCount, closeAllClients, broadcast, makeMessage } from '../services/terminal/ws.ts'
+import { lockPort, unlockPort, isLocked, isFirewallEnabled, isFirewallAvailable, setFirewallEnabled } from '../services/system/firewall.ts'
+import { createBrowserSession } from '../services/preview/proxy.ts'
+import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/system/version.ts'
+import { disableManagedSwap, enableManagedSwap, getSwapMetrics, getSwapStatus } from '../services/system/swap.ts'
 import {
   listEnvVars,
   createEnvVar,
   updateEnvVarById,
   deleteEnvVarById,
   bulkUpsertEnvVars,
-} from '../services/env-vars.ts'
+} from '../services/system/env-vars.ts'
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
@@ -467,7 +467,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       return { error: 'Unauthorized' }
     }
 
-    const { authenticateRequest } = await import('../services/auth.ts')
+    const { authenticateRequest } = await import('../services/auth/auth.ts')
     const authHeader = body.authHeader as string
     const result = await authenticateRequest(authHeader)
 
