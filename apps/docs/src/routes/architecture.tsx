@@ -96,6 +96,25 @@ function ArchitecturePage() {
         <li>File, git, terminal, and preview actions are mediated by the agent instead of exposing direct host access from clients.</li>
         <li>Operational runtime data stays local to the machine you control, primarily in SQLite on the agent and secure local client storage on devices.</li>
       </ul>
+      <h3>Port Security</h3>
+      <p>
+        When enabled, the agent can block its own port at the iptables level, making the server
+        invisible to scanners when not in use. This is opt-in and disabled by default.
+      </p>
+      <p>
+        The design uses two ports. The main agent port (<code>4387</code>) can be blocked by iptables
+        when no mobile clients are active. A secondary wake server on port <code>4388</code> stays
+        permanently open but accepts only one request type: a signed <code>POST /wake</code> from a
+        registered device. This solves the catch-22 of "port is closed, how do I reopen it" — the
+        mobile app sends a wake request to port 4388, which verifies the Ed25519 signature and
+        unblocks port 4387.
+      </p>
+      <ul>
+        <li>Auto-lock fires after configurable inactivity with no active WebSocket clients. Skipped if a task is running.</li>
+        <li>Manual lock and unlock are available from the mobile app Settings screen and the server console's Network diagnostics tab.</li>
+        <li>The wake server rate-limits attempts per IP (3 per 60 seconds) to prevent brute force.</li>
+        <li>The agent always boots unlocked, so restarts and updates never leave the server inaccessible.</li>
+      </ul>
 
       <h2>Wire Protocol</h2>
       <p>
@@ -124,6 +143,8 @@ function ArchitecturePage() {
         <li><code>plan.proposed</code></li>
         <li><code>plan.step_updated</code></li>
         <li><code>plan.resolved</code></li>
+        <li><code>server.locked</code></li>
+        <li><code>server.unlocked</code></li>
       </ul>
       <pre>{`{
   type: "plan.step_updated",

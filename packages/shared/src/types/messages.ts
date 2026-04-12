@@ -39,6 +39,8 @@ export type EventType =
   | 'plan.step_updated'
   | 'plan.resolved'
   | 'pong'
+  | 'server.locked'
+  | 'server.unlocked'
 
 export interface WsMessage<T = unknown> {
   type: CommandType | EventType

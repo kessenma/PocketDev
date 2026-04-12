@@ -101,6 +101,7 @@ class ClaudeTaskStreamAdapter extends BaseTaskStreamAdapter {
     const type = typeof message.type === 'string' ? message.type : null
     if (!type) return false
 
+    this.handlePermissionRequests(message)
     this.handlePermissionDenials(message)
 
     if (type === 'system') {
@@ -204,6 +205,40 @@ class ClaudeTaskStreamAdapter extends BaseTaskStreamAdapter {
     return false
   }
 
+  /**
+   * Handles pre-execution permission requests (--permission-mode default).
+   * Claude emits permission_requests and WAITS on stdin for 'y'/'n' before executing the tool.
+   */
+  private handlePermissionRequests(message: JsonRecord) {
+    if (!Array.isArray(message.permission_requests) || message.permission_requests.length === 0) return
+
+    for (const raw of message.permission_requests) {
+      const req = asRecord(raw)
+      const toolName = typeof req.tool_name === 'string' ? req.tool_name : 'Tool'
+      const toolUseId = typeof req.tool_use_id === 'string' ? req.tool_use_id : undefined
+      const toolInput = asRecord(req.tool_input)
+      const questionId = toolUseId ?? crypto.randomUUID()
+
+      this.sink.emitQuestion(
+        {
+          questionId,
+          taskId: this.taskId,
+          provider: 'claude',
+          prompt: `Allow ${toolName}?`,
+          type: 'permission',
+          toolDetails: { toolName, toolInput },
+        },
+        (answer) => {
+          this.writeStdin(`${normalizeBinaryAnswer(answer)}\n`)
+        },
+      )
+    }
+  }
+
+  /**
+   * Handles post-denial notifications (--permission-mode acceptEdits / plan).
+   * Claude already denied the tool — writes 'y'/'n' to stdin may trigger a retry in some modes.
+   */
   private handlePermissionDenials(message: JsonRecord) {
     if (!Array.isArray(message.permission_denials) || message.permission_denials.length === 0) return
 

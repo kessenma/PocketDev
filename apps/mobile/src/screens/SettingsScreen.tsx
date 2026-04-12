@@ -4,7 +4,7 @@ import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import { useConnectionStore } from '../stores/connection'
 import { useServerActionsStore } from '../stores/server-actions'
-import { browserSessionUrl } from '../services/api'
+import { browserSessionUrl, lockServer } from '../services/api'
 import type { CompositeNavigationProp } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -30,8 +30,28 @@ export default function SettingsScreen({ navigation }: Props) {
   const server = useConnectionStore((s) => s.server)
   const status = useConnectionStore((s) => s.status)
   const unpair = useConnectionStore((s) => s.unpair)
+  const serverLocked = useConnectionStore((s) => s.serverLocked)
+  const wakeAndConnect = useConnectionStore((s) => s.wakeAndConnect)
+  const setServerLocked = useConnectionStore((s) => s.setServerLocked)
   const refreshServer = useServerActionsStore((s) => s.refresh)
   const [consoleOpen, setConsoleOpen] = useState(false)
+  const [lockLoading, setLockLoading] = useState(false)
+
+  async function handleLock() {
+    if (!server) return
+    setLockLoading(true)
+    try {
+      await lockServer(server.ip, server.port)
+      setServerLocked(true)
+    } catch { /* ignore — WS server.locked event will also update state */ }
+    finally { setLockLoading(false) }
+  }
+
+  async function handleWake() {
+    setLockLoading(true)
+    try { await wakeAndConnect() }
+    finally { setLockLoading(false) }
+  }
 
   const consoleUrl = server
     ? browserSessionUrl(server.ip, server.port, '/PocketDev/')
@@ -107,6 +127,26 @@ export default function SettingsScreen({ navigation }: Props) {
               <Text style={[styles.value, { color: colors.primary }]}>Review</Text>
             </TouchableOpacity>
           </View>
+        </BauhausPanel>
+
+        <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Security</Text>
+          <View style={styles.row}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Server Port</Text>
+            <BauhausBadge
+              label={serverLocked ? 'Locked' : 'Open'}
+              color={serverLocked ? '#ef4444' : '#22c55e'}
+            />
+          </View>
+          {serverLocked ? (
+            <BauhausButton onPress={handleWake} loading={lockLoading}>
+              Wake &amp; Unlock Server
+            </BauhausButton>
+          ) : (
+            <BauhausButton variant="danger" onPress={handleLock} loading={lockLoading}>
+              Lock Server Port
+            </BauhausButton>
+          )}
         </BauhausPanel>
 
         <BauhausPanel style={styles.section} accentColor={colors.accentRed}>

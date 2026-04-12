@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ConnectionStatus } from '../services/websocket'
 import { PocketDevWebSocket } from '../services/websocket'
-import { buildWsUrl, unpairFromServer, setSecureMode } from '../services/api'
+import { buildWsUrl, unpairFromServer, setSecureMode, fetchLockStatus, wakeServer } from '../services/api'
 import { getServer, clearAll, type StoredServer } from '../services/storage'
 import type { WsMessage } from '@pocketdev/shared/types'
 import { useTaskStore } from './tasks'
@@ -24,12 +24,15 @@ interface ConnectionState {
   server: StoredServer | null
   ws: PocketDevWebSocket | null
   connectionLog: ConnectionEvent[]
+  serverLocked: boolean
   connect: () => void
   disconnect: () => void
   setPaired: (server: StoredServer) => void
   unpair: () => void
   loadFromStorage: () => void
   getConnectionLogText: () => string
+  setServerLocked: (locked: boolean) => void
+  wakeAndConnect: () => Promise<void>
 }
 
 const _initialServer = getServer()
@@ -48,6 +51,31 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   server: _initialServer,
   ws: null,
   connectionLog: [],
+  serverLocked: false,
+
+  setServerLocked: (locked: boolean) => set({ serverLocked: locked }),
+
+  wakeAndConnect: async () => {
+    const { server } = get()
+    if (!server) return
+    pushLog(set, get, 'wakeAndConnect()', `ip=${server.ip}`)
+    try {
+      const status = await fetchLockStatus(server.ip, server.port).catch(() => null)
+      const wakePort = status?.wakePort ?? 4388
+      const ok = await wakeServer(server.ip, wakePort)
+      if (ok) {
+        set({ serverLocked: false })
+        pushLog(set, get, 'wake_ok', `wakePort=${wakePort}`)
+        // Brief pause so iptables rule clears before we attempt the WS connection
+        await new Promise(r => setTimeout(r, 1500))
+        get().connect()
+      } else {
+        pushLog(set, get, 'wake_failed')
+      }
+    } catch (err) {
+      pushLog(set, get, 'wake_error', String(err))
+    }
+  },
 
   loadFromStorage: () => {
     const server = get().server
@@ -203,5 +231,15 @@ function handleWsMessage(message: WsMessage) {
     case 'plan.resolved':
       usePlanStore.getState().handlePlanResolved(message.payload as any)
       break
+  }
+
+  // Handle lock events (string guard avoids narrowing errors before type regen)
+  const t = message.type as string
+  if (t === 'server.locked') {
+    const store = useConnectionStore.getState()
+    store.setServerLocked(true)
+    store.ws?.suppressReconnect()
+  } else if (t === 'server.unlocked') {
+    useConnectionStore.getState().setServerLocked(false)
   }
 }

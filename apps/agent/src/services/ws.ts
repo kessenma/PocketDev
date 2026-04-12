@@ -11,6 +11,7 @@ import { DockerServiceError, getContainerLogs, startContainerLogsFollow, type Co
 import { checkAllPrerequisites } from './prerequisites.ts'
 import { handleAnswer, handlePlanMessage, acceptPlan, denyPlan } from './plan-manager.ts'
 import type { PlanAnswerCommand, PlanMessageCommand, PlanAcceptCommand, PlanDenyCommand } from '@pocketdev/shared/types'
+import { lockPort, isFirewallEnabled } from './firewall.ts'
 
 /** Connected clients keyed by device ID */
 interface WsClient {
@@ -23,6 +24,45 @@ interface WsClient {
 }
 const clients = new Map<string, WsClient>()
 const containerLogFollowers = new Map<string, ContainerLogsFollower>()
+
+// ─── Auto-lock timer ────────────────────────────────────────
+const AUTO_LOCK_MINUTES = Number(process.env.POCKETDEV_AUTO_LOCK_MINUTES ?? 0)
+let autoLockTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleAutoLock() {
+  if (AUTO_LOCK_MINUTES <= 0 || !isFirewallEnabled()) return
+  clearAutoLock()
+  autoLockTimer = setTimeout(async () => {
+    if (clients.size === 0) {
+      const running = getTaskList().some((t) => t.status === 'running')
+      if (running) {
+        console.log('[auto-lock] Task still running — deferring lock')
+        scheduleAutoLock()
+        return
+      }
+      console.log('[auto-lock] No active clients — locking port')
+      broadcast(makeMessage('server.locked', {}))
+      await lockPort()
+    }
+  }, AUTO_LOCK_MINUTES * 60_000)
+}
+
+function clearAutoLock() {
+  if (autoLockTimer !== null) {
+    clearTimeout(autoLockTimer)
+    autoLockTimer = null
+  }
+}
+
+/** Expose client count for lock status endpoint */
+export function getConnectedClientCount() { return clients.size }
+
+/** Close all connected WebSocket clients (called before locking the port) */
+export function closeAllClients() {
+  for (const client of clients.values()) {
+    try { client.close() } catch { /* already closed */ }
+  }
+}
 
 // ─── Connection event ring buffer for diagnostics ────────
 interface WsConnectionEvent {
@@ -138,6 +178,7 @@ export const wsRoutes = new Elysia()
         messageCount: 0,
       }
       clients.set(deviceId, client)
+      clearAutoLock()
       pushWsEvent({ type: 'connect', deviceId, timestamp: Date.now(), detail: `staleClient=${!!existing}` })
       console.log(`[ws] open: device=${deviceId}, staleClient=${!!existing}, connectionId=${connectionId}`)
     },
@@ -353,6 +394,7 @@ export const wsRoutes = new Elysia()
           clients.delete(deviceId)
           pushWsEvent({ type: 'disconnect', deviceId, timestamp: Date.now(), detail: 'current_client' })
           console.log(`[ws] close: device=${deviceId}, was current client — removed from map`)
+          if (clients.size === 0) scheduleAutoLock()
         } else {
           pushWsEvent({ type: 'disconnect', deviceId, timestamp: Date.now(), detail: 'stale_client_ignored' })
           console.log(`[ws] close: device=${deviceId}, was STALE client — map entry preserved for newer connection`)

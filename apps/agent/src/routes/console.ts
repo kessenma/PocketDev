@@ -49,7 +49,8 @@ import { checkTypeScriptStatus } from '../services/typescript-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/task-manager.ts'
 import { getGitSummary } from '../services/git.ts'
 import { getDetailedCommits, detectNewCommits, syncGitHistory } from '../services/git-history-sync.ts'
-import { getWsDebugInfo } from '../services/ws.ts'
+import { getWsDebugInfo, getConnectedClientCount, closeAllClients, broadcast, makeMessage } from '../services/ws.ts'
+import { lockPort, unlockPort, isLocked, isFirewallEnabled, isFirewallAvailable, setFirewallEnabled } from '../services/firewall.ts'
 import { createBrowserSession } from '../services/proxy.ts'
 import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/version.ts'
 import { disableManagedSwap, enableManagedSwap, getSwapMetrics, getSwapStatus } from '../services/swap.ts'
@@ -515,6 +516,44 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
   })
 
+  // ─── Port security / firewall controls (requires session) ───
+  .get('/lock/status', ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    return {
+      locked: isLocked(),
+      firewallEnabled: isFirewallEnabled(),
+      firewallAvailable: isFirewallAvailable(),
+      autoLockMinutes: Number(process.env.POCKETDEV_AUTO_LOCK_MINUTES ?? 0),
+      wakePort: Number(process.env.POCKETDEV_WAKE_PORT ?? 4388),
+      activeClients: getConnectedClientCount(),
+    }
+  })
+
+  .post('/lock/enable', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    const body = await request.json().catch(() => null) as Record<string, unknown> | null
+    const enabled = typeof body?.enabled === 'boolean' ? body.enabled : true
+    await setFirewallEnabled(enabled)
+    return { firewallEnabled: isFirewallEnabled() }
+  })
+
+  .post('/lock/lock', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    broadcast(makeMessage('server.locked', {}))
+    setTimeout(async () => {
+      closeAllClients()
+      await lockPort()
+    }, 200)
+    return { locked: true }
+  })
+
+  .post('/lock/unlock', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    await unlockPort()
+    broadcast(makeMessage('server.unlocked', {}))
+    return { locked: false }
+  })
+
   .get('/debug/codex-auth', ({ request, set }) => {
     if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
@@ -631,7 +670,8 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       .filter((task) => task.status === 'running')
       .map((task) => {
         const proc = getProcess(task.id)
-        return { taskId: task.id, hasProcess: !!proc, status: proc?.status ?? null }
+        const pendingQuestions = proc && 'getPendingQuestions' in proc ? proc.getPendingQuestions() : []
+        return { taskId: task.id, hasProcess: !!proc, status: proc?.status ?? null, pendingQuestions }
       })
 
     // Include logs for recent failed/running tasks (last 50 lines each)
@@ -672,6 +712,23 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
     const killed = killTask(params.taskId)
     return { success: killed, taskId: params.taskId }
+  })
+
+  // ─── Answer a pending task question from console (requires session) ──────────
+  .post('/debug/tasks/:taskId/answer', async ({ request, params, set, body }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+
+    const { questionId, answer } = body as { questionId: string; answer: string }
+    const proc = getProcess(params.taskId)
+    if (!proc || !('answerQuestion' in proc)) {
+      set.status = 404
+      return { error: 'No active process for this task' }
+    }
+
+    await proc.answerQuestion(questionId, answer)
+    return { success: true, taskId: params.taskId, questionId }
   })
 
   // ─── Setup debug (requires session) ───────────────────

@@ -13,7 +13,7 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
   switch (agentType) {
     case 'claude': {
       const claudePath = getToolPath('claude_cli') ?? 'claude'
-      const permissionMode = mode === 'plan' ? 'plan' : 'acceptEdits'
+      const permissionMode = mode === 'plan' ? 'plan' : 'default'
       const cmd = [
         claudePath,
         '--output-format', 'stream-json',
@@ -97,7 +97,7 @@ export function continueTask(taskId: string, prompt: string, model: string | nul
   const command = [
     claudePath,
     '--output-format', 'stream-json',
-    '--permission-mode', 'acceptEdits',
+    '--permission-mode', 'default',
     '--verbose',
     '--resume', task.sessionId,
   ]

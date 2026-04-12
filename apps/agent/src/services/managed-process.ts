@@ -97,6 +97,7 @@ export class ManagedProcess {
   private readonly model: string | null
   private readonly onComplete?: () => void
   private readonly questionResponders = new Map<string, (answer: string) => void | Promise<void>>()
+  private readonly questionDetails = new Map<string, TaskQuestion>()
   private readonly adapter
   private readonly pendingRpcResponses = new Map<number, {
     resolve: (value: Record<string, unknown>) => void
@@ -150,6 +151,8 @@ export class ManagedProcess {
   async answerQuestion(questionId: string, answer: string) {
     const responder = this.questionResponders.get(questionId)
     if (responder) {
+      this.questionResponders.delete(questionId)
+      this.questionDetails.delete(questionId)
       try {
         await responder(answer)
       } catch (err) {
@@ -186,6 +189,7 @@ export class ManagedProcess {
     this.proc.exited.then((exitCode) => {
       this.killTimer && clearTimeout(this.killTimer)
       this.questionResponders.clear()
+      this.questionDetails.clear()
       this.rejectPendingRpcResponses(new Error(`Task ${this.taskId} exited before the RPC conversation completed`))
 
       const status: TaskStatus = this.codexExpectedStatus ?? (exitCode === 0 ? 'completed' : 'failed')
@@ -301,7 +305,12 @@ export class ManagedProcess {
 
   private registerQuestion(question: TaskQuestion, onAnswer: (answer: string) => void | Promise<void>) {
     this.questionResponders.set(question.questionId, onAnswer)
+    this.questionDetails.set(question.questionId, question)
     broadcast(makeMessage('task.question', question))
+  }
+
+  getPendingQuestions(): TaskQuestion[] {
+    return [...this.questionDetails.values()].filter((q) => this.questionResponders.has(q.questionId))
   }
 
   private persistSessionId(sessionId: string) {

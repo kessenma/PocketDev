@@ -6,12 +6,15 @@ services:
     command: bun --watch src/index.ts
     ports:
       - "4387:4387"
+      - "4388:4388"
     volumes:
       - ./apps/agent:/app
       - ./packages/shared:/shared
       - agent_data:/app/data
     environment:
       - POCKETDEV_PORT=4387
+      - POCKETDEV_WAKE_PORT=4388
+      - POCKETDEV_FIREWALL_LOCK_ENABLED=false
       - POCKETDEV_DEV_MODE=1
       - POCKETDEV_PROJECT_DIR=/project
       - POCKETDEV_DEV_PORT=5173

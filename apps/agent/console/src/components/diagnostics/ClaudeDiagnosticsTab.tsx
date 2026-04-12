@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { Badge } from '#/components/ui/badge'
-import type { ClaudeAuthDebugInfo } from '#/lib/api'
-import { Sparkles } from 'lucide-react'
+import { Button } from '#/components/ui/button'
+import { answerTaskQuestion, type ClaudeAuthDebugInfo, type TasksDebugInfo } from '#/lib/api'
+import { ShieldCheck, ShieldAlert, Sparkles } from 'lucide-react'
 
 interface Props {
   claudeInfo: ClaudeAuthDebugInfo | null
+  tasksInfo: TasksDebugInfo | null
 }
 
 function formatShortTime(iso: string) {
@@ -14,7 +17,23 @@ function formatShortTime(iso: string) {
   })
 }
 
-export function ClaudeDiagnosticsTab({ claudeInfo }: Props) {
+export function ClaudeDiagnosticsTab({ claudeInfo, tasksInfo }: Props) {
+  const [answering, setAnswering] = useState<Record<string, boolean>>({})
+
+  const claudeTasks = (tasksInfo?.activeProcesses ?? []).filter((p) => p.pendingQuestions.length > 0)
+
+  async function handleAnswer(taskId: string, questionId: string, answer: string) {
+    const key = `${taskId}:${questionId}`
+    setAnswering((s) => ({ ...s, [key]: true }))
+    try {
+      await answerTaskQuestion(taskId, questionId, answer)
+    } catch {
+      // silent — will be visible in task output
+    } finally {
+      setAnswering((s) => ({ ...s, [key]: false }))
+    }
+  }
+
   return (
     <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
       <div className="space-y-3">
@@ -37,6 +56,63 @@ export function ClaudeDiagnosticsTab({ claudeInfo }: Props) {
                 <p>Updated: {claudeInfo?.persistedState?.updatedAt ? new Date(claudeInfo.persistedState.updatedAt).toLocaleString() : 'Unknown'}</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Pending Permissions */}
+        <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-[#f59e0b]" />
+            <p className="text-sm font-medium">Pending Permissions</p>
+          </div>
+          <div className="mt-3 space-y-3">
+            {claudeTasks.length === 0 ? (
+              <div className="flex items-center gap-2 rounded-xl border border-dashed border-white/10 bg-black/20 p-3 text-sm text-[#f4f0e8]/52">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                No pending permission requests.
+              </div>
+            ) : (
+              claudeTasks.map((proc) =>
+                proc.pendingQuestions.map((q) => {
+                  const key = `${proc.taskId}:${q.questionId}`
+                  const busy = answering[key]
+                  return (
+                    <div key={key} className="rounded-[1.2rem] border border-[#f59e0b]/30 bg-[#f59e0b]/5 p-3">
+                      <p className="text-xs font-semibold text-[#f59e0b]">{q.toolDetails?.toolName ?? q.prompt}</p>
+                      {q.toolDetails?.toolInput?.command != null ? (
+                        <pre className="mt-1 whitespace-pre-wrap break-all font-mono text-[11px] text-[#f4f0e8]/60">
+                          {String(q.toolDetails.toolInput.command)}
+                        </pre>
+                      ) : null}
+                      {q.toolDetails?.toolInput?.file_path != null ? (
+                        <p className="mt-1 break-all font-mono text-[11px] text-[#f4f0e8]/60">
+                          {String(q.toolDetails.toolInput.file_path)}
+                        </p>
+                      ) : null}
+                      <div className="mt-2 flex gap-2">
+                        <Button
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => handleAnswer(proc.taskId, q.questionId, 'y')}
+                          className="h-7 rounded-lg bg-[#22c55e] px-3 text-xs text-black hover:bg-[#22c55e]/80"
+                        >
+                          Allow
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => handleAnswer(proc.taskId, q.questionId, 'n')}
+                          className="h-7 rounded-lg border-white/15 px-3 text-xs text-[#f4f0e8]/70 hover:bg-white/5"
+                        >
+                          Deny
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                }),
+              )
+            )}
           </div>
         </div>
       </div>

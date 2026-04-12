@@ -81,6 +81,7 @@ interface TaskState {
   clearPermissions: (taskId: string) => void
   addQuestion: (taskId: string, question: TaskQuestion) => void
   removeQuestion: (taskId: string, questionId: string) => void
+  clearQuestions: (taskId: string) => void
   answerQuestion: (taskId: string, questionId: string, answer: string) => void
   setActiveTask: (id: string | null) => void
 }
@@ -353,6 +354,14 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       } else {
         questions.set(taskId, filtered)
       }
+      return { pendingQuestions: questions }
+    })
+  },
+
+  clearQuestions: (taskId: string) => {
+    set((state) => {
+      const questions = new Map(state.pendingQuestions)
+      questions.delete(taskId)
       return { pendingQuestions: questions }
     })
   },

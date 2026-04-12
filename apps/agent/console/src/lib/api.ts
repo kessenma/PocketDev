@@ -519,12 +519,26 @@ export interface TaskFileTouchEntry {
   turnNumber: number | null
 }
 
+export interface PendingTaskQuestion {
+  questionId: string
+  taskId: string
+  prompt: string
+  type: string
+  provider?: string
+  toolDetails?: {
+    toolName: string
+    toolInput?: Record<string, unknown>
+    detail?: string
+  }
+}
+
 export interface TasksDebugInfo {
   tasks: TaskDebugEntry[]
   activeProcesses: Array<{
     taskId: string
     hasProcess: boolean
     status: string | null
+    pendingQuestions: PendingTaskQuestion[]
   }>
   totalCount: number
   taskLogs: Record<string, TaskLogEntry[]>
@@ -541,6 +555,12 @@ export async function fetchTasksDebug(): Promise<TasksDebugInfo> {
 export async function killTaskFromConsole(taskId: string): Promise<{ success: boolean }> {
   const res = await post(`/debug/tasks/${taskId}/kill`)
   if (!res.ok) throw new Error('Failed to kill task')
+  return res.json()
+}
+
+export async function answerTaskQuestion(taskId: string, questionId: string, answer: string): Promise<{ success: boolean }> {
+  const res = await post(`/debug/tasks/${taskId}/answer`, { questionId, answer })
+  if (!res.ok) throw new Error('Failed to answer question')
   return res.json()
 }
 
@@ -755,6 +775,36 @@ export async function fetchNetworkDebug(): Promise<NetworkDebugInfo> {
   const res = await get('/debug/network')
   if (!res.ok) throw new Error('Failed to fetch network debug')
   return res.json()
+}
+
+export interface LockStatus {
+  locked: boolean
+  firewallEnabled: boolean
+  firewallAvailable: boolean
+  autoLockMinutes: number
+  wakePort: number
+  activeClients: number
+}
+
+export async function fetchLockStatus(): Promise<LockStatus> {
+  const res = await get('/lock/status')
+  if (!res.ok) throw new Error('Failed to fetch lock status')
+  return res.json()
+}
+
+export async function setFirewallEnabled(enabled: boolean): Promise<void> {
+  const res = await post('/lock/enable', { enabled })
+  if (!res.ok) throw new Error('Failed to set firewall enabled')
+}
+
+export async function consoleLockPort(): Promise<void> {
+  const res = await post('/lock/lock', {})
+  if (!res.ok) throw new Error('Failed to lock port')
+}
+
+export async function consoleUnlockPort(): Promise<void> {
+  const res = await post('/lock/unlock', {})
+  if (!res.ok) throw new Error('Failed to unlock port')
 }
 
 export interface RepoSummary {

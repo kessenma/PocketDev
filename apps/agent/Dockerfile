@@ -23,8 +23,11 @@ COPY --from=build /app/console/dist ./console
 
 ENV POCKETDEV_DATA_DIR=/opt/pocketdev/data
 ENV POCKETDEV_PORT=4387
+ENV POCKETDEV_WAKE_PORT=4388
+ENV POCKETDEV_FIREWALL_LOCK_ENABLED=false
 
 EXPOSE 4387
+EXPOSE 4388
 
 VOLUME ["/opt/pocketdev/data"]
 

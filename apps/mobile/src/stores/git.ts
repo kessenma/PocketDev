@@ -251,7 +251,29 @@ export const useGitStore = create<GitState>((set, get) => ({
       } catch { /* non-fatal */ }
     }
 
-    set({ isRefreshing: true, lastActionMessage: 'Refreshing git status...', error: null })
+    set({ isRefreshing: true, lastActionMessage: 'Pulling latest changes...', error: null })
+
+    // Attempt pull before refreshing status; errors are non-fatal
+    let pullMessage: string | null = null
+    try {
+      const pullResult = await postGitPull(server.ip, server.port)
+      if ('ok' in pullResult && pullResult.ok) {
+        pullMessage = `Pulled from ${pullResult.summary.remote.upstream}.`
+      } else if ('error' in pullResult) {
+        const code = pullResult.code
+        if (code === 'dirty_worktree_blocked') {
+          pullMessage = 'Pull skipped: uncommitted changes.'
+        } else if (code === 'upstream_missing') {
+          pullMessage = 'No upstream branch configured.'
+        } else if (code === 'auth_required') {
+          pullMessage = 'Pull failed: authentication required.'
+        } else {
+          pullMessage = pullResult.error
+        }
+      }
+    } catch {
+      // Non-fatal — status refresh continues regardless
+    }
 
     try {
       const [summary, changes, commits, branches] = await Promise.all([
@@ -272,9 +294,9 @@ export const useGitStore = create<GitState>((set, get) => ({
         remote: summaryToRemote(summary),
         selectedFileId: changes.length > 0 ? changes[0].id : null,
         isRefreshing: false,
-        lastActionMessage: changes.length > 0
+        lastActionMessage: pullMessage ?? (changes.length > 0
           ? `${changes.length} changes on ${branchName}.`
-          : `Working tree is clean on ${branchName}.`,
+          : `Working tree is clean on ${branchName}.`),
       })
       emitGitEvent({ type: 'refresh_completed', branchName })
 

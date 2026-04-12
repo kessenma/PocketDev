@@ -413,7 +413,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
         ) : activeTab === 'languages' ? (
           <LanguagesDiagnosticsTab pythonInfo={pythonInfo} rustInfo={rustInfo} goInfo={goInfo} tsInfo={tsInfo} />
         ) : activeTab === 'claude' ? (
-          <ClaudeDiagnosticsTab claudeInfo={claudeInfo} />
+          <ClaudeDiagnosticsTab claudeInfo={claudeInfo} tasksInfo={tasksInfo} />
         ) : activeTab === 'codex' ? (
           <CodexDiagnosticsTab codexInfo={codexInfo} />
         ) : activeTab === 'copilot' ? (

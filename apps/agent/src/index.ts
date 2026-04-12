@@ -32,8 +32,11 @@ import { offlineSnapshotRoutes } from './routes/offline-snapshots.ts'
 import { screenshotRoutes } from './services/preview-screenshot.ts'
 import { consoleRoutes, consoleStaticRoutes } from './routes/console.ts'
 import { passkeyRoutes } from './routes/passkey.ts'
+import { lockRoutes } from './routes/lock.ts'
 import { initSetup, getServerKeypair } from './services/setup.ts'
 import { getDb } from './db/index.ts'
+import { initFirewall } from './services/firewall.ts'
+import { startWakeServer } from './services/wake-server.ts'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
 const HOST = process.env.POCKETDEV_HOST ?? '0.0.0.0'
@@ -50,6 +53,9 @@ getServerKeypair()
 
 // Start setup mode if no devices registered
 const setupCode = initSetup()
+
+// Initialize firewall (no-op if POCKETDEV_FIREWALL_LOCK_ENABLED != true)
+initFirewall().then(startWakeServer)
 
 new Elysia()
   .onError(({ error }) => {
@@ -68,6 +74,7 @@ new Elysia()
     .use(passkeyRoutes)
     // API routes (most require device auth)
     .group('/api', (api) => api
+      .use(lockRoutes)
       .use(setupRoutes)
       .use(prerequisitesRoutes)
       .use(databaseRoutes)

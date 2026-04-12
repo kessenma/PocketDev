@@ -1186,3 +1186,54 @@ export async function patchBulkEnvVars(
   if (!response.ok) throw new Error(`Failed to bulk upsert env vars (${response.status})`)
   return response.json() as Promise<BulkUpsertEnvVarsResponse>
 }
+
+// ─── Port security / wake ────────────────────────────────────────────────────
+
+export interface LockStatus {
+  locked: boolean
+  firewallEnabled: boolean
+  firewallAvailable: boolean
+  autoLockMinutes: number
+  wakePort: number
+  activeClients: number
+}
+
+/** Fetch lock status — unauthenticated, works even when port is locked */
+export async function fetchLockStatus(ip: string, port: number): Promise<LockStatus> {
+  const protocol = _useSecure ? 'https' : 'http'
+  const response = await fetch(`${protocol}://${ip}:${port}/PocketDev/api/lock/status`)
+  if (!response.ok) throw new Error(`Failed to fetch lock status (${response.status})`)
+  return response.json() as Promise<LockStatus>
+}
+
+/** Send a signed wake request to the secondary wake port to unblock the main port */
+export async function wakeServer(ip: string, wakePort: number): Promise<boolean> {
+  try {
+    const response = await fetch(`http://${ip}:${wakePort}/wake`, {
+      method: 'POST',
+      headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+/** Lock the main port (requires active WS connection / auth) */
+export async function lockServer(ip: string, port: number): Promise<void> {
+  const response = await fetch(apiUrl(ip, port, '/lock/lock'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to lock server (${response.status})`)
+}
+
+/** Unlock the main port (requires active WS connection / auth) */
+export async function unlockServer(ip: string, port: number): Promise<void> {
+  const response = await fetch(apiUrl(ip, port, '/lock/unlock'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to unlock server (${response.status})`)
+}
+

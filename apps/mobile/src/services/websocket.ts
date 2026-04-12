@@ -34,6 +34,15 @@ export class PocketDevWebSocket {
     this.createWebSocket = createWebSocket
   }
 
+  /** Suppress the automatic reconnect loop (e.g. when the server is locked) */
+  suppressReconnect() {
+    this.shouldReconnect = false
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+  }
+
   async connect() {
     this.shouldReconnect = true
 

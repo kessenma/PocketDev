@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
-import type { NetworkDebugInfo } from '#/lib/api'
+import type { NetworkDebugInfo, LockStatus } from '#/lib/api'
+import { fetchLockStatus, setFirewallEnabled, consoleLockPort, consoleUnlockPort } from '#/lib/api'
 import { DomainSettings } from '#/components/DomainSettings'
-import { Wifi, WifiOff, Shield, Radio } from 'lucide-react'
+import { Wifi, WifiOff, Shield, Radio, Lock, Unlock } from 'lucide-react'
 
 interface Props {
   networkInfo: NetworkDebugInfo | null
@@ -49,6 +51,38 @@ function eventIcon(type: string) {
 export function NetworkDiagnosticsTab({ networkInfo }: Props) {
   const clientCount = networkInfo?.websocket.connectedClients.length ?? 0
   const eventCount = networkInfo?.websocket.recentEvents.length ?? 0
+
+  const [lockStatus, setLockStatus] = useState<LockStatus | null>(null)
+  const [lockLoading, setLockLoading] = useState(false)
+
+  useEffect(() => {
+    fetchLockStatus().then(setLockStatus).catch(() => {})
+  }, [])
+
+  async function handleToggleFirewall() {
+    if (!lockStatus) return
+    setLockLoading(true)
+    try {
+      await setFirewallEnabled(!lockStatus.firewallEnabled)
+      setLockStatus(await fetchLockStatus())
+    } catch { /* ignore */ } finally { setLockLoading(false) }
+  }
+
+  async function handleLock() {
+    setLockLoading(true)
+    try {
+      await consoleLockPort()
+      setLockStatus(await fetchLockStatus())
+    } catch { /* ignore */ } finally { setLockLoading(false) }
+  }
+
+  async function handleUnlock() {
+    setLockLoading(true)
+    try {
+      await consoleUnlockPort()
+      setLockStatus(await fetchLockStatus())
+    } catch { /* ignore */ } finally { setLockLoading(false) }
+  }
 
   const connectDisconnectPairs = useMemo(() => {
     if (!networkInfo) return { connects: 0, disconnects: 0, authRejected: 0, stalesClosed: 0 }
@@ -183,6 +217,101 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Port Security */}
+      <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+        <div className="flex items-center gap-2">
+          <Shield className="h-4 w-4 text-[#f0c419]" />
+          <p className="text-sm font-medium">Port Security</p>
+          {lockStatus && (
+            <Badge
+              variant="outline"
+              className={lockStatus.locked
+                ? 'border-red-500/40 text-red-400'
+                : 'border-green-500/40 text-green-400'}
+            >
+              {lockStatus.locked ? 'Locked' : 'Open'}
+            </Badge>
+          )}
+        </div>
+
+        {lockStatus ? (
+          <div className="mt-4 space-y-3">
+            {!lockStatus.firewallAvailable && (
+              <p className="rounded-[1rem] border border-yellow-500/20 bg-yellow-500/8 px-3 py-2 text-xs text-yellow-300/80">
+                iptables unavailable — network-level locking requires root and iptables on the server.
+              </p>
+            )}
+
+            <div className="grid grid-cols-3 gap-2 text-xs text-[#f4f0e8]/55">
+              <div className="rounded-[1rem] border border-white/8 bg-white/5 p-2">
+                <p className="uppercase tracking-wider text-[0.6rem] text-[#f4f0e8]/40">Wake Port</p>
+                <p className="mt-1 font-mono">{lockStatus.wakePort}</p>
+              </div>
+              <div className="rounded-[1rem] border border-white/8 bg-white/5 p-2">
+                <p className="uppercase tracking-wider text-[0.6rem] text-[#f4f0e8]/40">Auto-lock</p>
+                <p className="mt-1 font-mono">
+                  {lockStatus.autoLockMinutes > 0 ? `${lockStatus.autoLockMinutes}m` : 'off'}
+                </p>
+              </div>
+              <div className="rounded-[1rem] border border-white/8 bg-white/5 p-2">
+                <p className="uppercase tracking-wider text-[0.6rem] text-[#f4f0e8]/40">Clients</p>
+                <p className="mt-1 font-mono">{lockStatus.activeClients}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={lockLoading}
+                onClick={handleToggleFirewall}
+                className={cn(
+                  'rounded-[0.9rem] border text-xs',
+                  lockStatus.firewallEnabled
+                    ? 'border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/10'
+                    : 'border-white/15 text-[#f4f0e8]/60 hover:bg-white/8',
+                )}
+              >
+                {lockStatus.firewallEnabled ? 'Disable Network Lock' : 'Enable Network Lock'}
+              </Button>
+              {lockStatus.firewallEnabled && (
+                lockStatus.locked ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={lockLoading}
+                    onClick={handleUnlock}
+                    className="rounded-[0.9rem] border border-green-500/30 text-xs text-green-400 hover:bg-green-500/10"
+                  >
+                    <Unlock className="mr-1.5 h-3 w-3" />
+                    Unlock Port
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={lockLoading}
+                    onClick={handleLock}
+                    className="rounded-[0.9rem] border border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
+                  >
+                    <Lock className="mr-1.5 h-3 w-3" />
+                    Lock Port Now
+                  </Button>
+                )
+              )}
+            </div>
+
+            {!lockStatus.firewallEnabled && (
+              <p className="text-xs text-[#f4f0e8]/35">
+                Enable to allow iptables-level port blocking. The mobile app can lock/unlock the port remotely via the wake server on port {lockStatus.wakePort}.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-[#f4f0e8]/40">Loading security status…</p>
+        )}
       </div>
 
       {/* Bottom row: Domain & HTTPS settings */}

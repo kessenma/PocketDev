@@ -194,6 +194,8 @@ Environment=POCKETDEV_PORT=${PORT}
 Environment=POCKETDEV_HOST=127.0.0.1
 Environment=POCKETDEV_PROJECT_DIR=${HOME}
 Environment=POCKETDEV_HOSTNAME=pocketdev.local
+Environment=POCKETDEV_WAKE_PORT=4388
+Environment=POCKETDEV_FIREWALL_LOCK_ENABLED=false
 Environment=PATH=${BUN_PATH%/*}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Restart=always
 RestartSec=5
@@ -357,6 +359,11 @@ if [ "$CADDY_ACTIVE" = true ]; then
   echo -e "  ${BOLD}HTTPS:${NC} Caddy is running with a self-signed certificate."
   echo -e "  Add a custom domain from the console for a trusted Let's Encrypt cert."
 fi
+echo ""
+echo -e "  ${BOLD}Port Security:${NC} Enable network-level locking from the server console."
+echo -e "  When enabled, port ${PORT} is blocked via iptables when no mobile clients are connected."
+echo -e "  A wake server on port ${CYAN}4388${NC} accepts signed requests to reopen it."
+echo -e "  If you use an external firewall (ufw / cloud security groups), open port 4388."
 echo ""
 echo -e "  ${BOLD}Passkeys:${NC} To enable passkey login, add this to ${CYAN}/etc/hosts${NC} on your computer:"
 echo -e "    ${CYAN}${PUBLIC_IP} pocketdev.local${NC}"

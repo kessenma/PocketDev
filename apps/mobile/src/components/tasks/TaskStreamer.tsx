@@ -9,6 +9,7 @@ import {
   ListTodo,
   MessageSquare,
   Search,
+  ShieldAlert,
   Terminal,
   Users,
   WandSparkles,
@@ -227,6 +228,21 @@ function ToolUseRow({ activity, colors }: { activity: Extract<TaskActivity, { ty
 
 function ToolResultRow({ activity, colors }: { activity: Extract<TaskActivity, { type: 'tool_result' }>; colors: any }) {
   if (!activity.preview) return null
+
+  const isPermissionError = activity.isError && activity.preview.toLowerCase().includes('requires approval')
+
+  if (isPermissionError) {
+    const amber = '#f59e0b'
+    return (
+      <View style={[styles.row, { borderLeftColor: amber }]}>
+        <ShieldAlert color={amber} size={14} strokeWidth={2.25} style={styles.rowIcon} />
+        <Text style={[styles.rowLabel, { color: amber }]}>Permission denied</Text>
+        <Text style={[styles.rowDetail, { color: colors.textSecondary }]} numberOfLines={2}>
+          {activity.preview.replace(/^\[error\]\s*/i, '')}
+        </Text>
+      </View>
+    )
+  }
 
   const textColor = activity.isError ? (colors.accentRed ?? '#ef4444') : colors.textTertiary
 
