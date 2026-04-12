@@ -16,7 +16,8 @@ import type { PlanAnswerCommand, PlanMessageCommand, PlanAcceptCommand, PlanDeny
 interface WsClient {
   send: (data: string) => void
   close: () => void
-  ws: unknown  // raw Elysia WS ref for identity checks
+  ws: unknown
+  connectionId: string  // UUID generated per-connection; never reused (ws objects may be reused by Bun)
   connectedAt: number
   messageCount: number
 }
@@ -97,8 +98,10 @@ export const wsRoutes = new Elysia()
     },
     open(ws) {
       const deviceId = parseDeviceIdFromAuthHeader(ws.data.request.headers.get('authorization')) ?? 'dev-device'
+      const connectionId = crypto.randomUUID()
 
       ;(ws as any)._deviceId = deviceId
+      ;(ws as any)._connectionId = connectionId
 
       // Close stale connection from the same device (e.g. mobile app reload).
       // Deferred: closing a WS synchronously inside another WS's open handler
@@ -108,7 +111,14 @@ export const wsRoutes = new Elysia()
         console.log(`[ws] open: scheduling stale WS close for device=${deviceId}`)
         pushWsEvent({ type: 'stale_closed', deviceId, timestamp: Date.now(), detail: `connectedFor=${Date.now() - existing.connectedAt}ms` })
         const staleClient = existing
+        const staleConnectionId = existing.connectionId
         setTimeout(() => {
+          // If the stale client is still registered (shouldn't happen normally), evict it.
+          const currentForDevice = clients.get(deviceId)
+          if (currentForDevice && currentForDevice.connectionId === staleConnectionId) {
+            clients.delete(deviceId)
+          }
+          // Close the stale socket regardless (it's probably already dead).
           try { staleClient.close() } catch { /* already closed */ }
         }, 500)
         // Also clean up any container log follower for the old connection
@@ -123,12 +133,13 @@ export const wsRoutes = new Elysia()
         send: (data: string) => ws.send(data),
         close: () => ws.close(),
         ws,
+        connectionId,
         connectedAt: Date.now(),
         messageCount: 0,
       }
       clients.set(deviceId, client)
       pushWsEvent({ type: 'connect', deviceId, timestamp: Date.now(), detail: `staleClient=${!!existing}` })
-      console.log(`[ws] open: device=${deviceId}, staleClient=${!!existing}`)
+      console.log(`[ws] open: device=${deviceId}, staleClient=${!!existing}, connectionId=${connectionId}`)
     },
     async message(ws, raw) {
       let containerIdForError = ''
@@ -326,6 +337,7 @@ export const wsRoutes = new Elysia()
     },
     close(ws) {
       const deviceId = (ws as any)._deviceId as string | undefined
+      const connectionId = (ws as any)._connectionId as string | undefined
       if (deviceId) {
         const follower = containerLogFollowers.get(deviceId)
         if (follower) {
@@ -333,10 +345,11 @@ export const wsRoutes = new Elysia()
           follower.stop()
         }
 
-        // Only delete from clients map if this WS is still the registered client.
-        // Prevents a stale close handler from removing a newer connection's entry.
+        // Only delete from clients map if this connectionId is still the registered one.
+        // Using connectionId (UUID) instead of ws-object identity because Bun/Elysia
+        // may reuse ws objects across connections, making ws === current.ws unreliable.
         const current = clients.get(deviceId)
-        if (current && current.ws === ws) {
+        if (current && current.connectionId === connectionId) {
           clients.delete(deviceId)
           pushWsEvent({ type: 'disconnect', deviceId, timestamp: Date.now(), detail: 'current_client' })
           console.log(`[ws] close: device=${deviceId}, was current client — removed from map`)

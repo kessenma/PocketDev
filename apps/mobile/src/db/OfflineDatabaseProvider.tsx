@@ -81,12 +81,13 @@ async function openOfflineDb(dbDir: string): Promise<DB> {
     return open({ name: 'offline.db', location: dbDir, ...(encryptionKey ? { encryptionKey } : {}) })
   } catch (error) {
     console.warn('[offline-db] Failed to open offline.db (key mismatch?), recreating:', error)
-    // Key mismatch after re-pair / reinstall — delete and recreate without encryption
+    // Key mismatch or unencrypted DB from before SQLCipher was enabled — delete and recreate
     const dbPath = `${dbDir}/offline.db`
     if (await RNFS.exists(dbPath)) {
       await RNFS.unlink(dbPath)
     }
-    return open({ name: 'offline.db', location: dbDir })
+    // Reopen fresh — with encryption key if available, otherwise plain
+    return open({ name: 'offline.db', location: dbDir, ...(encryptionKey ? { encryptionKey } : {}) })
   }
 }
 
