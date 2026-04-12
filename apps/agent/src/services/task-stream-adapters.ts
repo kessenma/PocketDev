@@ -207,32 +207,47 @@ class ClaudeTaskStreamAdapter extends BaseTaskStreamAdapter {
 
   /**
    * Handles pre-execution permission requests (--permission-mode default).
-   * Claude emits permission_requests and WAITS on stdin for 'y'/'n' before executing the tool.
+   *
+   * Claude stream-json can emit permissions in two formats:
+   *   1. As a field `permission_requests: [{tool_name, tool_use_id, tool_input}]` on any message
+   *   2. As a top-level `type: "permission"` message (observed in some CLI versions)
+   *
+   * Claude WAITS on stdin for 'y'/'n' before executing the tool in default mode.
    */
   private handlePermissionRequests(message: JsonRecord) {
-    if (!Array.isArray(message.permission_requests) || message.permission_requests.length === 0) return
-
-    for (const raw of message.permission_requests) {
-      const req = asRecord(raw)
-      const toolName = typeof req.tool_name === 'string' ? req.tool_name : 'Tool'
-      const toolUseId = typeof req.tool_use_id === 'string' ? req.tool_use_id : undefined
-      const toolInput = asRecord(req.tool_input)
-      const questionId = toolUseId ?? crypto.randomUUID()
-
-      this.sink.emitQuestion(
-        {
-          questionId,
-          taskId: this.taskId,
-          provider: 'claude',
-          prompt: `Allow ${toolName}?`,
-          type: 'permission',
-          toolDetails: { toolName, toolInput },
-        },
-        (answer) => {
-          this.writeStdin(`${normalizeBinaryAnswer(answer)}\n`)
-        },
-      )
+    // Format 1: permission_requests array field
+    if (Array.isArray(message.permission_requests) && message.permission_requests.length > 0) {
+      for (const raw of message.permission_requests) {
+        this.emitPermissionQuestion(asRecord(raw))
+      }
+      return
     }
+
+    // Format 2: top-level type === 'permission' message
+    if (message.type === 'permission') {
+      this.emitPermissionQuestion(message)
+    }
+  }
+
+  private emitPermissionQuestion(req: JsonRecord) {
+    const toolName = typeof req.tool_name === 'string' ? req.tool_name : 'Tool'
+    const toolUseId = typeof req.tool_use_id === 'string' ? req.tool_use_id : undefined
+    const toolInput = asRecord(req.tool_input)
+    const questionId = toolUseId ?? crypto.randomUUID()
+
+    this.sink.emitQuestion(
+      {
+        questionId,
+        taskId: this.taskId,
+        provider: 'claude',
+        prompt: `Allow ${toolName}?`,
+        type: 'permission',
+        toolDetails: { toolName, toolInput },
+      },
+      (answer) => {
+        this.writeStdin(`${normalizeBinaryAnswer(answer)}\n`)
+      },
+    )
   }
 
   /**

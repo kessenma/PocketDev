@@ -311,6 +311,24 @@ export async function setSyncState(db: DB, key: string, value: string): Promise<
   )
 }
 
+// ─── Branch task count ────────────────────────────────
+
+export async function getTaskCountForBranch(
+  db: DB,
+  projectId: string,
+  branch: string,
+): Promise<number> {
+  const result = await db.execute(
+    `SELECT COUNT(DISTINCT tc.task_id) as count
+     FROM task_commits tc
+     INNER JOIN git_commits gc ON tc.commit_id = gc.id
+     WHERE gc.project_id = ? AND gc.branch = ?`,
+    [projectId, branch],
+  )
+  if (!result.rows || result.rows.length === 0) return 0
+  return ((result.rows[0] as Record<string, unknown>).count as number) ?? 0
+}
+
 // ─── Cleanup ──────────────────────────────────────────
 
 export async function pruneOldCommits(

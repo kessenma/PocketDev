@@ -1,19 +1,41 @@
 import React from 'react'
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native'
+import { Terminal } from 'lucide-react-native'
 import { FlashList } from '@shopify/flash-list'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { Task } from '@pocketdev/shared/types'
-import type { TaskStatus } from '@pocketdev/shared/schema'
+import type { AgentType, TaskStatus } from '@pocketdev/shared/schema'
 import { useTheme } from '../../contexts/ThemeContext'
 import { getRecentPrompts } from '../../services/storage'
 import BauhausBadge from '../shared/BauhausBadge'
 import { typeStyles } from '../../theme/typography'
+import { Assets } from '../../../assets'
+
+function AgentIcon({ agentType, isDark }: { agentType: AgentType; isDark: boolean }) {
+  if (agentType === 'shell') {
+    return <Terminal size={18} color={isDark ? '#888' : '#666'} strokeWidth={1.5} />
+  }
+  const source = {
+    claude: isDark ? Assets.claudeWhite : Assets.claudeBlack,
+    codex: isDark ? Assets.codexWhite : Assets.codexBlack,
+    copilot: isDark ? Assets.githubCopilotWhite : Assets.githubCopilotBlack,
+  }[agentType]
+  if (!source) return null
+  return <Image source={source} style={styles.agentIcon} resizeMode="contain" />
+}
+
+function getDisplayPrompt(prompt: string): string {
+  const marker = 'User request:\n'
+  const idx = prompt.indexOf(marker)
+  return idx !== -1 ? prompt.slice(idx + marker.length).trim() : prompt
+}
 
 type Props = {
   tasks: Task[]
@@ -42,7 +64,7 @@ export default function TaskListPane({
   onRefresh,
   tablet = false,
 }: Props) {
-  const { colors } = useTheme()
+  const { colors, isDark } = useTheme()
   const recentPrompts = getRecentPrompts()
 
   if (tasks.length === 0 && !refreshing) {
@@ -87,10 +109,12 @@ export default function TaskListPane({
           >
             <View style={styles.taskHeader}>
               <BauhausBadge label={item.status} color={statusColor} />
-              <Text style={[styles.agentBadge, { color: colors.textTertiary }]}>{item.agent_type}</Text>
+              <View style={styles.agentBadge}>
+                <AgentIcon agentType={item.agent_type} isDark={isDark} />
+              </View>
             </View>
             <Text style={[styles.taskPrompt, { color: colors.text }]} numberOfLines={2}>
-              {item.prompt}
+              {getDisplayPrompt(item.prompt)}
             </Text>
             <Text style={[styles.taskTime, { color: colors.textTertiary }]}>
               {formatTime(item.created_at)}
@@ -154,8 +178,13 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   agentBadge: {
-    ...typeStyles.meta,
     marginLeft: 'auto',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  agentIcon: {
+    width: 18,
+    height: 18,
   },
   taskPrompt: {
     ...typeStyles.body,

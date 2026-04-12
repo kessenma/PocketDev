@@ -1,10 +1,11 @@
 import { insertTask, getRecentTasks, getToolPath, getProject, getTask, insertTaskTurn, resetTaskForContinuation } from '../db/index.ts'
 import { ManagedProcess } from './managed-process.ts'
+import { ManagedClaudeProcess } from './managed-claude-process.ts'
 import { ManagedTmuxProcess } from './managed-tmux-process.ts'
 import { getActiveProjectId } from './projects.ts'
 
 /** Active processes keyed by task ID — only holds running processes, cleaned up on completion */
-const processes = new Map<string, ManagedProcess | ManagedTmuxProcess>()
+const processes = new Map<string, ManagedProcess | ManagedClaudeProcess | ManagedTmuxProcess>()
 
 type TaskMode = 'default' | 'plan'
 
@@ -70,6 +71,12 @@ export function startTask(
     const proc = new ManagedTmuxProcess({ taskId, prompt, cwd, mode, model, onComplete })
     processes.set(taskId, proc)
     proc.start()
+  } else if (agentType === 'claude') {
+    console.log(`[task-manager] Starting claude tmux task ${taskId}`)
+    console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} sessionId=${sessionId ?? 'new'}`)
+    const proc = new ManagedClaudeProcess({ taskId, prompt, cwd, mode, model, sessionId, onComplete })
+    processes.set(taskId, proc)
+    void proc.start()
   } else {
     const command = buildCommand(agentType, prompt, model, mode, sessionId ?? undefined)
     console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
@@ -92,18 +99,6 @@ export function continueTask(taskId: string, prompt: string, model: string | nul
   const newTurnCount = (task.turnCount ?? 1) + 1
   const turnModel = model ?? task.model
 
-  // Build resume command
-  const claudePath = getToolPath('claude_cli') ?? 'claude'
-  const command = [
-    claudePath,
-    '--output-format', 'stream-json',
-    '--permission-mode', 'default',
-    '--verbose',
-    '--resume', task.sessionId,
-  ]
-  if (turnModel) command.push('--model', turnModel)
-  command.push('-p', prompt)
-
   // Record the user turn
   insertTaskTurn(crypto.randomUUID(), taskId, newTurnCount, 'user', prompt)
 
@@ -111,11 +106,20 @@ export function continueTask(taskId: string, prompt: string, model: string | nul
   resetTaskForContinuation(taskId, newTurnCount)
 
   const cwd = task.workingDirectory ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
-  console.log(`[task-manager] Continuing task ${taskId} (turn ${newTurnCount}): ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
+  console.log(`[task-manager] Continuing task ${taskId} (turn ${newTurnCount}) via tmux`)
 
-  const proc = new ManagedProcess({ taskId, command, cwd, mode: 'default', agentType: 'claude', turnNumber: newTurnCount, onComplete: () => { processes.delete(taskId) } })
+  const proc = new ManagedClaudeProcess({
+    taskId,
+    prompt,
+    cwd,
+    mode: 'default',
+    model: turnModel,
+    sessionId: task.sessionId,
+    turnNumber: newTurnCount,
+    onComplete: () => { processes.delete(taskId) },
+  })
   processes.set(taskId, proc)
-  proc.start()
+  void proc.start()
 
   return true
 }
@@ -134,6 +138,6 @@ export function getTaskList() {
 }
 
 /** Get a specific active process */
-export function getProcess(taskId: string): ManagedProcess | ManagedTmuxProcess | undefined {
+export function getProcess(taskId: string): ManagedProcess | ManagedClaudeProcess | ManagedTmuxProcess | undefined {
   return processes.get(taskId)
 }

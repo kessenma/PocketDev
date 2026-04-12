@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Animated, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 
@@ -7,6 +7,8 @@ type Direction = 'top' | 'bottom'
 
 type Props = {
   label: string
+  /** Optional list items displayed below the label (label becomes a bold header). */
+  items?: string[]
   children: React.ReactNode
   direction?: Direction
 }
@@ -14,8 +16,11 @@ type Props = {
 type AnchorRect = { x: number; y: number; width: number; height: number }
 
 const TOOLTIP_GAP = 6
+const TOOLTIP_MAX_WIDTH = 230
+const SCREEN_MARGIN = 10
+const MAX_ITEMS = 5
 
-export default function BauhausTooltip({ label, children, direction = 'top' }: Props) {
+export default function BauhausTooltip({ label, items, children, direction = 'top' }: Props) {
   const { colors, isDark } = useTheme()
   const [visible, setVisible] = useState(false)
   const [anchor, setAnchor] = useState<AnchorRect | null>(null)
@@ -41,11 +46,23 @@ export default function BauhausTooltip({ label, children, direction = 'top' }: P
   }
 
   const tooltipBg = isDark ? 'rgba(28, 28, 30, 0.97)' : 'rgba(20, 20, 20, 0.92)'
+  const hasItems = items && items.length > 0
+  const visibleItems = hasItems ? items.slice(0, MAX_ITEMS) : []
+  const overflow = hasItems ? items.length - MAX_ITEMS : 0
 
   const tooltipPositionStyle = anchor
-    ? direction === 'bottom'
-      ? { top: anchor.y + anchor.height + TOOLTIP_GAP, right: undefined, left: anchor.x + anchor.width / 2 - 40 }
-      : { top: anchor.y - 32 - TOOLTIP_GAP, right: undefined, left: anchor.x + anchor.width / 2 - 40 }
+    ? (() => {
+        const screenWidth = Dimensions.get('window').width
+        const idealLeft = anchor.x + anchor.width / 2 - TOOLTIP_MAX_WIDTH / 2
+        const left = Math.max(
+          SCREEN_MARGIN,
+          Math.min(idealLeft, screenWidth - TOOLTIP_MAX_WIDTH - SCREEN_MARGIN),
+        )
+        const top = direction === 'bottom'
+          ? anchor.y + anchor.height + TOOLTIP_GAP
+          : anchor.y - TOOLTIP_GAP - (hasItems ? 20 + visibleItems.length * 22 : 30)
+        return { top, left }
+      })()
     : { top: 0, left: 0 }
 
   return (
@@ -63,7 +80,16 @@ export default function BauhausTooltip({ label, children, direction = 'top' }: P
                 { opacity, backgroundColor: tooltipBg, borderColor: colors.border },
               ]}
             >
-              <Text style={styles.tooltipText}>{label}</Text>
+              <Text style={[styles.tooltipText, hasItems && styles.tooltipHeader]}>{label}</Text>
+              {visibleItems.map((item, i) => (
+                <View key={i} style={styles.itemRow}>
+                  <Text style={styles.bullet}>·</Text>
+                  <Text style={styles.itemText} numberOfLines={1}>{item}</Text>
+                </View>
+              ))}
+              {overflow > 0 && (
+                <Text style={styles.overflow}>+{overflow} more</Text>
+              )}
             </Animated.View>
           </TouchableOpacity>
         </Modal>
@@ -78,14 +104,38 @@ const styles = StyleSheet.create({
     zIndex: 9999,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    paddingHorizontal: spacing[2],
-    paddingVertical: 5,
-    minWidth: 64,
-    alignItems: 'center',
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    width: TOOLTIP_MAX_WIDTH,
   },
   tooltipText: {
     ...typographyScale.xs,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  tooltipHeader: {
+    fontWeight: '700',
+    marginBottom: spacing[1],
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 1,
+  },
+  bullet: {
+    ...typographyScale.xs,
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 16,
+  },
+  itemText: {
+    ...typographyScale.xs,
+    color: 'rgba(255,255,255,0.85)',
+    flex: 1,
+  },
+  overflow: {
+    ...typographyScale.xs,
+    color: 'rgba(255,255,255,0.45)',
+    marginTop: 2,
   },
 })

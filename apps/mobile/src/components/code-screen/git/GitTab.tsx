@@ -53,6 +53,7 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
   const isRefreshing = useGitStore((state) => state.isRefreshing)
   const isCommitting = useGitStore((state) => state.isCommitting)
   const isPushing = useGitStore((state) => state.isPushing)
+  const taskCount = useGitStore((state) => state.taskCount)
   const isPulling = useGitStore((state) => state.isPulling)
   const isStashing = useGitStore((state) => state.isStashing)
   const isAborting = useGitStore((state) => state.isAborting)
@@ -191,7 +192,7 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
       <SplitViewLayout
         leading={
           <View style={styles.stack}>
-            <GitStatusSummary changes={changes} />
+            <GitStatusSummary changes={changes} stashes={stashes} headFilesChanged={commits[0]?.filesChanged ?? 0} taskCount={taskCount} />
             <GitChangeList
               changes={changes}
               selectedFileId={selectedFileId}
@@ -219,7 +220,7 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
     )
     : (
       <View style={styles.stack}>
-        <GitStatusSummary changes={changes} />
+        <GitStatusSummary changes={changes} stashes={stashes} headFilesChanged={commits[0]?.filesChanged ?? 0} taskCount={taskCount} />
         <GitChangeList
           changes={changes}
           selectedFileId={selectedFileId}

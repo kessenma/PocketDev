@@ -414,7 +414,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    maxHeight: '75%',
+    maxHeight: '80%',
+    minHeight: 400,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     overflow: 'hidden',

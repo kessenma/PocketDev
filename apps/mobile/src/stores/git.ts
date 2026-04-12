@@ -33,6 +33,7 @@ import {
   upsertGitCommitsForProject,
   getCachedGitCommits,
   pruneOldCommits,
+  getTaskCountForBranch,
 } from '../db/gitHistoryOperations'
 import { emitGitEvent } from '../services/gitEventBus'
 
@@ -50,6 +51,7 @@ type GitState = {
   remote: GitRemoteState
   stashes: GitStashEntry[]
   mergeState: GitMergeState | null
+  taskCount: number
   lastActionMessage: string
   isRefreshing: boolean
   isCommitting: boolean
@@ -180,6 +182,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   remote: emptyRemote,
   stashes: [],
   mergeState: null,
+  taskCount: 0,
   lastActionMessage: 'Pull to refresh to load git status from the server.',
   isRefreshing: false,
   isCommitting: false,
@@ -334,6 +337,8 @@ export const useGitStore = create<GitState>((set, get) => ({
           if (db && summary.repoPath && result.commits.length > 0) {
             await upsertGitCommitsForProject(db, summary.repoPath, result.commits)
             await pruneOldCommits(db, summary.repoPath, 200)
+            const taskCount = await getTaskCountForBranch(db, summary.repoPath, branchName).catch(() => 0)
+            set({ taskCount })
           }
         })
         .catch((e) => console.warn('[git] Background history fetch failed:', e))
