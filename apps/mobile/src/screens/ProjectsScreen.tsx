@@ -256,7 +256,7 @@ export default function ProjectsScreen() {
         )}
       </BauhausPanel>
     )
-  }, [branchDrafts, setBranchDrafts, mutatingProjectId, mutatingAction, isMutating, cloneCelebrationProjectId, clearCloneCelebration, selectProject, cloneProject, colors])
+  }, [branchDrafts, setBranchDrafts, mutatingProjectId, mutatingAction, isMutating, cloneCelebrationProjectId, clearCloneCelebration, selectProject, cloneProject, colors, server, currentBranch, offlineSnapshots, downloadingKey, downloadProgress, startDownload, cancelDownload, clearOfflineData])
 
   const listHeader = (
     <View style={styles.header}>

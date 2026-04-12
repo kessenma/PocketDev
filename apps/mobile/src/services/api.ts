@@ -22,6 +22,8 @@ import type {
   GitDetailedHistoryResponse,
   GitHistorySyncStatus,
   GitHistorySyncResult,
+  GitStashEntry,
+  GitMergeState,
   ListProjectsResponse,
   ProjectMutationResult,
   ProjectSummary,
@@ -461,6 +463,73 @@ export async function postGitPush(ip: string, port: number) {
 
 export async function postGitPull(ip: string, port: number) {
   return postGitMutation(ip, port, 'pull')
+}
+
+// ─── Stash ─────────────────────────────────────────────
+
+export async function fetchGitStashList(ip: string, port: number): Promise<GitStashEntry[]> {
+  const response = await fetch(apiUrl(ip, port, '/git/stash'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch stash list (${response.status})`)
+  const data = (await response.json()) as { stashes: GitStashEntry[] }
+  return data.stashes
+}
+
+export async function postGitStash(
+  ip: string,
+  port: number,
+  message?: string,
+): Promise<{ ok: true } | GitErrorResponse> {
+  const response = await fetch(apiUrl(ip, port, '/git/stash'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ message }),
+  })
+  return response.json() as Promise<{ ok: true } | GitErrorResponse>
+}
+
+export async function postGitStashPop(
+  ip: string,
+  port: number,
+  index: number,
+): Promise<GitMutationResult | GitErrorResponse> {
+  return postGitMutation(ip, port, `stash/${index}/pop`)
+}
+
+export async function postGitStashApply(
+  ip: string,
+  port: number,
+  index: number,
+): Promise<GitMutationResult | GitErrorResponse> {
+  return postGitMutation(ip, port, `stash/${index}/apply`)
+}
+
+export async function deleteGitStash(ip: string, port: number, index: number): Promise<void> {
+  await fetch(apiUrl(ip, port, `/git/stash/${index}`), {
+    method: 'DELETE',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+}
+
+// ─── Merge state ───────────────────────────────────────
+
+export async function fetchGitMergeState(ip: string, port: number): Promise<GitMergeState> {
+  const response = await fetch(apiUrl(ip, port, '/git/merge/state'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch merge state (${response.status})`)
+  return response.json() as Promise<GitMergeState>
+}
+
+export async function postGitMergeAbort(
+  ip: string,
+  port: number,
+): Promise<GitMutationResult | GitErrorResponse> {
+  return postGitMutation(ip, port, 'merge/abort')
 }
 
 // ─── Repo History ──────────────────────────────────────

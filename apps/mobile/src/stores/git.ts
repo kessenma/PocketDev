@@ -18,9 +18,16 @@ import {
   postGitPull,
   fetchDetailedHistory,
   triggerHistorySync,
+  fetchGitStashList,
+  postGitStash,
+  postGitStashPop,
+  postGitStashApply,
+  deleteGitStash,
+  fetchGitMergeState,
+  postGitMergeAbort,
 } from '../services/api'
 import { useConnectionStore } from './connection'
-import type { GitSummary, GitBranchEntry, GitDetailedCommitEntry } from '@pocketdev/shared/types'
+import type { GitSummary, GitBranchEntry, GitDetailedCommitEntry, GitStashEntry, GitMergeState } from '@pocketdev/shared/types'
 import { getModuleDb } from '../db/DatabaseProvider'
 import {
   upsertGitCommitsForProject,
@@ -41,12 +48,16 @@ type GitState = {
   detailedCommits: GitDetailedCommitEntry[]
   branches: GitBranchOption[]
   remote: GitRemoteState
+  stashes: GitStashEntry[]
+  mergeState: GitMergeState | null
   lastActionMessage: string
   isRefreshing: boolean
   isCommitting: boolean
   isPushing: boolean
   isPulling: boolean
   isSyncing: boolean
+  isStashing: boolean
+  isAborting: boolean
   error: string | null
   selectView: (view: GitView) => void
   selectFile: (fileId: string) => void
@@ -57,6 +68,12 @@ type GitState = {
   commit: () => void
   push: () => void
   pull: () => void
+  stash: (message?: string) => void
+  popStash: (index: number) => void
+  applyStash: (index: number) => void
+  dropStash: (index: number) => void
+  refreshStashes: () => void
+  abortMerge: () => void
 }
 
 const emptyRemote: GitRemoteState = {
@@ -161,12 +178,16 @@ export const useGitStore = create<GitState>((set, get) => ({
   detailedCommits: [],
   branches: [],
   remote: emptyRemote,
+  stashes: [],
+  mergeState: null,
   lastActionMessage: 'Pull to refresh to load git status from the server.',
   isRefreshing: false,
   isCommitting: false,
   isPushing: false,
   isPulling: false,
   isSyncing: false,
+  isStashing: false,
+  isAborting: false,
   error: null,
 
   selectView: (view) => set({ activeView: view }),
@@ -276,11 +297,13 @@ export const useGitStore = create<GitState>((set, get) => ({
     }
 
     try {
-      const [summary, changes, commits, branches] = await Promise.all([
+      const [summary, changes, commits, branches, stashes, mergeState] = await Promise.all([
         fetchGitSummary(server.ip, server.port),
         fetchGitChanges(server.ip, server.port),
         fetchGitHistory(server.ip, server.port),
         fetchGitBranches(server.ip, server.port),
+        fetchGitStashList(server.ip, server.port).catch(() => get().stashes),
+        fetchGitMergeState(server.ip, server.port).catch(() => get().mergeState),
       ])
 
       const branchName = summary.currentBranch.name
@@ -292,6 +315,8 @@ export const useGitStore = create<GitState>((set, get) => ({
         commits: commits.map(commitToMobile),
         branches: branches.map(branchEntryToOption),
         remote: summaryToRemote(summary),
+        stashes,
+        mergeState,
         selectedFileId: changes.length > 0 ? changes[0].id : null,
         isRefreshing: false,
         lastActionMessage: pullMessage ?? (changes.length > 0
@@ -453,11 +478,19 @@ export const useGitStore = create<GitState>((set, get) => ({
         get().refresh()
         get().syncHistory()
       } else if ('error' in result) {
-        set({
-          isPulling: false,
-          lastActionMessage: result.error,
-          error: result.error,
-        })
+        const code = result.code as string
+        const isMergeConflict = code === 'merge_conflict' || code === 'merge_in_progress'
+        if (isMergeConflict) {
+          // Fetch merge state so the conflict panel can render
+          try {
+            const mergeState = await fetchGitMergeState(server.ip, server.port)
+            set({ isPulling: false, mergeState, lastActionMessage: 'Merge conflict — resolve or abort.' })
+          } catch {
+            set({ isPulling: false, lastActionMessage: result.error, error: result.error })
+          }
+        } else {
+          set({ isPulling: false, lastActionMessage: result.error, error: result.error })
+        }
       }
     } catch (err) {
       set({
@@ -465,6 +498,101 @@ export const useGitStore = create<GitState>((set, get) => ({
         lastActionMessage: 'Pull failed.',
         error: err instanceof Error ? err.message : 'Pull failed',
       })
+    }
+  },
+
+  refreshStashes: async () => {
+    const server = getServer()
+    if (!server) return
+    try {
+      const stashes = await fetchGitStashList(server.ip, server.port)
+      set({ stashes })
+    } catch { /* non-fatal */ }
+  },
+
+  stash: async (message?: string) => {
+    if (get().isStashing) return
+    const server = getServer()
+    if (!server) return
+
+    set({ isStashing: true, lastActionMessage: 'Stashing changes...' })
+    try {
+      const result = await postGitStash(server.ip, server.port, message)
+      if ('ok' in result && result.ok) {
+        set({ isStashing: false, lastActionMessage: 'Changes stashed.' })
+        get().refreshStashes()
+        get().refresh()
+      } else if ('error' in result) {
+        set({ isStashing: false, lastActionMessage: result.error, error: result.error })
+      }
+    } catch (err) {
+      set({ isStashing: false, lastActionMessage: 'Stash failed.', error: err instanceof Error ? err.message : 'Stash failed' })
+    }
+  },
+
+  popStash: async (index: number) => {
+    const server = getServer()
+    if (!server) return
+    set({ lastActionMessage: `Popping stash@{${index}}...` })
+    try {
+      const result = await postGitStashPop(server.ip, server.port, index)
+      if ('ok' in result && result.ok) {
+        set({ lastActionMessage: 'Stash applied and dropped.' })
+        get().refreshStashes()
+        get().refresh()
+      } else if ('error' in result) {
+        set({ lastActionMessage: result.error, error: result.error })
+      }
+    } catch (err) {
+      set({ lastActionMessage: 'Pop failed.', error: err instanceof Error ? err.message : 'Pop failed' })
+    }
+  },
+
+  applyStash: async (index: number) => {
+    const server = getServer()
+    if (!server) return
+    set({ lastActionMessage: `Applying stash@{${index}}...` })
+    try {
+      const result = await postGitStashApply(server.ip, server.port, index)
+      if ('ok' in result && result.ok) {
+        set({ lastActionMessage: 'Stash applied.' })
+        get().refresh()
+      } else if ('error' in result) {
+        set({ lastActionMessage: result.error, error: result.error })
+      }
+    } catch (err) {
+      set({ lastActionMessage: 'Apply failed.', error: err instanceof Error ? err.message : 'Apply failed' })
+    }
+  },
+
+  dropStash: async (index: number) => {
+    const server = getServer()
+    if (!server) return
+    try {
+      await deleteGitStash(server.ip, server.port, index)
+      set({ lastActionMessage: `Stash@{${index}} dropped.` })
+      get().refreshStashes()
+    } catch (err) {
+      set({ lastActionMessage: 'Drop failed.', error: err instanceof Error ? err.message : 'Drop failed' })
+    }
+  },
+
+  abortMerge: async () => {
+    if (get().isAborting) return
+    const server = getServer()
+    if (!server) return
+
+    set({ isAborting: true, lastActionMessage: 'Aborting merge...' })
+    try {
+      const result = await postGitMergeAbort(server.ip, server.port)
+      if ('ok' in result && result.ok) {
+        set({ isAborting: false, mergeState: null, lastActionMessage: 'Merge aborted.' })
+        get().refresh()
+      } else if ('error' in result) {
+        set({ isAborting: false, lastActionMessage: result.error, error: result.error })
+      }
+    } catch (err) {
+      set({ isAborting: false, lastActionMessage: 'Abort failed.', error: err instanceof Error ? err.message : 'Abort failed' })
     }
   },
 }))

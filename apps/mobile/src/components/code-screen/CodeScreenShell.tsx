@@ -89,7 +89,7 @@ export default function CodeScreenShell({ navigation }: Props) {
 
       {runningCount > 0 ? (
         <TouchableOpacity
-          style={[styles.runningFab, { backgroundColor: colors.primary, borderColor: colors.border }]}
+          style={[styles.runningFab, { backgroundColor: colors.primary, borderColor: colors.border, bottom: insets.bottom + 72 + 12 }]}
           onPress={() => setShowRunningScripts(true)}
           activeOpacity={0.7}
         >
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   },
   runningFab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 0, // overridden inline with insets + tab bar height
     right: 24,
     width: 52,
     height: 52,

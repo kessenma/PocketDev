@@ -9,6 +9,7 @@ import TaskDetailScreen from '../screens/TaskDetailScreen'
 import NewTaskScreen from '../screens/NewTaskScreen'
 import ProjectsScreen from '../screens/ProjectsScreen'
 import GitHistoryScreen from '../screens/GitHistoryScreen'
+import ServerDebugScreen from '../screens/ServerDebugScreen'
 import MainTabs from './MainTabs'
 import { useConnectionStore } from '../stores/connection'
 import type { RootStackParamList } from './types'
@@ -78,6 +79,11 @@ export default function RootNavigator() {
         name="GitHistory"
         component={GitHistoryScreen}
         options={{ title: 'Commit History' }}
+      />
+      <Stack.Screen
+        name="ServerDebug"
+        component={ServerDebugScreen}
+        options={{ title: 'Server Debug' }}
       />
     </Stack.Navigator>
   )

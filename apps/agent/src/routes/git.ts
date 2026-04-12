@@ -11,6 +11,13 @@ import {
   commitStaged,
   pushCurrent,
   pullCurrent,
+  listStashes,
+  saveStash,
+  popStash,
+  applyStash,
+  dropStash,
+  getMergeState,
+  abortMerge,
 } from '../services/git.ts'
 import {
   syncGitHistory,
@@ -161,6 +168,102 @@ export const gitRoutes = new Elysia({ prefix: '/git' })
     try {
       console.log('[git] POST /git/pull')
       const summary = await pullCurrent()
+      return { ok: true, summary }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  })
+
+  // ─── Stash endpoints ──────────────────────────────────
+
+  .get('/stash', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      return { stashes: await listStashes() }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  })
+
+  .post('/stash', async ({ request, body, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      await saveStash(body.message ?? undefined)
+      return { ok: true }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  }, {
+    body: t.Object({
+      message: t.Optional(t.String()),
+    }),
+  })
+
+  .post('/stash/:index/pop', async ({ request, params, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      const summary = await popStash(parseInt(params.index, 10))
+      return { ok: true, summary }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  }, {
+    params: t.Object({ index: t.String() }),
+  })
+
+  .post('/stash/:index/apply', async ({ request, params, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      const summary = await applyStash(parseInt(params.index, 10))
+      return { ok: true, summary }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  }, {
+    params: t.Object({ index: t.String() }),
+  })
+
+  .delete('/stash/:index', async ({ request, params, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      await dropStash(parseInt(params.index, 10))
+      return { ok: true }
+    } catch (error) {
+      return handleError(error, set)
+    }
+  }, {
+    params: t.Object({ index: t.String() }),
+  })
+
+  // ─── Merge state endpoints ─────────────────────────────
+
+  .get('/merge/state', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      return await getMergeState()
+    } catch (error) {
+      return handleError(error, set)
+    }
+  })
+
+  .post('/merge/abort', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    try {
+      const summary = await abortMerge()
       return { ok: true, summary }
     } catch (error) {
       return handleError(error, set)

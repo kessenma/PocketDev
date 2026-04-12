@@ -115,6 +115,11 @@ export default function SettingsScreen({ navigation }: Props) {
               Server Console
             </BauhausButton>
           )}
+          {server && (
+            <BauhausButton onPress={() => navigation.getParent()?.navigate('ServerDebug')}>
+              Server Debug
+            </BauhausButton>
+          )}
           <View style={styles.row}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Services</Text>
             <TouchableOpacity onPress={() => navigation.getParent()?.navigate('Containers')} activeOpacity={0.7}>

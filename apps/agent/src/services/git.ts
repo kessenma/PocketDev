@@ -1,4 +1,5 @@
 import { resolve, basename } from 'node:path'
+import { existsSync } from 'node:fs'
 import type {
   GitSummary,
   GitFileChange,
@@ -9,6 +10,8 @@ import type {
   GitErrorCode,
   GitFileChangeKind,
   GitRemoteStatus,
+  GitStashEntry,
+  GitMergeState,
 } from '@pocketdev/shared/types'
 import { getActiveProjectPath } from './projects.ts'
 
@@ -343,22 +346,166 @@ export async function pushCurrent(): Promise<GitSummary> {
 export async function pullCurrent(): Promise<GitSummary> {
   await ensureRepo()
 
-  const { exitCode, stderr } = await exec('git pull --ff-only')
+  const { exitCode, stdout, stderr } = await exec('git pull')
 
   if (exitCode !== 0) {
     if (stderr.includes('Authentication') || stderr.includes('Permission denied') || stderr.includes('could not read Username')) {
       throw new GitServiceError('Pull requires authentication', 'auth_required')
     }
-    if (stderr.includes('Not possible to fast-forward') || stderr.includes('fatal: Not possible')) {
-      throw new GitServiceError('Cannot fast-forward — local and remote have diverged. Rebase or merge manually.', 'push_rejected')
-    }
     if (stderr.includes('no tracking information') || stderr.includes('no upstream')) {
       throw new GitServiceError('No upstream branch configured', 'upstream_missing')
     }
-    if (stderr.includes('uncommitted changes') || stderr.includes('local changes')) {
+    if (stderr.includes('uncommitted changes') || stderr.includes('local changes') || stderr.includes('Please commit or stash')) {
       throw new GitServiceError('Cannot pull with uncommitted changes — commit or stash first', 'dirty_worktree_blocked')
     }
+    // Merge conflict — check if MERGE_HEAD now exists
+    const combined = stdout + '\n' + stderr
+    if (combined.includes('CONFLICT') || combined.includes('Automatic merge failed')) {
+      const mergeState = await getMergeState()
+      throw new GitServiceError(
+        `Merge conflict in ${mergeState.conflictedPaths.length} file(s) — resolve or abort`,
+        'merge_conflict',
+      )
+    }
     throw new GitServiceError(stderr || 'Pull failed', 'command_failed')
+  }
+
+  return getGitSummary()
+}
+
+// ─── Stash operations ─────────────────────────────────
+
+export async function listStashes(): Promise<GitStashEntry[]> {
+  await ensureRepo()
+
+  const { stdout } = await exec("git stash list --format='%gd%x1f%s%x1f%cr'")
+  if (!stdout) return []
+
+  const entries: GitStashEntry[] = []
+  for (const line of stdout.split('\n')) {
+    if (!line) continue
+    const parts = line.split('\x1f')
+    if (parts.length < 3) continue
+
+    const ref = parts[0] // stash@{0}
+    const subject = parts[1] // "WIP on main: abc1234 msg" or "On main: custom msg"
+    const relativeTime = parts[2]
+
+    const indexMatch = ref.match(/stash@\{(\d+)\}/)
+    const index = indexMatch ? parseInt(indexMatch[1], 10) : 0
+
+    // Extract branch from "WIP on <branch>: ..." or "On <branch>: ..."
+    const branchMatch = subject.match(/^(?:WIP on |On )([^:]+):/)
+    const branch = branchMatch ? branchMatch[1].trim() : ''
+
+    entries.push({ index, branch, message: subject, relativeTime })
+  }
+
+  return entries
+}
+
+export async function saveStash(message?: string): Promise<void> {
+  await ensureRepo()
+
+  const cmd = message
+    ? `git stash push -m ${escapeShellArg(message)}`
+    : 'git stash push'
+
+  const { exitCode, stdout, stderr } = await exec(cmd)
+
+  if (exitCode !== 0) {
+    throw new GitServiceError(stderr || 'Stash failed', 'command_failed')
+  }
+
+  if (stdout.includes('No local changes to save')) {
+    throw new GitServiceError('No local changes to stash', 'nothing_to_commit')
+  }
+}
+
+export async function popStash(index: number): Promise<GitSummary> {
+  await ensureRepo()
+
+  const { exitCode, stdout, stderr } = await exec(`git stash pop stash@{${index}}`)
+
+  if (exitCode !== 0) {
+    const combined = stdout + '\n' + stderr
+    if (combined.includes('CONFLICT') || combined.includes('conflict')) {
+      throw new GitServiceError('Stash pop caused conflicts — resolve manually', 'stash_conflict')
+    }
+    throw new GitServiceError(stderr || 'Stash pop failed', 'command_failed')
+  }
+
+  return getGitSummary()
+}
+
+export async function applyStash(index: number): Promise<GitSummary> {
+  await ensureRepo()
+
+  const { exitCode, stdout, stderr } = await exec(`git stash apply stash@{${index}}`)
+
+  if (exitCode !== 0) {
+    const combined = stdout + '\n' + stderr
+    if (combined.includes('CONFLICT') || combined.includes('conflict')) {
+      throw new GitServiceError('Stash apply caused conflicts — resolve manually', 'stash_conflict')
+    }
+    throw new GitServiceError(stderr || 'Stash apply failed', 'command_failed')
+  }
+
+  return getGitSummary()
+}
+
+export async function dropStash(index: number): Promise<void> {
+  await ensureRepo()
+
+  const { exitCode, stderr } = await exec(`git stash drop stash@{${index}}`)
+
+  if (exitCode !== 0) {
+    throw new GitServiceError(stderr || 'Stash drop failed', 'command_failed')
+  }
+}
+
+// ─── Merge state ──────────────────────────────────────
+
+export async function getMergeState(): Promise<GitMergeState> {
+  const repoPath = await ensureRepo()
+  const mergeHeadPath = `${repoPath}/.git/MERGE_HEAD`
+  const inProgress = existsSync(mergeHeadPath)
+
+  if (!inProgress) {
+    return { inProgress: false, mergeBranch: '', conflictedPaths: [] }
+  }
+
+  // Get the merge branch name from MERGE_HEAD sha
+  const { stdout: mergeSha } = await exec(`cat ${escapeShellArg(mergeHeadPath)}`)
+  const { stdout: mergeBranch } = await exec(
+    `git name-rev --name-only ${mergeSha.trim()} 2>/dev/null || echo "${mergeSha.trim().slice(0, 7)}"`,
+  )
+
+  // Find conflicted files: status codes UU, AA, DD, AU, UA, DU, UD
+  const { stdout: statusOut } = await exec('git status --porcelain')
+  const conflictedPaths: string[] = []
+  for (const line of statusOut.split('\n')) {
+    if (!line) continue
+    const xy = line.slice(0, 2)
+    if (['UU', 'AA', 'DD', 'AU', 'UA', 'DU', 'UD'].includes(xy)) {
+      conflictedPaths.push(line.slice(3).trim())
+    }
+  }
+
+  return {
+    inProgress: true,
+    mergeBranch: mergeBranch.trim(),
+    conflictedPaths,
+  }
+}
+
+export async function abortMerge(): Promise<GitSummary> {
+  await ensureRepo()
+
+  const { exitCode, stderr } = await exec('git merge --abort')
+
+  if (exitCode !== 0) {
+    throw new GitServiceError(stderr || 'Merge abort failed', 'command_failed')
   }
 
   return getGitSummary()

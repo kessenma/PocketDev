@@ -1,24 +1,31 @@
 import React from 'react'
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { FolderGit2, Ghost, GitBranch, RefreshCw, Shapes, Split } from 'lucide-react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { borderRadius, palette, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../../hooks/useAdaptiveLayout'
 import { useGitStore } from '../../../stores/git'
+import { useNewTaskDraftStore } from '../../../stores/new-task-draft'
+import { useFilesStore } from '../../../stores/files'
 import BauhausTooltip from '../../shared/BauhausTooltip'
 import SplitViewLayout from '../../layout/SplitViewLayout'
 import GitBranchList from '../../git/GitBranchList'
 import GitChangeDetailSheet from '../../git/GitChangeDetailSheet'
 import GitChangeList from '../../git/GitChangeList'
 import GitCommitComposer from '../../git/GitCommitComposer'
+import GitConflictPanel from '../../git/GitConflictPanel'
 import GitDiffPreview from '../../git/GitDiffPreview'
 import GitHistoryList from '../../git/GitHistoryList'
 import GitPushPanel from '../../git/GitPushPanel'
+import GitStashPanel from '../../git/GitStashPanel'
 import GitStatusSummary from '../../git/GitStatusSummary'
 import CodeScreenHeader from '../navigation/CodeScreenHeader'
 import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
 import type { GitView } from '../../git/model'
+import type { MainTabParamList } from '../../../navigation/types'
 
 const VIEW_OPTIONS: readonly CodeSubTabOption<GitView>[] = [
   { value: 'changes', label: 'Changes', icon: Split },
@@ -29,6 +36,7 @@ const VIEW_OPTIONS: readonly CodeSubTabOption<GitView>[] = [
 export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps) {
   const { colors } = useTheme()
   const { layoutMode } = useAdaptiveLayout()
+  const navigation = useNavigation<BottomTabNavigationProp<MainTabParamList>>()
   const [isChangeSheetVisible, setIsChangeSheetVisible] = React.useState(false)
   const repoName = useGitStore((state) => state.repoName)
   const repoPath = useGitStore((state) => state.repoPath)
@@ -39,11 +47,15 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
   const commits = useGitStore((state) => state.commits)
   const branches = useGitStore((state) => state.branches)
   const remote = useGitStore((state) => state.remote)
+  const stashes = useGitStore((state) => state.stashes)
+  const mergeState = useGitStore((state) => state.mergeState)
   const lastActionMessage = useGitStore((state) => state.lastActionMessage)
   const isRefreshing = useGitStore((state) => state.isRefreshing)
   const isCommitting = useGitStore((state) => state.isCommitting)
   const isPushing = useGitStore((state) => state.isPushing)
   const isPulling = useGitStore((state) => state.isPulling)
+  const isStashing = useGitStore((state) => state.isStashing)
+  const isAborting = useGitStore((state) => state.isAborting)
   const selectView = useGitStore((state) => state.selectView)
   const selectFile = useGitStore((state) => state.selectFile)
   const selectBranch = useGitStore((state) => state.selectBranch)
@@ -52,6 +64,41 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
   const commit = useGitStore((state) => state.commit)
   const push = useGitStore((state) => state.push)
   const pull = useGitStore((state) => state.pull)
+  const stash = useGitStore((state) => state.stash)
+  const popStash = useGitStore((state) => state.popStash)
+  const applyStash = useGitStore((state) => state.applyStash)
+  const dropStash = useGitStore((state) => state.dropStash)
+  const abortMerge = useGitStore((state) => state.abortMerge)
+
+  const setDraftPrompt = useNewTaskDraftStore((state) => state.setPrompt)
+  const setDraftMode = useNewTaskDraftStore((state) => state.selectTaskMode)
+  const toggleContextPath = useFilesStore((state) => state.toggleContextPath)
+
+  const handleFixWithAI = React.useCallback(() => {
+    if (!mergeState) return
+    const fileList = mergeState.conflictedPaths.map((p: string) => `- ${p}`).join('\n')
+    const branchLabel = mergeState.mergeBranch ? `\`${mergeState.mergeBranch}\`` : 'the remote branch'
+    const prompt = [
+      `I have a merge conflict between the current branch and ${branchLabel}.`,
+      '',
+      'Conflicted files:',
+      fileList,
+      '',
+      'Before making any edits:',
+      '1. Read each conflicted file and identify both sides of every conflict marker.',
+      '2. Explain what each side contains and which version (or combination) you plan to keep and why.',
+      '3. Wait for my approval before writing any changes.',
+      '',
+      'Once I confirm, resolve every conflict by removing all markers (<<<<<<< / ======= / >>>>>>>) and producing clean, working code.',
+    ].join('\n')
+
+    setDraftPrompt(prompt)
+    setDraftMode('plan')
+    for (const path of mergeState.conflictedPaths) {
+      toggleContextPath(path)
+    }
+    navigation.navigate('Tasks')
+  }, [mergeState, setDraftPrompt, setDraftMode, toggleContextPath, navigation])
 
   const scrollY = React.useRef(new Animated.Value(0)).current
   const currentBranch = branches.find((branch) => branch.current) ?? branches[0]
@@ -118,6 +165,27 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
     extrapolate: 'clamp',
   })
 
+  const conflictPanel = mergeState?.inProgress ? (
+    <GitConflictPanel
+      mergeState={mergeState}
+      isAborting={isAborting}
+      onAbort={abortMerge}
+      onFixWithAI={handleFixWithAI}
+    />
+  ) : null
+
+  const stashPanel = (
+    <GitStashPanel
+      stashes={stashes}
+      changes={changes}
+      isStashing={isStashing}
+      onStash={stash}
+      onPop={popStash}
+      onApply={applyStash}
+      onDrop={dropStash}
+    />
+  )
+
   const changesView = isSplitLayout
     ? (
       <SplitViewLayout
@@ -129,6 +197,8 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
               selectedFileId={selectedFileId}
               onSelect={handleSelectFile}
             />
+            {conflictPanel}
+            {stashPanel}
           </View>
         }
         trailing={
@@ -155,6 +225,8 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
           selectedFileId={selectedFileId}
           onSelect={handleSelectFile}
         />
+        {conflictPanel}
+        {stashPanel}
         <GitCommitComposer
           value={commitMessage}
           canCommit={canCommit}

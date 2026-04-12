@@ -10,6 +10,9 @@ export type GitErrorCode =
   | 'push_rejected'
   | 'upstream_missing'
   | 'command_failed'
+  | 'merge_in_progress'
+  | 'merge_conflict'
+  | 'stash_conflict'
 
 export interface GitSummary {
   repoName: string
@@ -126,4 +129,21 @@ export interface GitHistorySyncResult {
 export interface GitDetailedHistoryResponse {
   commits: GitDetailedCommitEntry[]
   hasMore: boolean
+}
+
+// ─── Stash types ───────────────────────────────────────
+
+export interface GitStashEntry {
+  index: number
+  branch: string
+  message: string
+  relativeTime: string
+}
+
+// ─── Merge state types ─────────────────────────────────
+
+export interface GitMergeState {
+  inProgress: boolean
+  mergeBranch: string
+  conflictedPaths: string[]
 }

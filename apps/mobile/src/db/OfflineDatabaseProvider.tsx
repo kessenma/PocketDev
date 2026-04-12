@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { open, type DB } from '@op-engineering/op-sqlite'
 import RNFS from 'react-native-fs'
-import { OFFLINE_CREATE_TABLES_SQL, OFFLINE_CREATE_INDEXES_SQL } from './offlineSchema'
+import { OFFLINE_SCHEMA_STATEMENTS } from './offlineSchema'
 import { getStoredKeypair } from '../services/storage'
 import { setOfflineStoreDb } from '../stores/offline'
 import { useOfflineStore } from '../stores/offline'
@@ -43,15 +43,19 @@ export default function OfflineDatabaseProvider({ children }: { children: React.
   }, [])
 
   async function initializeOfflineDatabase() {
+    const dbDir = `${RNFS.DocumentDirectoryPath}/databases`
+    const dbPath = `${dbDir}/offline.db`
+
+    if (!(await RNFS.exists(dbDir))) {
+      await RNFS.mkdir(dbDir)
+    }
+
+    const dbExists = await RNFS.exists(dbPath)
+    const encryptionKey = deriveEncryptionKey()
+
     try {
-      const dbDir = `${RNFS.DocumentDirectoryPath}/databases`
-      if (!(await RNFS.exists(dbDir))) {
-        await RNFS.mkdir(dbDir)
-      }
-
-      const database = await openOfflineDb(dbDir)
+      const database = open({ name: 'offline.db', location: dbDir, ...(encryptionKey ? { encryptionKey } : {}) })
       await applySchema(database)
-
       _offlineDb = database
       setDb(database)
       setOfflineStoreDb(database)
@@ -59,9 +63,23 @@ export default function OfflineDatabaseProvider({ children }: { children: React.
       setIsReady(true)
       console.log('[offline-db] Encrypted offline SQLite initialized')
     } catch (error) {
-      console.error('[offline-db] Failed to initialize offline SQLite:', error)
-      // Don't block the app — offline features just won't work
-      setIsReady(true)
+      // SQLCipher key mismatch or pre-SQLCipher unencrypted file — delete and recreate
+      if (dbExists) {
+        await RNFS.unlink(dbPath)
+      }
+      try {
+        const database = open({ name: 'offline.db', location: dbDir, ...(encryptionKey ? { encryptionKey } : {}) })
+        await applySchema(database)
+        _offlineDb = database
+        setDb(database)
+        setOfflineStoreDb(database)
+        await useOfflineStore.getState().loadAllSnapshots()
+        setIsReady(true)
+        console.log('[offline-db] Offline SQLite initialized after recreation')
+      } catch (retryError) {
+        console.error('[offline-db] Failed to initialize offline SQLite after retry:', retryError)
+        setIsReady(true)
+      }
     }
   }
 
@@ -74,34 +92,12 @@ export default function OfflineDatabaseProvider({ children }: { children: React.
   )
 }
 
-async function openOfflineDb(dbDir: string): Promise<DB> {
-  const encryptionKey = deriveEncryptionKey()
-
-  try {
-    return open({ name: 'offline.db', location: dbDir, ...(encryptionKey ? { encryptionKey } : {}) })
-  } catch (error) {
-    console.warn('[offline-db] Failed to open offline.db (key mismatch?), recreating:', error)
-    // Key mismatch or unencrypted DB from before SQLCipher was enabled — delete and recreate
-    const dbPath = `${dbDir}/offline.db`
-    if (await RNFS.exists(dbPath)) {
-      await RNFS.unlink(dbPath)
-    }
-    // Reopen fresh — with encryption key if available, otherwise plain
-    return open({ name: 'offline.db', location: dbDir, ...(encryptionKey ? { encryptionKey } : {}) })
-  }
-}
 
 async function applySchema(database: DB): Promise<void> {
   await database.execute('PRAGMA journal_mode=WAL;')
   await database.execute('PRAGMA foreign_keys=ON;')
 
-  const tableStatements = OFFLINE_CREATE_TABLES_SQL.split(';').filter((s) => s.trim())
-  for (const statement of tableStatements) {
-    await database.execute(statement + ';')
-  }
-
-  const indexStatements = OFFLINE_CREATE_INDEXES_SQL.split(';').filter((s) => s.trim())
-  for (const statement of indexStatements) {
+  for (const statement of OFFLINE_SCHEMA_STATEMENTS) {
     await database.execute(statement + ';')
   }
 }

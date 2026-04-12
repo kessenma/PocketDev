@@ -141,6 +141,8 @@ export type {
   GitHistorySyncStatus,
   GitHistorySyncResult,
   GitDetailedHistoryResponse,
+  GitStashEntry,
+  GitMergeState,
 } from './git.js'
 export type {
   TreeEntry,
