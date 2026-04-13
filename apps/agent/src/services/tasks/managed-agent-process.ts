@@ -159,6 +159,90 @@ export interface TmuxProviderConfig {
   onFinish?(ctx: FinishCtx, taskId: string): void
 }
 
+// ── Claude pane output → structured activities ────────────────────────────────
+// Converts visible Claude TUI lines into TaskActivity events so the mobile app
+// can render them with icons/colours instead of raw monospace text.
+
+const SPINNER_CHAR_RE = /^[✽✢✶✻✷✹✺✸*·]\s+/
+
+/** Returns true for TUI chrome that should never be shown in the mobile stream. */
+function isPaneChromeOnly(line: string): boolean {
+  const t = line.trim()
+  if (!t) return true
+  if (/^[─━═╌╍]+$/.test(t)) return true          // horizontal separator
+  if (/[▛▜]/.test(t)) return true                 // TUI block-draw header chars
+  if (/^❯\s*$/.test(t)) return true               // empty input cursor
+  if (/^(esc to interrupt|ctrl\+g to edit|\? for shortcuts)\b/i.test(t)) return true
+  if (/^\/[^\s]+\/[^\s]*$/.test(t)) return true   // bare cwd path e.g. /PocketDev/repos/…
+  return false
+}
+
+/** Normalise spinner char so all animation frames of the same message map to one key. */
+function spinnerKey(line: string): string {
+  return line.trim().replace(SPINNER_CHAR_RE, '⟳ ')
+}
+
+type ToolKind = 'read' | 'search' | 'write' | 'create' | 'run' | 'agent' | 'plan' | 'mcp' | 'web' | 'image' | 'info'
+
+function inferToolKindFromName(name: string): ToolKind {
+  const n = name.toLowerCase()
+  if (n === 'write') return 'write'
+  if (n === 'read') return 'read'
+  if (n === 'edit' || n === 'multiedit' || n === 'apply_patch') return 'write'
+  if (n === 'glob' || n === 'grep' || n.includes('find') || n.includes('search')) return 'search'
+  if (n === 'bash' || n.includes('run') || n.includes('exec')) return 'run'
+  if (n.includes('agent') || n.includes('task') || n.includes('sub')) return 'agent'
+  if (n.includes('todo') || n.includes('plan')) return 'plan'
+  if (n.includes('web') || n.includes('browser') || n.includes('fetch')) return 'web'
+  if (n.includes('image') || n.includes('screenshot')) return 'image'
+  if (n.startsWith('mcp')) return 'mcp'
+  return 'info'
+}
+
+/** Parse a single visible TUI line into a structured activity, or null if not meaningful. */
+function parsePaneLineToActivity(line: string): TaskActivity | null {
+  const t = line.trim()
+  if (!t) return null
+
+  // ● ToolName(detail)  — tool use
+  const toolMatch = t.match(/^●\s+(\w[\w.]+)\(([^)]*)\)/)
+  if (toolMatch) {
+    return {
+      type: 'tool_use',
+      tool: toolMatch[1],
+      provider: 'claude',
+      kind: inferToolKindFromName(toolMatch[1]),
+      title: toolMatch[1],
+      detail: toolMatch[2] || undefined,
+    }
+  }
+
+  // ⎿  result preview  — tool result
+  const resultMatch = t.match(/^⎿\s+(.+)/)
+  if (resultMatch) {
+    return { type: 'tool_result', toolName: '', provider: 'claude', isError: false, preview: resultMatch[1] }
+  }
+
+  // ● Done. / ● Some assistant text response (but not a tool call)
+  if (t.startsWith('● ') && !t.match(/^●\s+\w+\(/)) {
+    const content = t.slice(2).trim()
+    if (content.length > 4) {
+      return { type: 'text', provider: 'claude', content }
+    }
+  }
+
+  // Spinner / thinking lines: ✽ Word… (thinking) or ✽ Word…
+  const spinnerMatch = t.match(/^[✽✢✶✻✷✹✺✸*·]\s+(.+?)(\s+\(thinking\))?$/)
+  if (spinnerMatch) {
+    const msg = spinnerMatch[1]
+    return spinnerMatch[2]
+      ? { type: 'thinking', provider: 'claude', preview: msg }
+      : { type: 'status', provider: 'claude', message: msg }
+  }
+
+  return null
+}
+
 // ── Claude provider ───────────────────────────────────────────────────────────
 
 interface TuiPrompt {
@@ -474,6 +558,7 @@ export class ManagedAgentProcess {
   private previousPane = ''
   private pendingTuiQuestionId: string | null = null
   private panePollCountdown = 0
+  private seenPaneLineKeys = new Set<string>()
 
   // Question tracking
   private readonly questionResponders = new Map<string, (answer: string) => void | Promise<void>>()
@@ -711,15 +796,22 @@ export class ManagedAgentProcess {
       this.previousPane = normalized
       this.lastPaneChangeMs = Date.now()
 
-      // Pane mode: emit new visible content as output lines
+      // Pane mode: emit new visible content as filtered, deduplicated output lines + activities
       if (!this.outputFilePath) {
         const diff = this.extractPaneDiff(previous, normalized)
         if (diff) {
           for (const line of diff.split('\n')) {
-            if (line.trim()) {
-              insertTaskLog(this.taskId, 'stdout', line)
-              this.broadcastOutput(line)
-            }
+            if (isPaneChromeOnly(line)) continue
+            // Deduplicate: spinner frames change one char but carry the same message
+            const key = spinnerKey(line)
+            if (this.seenPaneLineKeys.has(key)) continue
+            this.seenPaneLineKeys.add(key)
+
+            insertTaskLog(this.taskId, 'stdout', line)
+            this.broadcastOutput(line)
+
+            const activity = parsePaneLineToActivity(line)
+            if (activity) this.broadcastActivity(activity)
           }
         }
       }
