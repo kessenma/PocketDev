@@ -335,7 +335,11 @@ export function claudeProviderConfig(): TmuxProviderConfig {
           options: tuiPrompt.options.map((o) => ({ value: o.value, label: o.label })),
         },
         onAnswer: (answer) => {
-          void exec(`tmux send-keys -t ${ctx.tmuxSession} ${shellEscape(answer)} Enter`)
+          // Claude's ink-select-input menu uses arrow keys to navigate; Enter confirms.
+          // The cursor starts at option 1, so navigate Down (answer-1) times then Enter.
+          const optionIndex = Math.max(0, parseInt(answer, 10) - 1)
+          const keys = [...Array(optionIndex).fill('Down'), 'Enter'].join(' ')
+          void exec(`tmux send-keys -t ${ctx.tmuxSession} ${keys}`)
         },
       }
     },

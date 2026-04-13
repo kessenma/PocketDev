@@ -47,6 +47,7 @@ import { checkRustStatus } from '../services/cli-setup/rust-setup.ts'
 import { checkGoStatus } from '../services/cli-setup/go-setup.ts'
 import { checkTypeScriptStatus } from '../services/cli-setup/typescript-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/tasks/task-manager.ts'
+import { updateTaskStatus } from '../db/index.ts'
 import { getGitSummary } from '../services/git/git.ts'
 import { getDetailedCommits, detectNewCommits, syncGitHistory } from '../services/git/git-history-sync.ts'
 import { getWsDebugInfo, getConnectedClientCount, closeAllClients, broadcast, makeMessage } from '../services/terminal/ws.ts'
@@ -711,7 +712,12 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     const killed = killTask(params.taskId)
-    return { success: killed, taskId: params.taskId }
+    if (!killed) {
+      // Process not in active map — task may be orphaned (e.g. after server restart).
+      // Force the DB status to 'killed' so the UI stops showing it as running.
+      updateTaskStatus(params.taskId, 'killed', -1)
+    }
+    return { success: true, taskId: params.taskId }
   })
 
   // ─── Answer a pending task question from console (requires session) ──────────
