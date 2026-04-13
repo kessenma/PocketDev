@@ -101,6 +101,8 @@ export interface SetupResult {
   command: string
   /** If set, poll this file for output lines (file mode). Omit for pane mode. */
   outputFilePath?: string
+  /** If set, poll this file for structured hook events (PreToolUse/PostToolUse/Stop) */
+  hooksFilePath?: string
   /** Temp files to delete 5 s after finish */
   tempFiles?: string[]
 }
@@ -204,34 +206,8 @@ function parsePaneLineToActivity(line: string): TaskActivity | null {
   const t = line.trim()
   if (!t) return null
 
-  // ● ToolName(detail)  — tool use
-  const toolMatch = t.match(/^●\s+(\w[\w.]+)\(([^)]*)\)/)
-  if (toolMatch) {
-    return {
-      type: 'tool_use',
-      tool: toolMatch[1],
-      provider: 'claude',
-      kind: inferToolKindFromName(toolMatch[1]),
-      title: toolMatch[1],
-      detail: toolMatch[2] || undefined,
-    }
-  }
-
-  // ⎿  result preview  — tool result
-  const resultMatch = t.match(/^⎿\s+(.+)/)
-  if (resultMatch) {
-    return { type: 'tool_result', toolName: '', provider: 'claude', isError: false, preview: resultMatch[1] }
-  }
-
-  // ● Done. / ● Some assistant text response (but not a tool call)
-  if (t.startsWith('● ') && !t.match(/^●\s+\w+\(/)) {
-    const content = t.slice(2).trim()
-    if (content.length > 4) {
-      return { type: 'text', provider: 'claude', content }
-    }
-  }
-
   // Spinner / thinking lines: ✽ Word… (thinking) or ✽ Word…
+  // Tool use/result are handled via hooks events — no duplicate parsing here.
   const spinnerMatch = t.match(/^[✽✢✶✻✷✹✺✸*·]\s+(.+?)(\s+\(thinking\))?$/)
   if (spinnerMatch) {
     const msg = spinnerMatch[1]
@@ -241,6 +217,79 @@ function parsePaneLineToActivity(line: string): TaskActivity | null {
   }
 
   return null
+}
+
+// ── Claude hook event parsing ─────────────────────────────────────────────────
+// Claude Code fires PreToolUse/PostToolUse/Stop hooks via --settings.
+// Each hook receives a JSON payload on stdin; we append it + newline to a temp file.
+// These give us structured tool_use/tool_result activities without needing --print.
+
+/** Extract a short human-readable detail string from a tool's input object. */
+function extractToolDetail(toolName: string, input: Record<string, unknown>): string | undefined {
+  const n = toolName.toLowerCase()
+  if (n === 'read' || n === 'write' || n === 'edit' || n === 'multiedit') {
+    const p = (input.file_path ?? input.path) as string | undefined
+    return p ? p.split('/').pop() : undefined
+  }
+  if (n === 'bash') {
+    const cmd = input.command as string | undefined
+    return cmd ? cmd.slice(0, 60) : undefined
+  }
+  if (n === 'glob') return input.pattern as string | undefined
+  if (n === 'grep') return (input.pattern ?? input.query) as string | undefined
+  const first = Object.values(input).find((v) => typeof v === 'string')
+  return typeof first === 'string' ? first.slice(0, 60) : undefined
+}
+
+/** Extract a short preview from a tool's response object. */
+function extractToolResultPreview(_toolName: string, response: Record<string, unknown>): string | undefined {
+  const out = (response.output ?? response.content ?? response.result) as string | undefined
+  if (!out) return undefined
+  const lines = out.split('\n')
+  return lines[0]?.slice(0, 100) + (lines.length > 1 ? ` … (${lines.length} lines)` : '')
+}
+
+/** Parse a single hook event JSONL line into a TaskActivity, or null. */
+function parseHookEvent(raw: string): { activity: TaskActivity | null; isStop: boolean } {
+  let event: Record<string, unknown>
+  try { event = JSON.parse(raw) } catch { return { activity: null, isStop: false } }
+
+  // Claude may use camelCase or snake_case depending on version
+  const eventName = (event.hook_event_name ?? event.hookEventName) as string | undefined
+  const toolName = (event.tool_name ?? event.toolName) as string | undefined
+  const toolInput = (event.tool_input ?? event.toolInput) as Record<string, unknown> | undefined
+  const toolResponse = (event.tool_response ?? event.toolResponse) as Record<string, unknown> | undefined
+
+  if (eventName === 'Stop') return { activity: null, isStop: true }
+
+  if (eventName === 'PreToolUse' && toolName) {
+    return {
+      isStop: false,
+      activity: {
+        type: 'tool_use',
+        provider: 'claude',
+        tool: toolName,
+        kind: inferToolKindFromName(toolName),
+        title: toolName,
+        detail: toolInput ? extractToolDetail(toolName, toolInput) : undefined,
+      },
+    }
+  }
+
+  if (eventName === 'PostToolUse' && toolName) {
+    return {
+      isStop: false,
+      activity: {
+        type: 'tool_result',
+        provider: 'claude',
+        toolName,
+        isError: false,
+        preview: (toolResponse ? extractToolResultPreview(toolName, toolResponse) : undefined) ?? '',
+      },
+    }
+  }
+
+  return { activity: null, isStop: false }
 }
 
 // ── Claude provider ───────────────────────────────────────────────────────────
@@ -329,7 +378,8 @@ const CLAUDE_READY_PATTERNS = [
 ]
 
 // How long the pane must be stable (post-prompt) before we consider the task complete.
-const CLAUDE_IDLE_TIMEOUT_MS = 20_000
+// With hooks enabled, the Stop hook fires first for normal completion — this is a fallback.
+const CLAUDE_IDLE_TIMEOUT_MS = 120_000
 
 function isClaudeReady(normalized: string): boolean {
   return CLAUDE_READY_PATTERNS.some((p) => p.test(normalized))
@@ -351,9 +401,29 @@ export function claudeProviderConfig(): TmuxProviderConfig {
       const claudePath = getToolPath('claude_cli') ?? 'claude'
       const permissionMode = ctx.mode === 'plan' ? 'plan' : 'default'
 
+      const hooksFilePath = `/tmp/pocketdev-events-${ctx.taskId}.jsonl`
+      const hooksSettingsPath = `/tmp/pocketdev-hooks-${ctx.taskId}.json`
+      const scriptPath = `/tmp/pocketdev-run-${ctx.taskId}.sh`
+
+      // Empty file so polling doesn't fail before the first hook fires
+      await Bun.write(hooksFilePath, '')
+
+      // Hook command: read stdin (the hook JSON payload) and append + newline for valid JSONL.
+      // No -p flag, no stdout redirect — full interactive TUI in tmux pane.
+      // Redirecting stdout kills process.stdout.isTTY and forces Claude into --print mode.
+      const hookCmd = `{ cat; echo; } >> ${shellEscape(hooksFilePath)}`
+      await Bun.write(hooksSettingsPath, JSON.stringify({
+        hooks: {
+          PreToolUse: [{ matcher: '.*', hooks: [{ type: 'command', command: hookCmd }] }],
+          PostToolUse: [{ matcher: '.*', hooks: [{ type: 'command', command: hookCmd }] }],
+          Stop: [{ hooks: [{ type: 'command', command: hookCmd }] }],
+        },
+      }))
+
       const args: string[] = [
         shellEscape(claudePath),
         '--permission-mode', permissionMode,
+        '--settings', shellEscape(hooksSettingsPath),
       ]
       if (ctx.sessionId) {
         if (ctx.turnNumber > 1) {
@@ -363,10 +433,7 @@ export function claudeProviderConfig(): TmuxProviderConfig {
         }
       }
       if (ctx.model) args.push('--model', shellEscape(ctx.model))
-      // No -p flag, no --output-format, no stdout redirect — full interactive TUI in tmux pane.
-      // Redirecting stdout kills process.stdout.isTTY and forces Claude into --print mode.
 
-      const scriptPath = `/tmp/pocketdev-run-${ctx.taskId}.sh`
       const script = [
         '#!/bin/bash',
         `cd ${shellEscape(ctx.cwd)}`,
@@ -377,8 +444,8 @@ export function claudeProviderConfig(): TmuxProviderConfig {
 
       return {
         command: scriptPath,
-        tempFiles: [scriptPath],
-        // No outputFilePath — activates pane mode (completion detected via idle timeout)
+        hooksFilePath,
+        tempFiles: [scriptPath, hooksSettingsPath, hooksFilePath],
       }
     },
 
@@ -541,6 +608,8 @@ export class ManagedAgentProcess {
   // Set during start()
   private tmuxSession = ''
   private outputFilePath: string | null = null
+  private hooksFilePath: string | null = null
+  private hooksFileOffset = 0
   private tempFiles: string[] = []
 
   // Polling state
@@ -667,6 +736,7 @@ export class ManagedAgentProcess {
     })
 
     this.outputFilePath = setupResult.outputFilePath ?? null
+    this.hooksFilePath = setupResult.hooksFilePath ?? null
     this.tempFiles = setupResult.tempFiles ?? []
 
     // Launch in tmux
@@ -771,7 +841,32 @@ export class ManagedAgentProcess {
     this.schedulePoll()
   }
 
+  private async pollHooksFile() {
+    if (!this.hooksFilePath || this.finished) return
+    let content: string
+    try { content = await Bun.file(this.hooksFilePath).text() } catch { return }
+    const newContent = content.slice(this.hooksFileOffset)
+    if (!newContent) return
+    this.hooksFileOffset = content.length
+
+    for (const line of newContent.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      const { activity, isStop } = parseHookEvent(trimmed)
+      if (isStop) {
+        if (!this.finished) {
+          this.broadcastOutput('[claude] Task complete')
+          this.cleanup()
+          this.finish('completed')
+        }
+        return
+      }
+      if (activity) this.broadcastActivity(activity)
+    }
+  }
+
   private async pollPane() {
+    await this.pollHooksFile()
     if (this._status !== 'running' || this.finished) return
 
     const { stdout: paneContent, exitCode } = await exec(
