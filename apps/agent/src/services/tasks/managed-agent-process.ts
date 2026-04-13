@@ -33,7 +33,6 @@ import {
 import { proposePlan } from './plan-manager.ts'
 import { detectDevServerPort, setDevServerPort } from '../preview/proxy.ts'
 import {
-  createTaskStreamAdapter,
   type CollectedToolUse,
   type PermissionDenial,
   type TaskStreamAdapter,
@@ -238,16 +237,15 @@ function createClaudePlan(taskId: string, adapter: TaskStreamAdapter, mode: 'def
 
 // Claude Code TUI ready-state detection.
 // Reference: apps/0-examples/claude-code-guide/README.md
-//   - Input prompt indicator is `>` (line 1143: `> _  # Cursor blinking`)
-//   - Status bar shows "? for shortcuts" and model/token info when idle
-// If these patterns never fire, the task will time out after startupTimeoutMs (60 s).
-// To tune: run `tmux capture-pane -t pocketdev-claude-<id> -p` on a live session
-// and inspect what normalizePane() produces.
+// Claude renders a welcome box "╭─── Claude Code v2.x.x ───" immediately on startup.
+// That version string is the most reliable early-ready signal.
+// If this never fires, the task will time out after startupTimeoutMs (60 s).
 const CLAUDE_READY_PATTERNS = [
-  /^\s*>\s*$/m,            // bare `>` input cursor on its own line
-  /\?\s+for shortcuts/i,   // status bar hint shown when idle
-  /\?\s+for help/i,        // alternate status bar phrasing
+  /Claude Code v\d+\.\d+/,  // welcome box visible from first startup frame
 ]
+
+// How long the pane must be stable (post-prompt) before we consider the task complete.
+const CLAUDE_IDLE_TIMEOUT_MS = 8_000
 
 function isClaudeReady(normalized: string): boolean {
   return CLAUDE_READY_PATTERNS.some((p) => p.test(normalized))
@@ -271,9 +269,7 @@ export function claudeProviderConfig(): TmuxProviderConfig {
 
       const args: string[] = [
         shellEscape(claudePath),
-        '--output-format', 'stream-json',
         '--permission-mode', permissionMode,
-        '--verbose',
       ]
       if (ctx.sessionId) {
         if (ctx.turnNumber > 1) {
@@ -283,30 +279,23 @@ export function claudeProviderConfig(): TmuxProviderConfig {
         }
       }
       if (ctx.model) args.push('--model', shellEscape(ctx.model))
-      // No -p flag — prompt is sent via tmux send-keys after TUI is ready
+      // No -p flag, no --output-format, no stdout redirect — full interactive TUI in tmux pane.
+      // Redirecting stdout kills process.stdout.isTTY and forces Claude into --print mode.
 
-      const outputFilePath = `/tmp/pocketdev-out-${ctx.taskId}.jsonl`
       const scriptPath = `/tmp/pocketdev-run-${ctx.taskId}.sh`
-
       const script = [
         '#!/bin/bash',
         `cd ${shellEscape(ctx.cwd)}`,
-        // stdout → JSONL file; stderr stays on PTY so Claude's TUI renders in the tmux pane
-        `${args.join(' ')} >> ${shellEscape(outputFilePath)}`,
+        args.join(' '),
       ].join('\n')
       await Bun.write(scriptPath, script)
       await exec(`chmod +x ${shellEscape(scriptPath)}`)
-      await Bun.write(outputFilePath, '')
 
       return {
         command: scriptPath,
-        outputFilePath,
-        tempFiles: [scriptPath, outputFilePath],
+        tempFiles: [scriptPath],
+        // No outputFilePath — activates pane mode (completion detected via idle timeout)
       }
-    },
-
-    createAdapter(taskId, sink, writeStdin) {
-      return createTaskStreamAdapter({ agentType: 'claude', taskId, sink, writeStdin })!
     },
 
     async onPaneSnapshot(snapshot, ctx) {
@@ -319,10 +308,18 @@ export function claudeProviderConfig(): TmuxProviderConfig {
         return { type: 'continue', markPromptSent: true }
       }
 
-      // Handle TUI permission menu (❯ 1. Yes  2. No style)
+      // After prompt sent, check for active TUI menu (permission/question)
       const tuiPrompt = parseTuiPrompt(snapshot)
+
+      // Idle completion: pane stable for N seconds with no active menu → task done
+      if (ctx.promptSent && !tuiPrompt && ctx.lastChangeMs > CLAUDE_IDLE_TIMEOUT_MS) {
+        ctx.broadcastOutput('[claude] Task complete (idle)')
+        return { type: 'complete', status: 'completed' }
+      }
+
       if (!tuiPrompt) return { type: 'continue' }
 
+      // Handle TUI permission/question menu (❯ 1. Yes  2. No style)
       const questionId = newUUID()
       return {
         type: 'question',
@@ -700,24 +697,31 @@ export class ManagedAgentProcess {
     }
 
     const normalized = normalizePane(paneContent)
-    if (normalized === this.previousPane) return
+    const paneChanged = normalized !== this.previousPane
 
-    const previous = this.previousPane
-    this.previousPane = normalized
-    this.lastPaneChangeMs = Date.now()
+    if (paneChanged) {
+      const previous = this.previousPane
+      this.previousPane = normalized
+      this.lastPaneChangeMs = Date.now()
 
-    // Pane mode: emit new visible content as output lines
-    if (!this.outputFilePath) {
-      const diff = this.extractPaneDiff(previous, normalized)
-      if (diff) {
-        for (const line of diff.split('\n')) {
-          if (line.trim()) {
-            insertTaskLog(this.taskId, 'stdout', line)
-            this.broadcastOutput(line)
+      // Pane mode: emit new visible content as output lines
+      if (!this.outputFilePath) {
+        const diff = this.extractPaneDiff(previous, normalized)
+        if (diff) {
+          for (const line of diff.split('\n')) {
+            if (line.trim()) {
+              insertTaskLog(this.taskId, 'stdout', line)
+              this.broadcastOutput(line)
+            }
           }
         }
       }
+    } else if (!this.promptSent) {
+      // Pane unchanged and prompt not yet sent — nothing to do yet
+      return
     }
+    // If pane is stable but prompt has been sent, fall through to onPaneSnapshot
+    // so the provider can detect idle completion.
 
     // Call provider snapshot handler
     const paneCtx: PaneCtx = {
