@@ -1,21 +1,19 @@
-import { ConnectTakeoverScene } from '../explainers/2-ConnectStage'
+import { SetupTakeoverScene } from '../explainers/4-SetupStage'
 import type { SceneConfig } from '../timeline-types'
 
-export const connectScene: SceneConfig = {
-  id: 'connect',
+export const setupScene: SceneConfig = {
+  id: 'setup',
   kind: 'takeover',
   weight: 3,
-  holdRatio: 0.8,
+  holdRatio: 0.75,
   reducedMotionFullBleed: true,
-  render: ({ progress, active, isDesktopLayout, hideLaptop, hideBlueCircle, hidePhone }) => (
+  render: ({ progress, active, isDesktopLayout, hideBlueCircle }) => (
     <div className="relative z-10 h-full w-full">
-      <ConnectTakeoverScene
+      <SetupTakeoverScene
         progress={progress}
         active={active}
         isDesktopLayout={isDesktopLayout}
-        hideLaptop={hideLaptop}
         hideBlueCircle={hideBlueCircle}
-        hidePhone={hidePhone}
       />
     </div>
   ),

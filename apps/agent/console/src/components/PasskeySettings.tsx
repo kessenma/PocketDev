@@ -16,7 +16,7 @@ function isIpAddress(hostname: string): boolean {
   return /^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes(':') // IPv4 or IPv6
 }
 
-export function PasskeySettings() {
+export function PasskeySettings({ disabled }: { disabled?: boolean }) {
   const [passkeys, setPasskeys] = useState<PasskeyCredential[]>([])
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState(false)
@@ -91,7 +91,7 @@ export function PasskeySettings() {
           <Fingerprint className="h-4 w-4" />
           Passkeys
         </CardTitle>
-        {!showNameInput && webAuthnAvailable && (
+        {!disabled && !showNameInput && webAuthnAvailable && (
           <Button
             variant="outline"
             size="sm"
@@ -104,7 +104,14 @@ export function PasskeySettings() {
         )}
       </CardHeader>
       <CardContent className="space-y-3">
-        {!webAuthnAvailable && (
+        {disabled && (
+          <div className="rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-3">
+            <p className="text-sm text-muted-foreground">
+              Configure a custom domain above to enable passkey registration.
+            </p>
+          </div>
+        )}
+        {!disabled && !webAuthnAvailable && (
           <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-3">
             <p className="text-sm text-muted-foreground">
               Passkeys require a domain name — browsers don't support WebAuthn on IP addresses.
@@ -122,7 +129,7 @@ export function PasskeySettings() {
             )}
           </div>
         )}
-        {showNameInput && webAuthnAvailable && (
+        {!disabled && showNameInput && webAuthnAvailable && (
           <div className="flex items-center gap-2">
             <Input
               placeholder="Device name (optional)"
@@ -149,37 +156,40 @@ export function PasskeySettings() {
           </div>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        ) : passkeys.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No passkeys registered. Add one for passwordless login.</p>
-        ) : (
-          <div className="space-y-2">
-            {passkeys.map((pk) => (
-              <div
-                key={pk.id}
-                className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-2"
-              >
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium">{pk.deviceName || 'Unnamed passkey'}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Added {formatDate(pk.createdAt)}
-                    {pk.lastUsedAt && ` \u00B7 Last used ${formatDate(pk.lastUsedAt)}`}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => handleRemove(pk.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+        {!disabled && (
+          <>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : passkeys.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No passkeys registered. Add one for passwordless login.</p>
+            ) : (
+              <div className="space-y-2">
+                {passkeys.map((pk) => (
+                  <div
+                    key={pk.id}
+                    className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-2"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">{pk.deviceName || 'Unnamed passkey'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Added {formatDate(pk.createdAt)}
+                        {pk.lastUsedAt && ` · Last used ${formatDate(pk.lastUsedAt)}`}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleRemove(pk.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

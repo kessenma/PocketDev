@@ -6,7 +6,9 @@ import { webFontStacks } from '@pocketdev/shared/theme'
 import './styles.css'
 import { SetupPage } from './pages/SetupPage'
 import { LoginPage } from './pages/LoginPage'
-import { ConsolePage } from './pages/ConsolePage'
+import { ConsoleDataProvider } from './context/ConsoleDataContext'
+import { LockStatusProvider } from './context/LockStatusContext'
+import { ConsoleLayout } from './components/layout/ConsoleLayout'
 import { applyConsoleTheme } from './theme'
 
 document.documentElement.style.setProperty('--font-sans', webFontStacks.body)
@@ -21,7 +23,17 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/setup" element={<SetupPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/console" element={<ConsolePage />} />
+        <Route
+          path="/console/*"
+          element={
+            <ConsoleDataProvider>
+              <LockStatusProvider>
+                <ConsoleLayout />
+              </LockStatusProvider>
+            </ConsoleDataProvider>
+          }
+        />
+        {/* Legacy /console route — redirect handled inside ConsoleLayout via display:none logic */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       <Toaster theme="dark" position="bottom-center" richColors />

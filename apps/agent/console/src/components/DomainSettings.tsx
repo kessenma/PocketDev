@@ -6,7 +6,7 @@ import { Badge } from '#/components/ui/badge'
 import { fetchDomainSettings, updateDomain, type DomainSettings as DomainSettingsType } from '#/lib/api'
 import { Globe, Shield, ShieldCheck, Loader2 } from 'lucide-react'
 
-export function DomainSettings() {
+export function DomainSettings({ onSettingsChanged }: { onSettingsChanged?: (settings: DomainSettingsType) => void } = {}) {
   const [settings, setSettings] = useState<DomainSettingsType | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -21,6 +21,7 @@ export function DomainSettings() {
       const data = await fetchDomainSettings()
       setSettings(data)
       setDomainInput(data.domain ?? '')
+      onSettingsChanged?.(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load domain settings')
     } finally {

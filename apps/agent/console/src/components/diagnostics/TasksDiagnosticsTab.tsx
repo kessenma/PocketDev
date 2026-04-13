@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { killTaskFromConsole, type TasksDebugInfo } from '#/lib/api'
+import { killTaskFromConsole, fetchTasksDebug, type TasksDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
-import { Square, Zap } from 'lucide-react'
+import { RefreshCw, Square, Zap } from 'lucide-react'
 
 interface Props {
-  tasksInfo: TasksDebugInfo | null
+  tasksInfo?: TasksDebugInfo | null
   onRefresh?: () => void
+  /** When true the component manages its own polling (standalone mode) */
+  standalone?: boolean
 }
 
 type ProviderFilter = 'claude' | 'codex' | 'minimax' | 'copilot'
@@ -150,7 +152,38 @@ function FilterChip({
   )
 }
 
-export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
+export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, standalone = false }: Props) {
+  const [standaloneInfo, setStandaloneInfo] = useState<TasksDebugInfo | null>(null)
+  const [standaloneLoading, setStandaloneLoading] = useState(false)
+  const hasFetchedRef = useRef(false)
+
+  const refresh = useCallback(async () => {
+    setStandaloneLoading(true)
+    try {
+      setStandaloneInfo(await fetchTasksDebug())
+    } catch { /* ignore */ } finally {
+      setStandaloneLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!standalone) return
+    if (hasFetchedRef.current) return
+    hasFetchedRef.current = true
+    void refresh()
+  }, [standalone, refresh])
+
+  useEffect(() => {
+    if (!standalone) return
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh()
+    }, 3000)
+    return () => window.clearInterval(interval)
+  }, [standalone, refresh])
+
+  const tasksInfo = standalone ? standaloneInfo : (tasksInfoProp ?? null)
+  const handleRefresh = standalone ? refresh : onRefresh
+
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [providerFilters, setProviderFilters] = useState<Set<ProviderFilter>>(new Set())
   const [modelFilters, setModelFilters] = useState<Set<string>>(new Set())
@@ -225,6 +258,24 @@ export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
+      {standalone && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-[#f0c419]" />
+            <h2 className="font-heading text-lg font-semibold uppercase tracking-[0.08em]">Tasks</h2>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+            onClick={refresh}
+            disabled={standaloneLoading}
+          >
+            <RefreshCw className={`mr-2 h-3.5 w-3.5 ${standaloneLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+      )}
       <div className="grid gap-3 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]">
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
@@ -463,7 +514,7 @@ export function TasksDiagnosticsTab({ tasksInfo, onRefresh }: Props) {
                         className="h-7 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/20"
                         onClick={async () => {
                           await killTaskFromConsole(selectedTask.id)
-                          onRefresh?.()
+                          handleRefresh?.()
                         }}
                       >
                         <Square className="mr-1 h-3 w-3" />

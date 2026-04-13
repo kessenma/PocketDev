@@ -41,12 +41,11 @@ import { Bug, Maximize2, RefreshCw, Smartphone, Waves, Sparkles } from 'lucide-r
 import { ClaudeDiagnosticsTab } from '#/components/diagnostics/ClaudeDiagnosticsTab'
 import { CodexDiagnosticsTab } from '#/components/diagnostics/CodexDiagnosticsTab'
 import { SetupDiagnosticsTab } from '#/components/diagnostics/SetupDiagnosticsTab'
-import { TasksDiagnosticsTab } from '#/components/diagnostics/TasksDiagnosticsTab'
 import { LanguagesDiagnosticsTab } from '#/components/diagnostics/LanguagesDiagnosticsTab'
 import { NetworkDiagnosticsTab } from '#/components/diagnostics/NetworkDiagnosticsTab'
 import { GitHubDiagnosticsTab } from '#/components/diagnostics/GitHubDiagnosticsTab'
 
-type DiagnosticsTab = 'terminal' | 'setup' | 'tasks' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot' | 'languages' | 'network'
+type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot' | 'languages' | 'network'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -213,13 +212,6 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return 'No GitHub auth activity yet.'
   }, [githubInfo])
 
-  const tasksSummary = useMemo(() => {
-    if (!tasksInfo) return 'No task data yet.'
-    const running = tasksInfo.tasks.filter((t) => t.status === 'running').length
-    if (running > 0) return `${running} running, ${tasksInfo.totalCount} total`
-    return `${tasksInfo.totalCount} task${tasksInfo.totalCount === 1 ? '' : 's'} recorded`
-  }, [tasksInfo])
-
   const setupSummary = useMemo(() => {
     if (!setupInfo) return 'No setup data yet.'
     const { claude, codex, opencode } = setupInfo.providers
@@ -285,8 +277,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d] p-1">
-            {(['terminal', 'tasks', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'registry'] as const).map((tab) => {
-              const label = tab === 'terminal' ? 'Terminal' : tab === 'tasks' ? 'Tasks' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : 'Registry'
+            {(['terminal', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'registry'] as const).map((tab) => {
+              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : 'Registry'
               return (
                 <Button
                   key={tab}
@@ -324,9 +316,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
         <Badge variant="outline" className="border-[var(--border)] text-[#f5eedf]/70">
           {activeTab === 'terminal'
             ? logSummary
-            : activeTab === 'tasks'
-              ? tasksSummary
-              : activeTab === 'setup'
+            : activeTab === 'setup'
                 ? setupSummary
                 : activeTab === 'network'
                   ? networkSummary
@@ -404,8 +394,6 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
               </div>
             </div>
           </div>
-        ) : activeTab === 'tasks' ? (
-          <TasksDiagnosticsTab tasksInfo={tasksInfo} onRefresh={refresh} />
         ) : activeTab === 'setup' ? (
           <SetupDiagnosticsTab setupInfo={setupInfo} onRefresh={refresh} />
         ) : activeTab === 'network' ? (

@@ -50,12 +50,14 @@ export function ConnectTakeoverScene({
   isDesktopLayout,
   hideLaptop = false,
   hideBlueCircle = false,
+  hidePhone = false,
 }: {
   progress: number
   active?: boolean
   isDesktopLayout: boolean
   hideLaptop?: boolean
   hideBlueCircle?: boolean
+  hidePhone?: boolean
 }) {
   const reduceMotion = useReducedMotion()
   const p = reduceMotion ? 1 : progress
@@ -84,6 +86,8 @@ export function ConnectTakeoverScene({
   const screenOn = connectedP > 0.5
   const showQrOnScreen = flyP === 0
   const settled = connectedP >= 1
+  // Credential shapes appear on phone screen during hold phase after pairing
+  const credP = mapProgress(p, 0.78, 0.90)
 
   // --- Layout positions in LOCAL coords (pre-scale) ---
   // Desktop: side by side. Mobile: laptop above phone.
@@ -176,40 +180,21 @@ export function ConnectTakeoverScene({
 
       {/* Animation group — scaled and centered */}
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>
-        {/* Blue circle — starts top-right of laptop, moves to right of phone.
-            Hidden during slide-out (overlay handles it) */}
+        {/* Blue circle — travels from laptop top-right and lands on phone screen.
+            Shrinks from large (traveling) to small (on-screen credential).
+            Hidden during slide-out (overlay bridges it). */}
         {!hideLaptop && !hideBlueCircle && (() => {
           const laptopTopRightX = laptopLocalCx + 70 * laptopScale
           const laptopTopY = laptopLocalCy - 100 * laptopScale
-          // End: to the right of the phone, vertically centered
-          const phoneRightX = phoneLocalCx + phoneW / 2 + 20
-          const phoneRightY = phoneLocalCy
+          // Destination: left area of phone screen
+          const destX = phoneScreenLocalCx - 12
+          const destY = phoneScreenLocalCy
           const moveP = clamp((connectedP - 0.2) / 0.8, 0, 1)
-          const bcx = mix(laptopTopRightX, phoneRightX, moveP)
-          const bcy = mix(laptopTopY, phoneRightY, moveP)
-          const br = mix(26, 30, moveP)
+          const bcx = mix(laptopTopRightX, destX, moveP)
+          const bcy = mix(laptopTopY, destY, moveP)
+          const br  = mix(26, 8, moveP)
           return (
-            <motion.circle
-              cx={bcx}
-              cy={bcy}
-              r={br}
-              fill={palette.bauhaus.blue}
-              opacity={0.96}
-              animate={
-                settled && !reduceMotion
-                  ? {
-                      cy: [bcy, bcy - 4, bcy + 2, bcy],
-                      scale: [1, 1.06, 0.97, 1],
-                    }
-                  : { scale: 1 }
-              }
-              transition={
-                settled && !reduceMotion
-                  ? { duration: 3.1, repeat: Infinity, ease: 'easeInOut' }
-                  : { duration: 0.3, ease: 'easeOut' }
-              }
-              style={{ transformOrigin: `${bcx}px ${bcy}px` }}
-            />
+            <circle cx={bcx} cy={bcy} r={br} fill={palette.bauhaus.blue} opacity={0.96} />
           )
         })()}
 
@@ -358,7 +343,8 @@ export function ConnectTakeoverScene({
             )
           })}
 
-        {/* Phone — BauhausPhone scaled to match original 52×96 dimensions */}
+        {/* Phone — hidden during slide-out so the overlay can bridge it */}
+        <g opacity={hidePhone ? 0 : 1}>
         <BauhausPhone
           cx={phoneLocalCx}
           cy={phoneLocalCy}
@@ -367,8 +353,9 @@ export function ConnectTakeoverScene({
           {/* Suppress default content — animated overlays rendered outside */}
           <></>
         </BauhausPhone>
+        </g>
 
-        {/* Phone screen — white with red button when connected */}
+        {/* Phone screen — white background */}
         <motion.rect
           x={phoneScreenX}
           y={phoneScreenY}
@@ -379,40 +366,59 @@ export function ConnectTakeoverScene({
           animate={{ opacity: screenOn ? 1 : 0 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
         />
-        {/* Red connect button */}
-        <motion.rect
-          x={phoneScreenLocalCx - 14}
-          y={phoneScreenLocalCy - 6}
-          width={28}
-          height={12}
-          rx={6}
-          fill={palette.bauhaus.red}
-          animate={
-            settled && !reduceMotion
-              ? { opacity: 1, scale: [1, 1.06, 1] }
-              : { opacity: screenOn ? 1 : 0 }
-          }
-          transition={
-            settled && !reduceMotion
-              ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
-              : { duration: 0.2, ease: 'easeOut' }
-          }
-          style={{ transformOrigin: `${phoneScreenLocalCx}px ${phoneScreenLocalCy}px` }}
-        />
-        {/* Button label */}
-        <motion.text
-          x={phoneScreenLocalCx}
-          y={phoneScreenLocalCy + 3}
-          textAnchor="middle"
-          fontSize="6"
-          fontWeight="700"
-          fill="#ffffff"
-          fontFamily="var(--font-sans), sans-serif"
-          animate={{ opacity: screenOn ? 1 : 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-        >
-          Pair
-        </motion.text>
+        {/* Pair button + label — fade out as credential shapes appear */}
+        <g opacity={Math.max(0, 1 - credP * 3)}>
+          <motion.rect
+            x={phoneScreenLocalCx - 14}
+            y={phoneScreenLocalCy - 6}
+            width={28}
+            height={12}
+            rx={6}
+            fill={palette.bauhaus.red}
+            animate={
+              settled && !reduceMotion
+                ? { opacity: 1, scale: [1, 1.06, 1] }
+                : { opacity: screenOn ? 1 : 0 }
+            }
+            transition={
+              settled && !reduceMotion
+                ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
+                : { duration: 0.2, ease: 'easeOut' }
+            }
+            style={{ transformOrigin: `${phoneScreenLocalCx}px ${phoneScreenLocalCy}px` }}
+          />
+          <motion.text
+            x={phoneScreenLocalCx}
+            y={phoneScreenLocalCy + 3}
+            textAnchor="middle"
+            fontSize="6"
+            fontWeight="700"
+            fill="#ffffff"
+            fontFamily="var(--font-sans), sans-serif"
+            animate={{ opacity: screenOn ? 1 : 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            Pair
+          </motion.text>
+        </g>
+        {/* Credential shapes on phone screen — appear after pairing, hidden during slide-out */}
+        {!hideBlueCircle && credP > 0 && (() => {
+          const sx = phoneScreenLocalCx
+          const sy = phoneScreenLocalCy
+          return (
+            <g opacity={credP}>
+              {/* Blue circle (left) — matches the traveling circle landing position */}
+              <circle cx={sx - 12} cy={sy} r={6} fill={palette.bauhaus.blue} />
+              {/* Yellow triangle (center) */}
+              <polygon
+                points={`${sx},${sy - 7} ${sx + 6.5},${sy + 4} ${sx - 6.5},${sy + 4}`}
+                fill={palette.bauhaus.yellow}
+              />
+              {/* Red square (right) */}
+              <rect x={sx + 6} y={sy - 6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
+            </g>
+          )
+        })()}
 
         {/* Labels */}
         <text

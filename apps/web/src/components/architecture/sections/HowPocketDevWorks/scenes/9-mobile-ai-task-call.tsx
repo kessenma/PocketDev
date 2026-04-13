@@ -1,4 +1,4 @@
-import { MobileAiTaskCallScene } from '../explainers/7-MobileAiTaskCallScene'
+import { MobileAiTaskCallScene } from '../explainers/9-MobileAiTaskCallScene'
 import type { SceneConfig } from '../timeline-types'
 
 export const mobileAiTaskCallScene: SceneConfig = {

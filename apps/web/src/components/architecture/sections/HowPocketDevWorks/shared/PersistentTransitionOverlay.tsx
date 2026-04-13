@@ -2,13 +2,29 @@
  * Persistent overlay that renders shared assets (laptop, blue circle) in
  * viewport-space above the sliding ScrollTimeline track.
  *
- * - Scene 0→1: Laptop + blue circle bridge ConsoleSetup → Connect slide.
- * - Scene 1→2: Blue circle (only) bridges Connect → Setup slide.
- * - Scene 3→4→5: Blue circle bridges RepoClone → EnvInjection → RemoteAi.
+ * Scene indices after port-security was inserted at index 2:
+ *   0  console-setup
+ *   1  connect
+ *   2  port-security  ← no blue circle; no overlay bridging adjacent to this scene
+ *   3  setup
+ *   4  repo-clone
+ *   5  env-injection
+ *   6  remote-ai
+ *   7  task-flow
+ *   8  mobile-ai-task-call
+ *
+ * - Slide 0→1: Laptop + blue circle bridge ConsoleSetup → Connect.
+ * - Slide 1→2: Phone + blue circle bridge Connect → PortSecurity.
+ * - Slide 2→3: Blue circle bridges PortSecurity (right of doors) → Setup start.
+ * - Slide 3→4: Blue circle bridges Setup → RepoClone.
+ * - Slide 4→5: Blue circle bridges RepoClone → EnvInjection.
+ * - Slide 5→6: Blue circle bridges EnvInjection → RemoteAi.
+ * - Scene 5 active: Overlay owns the circle throughout EnvInjection.
  */
 import { palette } from '@pocketdev/shared/theme'
 import { architectureFonts } from '../../../shared/theme'
 import { BauhausLaptop } from './BauhausLaptop'
+import { BauhausPhone } from './BauhausPhone'
 import type { SceneRange } from '../timeline-types'
 import { sceneProgress } from '../timeline-utils'
 
@@ -136,44 +152,100 @@ function connectCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): C
 }
 
 // ---------------------------------------------------------------------------
-// Blue circle poses (scene 1→2)
+// Phone poses (scene 1→2)  Connect phone → PortSecurity phone
 // ---------------------------------------------------------------------------
 
-/** Circle at end of Connect scene — to the right of the phone */
-function connectCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+/** Phone at the end of the Connect scene (to the right, paired with laptop) */
+function connectPhoneEndPose(vpW: number, vpH: number, isDesktop: boolean): Pose {
   const animScale = Math.min(vpW, vpH) / 320
-  const phoneLocalCx = isDesktop ? 80 : 0
-  const phoneLocalCy = isDesktop ? -6 : 50
-  const phoneW = 52
-  const animCenterX = vpW / 2
-  const animCenterY = vpH * (isDesktop ? 0.42 : 0.40)
-  // Matches ConnectStage's final circle position: right of the phone, vertically centered
-  const phoneRightX = phoneLocalCx + phoneW / 2 + 20
+  const localCx = isDesktop ? 80 : 0
+  const localCy = isDesktop ? -6 : 50
   return {
-    cx: animCenterX + phoneRightX * animScale,
-    cy: animCenterY + phoneLocalCy * animScale,
-    r: 30 * animScale,
+    cx: vpW / 2 + localCx * animScale,
+    cy: vpH * (isDesktop ? 0.42 : 0.40) + localCy * animScale,
+    scale: (52 / 60) * animScale,
   }
 }
 
-/** Circle at start of Setup scene — at funnel position (CIRCLE_CX=160, CIRCLE_CY=160) */
+/** Phone at the start of the PortSecurity scene (left side, always-open position) */
+function portSecurityPhoneStartPose(vpW: number, vpH: number, isDesktop: boolean): Pose {
+  const animScale = Math.min(vpW, vpH) / 320
+  const localCx = isDesktop ? -152 : -112
+  const localCy = isDesktop ? 0 : 22
+  return {
+    cx: vpW / 2 + localCx * animScale,
+    cy: vpH * (isDesktop ? 0.42 : 0.40) + localCy * animScale,
+    scale: (44 / 60) * animScale,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blue circle poses (scene 1→2)  Connect circle → PortSecurity circle start
+// ---------------------------------------------------------------------------
+
+/**
+ * Circle at end of Connect scene — landed on phone screen left area (small credential token).
+ * Matches ConnectStage's circle destination: (phoneScreenLocalCx - 12, phoneScreenLocalCy), r=8.
+ */
+function connectCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const animScale = Math.min(vpW, vpH) / 320
+  // phoneLocalCy → phoneLocalY = cy - 48 → phoneScreenLocalCy = phoneLocalY + 44
+  const phoneLocalCx = isDesktop ? 80 : 0
+  const phoneLocalCy = isDesktop ? -6 : 50
+  const phoneScreenLocalCy = (phoneLocalCy - 48) + 44  // = phoneLocalCy - 4
+  return {
+    cx: vpW / 2 + (phoneLocalCx - 12) * animScale,
+    cy: vpH * (isDesktop ? 0.42 : 0.40) + phoneScreenLocalCy * animScale,
+    r: 8 * animScale,
+  }
+}
+
+/**
+ * Circle at start of PortSecurity — on phone screen left area (small, matches Connect end).
+ * PortSecurityStage will grow it from r=8 to r=26 early in the scene.
+ * Local coords: (phoneCx - 12, phoneCy - 10).
+ */
+function portSecurityCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const animScale = Math.min(vpW, vpH) / 320
+  const phoneCx = isDesktop ? -152 : -112
+  const phoneCy = isDesktop ? 0 : 22
+  return {
+    cx: vpW / 2 + (phoneCx - 12) * animScale,
+    cy: vpH * (isDesktop ? 0.42 : 0.40) + (phoneCy - 10) * animScale,
+    r: 8 * animScale,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Blue circle poses (scene 2→3)  PortSecurity end → Setup start
+// ---------------------------------------------------------------------------
+
+/**
+ * Circle at end of PortSecurity — to the right of the doors after unlock.
+ * Matches PortSecurityStage's circle position at progress=1 (holdEnd).
+ * Local coords: (BD.x + BD.w + 30, BD.y + BD.h / 2) = (78, -23).
+ */
+function portSecurityCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
+  const animScale = Math.min(vpW, vpH) / 320
+  return {
+    cx: vpW / 2 + 78 * animScale,
+    cy: vpH * (isDesktop ? 0.42 : 0.40) + (-23) * animScale,
+    r: 26 * animScale,
+  }
+}
+
+/** Circle at start of Setup scene — at funnel entry position */
 function setupCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
   const animScale = Math.min(vpW, vpH) / 320
-  const animCenterX = vpW / 2
-  const animCenterY = vpH * (isDesktop ? 0.42 : 0.40)
-  // Setup scene uses: translate(animCenterX - 160*scale, animCenterY - 100*scale) scale(scale)
-  // Circle at (160, 160) in that coordinate system:
-  // viewport cx = (animCenterX - 160*scale) + 160*scale = animCenterX
-  // viewport cy = (animCenterY - 100*scale) + 160*scale = animCenterY + 60*scale
   return {
-    cx: animCenterX,
-    cy: animCenterY + 60 * animScale,
+    cx: vpW / 2,
+    cy: vpH * (isDesktop ? 0.42 : 0.40) + 60 * animScale,
     r: 52 * animScale,
   }
 }
 
 // ---------------------------------------------------------------------------
-// Blue circle poses (scene 2→3)
+// Blue circle poses (scene 3→4)  Setup → RepoClone
 // ---------------------------------------------------------------------------
 
 /** Circle at end of Setup scene — at funnel position (160, 160), back to base size after absorb */
@@ -307,19 +379,20 @@ export function PersistentTransitionOverlay({
   isDesktopLayout: boolean
 }) {
   const range0 = ranges[0]
-  const range1 = ranges[1]
-  const range2 = ranges[2]
-  const range4 = ranges[4]
+  const range1 = ranges[1] // connect
+  const range2 = ranges[2] // port-security
+  const range3 = ranges[3] // setup
+  const range4 = ranges[4] // repo-clone
+  const range5 = ranges[5] // env-injection
   if (!range0) return null
 
-  // --- Scene 0→1 slide transition ---
+  // --- Slide 0→1: Laptop + blue circle (ConsoleSetup → Connect) ---
   const inSlide0 = railProgress > range0.holdEnd && railProgress <= range0.end
   const slideP0 = inSlide0
     ? clamp((railProgress - range0.holdEnd) / (range0.end - range0.holdEnd), 0, 1)
     : 0
   const slideEased0 = easeOut(slideP0)
 
-  // Blue circle (scene 0→1)
   let circlePose: CirclePose | null = null
   if (inSlide0) {
     const from = consoleCircleEndPose(vpSize.w, vpSize.h)
@@ -331,7 +404,6 @@ export function PersistentTransitionOverlay({
     }
   }
 
-  // Laptop (scene 0→1)
   let laptopPose: Pose | null = null
   if (inSlide0) {
     const from = consoleEndLaptopPose(vpSize.w, vpSize.h)
@@ -343,48 +415,62 @@ export function PersistentTransitionOverlay({
     }
   }
 
-  // --- Scene 1→2 slide transition (circle only, no laptop) ---
+  // --- Slide 1→2: Phone + blue circle (Connect → PortSecurity) ---
   const inSlide1 = range1 && railProgress > range1.holdEnd && railProgress <= range1.end
   const slideP1 = inSlide1
     ? clamp((railProgress - range1.holdEnd) / (range1.end - range1.holdEnd), 0, 1)
     : 0
+  const slideEased1 = easeOut(slideP1)
+
+  let phonePose: Pose | null = null
+  let phoneOverlayOpacity = 1
 
   if (inSlide1) {
-    const from = connectCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
-    const to = setupCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const from = connectPhoneEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = portSecurityPhoneStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    phonePose = {
+      cx: mix(from.cx, to.cx, slideEased1),
+      cy: mix(from.cy, to.cy, slideEased1),
+      scale: mix(from.scale, to.scale, slideEased1),
+    }
+    const from2 = connectCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to2 = portSecurityCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
     circlePose = {
-      cx: mix(from.cx, to.cx, slideP1),
-      cy: mix(from.cy, to.cy, slideP1),
-      r: mix(from.r, to.r, slideP1),
+      cx: mix(from2.cx, to2.cx, slideEased1),
+      cy: mix(from2.cy, to2.cy, slideEased1),
+      r: mix(from2.r, to2.r, slideEased1),
     }
   }
 
-  // --- Scene 2→3 slide transition (circle only) ---
+  // --- Slide 2→3: Phone fade-out + blue circle bridge (PortSecurity → Setup) ---
   const inSlide2 = range2 && railProgress > range2.holdEnd && railProgress <= range2.end
   const slideP2 = inSlide2
     ? clamp((railProgress - range2.holdEnd) / (range2.end - range2.holdEnd), 0, 1)
     : 0
 
   if (inSlide2) {
-    const from = setupCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
-    const to = repoCloneCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    // Circle bridges PortSecurity end → Setup start
+    const from = portSecurityCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = setupCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
     circlePose = {
       cx: mix(from.cx, to.cx, slideP2),
       cy: mix(from.cy, to.cy, slideP2),
       r: mix(from.r, to.r, slideP2),
     }
+    // Phone stays at its PortSecurity position and fades out
+    phonePose = portSecurityPhoneStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    phoneOverlayOpacity = 1 - easeOut(slideP2)
   }
 
-  // --- Scene 3→4 slide transition (circle only) ---
-  const range3 = ranges[3]
+  // --- Slide 3→4: Setup → RepoClone (circle only) ---
   const inSlide3 = range3 && railProgress > range3.holdEnd && railProgress <= range3.end
   const slideP3 = inSlide3
     ? clamp((railProgress - range3.holdEnd) / (range3.end - range3.holdEnd), 0, 1)
     : 0
 
   if (inSlide3) {
-    const from = repoCloneCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
-    const to = envInjectionCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const from = setupCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = repoCloneCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
     circlePose = {
       cx: mix(from.cx, to.cx, slideP3),
       cy: mix(from.cy, to.cy, slideP3),
@@ -392,15 +478,15 @@ export function PersistentTransitionOverlay({
     }
   }
 
-  // --- Scene 4→5 slide transition (circle only) ---
+  // --- Slide 4→5: RepoClone → EnvInjection (circle only) ---
   const inSlide4 = range4 && railProgress > range4.holdEnd && railProgress <= range4.end
   const slideP4 = inSlide4
     ? clamp((railProgress - range4.holdEnd) / (range4.end - range4.holdEnd), 0, 1)
     : 0
 
   if (inSlide4) {
-    const from = envInjectionCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
-    const to = remoteAiCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const from = repoCloneCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = envInjectionCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
     circlePose = {
       cx: mix(from.cx, to.cx, slideP4),
       cy: mix(from.cy, to.cy, slideP4),
@@ -408,17 +494,34 @@ export function PersistentTransitionOverlay({
     }
   }
 
-  const envSceneActive = range4 && railProgress >= range4.start && railProgress <= range4.end
-  const envSceneProgress = envSceneActive && range4
-    ? sceneProgress(railProgress, range4)
+  // --- Slide 5→6: EnvInjection → RemoteAi (circle only) ---
+  const inSlide5 = range5 && railProgress > range5.holdEnd && railProgress <= range5.end
+  const slideP5 = inSlide5
+    ? clamp((railProgress - range5.holdEnd) / (range5.end - range5.holdEnd), 0, 1)
     : 0
 
-  if (!circlePose && envSceneActive && range4) {
+  if (inSlide5) {
+    const from = envInjectionCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
+    const to = remoteAiCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
+    circlePose = {
+      cx: mix(from.cx, to.cx, slideP5),
+      cy: mix(from.cy, to.cy, slideP5),
+      r: mix(from.r, to.r, slideP5),
+    }
+  }
+
+  // --- Scene 5 (EnvInjection) active: overlay owns the circle throughout ---
+  const envSceneActive = range5 && railProgress >= range5.start && railProgress <= range5.end
+  const envSceneProgress = envSceneActive && range5
+    ? sceneProgress(railProgress, range5)
+    : 0
+
+  if (!circlePose && envSceneActive && range5) {
     circlePose = envInjectionCirclePose(vpSize.w, vpSize.h, isDesktopLayout, envSceneProgress)
   }
 
   // Nothing to render
-  if (!circlePose && !laptopPose) return null
+  if (!circlePose && !laptopPose && !phonePose) return null
 
   return (
     <svg
@@ -428,7 +531,7 @@ export function PersistentTransitionOverlay({
       style={{ pointerEvents: 'none' }}
       aria-hidden="true"
     >
-      {/* Circle renders BEFORE laptop so it paints behind it */}
+      {/* Circle renders BEFORE phone/laptop so it paints behind them */}
       {circlePose && (
         <circle
           cx={circlePose.cx}
@@ -437,6 +540,14 @@ export function PersistentTransitionOverlay({
           fill={palette.bauhaus.blue}
           opacity={envSceneActive ? 1 : 0.96}
         />
+      )}
+      {/* Phone — bridged during slide 1→2 (enters PortSecurity) and fades during slide 2→3 (exits) */}
+      {phonePose && (
+        <g opacity={phoneOverlayOpacity}>
+          <BauhausPhone cx={phonePose.cx} cy={phonePose.cy} scale={phonePose.scale}>
+            <></>
+          </BauhausPhone>
+        </g>
       )}
       {laptopPose && (
         <BauhausLaptop cx={laptopPose.cx} cy={laptopPose.cy} scale={laptopPose.scale}>
@@ -504,6 +615,25 @@ export function shouldHideLaptop(
   return false
 }
 
+/** True when the overlay is rendering the phone — scene should hide its own */
+export function shouldHidePhone(
+  sceneIndex: number,
+  railProgress: number,
+  ranges: SceneRange[],
+): boolean {
+  const range1 = ranges[1] // connect
+  const range2 = ranges[2] // port-security
+  // Slide 1→2 (Connect → PortSecurity): overlay bridges phone; both scenes hide their own
+  if (range1 && (sceneIndex === 1 || sceneIndex === 2)) {
+    if (railProgress > range1.holdEnd && railProgress <= range1.end) return true
+  }
+  // Slide 2→3 (PortSecurity → Setup): overlay fades phone out; scene 2 hides its own
+  if (range2 && sceneIndex === 2) {
+    if (railProgress > range2.holdEnd && railProgress <= range2.end) return true
+  }
+  return false
+}
+
 /** True when the overlay is rendering the blue circle — scene should hide its own */
 export function shouldHideBlueCircle(
   sceneIndex: number,
@@ -512,38 +642,46 @@ export function shouldHideBlueCircle(
 ): boolean {
   const range0 = ranges[0]
   const range1 = ranges[1]
-  const range2 = ranges[2]
-  const range3 = ranges[3]
-  const range4 = ranges[4]
+  const range2 = ranges[2] // port-security
+  const range3 = ranges[3] // setup
+  const range4 = ranges[4] // repo-clone
+  const range5 = ranges[5] // env-injection
 
-  // Scene 0→1 slide: scenes 0 and 1 hide their circles
+  // Slide 0→1 (ConsoleSetup → Connect): scenes 0 and 1 hide their circles
   if (sceneIndex === 0 || sceneIndex === 1) {
     if (railProgress > range0.holdEnd && railProgress <= range0.end) return true
   }
 
-  // Scene 1→2 slide: scenes 1 and 2 hide their circles
+  // Slide 1→2 (Connect → PortSecurity): connect (1) hides its circle.
+  // Port-security (2) also hides its circle so the overlay bridge lands cleanly.
   if (range1 && (sceneIndex === 1 || sceneIndex === 2)) {
     if (railProgress > range1.holdEnd && railProgress <= range1.end) return true
   }
 
-  // Scene 2→3 slide: scenes 2 and 3 hide their circles
+  // Slide 2→3 (PortSecurity → Setup): overlay bridges port-security's circle to setup.
+  // Both scenes hide their own circles.
   if (range2 && (sceneIndex === 2 || sceneIndex === 3)) {
     if (railProgress > range2.holdEnd && railProgress <= range2.end) return true
   }
 
-  // Scene 3→4 slide: scenes 3 and 4 hide their circles
+  // Slide 3→4 (Setup → RepoClone): scenes 3 and 4 hide their circles
   if (range3 && (sceneIndex === 3 || sceneIndex === 4)) {
     if (railProgress > range3.holdEnd && railProgress <= range3.end) return true
   }
 
-  // EnvInjection scene: overlay owns the circle throughout the scene
-  if (range4 && sceneIndex === 4) {
-    if (railProgress >= range4.start && railProgress <= range4.end) return true
-  }
-
-  // Scene 4→5 slide: scenes 4 and 5 hide their circles
+  // Slide 4→5 (RepoClone → EnvInjection): scenes 4 and 5 hide their circles
   if (range4 && (sceneIndex === 4 || sceneIndex === 5)) {
     if (railProgress > range4.holdEnd && railProgress <= range4.end) return true
+  }
+
+  // Scene 5 (EnvInjection): overlay owns the circle throughout the entire scene
+  if (range5 && sceneIndex === 5) {
+    if (railProgress >= range5.start && railProgress <= range5.end) return true
+  }
+
+  // Slide 5→6 (EnvInjection → RemoteAi): scenes 5 and 6 hide their circles
+  if (range5 && (sceneIndex === 5 || sceneIndex === 6)) {
+    if (railProgress > range5.holdEnd && railProgress <= range5.end) return true
   }
 
   return false

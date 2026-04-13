@@ -14,6 +14,8 @@ export type SceneRenderProps = {
   hideLaptop?: boolean
   /** True when the persistent overlay is rendering the blue circle — scene should hide its own */
   hideBlueCircle?: boolean
+  /** True when the persistent overlay is rendering the phone — scene should hide its own */
+  hidePhone?: boolean
 }
 
 export type SceneConfig = {

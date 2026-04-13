@@ -1,4 +1,4 @@
-import { EnvInjectionTakeoverStage } from '../explainers/4-5-EnvInjectionStage'
+import { EnvInjectionTakeoverStage } from '../explainers/6-EnvInjectionStage'
 import type { SceneConfig } from '../timeline-types'
 
 export const envInjectionScene: SceneConfig = {

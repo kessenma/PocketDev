@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { architectureTokens } from '../../../shared/theme'
-import { RemoteAiStage } from '../explainers/5-RemoteAiStage'
+import { RemoteAiStage } from '../explainers/7-RemoteAiStage'
 import { TextGroup } from '../shared/TextGroup'
 import { BauhausLaptop } from '../shared/BauhausLaptop'
 import type { SceneConfig } from '../timeline-types'

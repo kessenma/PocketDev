@@ -16,7 +16,7 @@ export function HowPocketDevWorksSection({
   return (
     <ScrollTimeline
       scenes={howItWorksScenes}
-      sectionHeight="1000vh"
+      sectionHeight="1150vh"
       externalSectionRef={externalSectionRef}
       onRailProgress={(p) => {
         if (!remoteAiRange) return

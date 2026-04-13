@@ -1,9 +1,9 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
-import type { NetworkDebugInfo, LockStatus } from '#/lib/api'
-import { fetchLockStatus, setFirewallEnabled, consoleLockPort, consoleUnlockPort } from '#/lib/api'
+import type { NetworkDebugInfo } from '#/lib/api'
+import { useLockStatus } from '#/context/LockStatusContext'
 import { DomainSettings } from '#/components/DomainSettings'
 import { Wifi, WifiOff, Shield, Radio, Lock, Unlock } from 'lucide-react'
 
@@ -52,37 +52,7 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
   const clientCount = networkInfo?.websocket.connectedClients.length ?? 0
   const eventCount = networkInfo?.websocket.recentEvents.length ?? 0
 
-  const [lockStatus, setLockStatus] = useState<LockStatus | null>(null)
-  const [lockLoading, setLockLoading] = useState(false)
-
-  useEffect(() => {
-    fetchLockStatus().then(setLockStatus).catch(() => {})
-  }, [])
-
-  async function handleToggleFirewall() {
-    if (!lockStatus) return
-    setLockLoading(true)
-    try {
-      await setFirewallEnabled(!lockStatus.firewallEnabled)
-      setLockStatus(await fetchLockStatus())
-    } catch { /* ignore */ } finally { setLockLoading(false) }
-  }
-
-  async function handleLock() {
-    setLockLoading(true)
-    try {
-      await consoleLockPort()
-      setLockStatus(await fetchLockStatus())
-    } catch { /* ignore */ } finally { setLockLoading(false) }
-  }
-
-  async function handleUnlock() {
-    setLockLoading(true)
-    try {
-      await consoleUnlockPort()
-      setLockStatus(await fetchLockStatus())
-    } catch { /* ignore */ } finally { setLockLoading(false) }
-  }
+  const { lockStatus, lockLoading, toggleFirewall, lockPort, unlockPort } = useLockStatus()
 
   const connectDisconnectPairs = useMemo(() => {
     if (!networkInfo) return { connects: 0, disconnects: 0, authRejected: 0, stalesClosed: 0 }
@@ -266,7 +236,7 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
                 size="sm"
                 variant="outline"
                 disabled={lockLoading}
-                onClick={handleToggleFirewall}
+                onClick={toggleFirewall}
                 className={cn(
                   'rounded-[0.9rem] border text-xs',
                   lockStatus.firewallEnabled
@@ -282,7 +252,7 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
                     size="sm"
                     variant="outline"
                     disabled={lockLoading}
-                    onClick={handleUnlock}
+                    onClick={unlockPort}
                     className="rounded-[0.9rem] border border-green-500/30 text-xs text-green-400 hover:bg-green-500/10"
                   >
                     <Unlock className="mr-1.5 h-3 w-3" />
@@ -293,7 +263,7 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
                     size="sm"
                     variant="outline"
                     disabled={lockLoading}
-                    onClick={handleLock}
+                    onClick={lockPort}
                     className="rounded-[0.9rem] border border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
                   >
                     <Lock className="mr-1.5 h-3 w-3" />

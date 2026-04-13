@@ -9,7 +9,7 @@ import {
 import type { SceneConfig } from './timeline-types'
 import { buildTrackKeyframes, computeSceneRanges, sceneProgress } from './timeline-utils'
 import { ExplainerStage } from './explainers/ExplainerStage'
-import { PersistentTransitionOverlay, shouldHideLaptop, shouldHideBlueCircle } from './shared/PersistentTransitionOverlay'
+import { PersistentTransitionOverlay, shouldHideLaptop, shouldHideBlueCircle, shouldHidePhone } from './shared/PersistentTransitionOverlay'
 
 export function ScrollTimeline({
   scenes,
@@ -146,6 +146,7 @@ export function ScrollTimeline({
                   railProgress,
                   hideLaptop: shouldHideLaptop(i, railProgress, ranges),
                   hideBlueCircle: shouldHideBlueCircle(i, railProgress, ranges),
+                  hidePhone: shouldHidePhone(i, railProgress, ranges),
                 }
 
                 if (scene.kind === 'explainer' && scene.explainer) {

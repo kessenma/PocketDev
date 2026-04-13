@@ -1,15 +1,15 @@
-import { SetupTakeoverScene } from '../explainers/3-SetupStage'
+import { RepoCloneTakeoverScene } from '../explainers/5-RepoCloneStage'
 import type { SceneConfig } from '../timeline-types'
 
-export const setupScene: SceneConfig = {
-  id: 'setup',
+export const repoCloneScene: SceneConfig = {
+  id: 'repo-clone',
   kind: 'takeover',
   weight: 3,
   holdRatio: 0.75,
   reducedMotionFullBleed: true,
   render: ({ progress, active, isDesktopLayout, hideBlueCircle }) => (
     <div className="relative z-10 h-full w-full">
-      <SetupTakeoverScene
+      <RepoCloneTakeoverScene
         progress={progress}
         active={active}
         isDesktopLayout={isDesktopLayout}
