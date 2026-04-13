@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
 import { architectureTokens, architectureFonts } from '../../../shared/theme'
 import { BauhausLaptop } from '../shared/BauhausLaptop'
@@ -15,6 +15,16 @@ function mapProgress(value: number, start: number, end: number) {
 
 function mix(start: number, end: number, amount: number) {
   return start + (end - start) * amount
+}
+
+function easeOutQuad(t: number) {
+  return 1 - (1 - t) * (1 - t)
+}
+
+function easeOutBack(t: number) {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
 }
 
 // 6x6 QR-like grid pattern (true = filled square)
@@ -83,11 +93,14 @@ export function ConnectTakeoverScene({
   const scanP = mapProgress(p, 0.35, 0.50)
   const flyP = mapProgress(p, 0.52, 0.68)
   const connectedP = mapProgress(p, 0.58, 0.76)
-  const screenOn = connectedP > 0.5
   const showQrOnScreen = flyP === 0
-  const settled = connectedP >= 1
-  // Credential shapes appear on phone screen during hold phase after pairing
-  const credP = mapProgress(p, 0.78, 0.90)
+  // White screen slides up when pairing completes, then exits; shapes pop in on dark screen
+  const screenSlideP = mapProgress(p, 0.60, 0.70)  // white screen slides in from below
+  const screenExitP  = mapProgress(p, 0.71, 0.75)  // white screen slides back down
+  const pairClickP   = mapProgress(p, 0.65, 0.71)  // pair button tap bounce
+  const shape0P      = mapProgress(p, 0.73, 0.78)  // blue circle pops in
+  const shape1P      = mapProgress(p, 0.75, 0.80)  // yellow triangle pops in
+  const shape2P      = mapProgress(p, 0.77, 0.82)  // red square pops in
 
   // --- Layout positions in LOCAL coords (pre-scale) ---
   // Desktop: side by side. Mobile: laptop above phone.
@@ -99,19 +112,12 @@ export function ConnectTakeoverScene({
   const phoneLocalCy = isDesktopLayout ? -6 : 50
   const phoneW = 52
   const phoneH = 96
-  const phoneLocalX = phoneLocalCx - phoneW / 2
   const phoneLocalY = phoneLocalCy - phoneH / 2
   const phoneScreenLocalCx = phoneLocalCx
   const phoneScreenLocalCy = phoneLocalY + 20 + 48 / 2
 
   // Scatter radius — big enough to come from well outside the viewport
   const scatterRadius = Math.max(vpSize.w, vpSize.h) / scale * 0.7
-
-  // Phone screen area
-  const phoneScreenX = phoneLocalX + 6
-  const phoneScreenY = phoneLocalY + 20
-  const phoneScreenW = phoneW - 12
-  const phoneScreenH = 48
 
   // Arc direction for flying squares
   const arcMag = isDesktopLayout ? -18 : 12
@@ -180,19 +186,20 @@ export function ConnectTakeoverScene({
 
       {/* Animation group — scaled and centered */}
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>
-        {/* Blue circle — travels from laptop top-right and lands on phone screen.
-            Shrinks from large (traveling) to small (on-screen credential).
+        {/* Blue circle — travels from laptop top-right into the phone screen.
+            Destination in animation-group coords matches BauhausPhone local (-12, 2) scaled by phoneW/60.
             Hidden during slide-out (overlay bridges it). */}
         {!hideLaptop && !hideBlueCircle && (() => {
           const laptopTopRightX = laptopLocalCx + 70 * laptopScale
           const laptopTopY = laptopLocalCy - 100 * laptopScale
-          // Destination: left area of phone screen
-          const destX = phoneScreenLocalCx - 12
-          const destY = phoneScreenLocalCy
+          const ps = phoneW / 60  // phone scale factor (52/60)
+          const destX = phoneLocalCx + (-12) * ps  // = 69.6 desktop
+          const destY = phoneLocalCy + 2 * ps       // = -4.3 desktop
+          const destR = 6 * ps                       // = 5.2 desktop
           const moveP = clamp((connectedP - 0.2) / 0.8, 0, 1)
           const bcx = mix(laptopTopRightX, destX, moveP)
           const bcy = mix(laptopTopY, destY, moveP)
-          const br  = mix(26, 8, moveP)
+          const br  = mix(26, destR, moveP)
           return (
             <circle cx={bcx} cy={bcy} r={br} fill={palette.bauhaus.blue} opacity={0.96} />
           )
@@ -343,82 +350,55 @@ export function ConnectTakeoverScene({
             )
           })}
 
-        {/* Phone — hidden during slide-out so the overlay can bridge it */}
+        {/* Phone — all screen content as children so overlay bridge inherits it */}
         <g opacity={hidePhone ? 0 : 1}>
-        <BauhausPhone
-          cx={phoneLocalCx}
-          cy={phoneLocalCy}
-          scale={phoneW / 60}
-        >
-          {/* Suppress default content — animated overlays rendered outside */}
-          <></>
-        </BauhausPhone>
+          <BauhausPhone cx={phoneLocalCx} cy={phoneLocalCy} scale={phoneW / 60}>
+            {/* White screen — slides up to reveal, slides back down when pair is tapped */}
+            {(() => {
+              const screenOpacity = screenSlideP * (1 - screenExitP)
+              if (screenOpacity <= 0) return null
+              const enterY = mix(10, 0, easeOutQuad(screenSlideP))
+              const exitY  = mix(0, 10, screenExitP)
+              // Pair button tap bounce: press down then spring back
+              const pairScale = pairClickP < 0.5
+                ? mix(1, 0.88, pairClickP / 0.5)
+                : mix(0.88, 1.0, (pairClickP - 0.5) / 0.5)
+              return (
+                <g opacity={screenOpacity} transform={`translate(0 ${enterY + exitY})`}>
+                  <rect x={-22} y={-41} width={44} height={86} rx={6} fill="white" />
+                  <g transform={`scale(${pairScale})`}>
+                    <rect x={-14} y={-3} width={28} height={10} rx={5} fill={palette.bauhaus.red} />
+                    <text
+                      x={0} y={4}
+                      textAnchor="middle"
+                      fontSize="7" fontWeight="700"
+                      fill="white"
+                      fontFamily="var(--font-sans), sans-serif"
+                    >
+                      Pair
+                    </text>
+                  </g>
+                </g>
+              )
+            })()}
+            {/* Credential shapes — staggered pop-in with bounce on dark screen */}
+            {shape0P > 0 && (
+              <g transform={`translate(-12 2) scale(${Math.max(0, easeOutBack(shape0P))})`}>
+                <circle r={6} fill={palette.bauhaus.blue} />
+              </g>
+            )}
+            {shape1P > 0 && (
+              <g transform={`translate(0 0) scale(${Math.max(0, easeOutBack(shape1P))})`}>
+                <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
+              </g>
+            )}
+            {shape2P > 0 && (
+              <g transform={`translate(12 0) scale(${Math.max(0, easeOutBack(shape2P))})`}>
+                <rect x={-6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
+              </g>
+            )}
+          </BauhausPhone>
         </g>
-
-        {/* Phone screen — white background */}
-        <motion.rect
-          x={phoneScreenX}
-          y={phoneScreenY}
-          width={phoneScreenW}
-          height={phoneScreenH}
-          rx={10}
-          fill="#ffffff"
-          animate={{ opacity: screenOn ? 1 : 0 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
-        />
-        {/* Pair button + label — fade out as credential shapes appear */}
-        <g opacity={Math.max(0, 1 - credP * 3)}>
-          <motion.rect
-            x={phoneScreenLocalCx - 14}
-            y={phoneScreenLocalCy - 6}
-            width={28}
-            height={12}
-            rx={6}
-            fill={palette.bauhaus.red}
-            animate={
-              settled && !reduceMotion
-                ? { opacity: 1, scale: [1, 1.06, 1] }
-                : { opacity: screenOn ? 1 : 0 }
-            }
-            transition={
-              settled && !reduceMotion
-                ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
-                : { duration: 0.2, ease: 'easeOut' }
-            }
-            style={{ transformOrigin: `${phoneScreenLocalCx}px ${phoneScreenLocalCy}px` }}
-          />
-          <motion.text
-            x={phoneScreenLocalCx}
-            y={phoneScreenLocalCy + 3}
-            textAnchor="middle"
-            fontSize="6"
-            fontWeight="700"
-            fill="#ffffff"
-            fontFamily="var(--font-sans), sans-serif"
-            animate={{ opacity: screenOn ? 1 : 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-          >
-            Pair
-          </motion.text>
-        </g>
-        {/* Credential shapes on phone screen — appear after pairing, hidden during slide-out */}
-        {!hideBlueCircle && credP > 0 && (() => {
-          const sx = phoneScreenLocalCx
-          const sy = phoneScreenLocalCy
-          return (
-            <g opacity={credP}>
-              {/* Blue circle (left) — matches the traveling circle landing position */}
-              <circle cx={sx - 12} cy={sy} r={6} fill={palette.bauhaus.blue} />
-              {/* Yellow triangle (center) */}
-              <polygon
-                points={`${sx},${sy - 7} ${sx + 6.5},${sy + 4} ${sx - 6.5},${sy + 4}`}
-                fill={palette.bauhaus.yellow}
-              />
-              {/* Red square (right) */}
-              <rect x={sx + 6} y={sy - 6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
-            </g>
-          )
-        })()}
 
         {/* Labels */}
         <text

@@ -182,6 +182,8 @@ function handleWsMessage(message: WsMessage) {
     }
     case 'task.status_changed': {
       const { taskId, status } = message.payload as { taskId: string; status: string }
+      const pendingQCount = useTaskStore.getState().pendingQuestions.get(taskId)?.length ?? 0
+      console.log(`[ws] task.status_changed → ${status} | taskId=${taskId} pendingQuestions=${pendingQCount} t=${Date.now()}`)
       tasks.updateTaskStatus(taskId, status as any)
       scripts.handleTaskStatusChange(taskId, status)
       break
@@ -193,6 +195,7 @@ function handleWsMessage(message: WsMessage) {
     }
     case 'task.question': {
       const question = message.payload as import('@pocketdev/shared/types').TaskQuestion
+      console.log(`[ws] task.question received | taskId=${question.taskId} qId=${question.questionId} type=${question.type} t=${Date.now()}`)
       tasks.addQuestion(question.taskId, question)
       break
     }

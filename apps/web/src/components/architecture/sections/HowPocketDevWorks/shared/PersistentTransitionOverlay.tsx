@@ -180,42 +180,6 @@ function portSecurityPhoneStartPose(vpW: number, vpH: number, isDesktop: boolean
 }
 
 // ---------------------------------------------------------------------------
-// Blue circle poses (scene 1→2)  Connect circle → PortSecurity circle start
-// ---------------------------------------------------------------------------
-
-/**
- * Circle at end of Connect scene — landed on phone screen left area (small credential token).
- * Matches ConnectStage's circle destination: (phoneScreenLocalCx - 12, phoneScreenLocalCy), r=8.
- */
-function connectCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
-  const animScale = Math.min(vpW, vpH) / 320
-  // phoneLocalCy → phoneLocalY = cy - 48 → phoneScreenLocalCy = phoneLocalY + 44
-  const phoneLocalCx = isDesktop ? 80 : 0
-  const phoneLocalCy = isDesktop ? -6 : 50
-  const phoneScreenLocalCy = (phoneLocalCy - 48) + 44  // = phoneLocalCy - 4
-  return {
-    cx: vpW / 2 + (phoneLocalCx - 12) * animScale,
-    cy: vpH * (isDesktop ? 0.42 : 0.40) + phoneScreenLocalCy * animScale,
-    r: 8 * animScale,
-  }
-}
-
-/**
- * Circle at start of PortSecurity — on phone screen left area (small, matches Connect end).
- * PortSecurityStage will grow it from r=8 to r=26 early in the scene.
- * Local coords: (phoneCx - 12, phoneCy - 10).
- */
-function portSecurityCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
-  const animScale = Math.min(vpW, vpH) / 320
-  const phoneCx = isDesktop ? -152 : -112
-  const phoneCy = isDesktop ? 0 : 22
-  return {
-    cx: vpW / 2 + (phoneCx - 12) * animScale,
-    cy: vpH * (isDesktop ? 0.42 : 0.40) + (phoneCy - 10) * animScale,
-    r: 8 * animScale,
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Blue circle poses (scene 2→3)  PortSecurity end → Setup start
 // ---------------------------------------------------------------------------
@@ -433,13 +397,7 @@ export function PersistentTransitionOverlay({
       cy: mix(from.cy, to.cy, slideEased1),
       scale: mix(from.scale, to.scale, slideEased1),
     }
-    const from2 = connectCircleEndPose(vpSize.w, vpSize.h, isDesktopLayout)
-    const to2 = portSecurityCircleStartPose(vpSize.w, vpSize.h, isDesktopLayout)
-    circlePose = {
-      cx: mix(from2.cx, to2.cx, slideEased1),
-      cy: mix(from2.cy, to2.cy, slideEased1),
-      r: mix(from2.r, to2.r, slideEased1),
-    }
+    // Circle is rendered inside BauhausPhone children — no separate bridge needed
   }
 
   // --- Slide 2→3: Phone fade-out + blue circle bridge (PortSecurity → Setup) ---
@@ -541,11 +499,18 @@ export function PersistentTransitionOverlay({
           opacity={envSceneActive ? 1 : 0.96}
         />
       )}
-      {/* Phone — bridged during slide 1→2 (enters PortSecurity) and fades during slide 2→3 (exits) */}
+      {/* Phone — bridged during slides. During slide 1→2 shows credential screen content. */}
       {phonePose && (
         <g opacity={phoneOverlayOpacity}>
           <BauhausPhone cx={phonePose.cx} cy={phonePose.cy} scale={phonePose.scale}>
-            <></>
+            {inSlide1 ? (
+              /* Carry credential shapes (on dark screen) from Connect into PortSecurity */
+              <>
+                <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
+                <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
+                <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
+              </>
+            ) : <></>}
           </BauhausPhone>
         </g>
       )}

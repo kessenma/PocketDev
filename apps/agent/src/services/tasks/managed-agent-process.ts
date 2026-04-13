@@ -610,7 +610,14 @@ export class ManagedAgentProcess {
         const exitText = await exec(`cat ${shellEscape(this.outputFilePath)} | tail -1`).then((r) => r.stdout).catch(() => '')
         const isError = exitText.includes('[error]') || exitText.includes('error')
 
-        console.log(`[managed-agent] Session ${this.tmuxSession} exited for task ${this.taskId}`)
+        const pendingQCount = this.questionResponders.size
+        console.log(`[managed-agent] Session ${this.tmuxSession} exited for task ${this.taskId} | pendingQuestions=${pendingQCount} | t=${Date.now()}`)
+        if (pendingQCount > 0) {
+          console.log(`[managed-agent] ⚠ Session exited WITH ${pendingQCount} unanswered question(s) — mobile may not have rendered them yet`)
+          for (const [qid, q] of this.questionDetails) {
+            console.log(`[managed-agent]   question ${qid}: type=${q.type} prompt="${q.prompt?.slice(0, 80)}"`)
+          }
+        }
         this.cleanup()
         this.finish(isError ? 'failed' : 'completed')
         return
@@ -773,6 +780,7 @@ export class ManagedAgentProcess {
   private registerQuestion(question: TaskQuestion, onAnswer: (answer: string) => void | Promise<void>) {
     this.questionResponders.set(question.questionId, onAnswer)
     this.questionDetails.set(question.questionId, question)
+    console.log(`[managed-agent] ➡ Emitting task.question | taskId=${this.taskId} qId=${question.questionId} type=${question.type} status=${this._status} t=${Date.now()}`)
     broadcast(makeMessage('task.question', question))
   }
 
@@ -785,6 +793,7 @@ export class ManagedAgentProcess {
   private finish(status: 'completed' | 'failed' | 'killed') {
     if (this.finished) return
     this.finished = true
+    console.log(`[managed-agent] ➡ Emitting task.status_changed → ${status} | taskId=${this.taskId} pendingQuestions=${this.questionResponders.size} t=${Date.now()}`)
 
     this.questionResponders.clear()
     this.questionDetails.clear()

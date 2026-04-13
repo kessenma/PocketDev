@@ -30,8 +30,6 @@ export default function TaskInteractionSheet({ taskId }: Props) {
   const questions = useMemo(() => questionsRaw ?? [], [questionsRaw])
   const answerQuestion = useTaskStore((s) => s.answerQuestion)
   const clearQuestions = useTaskStore((s) => s.clearQuestions)
-  const clearPermissions = useTaskStore((s) => s.clearPermissions)
-  const startTask = useTaskStore((s) => s.startTask)
   const task = useTaskStore((s) => s.tasks.get(taskId))
   const [dismissed, setDismissed] = useState(false)
 
@@ -48,14 +46,6 @@ export default function TaskInteractionSheet({ taskId }: Props) {
 
   function handleDismiss() {
     clearQuestions(taskId)
-    setDismissed(true)
-  }
-
-  function handleRerun() {
-    if (!task) return
-    clearQuestions(taskId)
-    clearPermissions(taskId)
-    startTask(task.prompt, task.agent_type, task.working_directory, task.model, 'default')
     setDismissed(true)
   }
 
@@ -94,19 +84,11 @@ export default function TaskInteractionSheet({ taskId }: Props) {
             contentContainerStyle={styles.bodyContent}
             keyboardShouldPersistTaps="handled"
           >
-            {isTerminal ? (
-              <TaskCompletedCard
-                questions={questions}
-                onRerun={handleRerun}
-                onDismiss={handleDismiss}
-                colors={colors}
-              />
-            ) : (
-              <QuestionCard
-                question={current}
-                onAnswer={(answer) => answerQuestion(taskId, current.questionId, answer)}
-              />
-            )}
+            <QuestionCard
+              question={current}
+              isTerminal={isTerminal}
+              onAnswer={(answer) => answerQuestion(taskId, current.questionId, answer)}
+            />
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
@@ -114,62 +96,20 @@ export default function TaskInteractionSheet({ taskId }: Props) {
   )
 }
 
-function TaskCompletedCard({
-  questions,
-  onRerun,
-  onDismiss,
-  colors,
-}: {
-  questions: TaskQuestion[]
-  onRerun: () => void
-  onDismiss: () => void
-  colors: any
-}) {
-  return (
-    <View style={styles.cardContent}>
-      <Text style={[styles.questionPrompt, { color: colors.text }]}>
-        This task finished before{' '}
-        {questions.length === 1 ? 'this permission' : `these ${questions.length} permissions`} could be answered.
-      </Text>
-      <View style={[styles.toolDetailBox, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
-        {questions.map((q) => (
-          <View key={q.questionId}>
-            <Text style={[styles.toolName, { color: colors.text }]}>{q.toolDetails?.toolName ?? q.prompt}</Text>
-            {q.toolDetails?.toolInput?.command != null ? (
-              <Text style={[styles.toolInput, { color: colors.textTertiary }]} numberOfLines={3}>
-                {String(q.toolDetails.toolInput.command)}
-              </Text>
-            ) : null}
-          </View>
-        ))}
-      </View>
-      <Text style={[typeStyles.bodySmall, { color: colors.textSecondary }]}>
-        Re-run the task to approve these tools automatically on the next attempt.
-      </Text>
-      <View style={styles.permissionButtons}>
-        <View style={styles.flexButton}>
-          <BauhausButton onPress={onRerun}>Re-run with Auto-Approve</BauhausButton>
-        </View>
-        <View style={styles.flexButton}>
-          <BauhausButton variant="quiet" onPress={onDismiss}>Dismiss</BauhausButton>
-        </View>
-      </View>
-    </View>
-  )
-}
-
 function QuestionCard({
   question,
+  isTerminal,
   onAnswer,
 }: {
   question: TaskQuestion
+  isTerminal: boolean
   onAnswer: (answer: string) => void
 }) {
   const { colors } = useTheme()
 
   switch (question.type) {
     case 'permission':
-      return <PermissionCard question={question} onAnswer={onAnswer} colors={colors} />
+      return <PermissionCard question={question} isTerminal={isTerminal} onAnswer={onAnswer} colors={colors} />
     case 'yes_no':
       return <YesNoCard question={question} onAnswer={onAnswer} colors={colors} />
     case 'multiple_choice':
@@ -185,10 +125,12 @@ function QuestionCard({
 
 function PermissionCard({
   question,
+  isTerminal,
   onAnswer,
   colors,
 }: {
   question: TaskQuestion
+  isTerminal: boolean
   onAnswer: (answer: string) => void
   colors: any
 }) {
@@ -215,6 +157,12 @@ function PermissionCard({
             </Text>
           ) : null}
         </View>
+      ) : null}
+
+      {isTerminal ? (
+        <Text style={[typeStyles.bodySmall, { color: colors.textSecondary }]}>
+          Task ended — answer sent for debugging. Check agent logs.
+        </Text>
       ) : null}
 
       <View style={styles.permissionButtons}>

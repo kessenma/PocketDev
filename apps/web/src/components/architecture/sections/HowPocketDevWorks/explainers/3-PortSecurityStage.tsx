@@ -374,38 +374,17 @@ export function PortSecurityStage({
           )
         })}
 
-        {/* ── Pre-fly shapes on phone screen — triangle + square visible before launch ── */}
-        {/* (Circle is handled separately with grow animation above) */}
-        {!hidePhone && !hideBlueCircle && (() => {
-          const preFadeIn = mapP(p, 0.05, 0.22)
-          const preFadeOut = clamp(fly0 * 3, 0, 1)
-          const opacity = preFadeIn * (1 - preFadeOut)
-          if (opacity <= 0) return null
-          const sy = phoneCy - 10  // phone screen center y
-          return (
-            <>
-              {/* Yellow triangle at screen center — matches ConnectStage */}
-              <g transform={`translate(${phoneCx} ${sy})`} opacity={opacity}>
-                <FlyingShape kind="triangle" color={palette.bauhaus.yellow} size={8} />
-              </g>
-              {/* Red square at screen right — matches ConnectStage */}
-              <g transform={`translate(${phoneCx + 12} ${sy})`} opacity={opacity}>
-                <FlyingShape kind="square" color={palette.bauhaus.red} size={8} />
-              </g>
-            </>
-          )
-        })()}
-
         {/* ── Blue circle — grows from phone screen token, then moves right of doors ── */}
         {!hideBlueCircle && (() => {
-          // Phase 1: grow from screen token (r=8, on phone screen) to full size (r=26, behind phone)
-          const startCx = phoneCx - 12
-          const startCy = phoneCy - 10
-          const fullCx = phoneCx + 20
+          // Phase 1: grow from BauhausPhone-local token position to full size behind phone
+          const circleStartCx = phoneCx + (-12) * phoneScale  // ≈ -160.8
+          const circleStartCy = phoneCy + 2 * phoneScale       // ≈ 1.47
+          const circleStartR  = 6 * phoneScale                  // ≈ 4.4
+          const fullCx = phoneCx   // centered on phone body, mostly hidden behind it
           const fullCy = phoneCy
-          const growCx = mix(startCx, fullCx, circleGrowP)
-          const growCy = mix(startCy, fullCy, circleGrowP)
-          const growR  = mix(8, 26, circleGrowP)
+          const growCx = mix(circleStartCx, fullCx, circleGrowP)
+          const growCy = mix(circleStartCy, fullCy, circleGrowP)
+          const growR  = mix(circleStartR, 26, circleGrowP)
           // Phase 2: move right of doors after unlock
           const circleEndX = BD.x + BD.w + 30  // 78
           const circleEndY = BD.y + BD.h / 2   // -23
@@ -420,7 +399,20 @@ export function PortSecurityStage({
         {/* ── Phone — renders above circle so circle is behind it ── */}
         <g opacity={hidePhone ? 0 : 1}>
           <BauhausPhone cx={phoneCx} cy={phoneCy} scale={phoneScale}>
-            <></>
+            {!hideBlueCircle && (() => {
+              const preFadeIn = mapP(p, 0.05, 0.22)
+              const preFadeOut = clamp(fly0 * 3, 0, 1)
+              const opacity = preFadeIn * (1 - preFadeOut)
+              if (opacity <= 0) return null
+              return (
+                <g opacity={opacity}>
+                  <rect x={-22} y={-41} width={44} height={86} rx={6} fill="white" opacity={0.95} />
+                  <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
+                  <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
+                  <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
+                </g>
+              )
+            })()}
           </BauhausPhone>
         </g>
 
