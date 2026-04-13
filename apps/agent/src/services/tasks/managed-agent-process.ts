@@ -245,7 +245,7 @@ const CLAUDE_READY_PATTERNS = [
 ]
 
 // How long the pane must be stable (post-prompt) before we consider the task complete.
-const CLAUDE_IDLE_TIMEOUT_MS = 8_000
+const CLAUDE_IDLE_TIMEOUT_MS = 20_000
 
 function isClaudeReady(normalized: string): boolean {
   return CLAUDE_READY_PATTERNS.some((p) => p.test(normalized))
@@ -299,10 +299,13 @@ export function claudeProviderConfig(): TmuxProviderConfig {
     },
 
     async onPaneSnapshot(snapshot, ctx) {
-      // Send prompt once Claude's TUI is ready for input
+      // Send prompt once Claude's TUI is ready for input.
+      // Flatten to a single line — literal \n sent via tmux triggers multi-line edit mode
+      // in Claude's Ink TUI, causing Enter to add a newline instead of submitting.
       if (!ctx.promptSent && isClaudeReady(snapshot)) {
+        const singleLinePrompt = ctx.prompt.replace(/\r?\n/g, ' ').trim()
         ctx.broadcastOutput('[claude] TUI ready — sending prompt...')
-        await exec(`tmux send-keys -t ${ctx.tmuxSession} -l ${shellEscape(ctx.prompt)}`)
+        await exec(`tmux send-keys -t ${ctx.tmuxSession} -l ${shellEscape(singleLinePrompt)}`)
         await Bun.sleep(100)
         await exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`)
         return { type: 'continue', markPromptSent: true }
