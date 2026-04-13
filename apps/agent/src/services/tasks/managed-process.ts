@@ -6,6 +6,8 @@ import { proposePlan } from './plan-manager.ts'
 import { detectDevServerPort, setDevServerPort } from '../preview/proxy.ts'
 import { createTaskStreamAdapter, type CollectedToolUse, type PermissionDenial } from './task-stream-adapters.ts'
 import { broadcast, makeMessage } from '../terminal/ws.ts'
+import { getDevices } from '../../db/index.ts'
+import { sendPush } from '../push/relay-push.ts'
 
 type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'killed'
 
@@ -211,6 +213,22 @@ export class ManagedProcess {
       }
 
       broadcast(makeMessage('task.completed', { taskId: this.taskId, exitCode: finalExitCode, status }))
+
+      if (status !== 'killed') {
+        const shortPrompt = (this.prompt ?? '').slice(0, 80)
+        for (const device of getDevices()) {
+          if (device.apnsToken) {
+            void sendPush({
+              apnsToken: device.apnsToken,
+              title: status === 'completed' ? 'Task Complete' : 'Task Failed',
+              message: shortPrompt,
+              data: { type: 'task_completed', taskId: this.taskId, status },
+              deviceId: device.id,
+              taskId: this.taskId,
+            })
+          }
+        }
+      }
 
       if (this.mode === 'plan' && (this.adapter?.getCollectedToolUses().length ?? 0) > 0) {
         this.createPlanFromToolUses()

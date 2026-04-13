@@ -356,7 +356,7 @@ export function ConnectTakeoverScene({
             {/* White screen — slides up to reveal, slides back down when pair is tapped */}
             {(() => {
               const screenOpacity = screenSlideP * (1 - screenExitP)
-              if (screenOpacity <= 0) return null
+              if (screenOpacity <= 0) return <></>  // keep children truthy so BauhausPhone default bars never show
               const enterY = mix(10, 0, easeOutQuad(screenSlideP))
               const exitY  = mix(0, 10, screenExitP)
               // Pair button tap bounce: press down then spring back

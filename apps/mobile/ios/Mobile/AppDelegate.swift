@@ -2,6 +2,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import UserNotifications
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -29,7 +30,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       launchOptions: launchOptions
     )
 
+    // APNs registration is triggered from JS after the user opts in and grants permission.
+    // We only set up the notification center delegate here so delivered notifications
+    // are handled while the app is in the foreground.
+    UNUserNotificationCenter.current().delegate = self
+
     return true
+  }
+
+  // Called by iOS after successful APNs registration (triggered from JS via
+  // UIApplication.shared.registerForRemoteNotifications()).
+  func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+    UserDefaults.standard.set(token, forKey: "apnsDeviceToken")
+    NSLog("[APNs] Registered with token: %@", String(token.prefix(16)) + "...")
+  }
+
+  func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    NSLog("[APNs] Registration failed: %@", error.localizedDescription)
   }
 
   func application(
@@ -38,6 +62,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
     RCTLinkingManager.application(app, open: url, options: options)
+  }
+}
+
+// Show notifications even when app is in the foreground — RN will handle them via
+// PushNotificationIOS event listeners.
+extension AppDelegate: UNUserNotificationCenterDelegate {
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    completionHandler([.banner, .sound, .badge])
   }
 }
 

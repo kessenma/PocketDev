@@ -2,6 +2,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { handleInstallScript } from './src/server/install-script'
 import { handleVersionCheck, handleBundleDownload } from './src/server/agent-version'
+import { handlePushProvision, handlePushRegisterDevice, handlePushSend } from './src/server/push'
 
 const PORT = Number(process.env.PORT ?? 3000)
 const DIST_DIR = path.resolve(import.meta.dir, 'dist')
@@ -37,6 +38,17 @@ async function start() {
     hostname: '0.0.0.0',
     async fetch(req) {
       const url = new URL(req.url)
+
+      // Push notification relay
+      if (url.pathname === '/api/push/provision' && req.method === 'POST') {
+        return handlePushProvision(req)
+      }
+      if (url.pathname === '/api/push/register-device' && req.method === 'POST') {
+        return handlePushRegisterDevice(req)
+      }
+      if (url.pathname === '/api/push/send' && req.method === 'POST') {
+        return handlePushSend(req)
+      }
 
       // Serve install script and track downloads
       if (url.pathname === '/install.sh') {

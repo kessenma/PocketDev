@@ -57,6 +57,9 @@ function clearAutoLock() {
 /** Expose client count for lock status endpoint */
 export function getConnectedClientCount() { return clients.size }
 
+/** True when no mobile clients are actively connected via WebSocket */
+export function isNoClientConnected() { return clients.size === 0 }
+
 /** Close all connected WebSocket clients (called before locking the port) */
 export function closeAllClients() {
   for (const client of clients.values()) {

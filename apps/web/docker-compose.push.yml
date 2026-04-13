@@ -1,0 +1,36 @@
+services:
+  gorush-init:
+    image: alpine:latest
+    environment:
+      APNS_KEY_BASE64: ${APNS_KEY_BASE64}
+    volumes:
+      - apns-keys:/keys
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      echo 'Decoding APNs key...' &&
+      if [ -n \"$$APNS_KEY_BASE64\" ]; then
+        echo \"$$APNS_KEY_BASE64\" | base64 -d > /keys/AuthKey.p8 &&
+        chmod 644 /keys/AuthKey.p8 &&
+        echo 'APNs key ready.'
+      else
+        echo 'ERROR: APNS_KEY_BASE64 not set' && exit 1
+      fi
+      "
+
+  gorush:
+    image: appleboy/gorush:latest
+    depends_on:
+      gorush-init:
+        condition: service_completed_successfully
+    volumes:
+      - apns-keys:/keys:ro
+      - ./gorush-config.yml:/config/gorush.yml:ro
+    environment:
+      APNS_KEY_ID: ${APNS_KEY_ID}
+      APNS_TEAM_ID: ${APNS_TEAM_ID}
+    # Port 8088 is internal only — NOT exposed externally
+    # The web app container reaches gorush via Docker network at http://gorush:8088
+
+volumes:
+  apns-keys:

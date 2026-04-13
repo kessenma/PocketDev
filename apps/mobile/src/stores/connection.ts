@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import type { ConnectionStatus } from '../services/websocket'
 import { PocketDevWebSocket } from '../services/websocket'
-import { buildWsUrl, unpairFromServer, setSecureMode, fetchLockStatus, wakeServer } from '../services/api'
-import { getServer, clearAll, type StoredServer } from '../services/storage'
+import { buildWsUrl, unpairFromServer, setSecureMode, fetchLockStatus, wakeServer, registerPushToken } from '../services/api'
+import { getServer, clearAll, getPushNotificationsEnabled, type StoredServer } from '../services/storage'
+import { getApnsToken } from '../services/push-token'
 import type { WsMessage } from '@pocketdev/shared/types'
 import { useTaskStore } from './tasks'
 import { useContainerStore } from './containers'
@@ -127,6 +128,18 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         if (status === 'connected') {
           useNewTaskDraftStore.getState().loadCapabilities()
           useTaskStore.getState().refreshFromServer().catch(() => {})
+          // Re-register push token on every connect (token may have rotated)
+          if (getPushNotificationsEnabled()) {
+            const s = get().server
+            if (s) {
+              getApnsToken().then((token) => {
+                if (token) {
+                  const env = __DEV__ ? 'development' : 'production'
+                  registerPushToken(s.ip, s.port, s.deviceId, token, env).catch(() => {})
+                }
+              }).catch(() => {})
+            }
+          }
         }
       },
       (message: WsMessage) => handleWsMessage(message),

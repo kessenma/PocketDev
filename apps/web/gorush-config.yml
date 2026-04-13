@@ -1,0 +1,14 @@
+core:
+  port: "8088"
+  sync_mode: false
+  max_notification: 1000
+
+ios:
+  enabled: true
+  key_path: "/keys/AuthKey.p8"
+  key_type: "p8"
+  key_id: "${APNS_KEY_ID}"
+  team_id: "${APNS_TEAM_ID}"
+  production: true
+  max_retry: 3
+  max_concurrent_pushes: 100

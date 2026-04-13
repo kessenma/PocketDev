@@ -310,6 +310,17 @@ export function updateDeviceLastSeen(id: string) {
     .run()
 }
 
+export function updateDeviceApnsToken(id: string, apnsToken: string | null) {
+  getDb()
+    .update(schema.devices)
+    .set({
+      apnsToken,
+      apnsTokenUpdatedAt: apnsToken ? new Date().toISOString() : null,
+    })
+    .where(eq(schema.devices.id, id))
+    .run()
+}
+
 export function updateDeviceName(id: string, name: string) {
   getDb()
     .update(schema.devices)
@@ -1052,4 +1063,27 @@ export function upsertEnvVar(input: {
     .from(schema.envVars)
     .where(eq(schema.envVars.projectPath, input.projectPath) && eq(schema.envVars.key, input.key))
     .get()!
+}
+
+// ─── Push log operations ─────────────────────────────────
+
+export function insertPushLog(entry: {
+  id: string
+  deviceId?: string
+  type: string
+  taskId?: string
+  title: string
+  success: boolean
+  relayStatusCode?: number
+}) {
+  getDb().insert(schema.pushLog).values(entry).run()
+}
+
+export function getPushLog(limit = 100): typeof schema.pushLog.$inferSelect[] {
+  return getDb()
+    .select()
+    .from(schema.pushLog)
+    .orderBy(sql`sentAt DESC`)
+    .limit(limit)
+    .all()
 }

@@ -13,7 +13,7 @@ import OfflineDatabaseProvider from './src/db/OfflineDatabaseProvider'
 import RootNavigator from './src/navigation/RootNavigator'
 import { navigationRef } from './src/navigation/ref'
 import { useConnectionStore } from './src/stores/connection'
-import { AppState, StyleSheet } from 'react-native'
+import { AppState, Platform, PushNotificationIOS, StyleSheet } from 'react-native'
 import { typeStyles } from './src/theme/typography'
 
 function AppInner() {
@@ -35,6 +35,34 @@ function AppInner() {
     })
     return () => subscription.remove()
   }, [connect, server])
+
+  // Push notification tap handling (iOS only)
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return
+
+    const subscription = PushNotificationIOS.addEventListener('notification', (n) => {
+      const data = n.getData() as { type?: string; taskId?: string }
+      if (data.type === 'permission' || data.type === 'task_completed') {
+        if (data.taskId && navigationRef.isReady()) {
+          navigationRef.navigate('TaskDetail' as never, { taskId: data.taskId } as never)
+        }
+      }
+      n.finish(PushNotificationIOS.FetchResult.NoData)
+    })
+
+    // Handle tap when app was fully closed
+    PushNotificationIOS.getInitialNotification().then((n) => {
+      if (!n) return
+      const data = n.getData() as { type?: string; taskId?: string }
+      if ((data.type === 'permission' || data.type === 'task_completed') && data.taskId) {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('TaskDetail' as never, { taskId: data.taskId } as never)
+        }
+      }
+    }).catch(() => {})
+
+    return () => subscription.remove()
+  }, [])
 
   return (
     <NavigationContainer

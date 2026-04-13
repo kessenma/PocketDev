@@ -8,6 +8,13 @@
       "when": 1775746953573,
       "tag": "0000_sparkling_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776120279999,
+      "tag": "0001_messy_tattoo",
+      "breakpoints": true
     }
   ]
 }

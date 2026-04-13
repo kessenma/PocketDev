@@ -19,6 +19,7 @@ import {
   fetchNetworkDebug,
   fetchGitHistoryDebug,
   fetchOfflineSnapshots,
+  fetchPushDebug,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
@@ -35,6 +36,7 @@ import {
   type NetworkDebugInfo,
   type GitHistoryDebugInfo,
   type OfflineSnapshot,
+  type PushDebugInfo,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Bug, Maximize2, RefreshCw, Smartphone, Waves, Sparkles } from 'lucide-react'
@@ -44,8 +46,9 @@ import { SetupDiagnosticsTab } from '#/components/diagnostics/SetupDiagnosticsTa
 import { LanguagesDiagnosticsTab } from '#/components/diagnostics/LanguagesDiagnosticsTab'
 import { NetworkDiagnosticsTab } from '#/components/diagnostics/NetworkDiagnosticsTab'
 import { GitHubDiagnosticsTab } from '#/components/diagnostics/GitHubDiagnosticsTab'
+import { PushDiagnosticsTab } from '#/components/diagnostics/PushDiagnosticsTab'
 
-type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot' | 'languages' | 'network'
+type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot' | 'languages' | 'network' | 'push'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -76,6 +79,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [networkInfo, setNetworkInfo] = useState<NetworkDebugInfo | null>(null)
   const [gitHistoryInfo, setGitHistoryInfo] = useState<GitHistoryDebugInfo | null>(null)
   const [offlineSnapshots, setOfflineSnapshots] = useState<OfflineSnapshot[]>([])
+  const [pushInfo, setPushInfo] = useState<PushDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -102,11 +106,12 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
       fetchNetworkDebug(),
       fetchGitHistoryDebug(),
       fetchOfflineSnapshots(),
+      fetchPushDebug(),
     ])
 
     const failures: string[] = []
 
-    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult, rustResult, goResult, tsResult, networkResult, gitHistoryResult, offlineSnapshotsResult] = results
+    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult, rustResult, goResult, tsResult, networkResult, gitHistoryResult, offlineSnapshotsResult, pushResult] = results
 
     if (authResult.status === 'fulfilled') setInfo(authResult.value)
     else failures.push(`auth: ${authResult.reason instanceof Error ? authResult.reason.message : 'failed'}`)
@@ -154,6 +159,9 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     else failures.push(`git-history: ${gitHistoryResult.reason instanceof Error ? gitHistoryResult.reason.message : 'failed'}`)
 
     if (offlineSnapshotsResult.status === 'fulfilled') setOfflineSnapshots(offlineSnapshotsResult.value)
+
+    if (pushResult.status === 'fulfilled') setPushInfo(pushResult.value)
+    else failures.push(`push: ${pushResult.reason instanceof Error ? pushResult.reason.message : 'failed'}`)
 
     setLastUpdated(new Date().toISOString())
     setError(failures.length ? `Partial refresh failure: ${failures.join(' | ')}` : null)
@@ -277,8 +285,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d] p-1">
-            {(['terminal', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'registry'] as const).map((tab) => {
-              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : 'Registry'
+            {(['terminal', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'push', 'registry'] as const).map((tab) => {
+              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : tab === 'push' ? 'Push' : 'Registry'
               return (
                 <Button
                   key={tab}
@@ -330,7 +338,9 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                         ? copilotSummary
                         : activeTab === 'github'
                           ? githubSummary
-                          : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
+                          : activeTab === 'push'
+                            ? (pushInfo ? `${pushInfo.registeredDevices} device${pushInfo.registeredDevices === 1 ? '' : 's'} · ${pushInfo.log.length} log entries` : 'No push data yet.')
+                            : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
         </Badge>
         {lastUpdated ? (
           <span>Updated {formatShortTime(lastUpdated)}</span>
@@ -527,6 +537,8 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
           </div>
         ) : activeTab === 'github' ? (
           <GitHubDiagnosticsTab githubInfo={githubInfo} projectsInfo={projectsInfo} gitHistoryInfo={gitHistoryInfo} offlineSnapshots={offlineSnapshots} />
+        ) : activeTab === 'push' ? (
+          <PushDiagnosticsTab data={pushInfo} />
         ) : (
           <div className="grid h-full gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
             <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">

@@ -38,7 +38,9 @@ import {
   type TaskStreamAdapter,
   type TaskStreamAdapterSink,
 } from './task-stream-adapters.ts'
-import { broadcast, makeMessage } from '../terminal/ws.ts'
+import { broadcast, makeMessage, isNoClientConnected } from '../terminal/ws.ts'
+import { getDevices } from '../../db/index.ts'
+import { sendPush } from '../push/relay-push.ts'
 
 type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'killed'
 
@@ -1014,6 +1016,28 @@ export class ManagedAgentProcess {
     this.questionDetails.set(question.questionId, question)
     console.log(`[managed-agent] ➡ Emitting task.question | taskId=${this.taskId} qId=${question.questionId} type=${question.type} status=${this._status} t=${Date.now()}`)
     broadcast(makeMessage('task.question', question))
+    if (isNoClientConnected()) {
+      this.pushToAllDevices({
+        title: 'Permission Required',
+        message: 'Task needs your approval to continue',
+        data: { type: 'permission', taskId: this.taskId, questionId: question.questionId },
+      })
+    }
+  }
+
+  private pushToAllDevices(opts: { title: string; message: string; data: Record<string, string> }) {
+    for (const device of getDevices()) {
+      if (device.apnsToken) {
+        void sendPush({
+          apnsToken: device.apnsToken,
+          title: opts.title,
+          message: opts.message,
+          data: opts.data,
+          deviceId: device.id,
+          taskId: opts.data.taskId,
+        })
+      }
+    }
   }
 
   private setStatus(status: TaskStatus, exitCode?: number) {
@@ -1037,6 +1061,15 @@ export class ManagedAgentProcess {
     this.provider.onFinish?.({ status, adapter: this.adapter, turnNumber: this.turnNumber }, this.taskId)
 
     broadcast(makeMessage('task.completed', { taskId: this.taskId, exitCode, status }))
+
+    if (status !== 'killed') {
+      const shortPrompt = this.prompt.slice(0, 80)
+      this.pushToAllDevices({
+        title: status === 'completed' ? 'Task Complete' : 'Task Failed',
+        message: shortPrompt,
+        data: { type: 'task_completed', taskId: this.taskId, status },
+      })
+    }
 
     // Clean up temp files after a short delay
     if (this.tempFiles.length > 0) {

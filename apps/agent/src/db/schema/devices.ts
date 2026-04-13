@@ -8,4 +8,6 @@ export const devices = sqliteTable('devices', {
   platform: text('platform'),
   createdAt: text('created_at').default(sql`(datetime('now'))`),
   lastSeenAt: text('last_seen_at').default(sql`(datetime('now'))`),
+  apnsToken: text('apns_token'),
+  apnsTokenUpdatedAt: text('apns_token_updated_at'),
 })

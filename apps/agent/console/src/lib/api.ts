@@ -1097,3 +1097,28 @@ export async function fetchOfflineSnapshots(): Promise<OfflineSnapshot[]> {
   const result = await res.json() as { snapshots: OfflineSnapshot[] }
   return result.snapshots
 }
+
+// ─── Push notifications debug ────────────────────────────
+
+export interface PushLogEntry {
+  id: string
+  deviceId: string | null
+  type: string
+  taskId: string | null
+  title: string
+  success: boolean
+  relayStatusCode: number | null
+  sentAt: string
+}
+
+export interface PushDebugInfo {
+  relayToken: string | null    // masked: first 8 chars + "..."
+  registeredDevices: number
+  log: PushLogEntry[]
+}
+
+export async function fetchPushDebug(): Promise<PushDebugInfo> {
+  const res = await get('/debug/push')
+  if (!res.ok) throw new Error('Failed to fetch push debug')
+  return res.json()
+}

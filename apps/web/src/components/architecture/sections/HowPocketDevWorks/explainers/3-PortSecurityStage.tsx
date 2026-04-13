@@ -3,74 +3,69 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
 import { architectureTokens, architectureFonts } from '../../../shared/theme'
 import { BauhausPhone } from '../shared/BauhausPhone'
+import { BauhausLaptop } from '../shared/BauhausLaptop'
 
 function clamp(v: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, v))
 }
-
 function mapP(value: number, start: number, end: number) {
   return clamp((value - start) / (end - start), 0, 1)
 }
-
 function mix(a: number, b: number, t: number) {
   return a + (b - a) * t
 }
+function easeOutQuad(t: number) {
+  return 1 - (1 - t) * (1 - t)
+}
+function easeInOut(t: number) {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
+}
+function easeOutBack(t: number) {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
+}
 
-// ── Door geometry in local coords (pre-scale) ─────────────────────────────────
-// Front door = port 4388 (always open wake server)
-const FD = { x: -90, y: -118, w: 180, h: 206 }
-// Back door = port 4387 (shape-locked, blocks main agent port)
-const BD = { x: -48, y: -76, w: 96, h: 106 }
+// ── Door geometry ─────────────────────────────────────────────────────────────
+const DOOR_W = 120
+const DOOR_H = 210
 
-// Tunnel / depth lines connecting front door inner edges to back door edges
-const TUNNEL_LINES: [number, number, number, number][] = [
-  [FD.x,        FD.y,        BD.x,        BD.y       ],
-  [FD.x + FD.w, FD.y,        BD.x + BD.w, BD.y       ],
-  [FD.x + FD.w, FD.y + FD.h, BD.x + BD.w, BD.y + FD.h],
-  [FD.x,        FD.y + FD.h, BD.x,        BD.y + FD.h],
+// Shape slots centered on the door (animation-group coords)
+const SLOT_SIZE = 15
+const SLOT_DEFS = [
+  { kind: 'circle'   as const, x: -32, y: 8,  color: palette.bauhaus.blue   },
+  { kind: 'triangle' as const, x:   0, y: 8,  color: palette.bauhaus.yellow },
+  { kind: 'square'   as const, x:  32, y: 8,  color: palette.bauhaus.red    },
 ]
 
-// Shape slots — represent the Ed25519 "key" combination
-const SLOT_Y = BD.y + BD.h * 0.54 // slot row y-center in local coords
-const SLOT_SIZE = 14
-const SHAPES = [
-  { kind: 'circle'   as const, color: palette.bauhaus.blue,   dx: -26 },
-  { kind: 'triangle' as const, color: palette.bauhaus.yellow,  dx:   0 },
-  { kind: 'square'   as const, color: palette.bauhaus.red,     dx:  26 },
+// Per-shape orbit config — each shape spirals from the phone toward its slot
+const SHAPE_ORBIT = [
+  { pStart: 0.18, pEnd: 0.50, revs: 1.2, dir:  1, initAngle: Math.PI * 0.85 },
+  { pStart: 0.27, pEnd: 0.58, revs: 0.9, dir: -1, initAngle: Math.PI * 1.10 },
+  { pStart: 0.36, pEnd: 0.66, revs: 1.5, dir:  1, initAngle: Math.PI * 1.35 },
 ]
 
-function ShapeOutline({ kind, size }: { kind: typeof SHAPES[number]['kind']; size: number }) {
+// Phone-screen offsets for each shape (BauhausPhone local coords)
+const PHONE_OFFSETS = [
+  { dx: -12, dy: 2 },  // circle
+  { dx:   0, dy: 0 },  // triangle
+  { dx:  12, dy: 0 },  // square
+]
+
+function ShapeOutline({ kind, size }: { kind: typeof SLOT_DEFS[number]['kind']; size: number }) {
   const s = size
   if (kind === 'circle') {
-    return (
-      <circle r={s / 2} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-    )
+    return <circle r={s / 2} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1.5" />
   }
   if (kind === 'triangle') {
     const pts = `0,${-s / 2} ${s * 0.5},${s / 2} ${-s * 0.5},${s / 2}`
-    return (
-      <polygon points={pts} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-    )
+    return <polygon points={pts} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1.5" />
   }
   const h = s / 2
-  return (
-    <rect x={-h} y={-h} width={s} height={s} rx={2} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-  )
+  return <rect x={-h} y={-h} width={s} height={s} rx={2} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1.5" />
 }
 
-function ShapeFill({ kind, color, size }: { kind: typeof SHAPES[number]['kind']; color: string; size: number }) {
-  const s = size
-  if (kind === 'circle') return <circle r={s / 2} fill={color} />
-  if (kind === 'triangle') {
-    const pts = `0,${-s / 2} ${s * 0.5},${s / 2} ${-s * 0.5},${s / 2}`
-    return <polygon points={pts} fill={color} />
-  }
-  const h = s / 2
-  return <rect x={-h} y={-h} width={s} height={s} rx={2} fill={color} />
-}
-
-// Same helper used for flying shapes in transit
-function FlyingShape({ kind, color, size }: { kind: typeof SHAPES[number]['kind']; color: string; size: number }) {
+function ShapeFilled({ kind, color, size }: { kind: typeof SLOT_DEFS[number]['kind']; color: string; size: number }) {
   const s = size
   if (kind === 'circle') return <circle r={s / 2} fill={color} />
   if (kind === 'triangle') {
@@ -111,33 +106,30 @@ export function PortSecurityStage({
   const animCenterY = vpSize.h * (isDesktopLayout ? 0.42 : 0.40)
 
   // ── Animation timeline ────────────────────────────────────────────────────
-  const circleGrowP = mapP(p, 0.00, 0.18)  // circle grows from phone screen token to full
-  const corridorP   = mapP(p, 0.06, 0.26)  // door frames + tunnel lines draw in
-  const labelsP     = mapP(p, 0.14, 0.32)  // text labels fade in
+  const doorFadeP    = mapP(p, 0.00, 0.14)  // vault door fades in
+  const slotsRevealP = mapP(p, 0.08, 0.22)  // slot outlines pulse in
+  const labelsP      = mapP(p, 0.10, 0.26)  // title + subtitle
 
-  // Three shapes fly to their slots sequentially
-  const flyBase = mapP(p, 0.42, 0.70)
-  const fly0    = mapP(flyBase, 0.00, 0.46) // blue circle
-  const fly1    = mapP(flyBase, 0.27, 0.73) // yellow triangle
-  const fly2    = mapP(flyBase, 0.54, 1.00) // red square
-  const fillPs  = [fly0, fly1, fly2]
-  const allFilled = fly2 >= 1
+  // Last shape locks at p=0.66
+  const allLockedP   = mapP(p, 0.66, 0.69)  // glow flash on unlock
+  const doorOpenP    = mapP(p, 0.68, 0.74)  // door panels slide apart
+  const consoleRevP  = mapP(p, 0.69, 0.75)  // laptop console fades in behind door
 
-  const doorOpenP = mapP(p, 0.70, 0.84)  // back door panel disappears
-  const connP     = mapP(p, 0.78, 0.94)  // connection line + circle moves to door
+  // Big blue circle: grows from phone screen token, then moves right for overlay handoff
+  const circleGrowP   = mapP(p, 0.00, 0.18)
+  const circleMoveP   = mapP(p, 0.74, 0.78)
 
-  // ── Phone layout ──────────────────────────────────────────────────────────
+  // ── Layout ───────────────────────────────────────────────────────────────
   const phoneCx    = isDesktopLayout ? -152 : -112
   const phoneCy    = isDesktopLayout ?    0 :   22
-  const phoneW     = 44
-  const phoneScale = phoneW / 60
-  // Shape launch origin = phone screen center
-  const shotX = phoneCx
-  const shotY = phoneCy - 6
+  const phoneScale = 44 / 60
 
-  // ── Text layout ───────────────────────────────────────────────────────────
-  const titleX  = vpSize.w / 2
-  const titleY  = vpSize.h * (isDesktopLayout ? 0.12 : 0.08)
+  // Phone shapes fade out as they leave the phone screen
+  const phoneShapesFadeOut = mapP(p, SHAPE_ORBIT[0].pStart, SHAPE_ORBIT[0].pStart + 0.10)
+
+  // Text — title left of door (desktop) / right (mobile), subtitle bottom-right
+  const titleX  = isDesktopLayout ? vpSize.w * 0.24 : vpSize.w * 0.70
+  const titleY  = vpSize.h * (isDesktopLayout ? 0.14 : 0.10)
   const titleSz = isDesktopLayout
     ? Math.min(vpSize.w * 0.04, 56)
     : Math.min(vpSize.w * 0.068, 36)
@@ -145,11 +137,12 @@ export function PortSecurityStage({
     ? Math.min(vpSize.w * 0.015, 20)
     : Math.min(vpSize.w * 0.04, 18)
   const subLH = Math.round(subSz * 1.55)
-  const subY  = vpSize.h * (isDesktopLayout ? 0.88 : 0.80)
-  const subX  = isDesktopLayout ? vpSize.w * 0.06 : vpSize.w * 0.07
+  const subY  = vpSize.h * (isDesktopLayout ? 0.82 : 0.78)
+  const subX  = isDesktopLayout ? vpSize.w * 0.58 : vpSize.w * 0.50
 
-  // Brief blue glow on back door at unlock moment
-  const unlockGlow = allFilled ? Math.max(0, 0.5 - doorOpenP) * 0.75 : 0
+  // Door panel slide amount when opening
+  const doorSlide = easeInOut(doorOpenP) * (DOOR_W / 2 + 35)
+  const doorOpacity = doorFadeP * (1 - easeOutQuad(doorOpenP))
 
   return (
     <svg
@@ -164,8 +157,7 @@ export function PortSecurityStage({
 
       {/* Title */}
       <text
-        x={titleX}
-        y={titleY}
+        x={titleX} y={titleY}
         fill={architectureTokens.colors.text}
         fontFamily={architectureFonts.body}
         fontSize={titleSz}
@@ -174,239 +166,205 @@ export function PortSecurityStage({
         textAnchor="middle"
         opacity={labelsP}
       >
-        Invisible by default
+        Lock the port
       </text>
 
       {/* Subtitle */}
-      <text
-        x={subX}
-        y={subY}
-        fill={architectureTokens.colors.textSecondary}
-        fontFamily={architectureFonts.body}
-        fontSize={subSz}
-        opacity={labelsP}
-      >
+      <text x={subX} y={subY} fill={architectureTokens.colors.textSecondary} fontFamily={architectureFonts.body} fontSize={subSz} opacity={labelsP}>
         {isDesktopLayout ? (
           <>
-            <tspan x={subX} dy="0">
-              Port 4387 can be blocked at the iptables level — invisible to scanners.
-            </tspan>
-            <tspan x={subX} dy={subLH}>
-              Port 4388 accepts only your signed wake requests, then reopens 4387 for your session.
-            </tspan>
+            <tspan x={subX} dy="0">Optional. Leave port 4387 open, or flip the switch in</tspan>
+            <tspan x={subX} dy={subLH}>mobile app settings to hide it at the firewall level —</tspan>
+            <tspan x={subX} dy={subLH}>invisible to scanners. Signed wake requests let you back in.</tspan>
           </>
         ) : (
           <>
-            <tspan x={subX} dy="0">Port 4387 can be blocked at the</tspan>
-            <tspan x={subX} dy={subLH}>iptables level — invisible to scanners.</tspan>
-            <tspan x={subX} dy={subLH}>Port 4388 accepts only signed</tspan>
-            <tspan x={subX} dy={subLH}>wake requests to reopen it.</tspan>
+            <tspan x={subX} dy="0">Optional — leave port 4387</tspan>
+            <tspan x={subX} dy={subLH}>open, or enable port locking</tspan>
+            <tspan x={subX} dy={subLH}>in mobile app settings to</tspan>
+            <tspan x={subX} dy={subLH}>hide it from scanners.</tspan>
           </>
         )}
       </text>
 
-      {/* ── Main animation group (all local coords, scaled to viewport) ─── */}
+      {/* ── Main animation group ─────────────────────────────────────────── */}
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>
 
-        {/* Perspective / tunnel lines showing depth between doors */}
-        {TUNNEL_LINES.map(([x1, y1, x2, y2], i) => (
-          <line
-            key={`tl-${i}`}
-            x1={x1} y1={y1} x2={x2} y2={y2}
-            stroke={architectureTokens.colors.textSecondary}
-            strokeWidth="0.7"
-            opacity={corridorP * 0.2}
-          />
-        ))}
+        {/* ── Big blue circle — behind phone, grows, then moves right ─── */}
+        {!hideBlueCircle && (() => {
+          const startCx = phoneCx + (-12) * phoneScale
+          const startCy = phoneCy + 2 * phoneScale
+          const startR  = 6 * phoneScale
+          const growCx  = mix(startCx, phoneCx, circleGrowP)
+          const growCy  = mix(startCy, phoneCy, circleGrowP)
+          const growR   = mix(startR, 26, circleGrowP)
+          const cx = mix(growCx, 100, circleMoveP)
+          const cy = mix(growCy, 0,   circleMoveP)
+          return <circle cx={cx} cy={cy} r={growR} fill={palette.bauhaus.blue} opacity={0.96} />
+        })()}
 
-        {/* ── Front door — PORT 4388 (always open) ────────────────────── */}
-
-        {/* Door frame outline, draws in with pathLength */}
-        <motion.rect
-          x={FD.x} y={FD.y} width={FD.w} height={FD.h}
-          rx={3}
-          fill="none"
-          stroke={palette.bauhaus.black}
-          strokeWidth="5"
-          pathLength={1}
-          animate={{ pathLength: corridorP }}
-          transition={{ duration: 0.3, ease: 'linear' }}
-        />
-
-        {/* Door leaf edge — thin sliver on right showing door is open */}
-        <rect
-          x={FD.x + FD.w - 5}
-          y={FD.y + 2}
-          width={5}
-          height={FD.h - 4}
-          rx={2}
-          fill={palette.bauhaus.black}
-          opacity={corridorP * 0.6}
-        />
-
-        {/* Hinge marks */}
-        {[0.22, 0.78].map((frac, i) => (
-          <circle
-            key={`hinge-${i}`}
-            cx={FD.x + FD.w - 2.5}
-            cy={FD.y + FD.h * frac}
-            r={2}
-            fill={architectureTokens.colors.border}
-            opacity={corridorP * 0.65}
-          />
-        ))}
-
-        {/* PORT 4388 label */}
-        <text
-          x={FD.x + FD.w / 2}
-          y={FD.y - 10}
-          textAnchor="middle"
-          fontFamily={architectureFonts.mono}
-          fontSize="10"
-          fontWeight="600"
-          letterSpacing="0.06em"
-          fill={architectureTokens.colors.textSecondary}
-          opacity={labelsP * 0.75}
-        >
-          PORT 4388
-        </text>
-
-        {/* "always open" subtitle under front door */}
-        <text
-          x={FD.x + FD.w / 2}
-          y={FD.y + FD.h + 16}
-          textAnchor="middle"
-          fontFamily={architectureFonts.body}
-          fontSize="8"
-          fill={architectureTokens.colors.textSecondary}
-          opacity={labelsP * 0.45}
-        >
-          wake server · always open
-        </text>
-
-        {/* ── Back door — PORT 4387 (shape-locked) ────────────────────── */}
-
-        {/* Dark closed fill — fades out as door unlocks */}
-        <motion.rect
-          x={BD.x} y={BD.y} width={BD.w} height={BD.h}
-          rx={3}
-          fill={palette.bauhaus.black}
-          animate={{ opacity: corridorP * 0.6 * (1 - doorOpenP) }}
-        />
-
-        {/* Blue flash at moment of unlock */}
-        {unlockGlow > 0 && (
-          <rect
-            x={BD.x} y={BD.y} width={BD.w} height={BD.h}
-            rx={3}
-            fill={palette.bauhaus.blue}
-            opacity={unlockGlow}
-          />
+        {/* ── Console laptop — rendered BEHIND door panels ─────────────── */}
+        {consoleRevP > 0 && (
+          <g opacity={easeOutQuad(consoleRevP)}>
+            <BauhausLaptop cx={isDesktopLayout ? 0 : 0} cy={isDesktopLayout ? -18 : -10} scale={isDesktopLayout ? 0.50 : 0.43}>
+              {/* Traffic lights */}
+              <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
+              <circle cx={-63} cy={-112} r={3} fill={palette.bauhaus.yellow} />
+              <circle cx={-52} cy={-112} r={3} fill={palette.bauhaus.blue} />
+              {/* Header */}
+              <rect x={-78} y={-112} width={156} height={18} rx={4} fill="rgba(255,255,255,0.06)" />
+              <rect x={-72} y={-109} width={12} height={12} rx={3} fill={palette.bauhaus.yellow} />
+              <rect x={-56} y={-108} width={40} height={3} rx={1.5} fill="rgba(255,255,255,0.5)" />
+              <rect x={-56} y={-103} width={24} height={2.5} rx={1} fill="rgba(255,255,255,0.25)" />
+              <rect x={20}  y={-108} width={18} height={6} rx={3} fill={palette.bauhaus.yellow} opacity={0.7} />
+              <rect x={42}  y={-108} width={14} height={6} rx={3} fill={palette.bauhaus.blue} opacity={0.5} />
+              {/* Left card — Pairing */}
+              <rect x={-78} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+              <text x={-70} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Pairing</text>
+              {/* Right card — Devices */}
+              <rect x={2} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+              <text x={10} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Devices</text>
+              {[0, 1, 2].map((i) => (
+                <g key={`dev-${i}`}>
+                  <rect x={10} y={-70 + i * 16} width={58} height={12} rx={4} fill="rgba(255,255,255,0.04)" />
+                  <circle cx={18} cy={-64 + i * 16} r={3} fill={i === 0 ? palette.bauhaus.blue : 'rgba(255,255,255,0.15)'} />
+                  <rect x={24} y={-66 + i * 16} width={i === 0 ? 30 : 20 + i * 4} height={3} rx={1.5} fill={i === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)'} />
+                </g>
+              ))}
+              <text x={0} y={-17} textAnchor="middle" fontFamily={architectureFonts.body} fontSize="5" letterSpacing="0.16em" fill="rgba(255,255,255,0.5)">SERVER CONTROL BOARD</text>
+            </BauhausLaptop>
+          </g>
         )}
 
-        {/* Door frame outline */}
-        <motion.rect
-          x={BD.x} y={BD.y} width={BD.w} height={BD.h}
-          rx={3}
-          fill="none"
-          stroke={palette.bauhaus.black}
-          strokeWidth="3.5"
-          pathLength={1}
-          animate={{ pathLength: corridorP }}
-          transition={{ duration: 0.28, ease: 'linear' }}
-        />
+        {/* ── Vault door — left panel (slides left on open) ──────────────── */}
+        {doorFadeP > 0 && (
+          <g transform={`translate(${-doorSlide} 0)`} opacity={doorOpacity}>
+            <rect x={-DOOR_W / 2} y={-DOOR_H / 2} width={DOOR_W / 2} height={DOOR_H}
+              fill={palette.bauhaus.black} />
+            {/* Frame edge */}
+            <rect x={-DOOR_W / 2} y={-DOOR_H / 2} width={DOOR_W / 2} height={DOOR_H}
+              fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
+            {/* Horizontal accent lines */}
+            {[-50, 0, 50].map((dy) => (
+              <line key={dy} x1={-DOOR_W / 2 + 6} y1={dy} x2={-2} y2={dy}
+                stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+            ))}
+            {/* Hinge marks */}
+            {[0.25, 0.75].map((frac, i) => (
+              <circle key={i} cx={-DOOR_W / 2 + 5} cy={-DOOR_H / 2 + DOOR_H * frac} r={3.5}
+                fill="rgba(255,255,255,0.12)" />
+            ))}
+          </g>
+        )}
 
-        {/* PORT 4387 label */}
+        {/* ── Vault door — right panel (slides right on open) ─────────────── */}
+        {doorFadeP > 0 && (
+          <g transform={`translate(${doorSlide} 0)`} opacity={doorOpacity}>
+            <rect x={0} y={-DOOR_H / 2} width={DOOR_W / 2} height={DOOR_H}
+              fill={palette.bauhaus.black} />
+            <rect x={0} y={-DOOR_H / 2} width={DOOR_W / 2} height={DOOR_H}
+              fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
+            {[-50, 0, 50].map((dy) => (
+              <line key={dy} x1={2} y1={dy} x2={DOOR_W / 2 - 6} y2={dy}
+                stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+            ))}
+            {[0.25, 0.75].map((frac, i) => (
+              <circle key={i} cx={DOOR_W / 2 - 5} cy={-DOOR_H / 2 + DOOR_H * frac} r={3.5}
+                fill="rgba(255,255,255,0.12)" />
+            ))}
+          </g>
+        )}
+
+        {/* ── Center seam + PORT label ─────────────────────────────────────── */}
+        {doorFadeP > 0 && doorOpenP < 0.5 && (
+          <line x1={0} y1={-DOOR_H / 2} x2={0} y2={DOOR_H / 2}
+            stroke="rgba(255,255,255,0.07)" strokeWidth="1"
+            opacity={doorOpacity} />
+        )}
         <text
-          x={BD.x + BD.w / 2}
-          y={BD.y - 8}
+          x={0} y={-DOOR_H / 2 - 10}
           textAnchor="middle"
           fontFamily={architectureFonts.mono}
-          fontSize="8"
+          fontSize="9"
           fontWeight="600"
-          letterSpacing="0.06em"
+          letterSpacing="0.07em"
           fill={architectureTokens.colors.textSecondary}
-          opacity={labelsP * 0.75}
+          opacity={labelsP * 0.8 * (1 - doorOpenP)}
         >
           PORT 4387
         </text>
 
-        {/* ── Shape lock slots ─────────────────────────────────────────── */}
-        {SHAPES.map((shape, i) => {
-          const filled = fillPs[i] >= 1
+        {/* ── Shape lock slots (float above door panels) ───────────────────── */}
+        {SLOT_DEFS.map((slot, i) => {
+          const isLocked = SHAPE_ORBIT[i].pEnd <= p + 0.01
           return (
-            <g
-              key={`slot-${i}`}
-              transform={`translate(${shape.dx} ${SLOT_Y})`}
-              opacity={corridorP}
-            >
-              {/* Empty slot outline */}
-              <ShapeOutline kind={shape.kind} size={SLOT_SIZE} />
-              {/* Filled color when shape has arrived */}
-              {filled && <ShapeFill kind={shape.kind} color={shape.color} size={SLOT_SIZE} />}
-              {/* Soft glow halo */}
-              {filled && (
-                <circle r={SLOT_SIZE * 0.85} fill={shape.color} opacity={0.18} />
+            <g key={`slot-${i}`} transform={`translate(${slot.x} ${slot.y})`}
+              opacity={slotsRevealP * (1 - easeOutQuad(doorOpenP))}>
+              <ShapeOutline kind={slot.kind} size={SLOT_SIZE} />
+              {isLocked && (
+                <>
+                  <ShapeFilled kind={slot.kind} color={slot.color} size={SLOT_SIZE} />
+                  <circle r={SLOT_SIZE * 0.85} fill={slot.color}
+                    opacity={0.15 + allLockedP * 0.20} />
+                </>
               )}
             </g>
           )
         })}
 
-        {/* ── Flying shapes — arc from phone screen to each slot ───────── */}
-        {SHAPES.map((shape, i) => {
-          const t = fillPs[i]
-          if (t <= 0 || t >= 1) return null
+        {/* ── Unlock glow flash ─────────────────────────────────────────────── */}
+        {allLockedP > 0 && allLockedP < 1 && (
+          <rect x={-DOOR_W / 2} y={-DOOR_H / 2} width={DOOR_W} height={DOOR_H}
+            fill={palette.bauhaus.blue} opacity={allLockedP * 0.28} />
+        )}
 
-          const endX = shape.dx
-          const endY = SLOT_Y
-          // Quadratic bezier control point — arcs up and through the front door opening
-          const ctrlX = mix(shotX, endX, 0.5)
-          const ctrlY = Math.min(shotY, endY) - 30
+        {/* ── Flying shapes — orbit from phone to slot ─────────────────────── */}
+        {SHAPE_ORBIT.map((cfg, i) => {
+          const slot = SLOT_DEFS[i]
+          const phoneOff = PHONE_OFFSETS[i]
+          const totalP = mapP(p, cfg.pStart, cfg.pEnd)
+          if (totalP <= 0 || totalP >= 1) return null
 
-          const qx = (1 - t) * (1 - t) * shotX + 2 * (1 - t) * t * ctrlX + t * t * endX
-          const qy = (1 - t) * (1 - t) * shotY + 2 * (1 - t) * t * ctrlY + t * t * endY
-          const fadeOut = t > 0.86 ? mix(1, 0, (t - 0.86) / 0.14) : 1
+          // Phone-space start position (animation group coords)
+          const phoneX = phoneCx + phoneOff.dx * phoneScale
+          const phoneY = phoneCy + phoneOff.dy * phoneScale
+
+          // Spiral orbit: large radius that collapses toward slot
+          const orbitPhaseP = mapP(totalP, 0, 0.80)
+          const lockP       = mapP(totalP, 0.72, 1.0)
+          const orbitRadius = mix(72, 10, orbitPhaseP)
+          const angle = cfg.initAngle + cfg.dir * cfg.revs * Math.PI * 2 * orbitPhaseP
+
+          const orbitX = slot.x + Math.cos(angle) * orbitRadius
+          const orbitY = slot.y + Math.sin(angle) * orbitRadius
+
+          // Blend from phone into orbit path
+          const joinP = mapP(totalP, 0, 0.28)
+          const inOrbitX = mix(phoneX, orbitX, easeOutQuad(joinP))
+          const inOrbitY = mix(phoneY, orbitY, easeOutQuad(joinP))
+
+          // Snap to slot
+          const fx = mix(inOrbitX, slot.x, easeOutBack(lockP))
+          const fy = mix(inOrbitY, slot.y, easeOutBack(lockP))
+
+          const flySize = mix(9, SLOT_SIZE, easeOutQuad(totalP))
 
           return (
-            <g key={`fly-${i}`} transform={`translate(${qx} ${qy})`} opacity={fadeOut}>
-              <FlyingShape kind={shape.kind} color={shape.color} size={10} />
+            <g key={`fly-${i}`} transform={`translate(${fx} ${fy})`}>
+              <ShapeFilled kind={slot.kind} color={slot.color} size={flySize} />
             </g>
           )
         })}
 
-        {/* ── Blue circle — grows from phone screen token, then moves right of doors ── */}
-        {!hideBlueCircle && (() => {
-          // Phase 1: grow from BauhausPhone-local token position to full size behind phone
-          const circleStartCx = phoneCx + (-12) * phoneScale  // ≈ -160.8
-          const circleStartCy = phoneCy + 2 * phoneScale       // ≈ 1.47
-          const circleStartR  = 6 * phoneScale                  // ≈ 4.4
-          const fullCx = phoneCx   // centered on phone body, mostly hidden behind it
-          const fullCy = phoneCy
-          const growCx = mix(circleStartCx, fullCx, circleGrowP)
-          const growCy = mix(circleStartCy, fullCy, circleGrowP)
-          const growR  = mix(circleStartR, 26, circleGrowP)
-          // Phase 2: move right of doors after unlock
-          const circleEndX = BD.x + BD.w + 30  // 78
-          const circleEndY = BD.y + BD.h / 2   // -23
-          const cx = mix(growCx, circleEndX, connP)
-          const cy = mix(growCy, circleEndY, connP)
-          const r  = mix(growR, 26, connP)
-          return (
-            <circle cx={cx} cy={cy} r={r} fill={palette.bauhaus.blue} opacity={0.96} />
-          )
-        })()}
-
-        {/* ── Phone — renders above circle so circle is behind it ── */}
+        {/* ── Phone — renders above everything on left ─────────────────────── */}
         <g opacity={hidePhone ? 0 : 1}>
           <BauhausPhone cx={phoneCx} cy={phoneCy} scale={phoneScale}>
-            {!hideBlueCircle && (() => {
-              const preFadeIn = mapP(p, 0.05, 0.22)
-              const preFadeOut = clamp(fly0 * 3, 0, 1)
-              const opacity = preFadeIn * (1 - preFadeOut)
-              if (opacity <= 0) return null
+            {(() => {
+              const preFadeIn  = mapP(p, 0.05, 0.20)
+              const opacity = preFadeIn * (1 - phoneShapesFadeOut)
+              if (opacity <= 0) return <></>
               return (
                 <g opacity={opacity}>
-                  <rect x={-22} y={-41} width={44} height={86} rx={6} fill="white" opacity={0.95} />
                   <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
                   <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
                   <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
@@ -416,24 +374,24 @@ export function PortSecurityStage({
           </BauhausPhone>
         </g>
 
-        {/* ── Dashed connection line after unlock ──────────────────────── */}
-        {connP > 0 && (
+        {/* ── Dashed signal line: phone → door center (shows after door opens) ── */}
+        {consoleRevP > 0 && (
           <motion.line
-            x1={phoneCx + phoneW / 2}
+            x1={phoneCx + 22 * phoneScale}
             y1={phoneCy}
-            x2={BD.x + BD.w + 22}
-            y2={BD.y + BD.h / 2}
+            x2={-DOOR_W / 2 - 4}
+            y2={0}
             stroke={palette.bauhaus.blue}
             strokeWidth="2"
             strokeLinecap="round"
-            strokeDasharray="6 4"
+            strokeDasharray="5 4"
             animate={{
-              opacity: connP,
-              strokeDashoffset: [0, -20],
+              opacity: easeOutQuad(consoleRevP) * (1 - circleMoveP),
+              strokeDashoffset: [0, -18],
             }}
             transition={{
               opacity: { duration: 0.2 },
-              strokeDashoffset: { duration: 1.2, repeat: Infinity, ease: 'linear' },
+              strokeDashoffset: { duration: 1.0, repeat: Infinity, ease: 'linear' },
             }}
           />
         )}

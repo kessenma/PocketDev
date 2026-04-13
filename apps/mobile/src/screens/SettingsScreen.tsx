@@ -16,6 +16,7 @@ import BauhausButton from '../components/shared/BauhausButton'
 import { BauhausPanel } from '../components/shared/BauhausPanel'
 import BauhausBadge from '../components/shared/BauhausBadge'
 import OnDeviceAISection from '../components/settings/OnDeviceAISection'
+import PushNotificationsSection from '../components/settings/PushNotificationsSection'
 import { typeStyles } from '../theme/typography'
 
 type Props = {
@@ -159,6 +160,7 @@ export default function SettingsScreen({ navigation }: Props) {
           <ServerWorkspace />
         </BauhausPanel>
 
+        <PushNotificationsSection />
         <OnDeviceAISection />
 
         <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>

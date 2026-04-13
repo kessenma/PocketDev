@@ -64,6 +64,13 @@
       "when": 1775882114599,
       "tag": "0008_confused_phalanx",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1776120399881,
+      "tag": "0009_graceful_hex",
+      "breakpoints": true
     }
   ]
 }

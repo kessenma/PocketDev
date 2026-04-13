@@ -33,6 +33,8 @@ import {
   updateAdminAccountStatus,
   updateAdminAccountRole,
   getProjects,
+  getConfig,
+  getPushLog,
   type AdminAccountRow,
 } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/cli-setup/prerequisites.ts'
@@ -1247,6 +1249,19 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     deleteEnvVarById(params.id)
     set.status = 204
     return null
+  })
+  .get('/debug/push', ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+
+    const rawToken = getConfig('push_relay_token')
+    const relayToken = rawToken ? `${rawToken.slice(0, 8)}...` : null
+
+    const devices = getDevices()
+    const registeredDevices = devices.filter((d) => d.apnsToken).length
+
+    const log = getPushLog(100)
+
+    return { relayToken, registeredDevices, log }
   })
 
 // ─── Static file serving for console SPA ────────────────

@@ -127,6 +127,38 @@ export async function unpairFromServer(ip: string, port: number): Promise<void> 
   }
 }
 
+export async function registerPushToken(
+  ip: string,
+  port: number,
+  deviceId: string,
+  pushToken: string,
+  environment: 'development' | 'production',
+): Promise<void> {
+  await fetch(apiUrl(ip, port, `/devices/${deviceId}/push-token`), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ pushToken, environment }),
+  })
+}
+
+export async function deregisterPushToken(
+  ip: string,
+  port: number,
+  deviceId: string,
+): Promise<void> {
+  try {
+    await fetch(apiUrl(ip, port, `/devices/${deviceId}/push-token`), {
+      method: 'DELETE',
+      headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+    })
+  } catch {
+    // Best-effort
+  }
+}
+
 export function buildWsUrl(ip: string, port: number): string {
   const protocol = _useSecure ? 'wss' : 'ws'
   return `${protocol}://${ip}:${port}/PocketDev/ws`

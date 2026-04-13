@@ -26,7 +26,18 @@ const KEYS = {
   ONDEVICE_AI_DOWNLOADED_AT: 'ondeviceai.downloadedAt',
   ONDEVICE_AI_INDEX_CACHE_PREFIX: 'ondeviceai.indexCache',
   LEGACY_PREREQUISITES_REPORT: 'setup.prerequisitesReport',
+  PUSH_NOTIFICATIONS_ENABLED: 'push.notificationsEnabled',
 } as const
+
+// --- Push notifications ---
+
+export function getPushNotificationsEnabled(): boolean {
+  return getStorage().getBoolean(KEYS.PUSH_NOTIFICATIONS_ENABLED) ?? false
+}
+
+export function setPushNotificationsEnabled(enabled: boolean) {
+  getStorage().set(KEYS.PUSH_NOTIFICATIONS_ENABLED, enabled)
+}
 
 // --- Keypair ---
 

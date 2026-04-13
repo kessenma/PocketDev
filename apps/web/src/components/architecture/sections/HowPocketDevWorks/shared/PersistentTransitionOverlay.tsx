@@ -12,6 +12,7 @@
  *   6  remote-ai
  *   7  task-flow
  *   8  mobile-ai-task-call
+ *   9  push-notifications
  *
  * - Slide 0→1: Laptop + blue circle bridge ConsoleSetup → Connect.
  * - Slide 1→2: Phone + blue circle bridge Connect → PortSecurity.
@@ -185,15 +186,14 @@ function portSecurityPhoneStartPose(vpW: number, vpH: number, isDesktop: boolean
 // ---------------------------------------------------------------------------
 
 /**
- * Circle at end of PortSecurity — to the right of the doors after unlock.
- * Matches PortSecurityStage's circle position at progress=1 (holdEnd).
- * Local coords: (BD.x + BD.w + 30, BD.y + BD.h / 2) = (78, -23).
+ * Circle at end of PortSecurity — glides to local (100, 0), right of center,
+ * so the overlay carries it left into the Setup funnel matching the panel slide direction.
  */
 function portSecurityCircleEndPose(vpW: number, vpH: number, isDesktop: boolean): CirclePose {
   const animScale = Math.min(vpW, vpH) / 320
   return {
-    cx: vpW / 2 + 78 * animScale,
-    cy: vpH * (isDesktop ? 0.42 : 0.40) + (-23) * animScale,
+    cx: vpW / 2 + 100 * animScale,
+    cy: vpH * (isDesktop ? 0.42 : 0.40),
     r: 26 * animScale,
   }
 }
