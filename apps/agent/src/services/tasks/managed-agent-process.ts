@@ -765,7 +765,10 @@ export class ManagedAgentProcess {
           this.pendingTuiQuestionId = action.question.questionId
           this.broadcastOutput(`[system] Waiting for user approval: ${action.question.prompt}`)
           this.registerQuestion(action.question, (answer) => {
-            this.pendingTuiQuestionId = null
+            // Do NOT clear pendingTuiQuestionId here. The pane still shows the menu
+            // while Claude processes our answer. Clearing early causes another question
+            // to be emitted on the next poll cycle. The 'continue' case in pollPane
+            // clears it once the menu actually disappears from the pane.
             action.onAnswer(answer)
           })
         }
