@@ -156,6 +156,8 @@ function FilterChip({
 export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, standalone = false }: Props) {
   const [standaloneInfo, setStandaloneInfo] = useState<TasksDebugInfo | null>(null)
   const [standaloneLoading, setStandaloneLoading] = useState(false)
+  const [killingTaskId, setKillingTaskId] = useState<string | null>(null)
+  const [killError, setKillError] = useState<string | null>(null)
   const hasFetchedRef = useRef(false)
 
   const refresh = useCallback(async () => {
@@ -507,20 +509,32 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                     <p className="mt-2 text-sm font-medium text-[#f4f0e8]/92">{selectedTask.prompt}</p>
                     <p className="mt-2 font-mono text-[11px] text-[#f4f0e8]/40">{selectedTask.id}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col items-end gap-1">
                     {selectedTask.status === 'running' && (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/20"
+                        disabled={killingTaskId === selectedTask.id}
+                        className="h-7 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
                         onClick={async () => {
-                          await killTaskFromConsole(selectedTask.id)
-                          handleRefresh?.()
+                          setKillingTaskId(selectedTask.id)
+                          setKillError(null)
+                          try {
+                            await killTaskFromConsole(selectedTask.id)
+                            handleRefresh?.()
+                          } catch {
+                            setKillError('Kill failed')
+                          } finally {
+                            setKillingTaskId(null)
+                          }
                         }}
                       >
                         <Square className="mr-1 h-3 w-3" />
-                        Kill
+                        {killingTaskId === selectedTask.id ? 'Killing…' : 'Kill'}
                       </Button>
+                    )}
+                    {killError && (
+                      <p className="text-[10px] text-red-400">{killError}</p>
                     )}
                     <CopyButton
                       value={buildTaskDebugString(selectedTask, tasksInfo)}
