@@ -10,6 +10,7 @@ import { useSetupStore } from './setup'
 import { usePlanStore } from './plan'
 import { useNewTaskDraftStore } from './new-task-draft'
 import { useScriptsStore } from './scripts'
+import { navigationRef } from '../navigation/ref'
 
 export interface ConnectionEvent {
   timestamp: number
@@ -224,6 +225,9 @@ function handleWsMessage(message: WsMessage) {
       break
     case 'plan.proposed':
       usePlanStore.getState().handlePlanProposed(message.payload as any)
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('Plan')
+      }
       break
     case 'plan.agent_message':
       usePlanStore.getState().handleAgentMessage(message.payload as any)

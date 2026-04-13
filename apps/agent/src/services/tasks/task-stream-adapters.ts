@@ -25,6 +25,8 @@ export interface TaskStreamAdapterSink {
   emitPermissionRequest: (denials: PermissionDenial[]) => void
   updateSessionId: (sessionId: string) => void
   recordCollectedToolUse: (toolUse: CollectedToolUse) => void
+  /** Called when agent emits `type: 'result'` — used to kill the session in interactive mode. */
+  signalComplete?: () => void
 }
 
 export interface TaskStreamAdapter {
@@ -197,6 +199,7 @@ class ClaudeTaskStreamAdapter extends BaseTaskStreamAdapter {
         : 'complete'
       this.sink.emitOutput(`[done] Task finished (${stopReason})`)
       this.sink.emitActivity({ type: 'status', provider: 'claude', message: `Task finished (${stopReason})` })
+      this.sink.signalComplete?.()
       return true
     }
 

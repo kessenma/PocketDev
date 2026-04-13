@@ -11,6 +11,7 @@ import { ToastProvider } from './src/hooks/useToast'
 import TaskDatabaseProvider from './src/db/TaskDatabaseProvider'
 import OfflineDatabaseProvider from './src/db/OfflineDatabaseProvider'
 import RootNavigator from './src/navigation/RootNavigator'
+import { navigationRef } from './src/navigation/ref'
 import { useConnectionStore } from './src/stores/connection'
 import { AppState, StyleSheet } from 'react-native'
 import { typeStyles } from './src/theme/typography'
@@ -37,6 +38,7 @@ function AppInner() {
 
   return (
     <NavigationContainer
+      ref={navigationRef}
       theme={{
         dark: false,
         colors: {

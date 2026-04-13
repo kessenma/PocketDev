@@ -236,6 +236,23 @@ function createClaudePlan(taskId: string, adapter: TaskStreamAdapter, mode: 'def
   proposePlan(taskId, title, description, 'Claude', steps, questions)
 }
 
+// Claude Code TUI ready-state detection.
+// Reference: apps/0-examples/claude-code-guide/README.md
+//   - Input prompt indicator is `>` (line 1143: `> _  # Cursor blinking`)
+//   - Status bar shows "? for shortcuts" and model/token info when idle
+// If these patterns never fire, the task will time out after startupTimeoutMs (60 s).
+// To tune: run `tmux capture-pane -t pocketdev-claude-<id> -p` on a live session
+// and inspect what normalizePane() produces.
+const CLAUDE_READY_PATTERNS = [
+  /^\s*>\s*$/m,            // bare `>` input cursor on its own line
+  /\?\s+for shortcuts/i,   // status bar hint shown when idle
+  /\?\s+for help/i,        // alternate status bar phrasing
+]
+
+function isClaudeReady(normalized: string): boolean {
+  return CLAUDE_READY_PATTERNS.some((p) => p.test(normalized))
+}
+
 export function claudeProviderConfig(): TmuxProviderConfig {
   // Capture mode in closure so onFinish can use it without adding it to FinishCtx
   let taskMode: 'default' | 'plan' = 'default'
@@ -266,18 +283,16 @@ export function claudeProviderConfig(): TmuxProviderConfig {
         }
       }
       if (ctx.model) args.push('--model', shellEscape(ctx.model))
-      args.push('-p', '"$POCKETDEV_PROMPT"')
+      // No -p flag — prompt is sent via tmux send-keys after TUI is ready
 
-      const promptPath = `/tmp/pocketdev-prompt-${ctx.taskId}.txt`
       const outputFilePath = `/tmp/pocketdev-out-${ctx.taskId}.jsonl`
       const scriptPath = `/tmp/pocketdev-run-${ctx.taskId}.sh`
 
-      await Bun.write(promptPath, ctx.prompt)
       const script = [
         '#!/bin/bash',
-        `export POCKETDEV_PROMPT=$(cat ${shellEscape(promptPath)})`,
         `cd ${shellEscape(ctx.cwd)}`,
-        `${args.join(' ')} >> ${shellEscape(outputFilePath)} 2>&1`,
+        // stdout → JSONL file; stderr stays on PTY so Claude's TUI renders in the tmux pane
+        `${args.join(' ')} >> ${shellEscape(outputFilePath)}`,
       ].join('\n')
       await Bun.write(scriptPath, script)
       await exec(`chmod +x ${shellEscape(scriptPath)}`)
@@ -286,7 +301,7 @@ export function claudeProviderConfig(): TmuxProviderConfig {
       return {
         command: scriptPath,
         outputFilePath,
-        tempFiles: [promptPath, scriptPath, outputFilePath],
+        tempFiles: [scriptPath, outputFilePath],
       }
     },
 
@@ -294,7 +309,17 @@ export function claudeProviderConfig(): TmuxProviderConfig {
       return createTaskStreamAdapter({ agentType: 'claude', taskId, sink, writeStdin })!
     },
 
-    onPaneSnapshot(snapshot, ctx) {
+    async onPaneSnapshot(snapshot, ctx) {
+      // Send prompt once Claude's TUI is ready for input
+      if (!ctx.promptSent && isClaudeReady(snapshot)) {
+        ctx.broadcastOutput('[claude] TUI ready — sending prompt...')
+        await exec(`tmux send-keys -t ${ctx.tmuxSession} -l ${shellEscape(ctx.prompt)}`)
+        await Bun.sleep(100)
+        await exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`)
+        return { type: 'continue', markPromptSent: true }
+      }
+
+      // Handle TUI permission menu (❯ 1. Yes  2. No style)
       const tuiPrompt = parseTuiPrompt(snapshot)
       if (!tuiPrompt) return { type: 'continue' }
 
@@ -468,12 +493,17 @@ export class ManagedAgentProcess {
       ? opts.provider.createAdapter(
           this.taskId,
           {
-            emitOutput: (line) => this.broadcastOutput(line),
-            emitActivity: (activity) => this.broadcastActivity(activity),
-            emitQuestion: (question, onAnswer) => this.registerQuestion(question, onAnswer),
-            emitPermissionRequest: (denials) => this.broadcastPermissionRequest(denials),
-            updateSessionId: (id) => this.persistSessionId(id),
-            recordCollectedToolUse: (toolUse) => this.recordCollectedToolUse(toolUse),
+            emitOutput:             (line)     => this.broadcastOutput(line),
+            emitActivity:           (activity) => this.broadcastActivity(activity),
+            emitQuestion:           (question, onAnswer) => this.registerQuestion(question, onAnswer),
+            emitPermissionRequest:  (denials)  => this.broadcastPermissionRequest(denials),
+            updateSessionId:        (id)       => this.persistSessionId(id),
+            recordCollectedToolUse: (toolUse)  => this.recordCollectedToolUse(toolUse),
+            signalComplete: () => {
+              if (this.finished) return
+              this.cleanup()
+              this.finish('completed')
+            },
           },
           (data) => this.sendToTmux(data),
         )
@@ -608,7 +638,8 @@ export class ManagedAgentProcess {
         } catch { /* ignore */ }
 
         const exitText = await exec(`cat ${shellEscape(this.outputFilePath)} | tail -1`).then((r) => r.stdout).catch(() => '')
-        const isError = exitText.includes('[error]') || exitText.includes('error')
+        // Plan mode tasks always complete — ExitPlanMode errors are expected in headless mode
+        const isError = this.mode !== 'plan' && (exitText.includes('[error]') || exitText.includes('error'))
 
         const pendingQCount = this.questionResponders.size
         console.log(`[managed-agent] Session ${this.tmuxSession} exited for task ${this.taskId} | pendingQuestions=${pendingQCount} | t=${Date.now()}`)
