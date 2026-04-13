@@ -4,6 +4,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { killTaskFromConsole, fetchTasksDebug, type TasksDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
+import { CopyButton } from '@pocketdev/shared/components'
 import { RefreshCw, Square, Zap } from 'lucide-react'
 
 interface Props {
@@ -521,6 +522,15 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                         Kill
                       </Button>
                     )}
+                    <CopyButton
+                      value={buildTaskDebugString(selectedTask, tasksInfo)}
+                      label="Copy"
+                      copiedLabel="Copied!"
+                      variant="outline"
+                      size="sm"
+                      title="Copy task debug info"
+                      className="h-7 border-white/15 bg-white/5 px-2 text-xs text-[#f4f0e8]/70 hover:bg-white/10"
+                    />
                     <Badge variant="outline" className={cn(statusColor(selectedTask.status))}>
                       {selectedTask.status}
                     </Badge>
@@ -616,6 +626,42 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
       </div>
     </div>
   )
+}
+
+function buildTaskDebugString(task: TasksDebugInfo['tasks'][number], tasksInfo: TasksDebugInfo | null): string {
+  const lines: string[] = [
+    `=== Task Debug ===`,
+    `ID:        ${task.id}`,
+    `Status:    ${task.status}`,
+    `Agent:     ${task.agentType}`,
+    `Model:     ${task.model ?? 'default'}`,
+    `Mode:      ${task.mode}`,
+    `Project:   ${task.projectName ?? 'none'}`,
+    `CWD:       ${task.workingDirectory ?? 'none'}`,
+    `Session:   ${task.sessionId ?? 'none'}`,
+    `Turns:     ${task.turnCount ?? 1}`,
+    `Exit code: ${task.exitCode?.toString() ?? '—'}`,
+    `Created:   ${task.createdAt}`,
+    `Started:   ${task.startedAt ?? '—'}`,
+    `Completed: ${task.completedAt ?? '—'}`,
+    ``,
+    `--- Prompt ---`,
+    task.prompt,
+  ]
+
+  const logs = tasksInfo?.taskLogs[task.id]
+  if (logs?.length) {
+    lines.push(``, `--- Output (${logs.length} lines) ---`)
+    for (const log of logs) lines.push(log.line)
+  }
+
+  const files = tasksInfo?.taskFiles[task.id]
+  if (files?.length) {
+    lines.push(``, `--- Files Touched ---`)
+    for (const f of files) lines.push(`${f.action.padEnd(6)} ${f.filePath}`)
+  }
+
+  return lines.join('\n')
 }
 
 function DetailStat({ label, value }: { label: string, value: string }) {
