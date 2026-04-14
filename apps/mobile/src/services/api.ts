@@ -383,6 +383,35 @@ export async function fetchFileContent(
   return response.json() as Promise<FileReadResponse>
 }
 
+export async function fetchFilePreviews(
+  ip: string,
+  port: number,
+  paths: string[],
+  chunkSize = 20,
+): Promise<Map<string, string>> {
+  const previews = new Map<string, string>()
+  for (let i = 0; i < paths.length; i += chunkSize) {
+    const chunk = paths.slice(i, i + chunkSize)
+    const results = await Promise.allSettled(
+      chunk.map(async (path) => {
+        const res = await fetchFileContent(ip, port, path)
+        const snippet = res.content
+          .substring(0, 250)
+          .replace(/[^\x20-\x7E\n\t]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+        return { path, snippet }
+      }),
+    )
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value.snippet) {
+        previews.set(result.value.path, result.value.snippet)
+      }
+    }
+  }
+  return previews
+}
+
 export async function searchFiles(
   ip: string,
   port: number,

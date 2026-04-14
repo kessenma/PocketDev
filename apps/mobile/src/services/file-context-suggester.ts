@@ -59,7 +59,7 @@ function splitWords(name: string): string {
     .trim()
 }
 
-export function enrichPath(filePath: string): string {
+export function enrichPath(filePath: string, contentSnippet?: string): string {
   const parts = filePath.split('/')
   const filename = parts[parts.length - 1] ?? filePath
   const parent = parts.length > 1 ? parts[parts.length - 2] : ''
@@ -87,6 +87,7 @@ export function enrichPath(filePath: string): string {
     dirContext,
     filePath,
     info.label,
+    ...(contentSnippet ? [contentSnippet.trim().substring(0, 300)] : []),
   ]
 
   return contextParts.join(' - ')
@@ -113,9 +114,10 @@ export function flattenTree(entries: TreeEntry[], maxFiles = 500): string[] {
 export async function buildFileIndex(
   rootPath: string,
   paths: string[],
+  previews: Map<string, string> = new Map(),
   onProgress?: (current: number, total: number) => void,
 ): Promise<FileIndex> {
-  const enrichedTexts = paths.map(enrichPath)
+  const enrichedTexts = paths.map((p) => enrichPath(p, previews.get(p)))
   // Log a few samples for debugging enrichment quality
   for (let i = 0; i < Math.min(5, enrichedTexts.length); i++) {
     console.log(`[Enrichment] ${paths[i]} → "${enrichedTexts[i]}"`)

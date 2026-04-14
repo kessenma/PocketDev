@@ -24,6 +24,7 @@ import {
   insertFileEmbeddingsBatch,
   deleteProjectEmbeddings,
 } from '../db/vectorOperations'
+import { fetchFilePreviews } from '../services/api'
 
 function computeExtensions(paths: string[]): string[] {
   const extSet = new Set<string>()
@@ -51,13 +52,14 @@ interface OnDeviceAIState {
   restSuggestions: FileSuggestion[]
   extensionFilter: string[] // empty = all extensions
   availableExtensions: string[] // all unique extensions in the index
+  contentPreviews: Map<string, string>
   error: string | null
 
   hydrate: () => void
   downloadModel: () => Promise<void>
   deleteModel: () => Promise<void>
   loadModel: () => Promise<void>
-  buildIndex: (rootPath: string, entries: TreeEntry[]) => Promise<void>
+  buildIndex: (rootPath: string, entries: TreeEntry[], server?: { ip: string; port: number }) => Promise<void>
   suggest: (prompt: string) => Promise<void>
   clearSuggestions: () => void
   setExtensionFilter: (exts: string[]) => void
@@ -72,6 +74,7 @@ export const useOnDeviceAIStore = create<OnDeviceAIState>((set, get) => ({
   restSuggestions: [],
   extensionFilter: [],
   availableExtensions: [],
+  contentPreviews: new Map(),
   error: null,
 
   hydrate: () => {
@@ -143,7 +146,7 @@ export const useOnDeviceAIStore = create<OnDeviceAIState>((set, get) => ({
     }
   },
 
-  buildIndex: async (rootPath: string, entries: TreeEntry[]) => {
+  buildIndex: async (rootPath: string, entries: TreeEntry[], server?: { ip: string; port: number }) => {
     // Prevent concurrent builds
     if (get().indexingProgress > 0 && get().indexingProgress < 1) {
       console.log('[OnDeviceAI] Index build already in progress, skipping')
@@ -177,7 +180,8 @@ export const useOnDeviceAIStore = create<OnDeviceAIState>((set, get) => ({
               vectors: stored.map((s) => s.embedding),
               builtAt: stored[0]?.builtAt ?? Date.now(),
             }
-            set({ fileIndex: index, indexingProgress: 1, availableExtensions: computeExtensions(index.paths) })
+            const previews = new Map(stored.map((s) => [s.path, s.contentPreview]))
+            set({ fileIndex: index, indexingProgress: 1, availableExtensions: computeExtensions(index.paths), contentPreviews: previews })
             return
           }
         }
@@ -191,15 +195,27 @@ export const useOnDeviceAIStore = create<OnDeviceAIState>((set, get) => ({
     console.log('[OnDeviceAI] Building index for', rootPath, '→', paths.length, 'files')
     if (paths.length === 0) { set({ indexingProgress: 0 }); return }
 
+    // Fetch content previews from server to enrich embeddings
+    let previews = new Map<string, string>()
+    if (server) {
+      console.log('[OnDeviceAI] Fetching content previews for', paths.length, 'files...')
+      try {
+        previews = await fetchFilePreviews(server.ip, server.port, paths)
+        console.log('[OnDeviceAI] Fetched', previews.size, 'content previews')
+      } catch (e) {
+        console.warn('[OnDeviceAI] Failed to fetch previews, falling back to path-only embeddings:', e)
+      }
+    }
+
     try {
       const startTime = Date.now()
-      const index = await buildFileIndex(rootPath, paths, (current, total) => {
+      const index = await buildFileIndex(rootPath, paths, previews, (current, total) => {
         set({ indexingProgress: total > 0 ? current / total : 0.001 })
       })
       const availableExtensions = computeExtensions(index.paths)
 
       console.log('[OnDeviceAI] Index built in', Date.now() - startTime, 'ms →', index.vectors.length, 'vectors,', availableExtensions.length, 'extensions')
-      set({ fileIndex: index, indexingProgress: 1, availableExtensions })
+      set({ fileIndex: index, indexingProgress: 1, availableExtensions, contentPreviews: previews })
 
       // Persist to SQLite (replaces MMKV cache)
       if (db) {
@@ -209,6 +225,7 @@ export const useOnDeviceAIStore = create<OnDeviceAIState>((set, get) => ({
             path: p,
             enrichedText: index.enrichedTexts[i],
             embedding: index.vectors[i],
+            contentPreview: previews.get(p) ?? '',
           }))
           await insertFileEmbeddingsBatch(db, rootPath, items, index.builtAt)
           console.log('[OnDeviceAI] Embeddings persisted to SQLite →', items.length, 'files')
@@ -241,7 +258,7 @@ export const useOnDeviceAIStore = create<OnDeviceAIState>((set, get) => ({
       const { extensionFilter } = get()
       console.log('[OnDeviceAI] Embedding prompt and ranking against', fileIndex.vectors.length, 'files...', extensionFilter.length ? `filter: ${extensionFilter.join(',')}` : '(no filter)')
       const startTime = Date.now()
-      let { top, rest } = await suggestFiles(trimmed, fileIndex)
+      let { top, rest } = await suggestFiles(trimmed, fileIndex, 5, 0.20, 0.10)
 
       // Apply extension filter if set
       if (extensionFilter.length > 0) {

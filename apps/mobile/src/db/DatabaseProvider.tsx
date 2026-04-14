@@ -64,6 +64,7 @@ export default function DatabaseProvider({ children }: { children: React.ReactNo
       await database.execute('ALTER TABLE tasks ADD COLUMN session_id TEXT').catch(() => {})
       await database.execute('ALTER TABLE tasks ADD COLUMN turn_count INTEGER DEFAULT 1').catch(() => {})
       await database.execute("ALTER TABLE git_commits ADD COLUMN origin TEXT DEFAULT 'external'").catch(() => {})
+      await database.execute("ALTER TABLE file_embeddings ADD COLUMN content_preview TEXT DEFAULT ''").catch(() => {})
 
       // Initialize vector support (probes for vec0 extension)
       await initVectorSupport(database)

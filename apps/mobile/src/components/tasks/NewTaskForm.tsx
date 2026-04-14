@@ -123,6 +123,13 @@ export default function NewTaskForm({ onSubmitted }: Props) {
     }
   }, [aiModelStatus, aiLoadModel])
 
+  // Auto-suggest when prompt is long enough — debounced 600ms
+  React.useEffect(() => {
+    if (prompt.trim().length < 15 || aiModelStatus !== 'ready') return
+    const t = setTimeout(handleFindRelatedFiles, 600)
+    return () => clearTimeout(t)
+  }, [prompt]) // eslint-disable-line react-hooks/exhaustive-deps
+
   React.useEffect(() => {
     console.log('[FindFiles] Index effect — modelStatus:', aiModelStatus, 'server:', !!server)
     if (aiModelStatus !== 'ready' || !server) return
@@ -130,7 +137,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
     fetchFileTree(server.ip, server.port, '.', 6)
       .then((res) => {
         console.log('[FindFiles] File tree fetched →', res.tree.length, 'top-level entries, base:', res.base)
-        aiBuildIndex(res.base || '.', res.tree)
+        aiBuildIndex(res.base || '.', res.tree, server)
       })
       .catch((e) => console.error('[FindFiles] fetchFileTree failed:', e))
   }, [aiModelStatus, server, aiBuildIndex])
@@ -157,7 +164,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
         console.log('[FindFiles] Index missing — building on-demand...')
         const res = await fetchFileTree(server.ip, server.port, '.', 6)
         console.log('[FindFiles] File tree fetched →', res.tree.length, 'top-level entries, base:', res.base)
-        await aiBuildIndex(res.base || '.', res.tree)
+        await aiBuildIndex(res.base || '.', res.tree, server)
       }
 
       console.log('[FindFiles] Running suggest...')

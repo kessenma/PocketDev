@@ -88,14 +88,15 @@ export async function insertFileEmbedding(
   enrichedText: string,
   embedding: number[],
   builtAt: number,
+  contentPreview?: string,
 ): Promise<void> {
   const blobHex = vectorToBlob(embedding)
 
   // Upsert into regular table
   await db.execute(
-    `INSERT OR REPLACE INTO file_embeddings (project_id, path, enriched_text, embedding, built_at)
-     VALUES (?, ?, ?, x'${blobHex}', ?)`,
-    [projectId, path, enrichedText, builtAt],
+    `INSERT OR REPLACE INTO file_embeddings (project_id, path, enriched_text, embedding, built_at, content_preview)
+     VALUES (?, ?, ?, x'${blobHex}', ?, ?)`,
+    [projectId, path, enrichedText, builtAt, contentPreview ?? ''],
   )
 
   // If vec0 available, also insert into virtual table
@@ -127,13 +128,13 @@ export async function insertFileEmbedding(
 export async function insertFileEmbeddingsBatch(
   db: DB,
   projectId: string,
-  items: Array<{ path: string; enrichedText: string; embedding: number[] }>,
+  items: Array<{ path: string; enrichedText: string; embedding: number[]; contentPreview?: string }>,
   builtAt: number,
 ): Promise<void> {
   await db.execute('BEGIN TRANSACTION')
   try {
     for (const item of items) {
-      await insertFileEmbedding(db, projectId, item.path, item.enrichedText, item.embedding, builtAt)
+      await insertFileEmbedding(db, projectId, item.path, item.enrichedText, item.embedding, builtAt, item.contentPreview)
     }
     await db.execute('COMMIT')
   } catch (e) {
@@ -243,6 +244,7 @@ export interface StoredFileEmbedding {
   enrichedText: string
   embedding: number[]
   builtAt: number
+  contentPreview: string
 }
 
 /**
@@ -253,7 +255,7 @@ export async function loadProjectEmbeddings(
   projectId: string,
 ): Promise<StoredFileEmbedding[]> {
   const result = await db.execute(
-    'SELECT path, enriched_text, embedding, built_at FROM file_embeddings WHERE project_id = ? ORDER BY path',
+    'SELECT path, enriched_text, embedding, built_at, content_preview FROM file_embeddings WHERE project_id = ? ORDER BY path',
     [projectId],
   )
 
@@ -264,11 +266,13 @@ export async function loadProjectEmbeddings(
     enriched_text: string
     embedding: ArrayBuffer | string
     built_at: number
+    content_preview: string | null
   }>).map((r) => ({
     path: r.path,
     enrichedText: r.enriched_text,
     embedding: blobToVector(r.embedding),
     builtAt: r.built_at,
+    contentPreview: r.content_preview ?? '',
   }))
 }
 

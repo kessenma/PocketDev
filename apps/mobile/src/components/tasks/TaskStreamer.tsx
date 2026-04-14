@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import {
   Brain,
+  ChevronRight,
   FileEdit,
   FilePlus,
   FileSearch,
@@ -23,6 +24,7 @@ import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
 import { getToolPresentation } from './task-stream-utils'
+import FileViewerSheet from './FileViewerSheet'
 
 export type StreamItem =
   | { kind: 'activity'; data: TaskActivity }
@@ -169,6 +171,7 @@ export function ActivityRow({ activity }: { activity: TaskActivity }) {
 
 function ToolUseRow({ activity, colors }: { activity: Extract<TaskActivity, { type: 'tool_use' }>; colors: any }) {
   const presentation = getToolPresentation(activity)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   let Icon = FileSearch
   let accentColor = colors.textSecondary
@@ -215,14 +218,40 @@ function ToolUseRow({ activity, colors }: { activity: Extract<TaskActivity, { ty
       break
   }
 
-  return (
+  const isFileTappable =
+    activity.filePath != null &&
+    (presentation.kind === 'read' || presentation.kind === 'write' || presentation.kind === 'create')
+
+  const rowContent = (
     <View style={[styles.row, { borderLeftColor: accentColor }]}>
       <Icon color={accentColor} size={14} strokeWidth={2.25} style={styles.rowIcon} />
       <Text style={[styles.rowLabel, { color: accentColor }]}>{presentation.label}</Text>
       <Text style={[styles.rowDetail, { color: colors.text }]} numberOfLines={2}>
         {presentation.detail}
       </Text>
+      {isFileTappable && (
+        <ChevronRight color={colors.textTertiary} size={14} strokeWidth={2.25} style={styles.rowIcon} />
+      )}
     </View>
+  )
+
+  return (
+    <>
+      {isFileTappable ? (
+        <Pressable onPress={() => setSheetOpen(true)} accessibilityRole="button">
+          {rowContent}
+        </Pressable>
+      ) : (
+        rowContent
+      )}
+      {sheetOpen && activity.filePath && (
+        <FileViewerSheet
+          filePath={activity.filePath}
+          activity={activity}
+          onClose={() => setSheetOpen(false)}
+        />
+      )}
+    </>
   )
 }
 

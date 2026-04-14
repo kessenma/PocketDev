@@ -5,6 +5,8 @@ services:
       APNS_KEY_BASE64: ${APNS_KEY_BASE64}
     volumes:
       - apns-keys:/keys
+    networks:
+      - coolify
     entrypoint: /bin/sh
     command: >
       -c "
@@ -29,8 +31,14 @@ services:
     environment:
       APNS_KEY_ID: ${APNS_KEY_ID}
       APNS_TEAM_ID: ${APNS_TEAM_ID}
-    # Port 8088 is internal only — NOT exposed externally
+    networks:
+      - coolify
+    # Port 8088 is internal only — NOT exposed externally.
     # The web app container reaches gorush via Docker network at http://gorush:8088
 
 volumes:
   apns-keys:
+
+networks:
+  coolify:
+    external: true

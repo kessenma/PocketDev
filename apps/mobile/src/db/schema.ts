@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS file_embeddings (
   enriched_text TEXT NOT NULL,
   embedding BLOB NOT NULL,
   built_at INTEGER NOT NULL,
+  content_preview TEXT DEFAULT '',
   UNIQUE(project_id, path)
 );
 

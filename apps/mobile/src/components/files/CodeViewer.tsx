@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { FlashList } from '@shopify/flash-list'
+import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -26,6 +26,7 @@ type Props = {
   onBack?: () => void
   isContextSelected?: boolean
   onToggleContext?: () => void
+  scrollToLine?: number
 }
 
 const PREVIEWABLE_LANGUAGES = new Set([
@@ -69,9 +70,16 @@ export default function CodeViewer({
   onBack,
   isContextSelected = false,
   onToggleContext,
+  scrollToLine,
 }: Props) {
   const { colors } = useTheme()
   const [syntaxInfoVisible, setSyntaxInfoVisible] = React.useState(false)
+  const flashListRef = useRef<FlashListRef<string>>(null)
+
+  React.useEffect(() => {
+    if (scrollToLine == null) return
+    flashListRef.current?.scrollToIndex({ index: scrollToLine - 1, animated: true, viewPosition: 0.25 })
+  }, [scrollToLine])
   const showSyntaxInfo = file?.language ? HIGHLIGHTABLE_LANGUAGES.has(file.language) : false
 
   React.useEffect(() => {
@@ -112,7 +120,7 @@ export default function CodeViewer({
     </>
   )
 
-  const preview = file ? renderPreview(file, content, isLoading, wrapLines, colors, lineHighlights) : (
+  const preview = file ? renderPreview(file, content, isLoading, wrapLines, colors, lineHighlights, flashListRef) : (
     <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
       <Text style={[styles.emptyTitle, { color: colors.text }]}>No file selected</Text>
       <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
@@ -148,6 +156,7 @@ function renderPreview(
   wrapLines: boolean,
   colors: ReturnType<typeof useTheme>['colors'],
   lineHighlights: LineHighlightRange[],
+  flashListRef: React.RefObject<FlashListRef<string> | null>,
 ) {
   if (isLoading) {
     return (
@@ -247,6 +256,7 @@ function renderPreview(
   if (wrapLines) {
     return (
       <FlashList
+        ref={flashListRef}
         data={lines}
         renderItem={renderLine}
         keyExtractor={(_, i) => `${file.id}-${i}`}
@@ -266,6 +276,7 @@ function renderPreview(
       style={[styles.outerScroll, { backgroundColor: colors.backgroundSecondary }]}
     >
       <FlashList
+        ref={flashListRef}
         data={lines}
         renderItem={renderLine}
         keyExtractor={(_, i) => `${file.id}-${i}`}

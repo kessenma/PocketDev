@@ -10,6 +10,7 @@ COPY apps/agent/package.json ./apps/agent/package.json
 COPY apps/agent/console/package.json ./apps/agent/console/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/db/package.json ./packages/db/package.json
+COPY patches/ ./patches/
 RUN pnpm install --frozen-lockfile
 
 # Build workspace packages that are consumed through package exports.
