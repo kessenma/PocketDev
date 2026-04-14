@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
+import { SvgAutoWrapText } from '../../../shared/SvgAutoWrapText'
 import { architectureTokens, architectureFonts } from '../../../shared/theme'
 import { BauhausLaptop } from '../shared/BauhausLaptop'
 import { BauhausPhone } from '../shared/BauhausPhone'
@@ -162,27 +163,18 @@ export function ConnectTakeoverScene({
       </text>
 
       {/* Subtitle */}
-      <text
+      <SvgAutoWrapText
         x={subX}
         y={subY}
+        font={`${subFontSize}px var(--font-sans), sans-serif`}
+        maxWidth={vpSize.w * (isDesktopLayout ? 0.44 : 0.80)}
+        lineHeight={subLH}
         fill={architectureTokens.colors.textSecondary}
         fontFamily="var(--font-sans), sans-serif"
         fontSize={subFontSize}
       >
-        {isDesktopLayout ? (
-          <>
-            <tspan x={subX} dy="0">Open the app, scan the pairing code, done. Your phone becomes the</tspan>
-            <tspan x={subX} dy={subLH}>control surface — the server does the heavy lifting.</tspan>
-          </>
-        ) : (
-          <>
-            <tspan x={subX} dy="0">Open the app, scan the pairing</tspan>
-            <tspan x={subX} dy={subLH}>code, done. Your phone becomes</tspan>
-            <tspan x={subX} dy={subLH}>the control surface — the server</tspan>
-            <tspan x={subX} dy={subLH}>does the heavy lifting.</tspan>
-          </>
-        )}
-      </text>
+        Open the app, scan the pairing code, done. Your phone becomes the control surface — the server does the heavy lifting.
+      </SvgAutoWrapText>
 
       {/* Animation group — scaled and centered */}
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>

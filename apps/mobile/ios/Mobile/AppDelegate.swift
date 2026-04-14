@@ -45,7 +45,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
     let token = deviceToken.map { String(format: "%02x", $0) }.joined()
-    UserDefaults.standard.set(token, forKey: "apnsDeviceToken")
+    APNsDiagnostics.storeDeliveredToken(token)
     NSLog("[APNs] Registered with token: %@", String(token.prefix(16)) + "...")
   }
 
@@ -65,8 +65,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 }
 
-// Show notifications even when app is in the foreground — RN will handle them via
-// PushNotificationIOS event listeners.
+// Show notifications even when app is in the foreground — notifee handles the display.
 extension AppDelegate: UNUserNotificationCenterDelegate {
   func userNotificationCenter(
     _ center: UNUserNotificationCenter,

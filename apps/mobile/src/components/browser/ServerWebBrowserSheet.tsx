@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     ...typographyScale.sm,
   },
   errorOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing[5],

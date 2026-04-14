@@ -13,7 +13,8 @@ import OfflineDatabaseProvider from './src/db/OfflineDatabaseProvider'
 import RootNavigator from './src/navigation/RootNavigator'
 import { navigationRef } from './src/navigation/ref'
 import { useConnectionStore } from './src/stores/connection'
-import { AppState, Platform, PushNotificationIOS, StyleSheet } from 'react-native'
+import notifee, { EventType } from '@notifee/react-native'
+import { AppState, Platform, StyleSheet } from 'react-native'
 import { typeStyles } from './src/theme/typography'
 
 function AppInner() {
@@ -36,32 +37,28 @@ function AppInner() {
     return () => subscription.remove()
   }, [connect, server])
 
-  // Push notification tap handling (iOS only)
+  // Push notification tap handling (iOS only, via @notifee)
   useEffect(() => {
     if (Platform.OS !== 'ios') return
 
-    const subscription = PushNotificationIOS.addEventListener('notification', (n) => {
-      const data = n.getData() as { type?: string; taskId?: string }
-      if (data.type === 'permission' || data.type === 'task_completed') {
-        if (data.taskId && navigationRef.isReady()) {
-          navigationRef.navigate('TaskDetail' as never, { taskId: data.taskId } as never)
+    const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.PRESS) {
+        const taskId = detail.notification?.data?.taskId as string | undefined
+        if (taskId && navigationRef.isReady()) {
+          navigationRef.navigate('TaskDetail' as any, { taskId } as any)
         }
       }
-      n.finish(PushNotificationIOS.FetchResult.NoData)
     })
 
     // Handle tap when app was fully closed
-    PushNotificationIOS.getInitialNotification().then((n) => {
-      if (!n) return
-      const data = n.getData() as { type?: string; taskId?: string }
-      if ((data.type === 'permission' || data.type === 'task_completed') && data.taskId) {
-        if (navigationRef.isReady()) {
-          navigationRef.navigate('TaskDetail' as never, { taskId: data.taskId } as never)
-        }
+    notifee.getInitialNotification().then((initialNotification) => {
+      const taskId = initialNotification?.notification?.data?.taskId as string | undefined
+      if (taskId && navigationRef.isReady()) {
+        navigationRef.navigate('TaskDetail' as any, { taskId } as any)
       }
     }).catch(() => {})
 
-    return () => subscription.remove()
+    return () => unsubscribe()
   }, [])
 
   return (

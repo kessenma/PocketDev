@@ -35,5 +35,10 @@
   "packageManager": "pnpm@8.15.4",
   "engines": {
     "node": ">=22"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "react-native@0.85.1": "patches/react-native@0.85.1.patch"
+    }
   }
 }

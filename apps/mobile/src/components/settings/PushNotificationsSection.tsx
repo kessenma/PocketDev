@@ -7,17 +7,9 @@ import { BauhausPanel } from '../shared/BauhausPanel'
 import BauhausButton from '../shared/BauhausButton'
 import BauhausBadge from '../shared/BauhausBadge'
 import { typeStyles } from '../../theme/typography'
-import {
-  getPushNotificationsEnabled,
-  setPushNotificationsEnabled,
-} from '../../services/storage'
-import {
-  registerForRemoteNotifications,
-  waitForApnsToken,
-} from '../../services/push-token'
-import { registerPushToken, deregisterPushToken } from '../../services/api'
+import { getPushNotificationsEnabled, setPushNotificationsEnabled } from '../../services/storage'
+import { enablePushNotifications, disablePushNotifications } from '../../services/push-notifications'
 import PushConsentSheet from './PushConsentSheet'
-import { PushNotificationIOS } from 'react-native'
 
 export default function PushNotificationsSection() {
   const { colors } = useTheme()
@@ -41,21 +33,14 @@ export default function PushNotificationsSection() {
     if (!server) return
     setLoading(true)
     try {
-      // Request iOS permission
-      const perms = await PushNotificationIOS.requestPermissions({ alert: true, badge: true, sound: true })
-      if (!perms.alert) {
-        Alert.alert('Permission Denied', 'Enable notifications in iOS Settings to use this feature.')
+      const result = await enablePushNotifications(server)
+      if (!result.success) {
+        const msg = result.error === 'Permission denied'
+          ? 'Enable notifications in iOS Settings to use this feature.'
+          : (result.error ?? 'Something went wrong enabling notifications.')
+        Alert.alert('Could Not Enable', msg)
         return
       }
-      // Trigger APNs registration and wait for token
-      await registerForRemoteNotifications()
-      const token = await waitForApnsToken(8000)
-      if (!token) {
-        Alert.alert('Registration Failed', 'Could not get a push token from Apple. Try again later.')
-        return
-      }
-      const env = __DEV__ ? 'development' : 'production'
-      await registerPushToken(server.ip, server.port, server.deviceId, token, env)
       setPushNotificationsEnabled(true)
       setEnabled(true)
     } catch (err) {
@@ -70,7 +55,7 @@ export default function PushNotificationsSection() {
     if (!server) return
     setLoading(true)
     try {
-      await deregisterPushToken(server.ip, server.port, server.deviceId)
+      await disablePushNotifications(server)
     } catch {}
     setPushNotificationsEnabled(false)
     setEnabled(false)

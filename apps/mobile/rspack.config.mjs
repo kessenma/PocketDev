@@ -37,6 +37,9 @@ export default Repack.defineRspackConfig({
       '@pocketdev/shared/crypto': path.resolve(__dirname, '../../packages/shared/src/crypto/index.ts'),
       '@pocketdev/shared/assets': path.resolve(__dirname, '../../packages/shared/src/assets/index.ts'),
       '@pocketdev/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
+      // Shim PushNotificationIOS — rspack triggers its lazy getter from react-native/index.js
+      // which crashes because RCTPushNotificationManager native module is not linked.
+      'react-native/Libraries/PushNotificationIOS/PushNotificationIOS': path.resolve(__dirname, 'src/vendor-shims/push-notification-ios.js'),
       // Shim unused react-native-executorch LLM-only deps (we only use TextEmbeddingsModule)
       '@huggingface/jinja': path.resolve(__dirname, 'src/vendor-shims/empty.js'),
       'zod/v4': path.resolve(__dirname, 'src/vendor-shims/empty.js'),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { palette } from '@pocketdev/shared/theme'
+import { wrapTextToLines } from '../../../shared/pretext-measure'
 import { architectureTokens } from '../../../shared/theme'
 import { BauhausPhone } from '../shared/BauhausPhone'
 
@@ -20,23 +21,53 @@ export function PushNotificationsScene({
     return () => window.removeEventListener('resize', sync)
   }, [])
 
-  const eyeOpen = easeOut(segmentProgress(progress, 0.08, 0.36))
-  const irisReveal = easeOut(segmentProgress(progress, 0.24, 0.5))
-  const signalTravel = easeInOut(segmentProgress(progress, 0.5, 0.82))
-  const cardReveal = easeOut(segmentProgress(progress, 0.62, 0.9))
-  const settle = easeOut(segmentProgress(progress, 0.84, 1))
+  const taskBuild = easeOut(segmentProgress(progress, 0.06, 0.34))
+  const taskComplete = easeOut(segmentProgress(progress, 0.22, 0.44))
+  const eyeOpen = easeOut(segmentProgress(progress, 0.34, 0.58))
+  const irisReveal = easeOut(segmentProgress(progress, 0.44, 0.66))
+  const signalTravel = easeInOut(segmentProgress(progress, 0.58, 0.8))
+  const cardReveal = easeOut(segmentProgress(progress, 0.74, 0.92))
+  const settle = easeOut(segmentProgress(progress, 0.88, 1))
 
+  // ── Title ─────────────────────────────────────────────────────────────────
+  const TITLE_TEXT = 'Push Notifications; for plan and task completion, when permissions are required, when issues arise.'
+  const titleX = isDesktopLayout ? vpSize.w * 0.07 : vpSize.w * 0.08
+  const eyebrowY = vpSize.h * 0.1
+  const titleY = isDesktopLayout ? vpSize.h * 0.19 : vpSize.h * 0.16
+  const titleSize = isDesktopLayout
+    ? Math.min(vpSize.w * 0.047, 64)
+    : Math.min(vpSize.w * 0.096, 46)
+  const titleLH = titleSize * 1.12
+  const titleMaxWidth = vpSize.w * (isDesktopLayout ? 0.45 : 0.84)
+
+  const titleLines = wrapTextToLines(
+    TITLE_TEXT,
+    `700 ${titleSize}px var(--font-sans), sans-serif`,
+    titleMaxWidth,
+    titleLH,
+  )
+
+  // ── Eye ───────────────────────────────────────────────────────────────────
+  // Sits between the text block and the phone — where the signal starts.
+  const eyeWidth = isDesktopLayout ? Math.min(vpSize.w * 0.31, 380) : Math.min(vpSize.w * 0.52, 280)
+  const eyeHeight = isDesktopLayout ? Math.min(vpSize.h * 0.18, 180) : Math.min(vpSize.w * 0.24, 120)
   const eyeScaleY = mix(0, 1, eyeOpen)
+
+  // eye.cy is fixed — the text below it pushes down as the eye opens
   const eye = {
     cx: isDesktopLayout ? vpSize.w * 0.32 : vpSize.w * 0.5,
-    cy: isDesktopLayout ? vpSize.h * 0.56 : vpSize.h * 0.42,
-    width: isDesktopLayout ? Math.min(vpSize.w * 0.31, 380) : Math.min(vpSize.w * 0.52, 280),
-    height: isDesktopLayout ? Math.min(vpSize.h * 0.18, 180) : Math.min(vpSize.w * 0.24, 120),
+    cy: isDesktopLayout ? vpSize.h * 0.52 : vpSize.h * 0.54,
+    width: eyeWidth,
+    height: eyeHeight,
   }
 
+  // How far lines below eye.cy get pushed down
+  const pushDown = eyeHeight * eyeScaleY
+
+  // ── Phone ─────────────────────────────────────────────────────────────────
   const phone = {
     cx: isDesktopLayout ? vpSize.w * 0.76 : vpSize.w * 0.5,
-    cy: isDesktopLayout ? vpSize.h * 0.57 : vpSize.h * 0.76,
+    cy: isDesktopLayout ? vpSize.h * 0.57 : vpSize.h * 0.82,
     scale: isDesktopLayout ? Math.min(vpSize.w / 1280, 1) * 3.25 : Math.min(vpSize.w / 390, 1) * 2.9,
   }
 
@@ -58,16 +89,17 @@ export function PushNotificationsScene({
   }
   const signalToken = cubicPoint(signalStart, control1, control2, signalEnd, signalTravel)
 
-  const titleX = isDesktopLayout ? vpSize.w * 0.07 : vpSize.w * 0.08
-  const eyebrowY = vpSize.h * 0.1
-  const titleY = isDesktopLayout ? vpSize.h * 0.19 : vpSize.h * 0.16
-  const titleSize = isDesktopLayout
-    ? Math.min(vpSize.w * 0.047, 64)
-    : Math.min(vpSize.w * 0.096, 46)
-  const titleLH = titleSize * 1.12
-
-  const cardY = -18 + (1 - cardReveal) * 16
+  const inPhoneCardY = mix(8, -18, cardReveal)
+  const notificationLift = mix(18, 0, cardReveal)
+  const notificationScale = mix(0.86, 1, cardReveal)
+  const phoneScreenGlow = 0.08 + taskBuild * 0.08 + settle * 0.1
   const accentColor = settle > 0.22 ? '#93c5fd' : palette.bauhaus.yellow
+  const taskLineWidths = [
+    mix(0, 19, taskBuild),
+    mix(0, 14, Math.max(0, taskBuild - 0.12) / 0.88),
+    mix(0, 26, taskComplete),
+    mix(0, 20, Math.max(0, taskComplete - 0.16) / 0.84),
+  ]
 
   return (
     <svg
@@ -104,24 +136,30 @@ export function PushNotificationsScene({
         letterSpacing="0.22em"
         opacity="0.86"
       >
-        OPT-IN
+        --WITH OPT-IN
       </text>
 
-      <text
-        x={titleX}
-        y={titleY}
-        fill="#ffffff"
-        fontFamily="var(--font-sans), sans-serif"
-        fontSize={titleSize}
-        fontWeight="700"
-        letterSpacing="-0.04em"
-      >
-        <tspan x={titleX} dy="0">Push Notifications;</tspan>
-        <tspan x={titleX} dy={titleLH}>for plan and task completion,</tspan>
-        <tspan x={titleX} dy={titleLH}>when permissions are required,.</tspan>
-        <tspan x={titleX} dy={titleLH}>when issues arise.</tspan>
-      </text>
+      {/* Title text — lines below eye.cy push down as the eye opens */}
+      {titleLines.map((line, i) => {
+        const naturalY = titleY + (i + 1) * titleLH
+        const lineY = naturalY < eye.cy ? naturalY : naturalY + pushDown
+        return (
+          <text
+            key={i}
+            x={titleX}
+            y={lineY}
+            fill="#ffffff"
+            fontFamily="var(--font-sans), sans-serif"
+            fontSize={titleSize}
+            fontWeight="700"
+            letterSpacing="-0.04em"
+          >
+            {line}
+          </text>
+        )
+      })}
 
+      {/* Eye */}
       <g
         transform={`translate(${eye.cx} ${eye.cy}) scale(1 ${Math.max(eyeScaleY, 0.0001)})`}
         opacity={eyeOpen > 0 ? 1 : 0}
@@ -187,46 +225,70 @@ export function PushNotificationsScene({
 
       <g transform={`translate(${phone.cx} ${phone.cy})`}>
         <BauhausPhone cx={0} cy={0} scale={phone.scale}>
-          <g opacity={0.28 + cardReveal * 0.72}>
+          <g opacity={0.35 + taskBuild * 0.65}>
             <rect
               x={-22}
               y={-41}
               width={44}
               height={86}
               rx={6}
-              fill={settle > 0.22 ? 'rgba(147,197,253,0.18)' : 'rgba(255,255,255,0.08)'}
+              fill={settle > 0.22 ? 'rgba(147,197,253,0.18)' : `rgba(255,255,255,${phoneScreenGlow})`}
             />
             <rect
               x={-18}
-              y={cardY}
+              y={-27}
+              width={Math.max(0, taskLineWidths[0])}
+              height={3}
+              rx={1.5}
+              fill="rgba(255,255,255,0.48)"
+            />
+            <rect
+              x={-18}
+              y={-21}
+              width={Math.max(0, taskLineWidths[1])}
+              height={3}
+              rx={1.5}
+              fill="rgba(255,255,255,0.3)"
+            />
+            <rect
+              x={-18}
+              y={inPhoneCardY}
               width={36}
               height={22}
               rx={6}
               fill="#f8f2e3"
+              opacity={0.45 + cardReveal * 0.55}
             />
             <rect
               x={-18}
-              y={cardY}
+              y={inPhoneCardY}
               width={36}
               height={5}
               rx={4}
               fill={accentColor}
+              opacity={0.6 + cardReveal * 0.4}
             />
-            <circle cx={-13} cy={cardY + 11} r={2.5} fill={palette.bauhaus.black} opacity="0.85" />
-            <rect x={-8} y={cardY + 8} width={19} height={3} rx={1.5} fill="#173a70" />
-            <rect x={-8} y={cardY + 13} width={14} height={2.5} rx={1.25} fill="#94a3b8" />
+            <circle
+              cx={-13}
+              cy={inPhoneCardY + 11}
+              r={2.5}
+              fill={palette.bauhaus.black}
+              opacity={0.85}
+            />
+            <rect x={-8} y={inPhoneCardY + 8} width={19} height={3} rx={1.5} fill="#173a70" />
+            <rect x={-8} y={inPhoneCardY + 13} width={14} height={2.5} rx={1.25} fill="#94a3b8" />
             <rect
               x={-18}
-              y={cardY + 27}
-              width={26}
+              y={inPhoneCardY + 27}
+              width={Math.max(0, taskLineWidths[2])}
               height={3}
               rx={1.5}
               fill="rgba(255,255,255,0.42)"
             />
             <rect
               x={-18}
-              y={cardY + 33}
-              width={20}
+              y={inPhoneCardY + 33}
+              width={Math.max(0, taskLineWidths[3])}
               height={3}
               rx={1.5}
               fill="rgba(255,255,255,0.26)"
@@ -234,6 +296,33 @@ export function PushNotificationsScene({
           </g>
         </BauhausPhone>
       </g>
+
+      {cardReveal > 0 && (
+        <g
+          transform={`translate(${phone.cx + 10 * phone.scale} ${phone.cy - 40 * phone.scale - notificationLift * phone.scale}) scale(${notificationScale})`}
+          opacity={cardReveal}
+        >
+          <rect
+            x={-56}
+            y={-18}
+            width={112}
+            height={36}
+            rx={11}
+            fill="#f8f2e3"
+          />
+          <rect
+            x={-56}
+            y={-18}
+            width={112}
+            height={7}
+            rx={6}
+            fill={accentColor}
+          />
+          <circle cx={-42} cy={0} r={5} fill={palette.bauhaus.black} opacity="0.88" />
+          <rect x={-31} y={-5} width={46} height={5} rx={2.5} fill="#173a70" />
+          <rect x={-31} y={4} width={34} height={4} rx={2} fill="#94a3b8" />
+        </g>
+      )}
     </svg>
   )
 }

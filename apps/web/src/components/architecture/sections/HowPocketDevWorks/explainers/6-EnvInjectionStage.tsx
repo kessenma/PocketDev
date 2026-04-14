@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { measureTextWidth } from '../../../shared/pretext-measure'
 import { architectureTokens } from '../../../shared/theme'
 
 function clamp(value: number, min: number, max: number) {
@@ -110,8 +111,8 @@ export function EnvInjectionTakeoverStage({
         'the mobile app once a repo is',
         'cloned.',
       ]
-  const approxCharWidth = subFontSize * (isDesktopLayout ? 0.47 : 0.46)
-  const subLineWidths = subLines.map((line) => line.length * approxCharWidth)
+  const subFont = `${subFontSize}px var(--font-sans), sans-serif`
+  const subLineWidths = subLines.map((line) => measureTextWidth(line, subFont))
 
   return (
     <svg

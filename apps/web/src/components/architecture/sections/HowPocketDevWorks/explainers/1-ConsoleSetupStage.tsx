@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
+import { measureTextWidth } from '../../../shared/pretext-measure'
 import { architectureFonts } from '../../../shared/theme'
 import { BauhausLaptop } from '../shared/BauhausLaptop'
 
@@ -148,10 +149,10 @@ export function ConsoleSetupStage({
             {sshTyped}
           </text>
 
-          {/* Blinking cursor after SSH */}
+          {/* Blinking cursor after SSH — x measured via Canvas instead of char-count estimate */}
           {sshP > 0 && sshP < 1 && (
             <motion.rect
-              x={-74 + sshTyped.length * 3.6}
+              x={-74 + measureTextWidth(sshTyped, `6.5px ${architectureFonts.mono}`)}
               y={-101}
               width={4}
               height={7}

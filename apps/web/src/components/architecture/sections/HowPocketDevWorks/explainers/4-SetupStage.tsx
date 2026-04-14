@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
+import { SvgAutoWrapText } from '../../../shared/SvgAutoWrapText'
 import { architectureTokens } from '../../../shared/theme'
 import { brandAssets } from '../../../shared/brand-assets'
 
@@ -142,28 +143,18 @@ export function SetupTakeoverScene({
       </text>
 
       {/* Subtitle */}
-      <text
+      <SvgAutoWrapText
         x={subX}
         y={subY}
+        font={`${subFontSize}px var(--font-sans), sans-serif`}
+        maxWidth={vpSize.w * (isDesktopLayout ? 0.44 : 0.80)}
+        lineHeight={subLH}
         fill={architectureTokens.colors.textSecondary}
         fontFamily="var(--font-sans), sans-serif"
         fontSize={subFontSize}
       >
-        {isDesktopLayout ? (
-          <>
-            <tspan x={subX} dy="0">PocketDev walks you through guided wizards — choose which AI CLIs</tspan>
-            <tspan x={subX} dy={subLH}>to install (Claude, Codex, or Copilot), configure git SSH, Docker, and package tooling.</tspan>
-          </>
-        ) : (
-          <>
-            <tspan x={subX} dy="0">PocketDev walks you through guided</tspan>
-            <tspan x={subX} dy={subLH}>wizards — choose which AI CLIs to</tspan>
-            <tspan x={subX} dy={subLH}>install (Claude, Codex, or Copilot),</tspan>
-            <tspan x={subX} dy={subLH}>configure git SSH, Docker, and</tspan>
-            <tspan x={subX} dy={subLH}>package tooling.</tspan>
-          </>
-        )}
-      </text>
+        PocketDev walks you through guided wizards — choose which AI CLIs to install (Claude, Codex, or Copilot), configure git SSH, Docker, and package tooling.
+      </SvgAutoWrapText>
 
       {/* Animation — scaled and centered */}
       <g transform={`translate(${animCenterX - 160 * scale} ${animCenterY - 100 * scale}) scale(${scale})`}>

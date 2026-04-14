@@ -1,0 +1,20 @@
+diff --git a/index.js b/index.js
+index b205422effd77b695a0563247cde76192eca178c..90accbbdd787d14e52d7319491e3b4e4d7308e28 100644
+--- a/index.js
++++ b/index.js
+@@ -286,14 +286,7 @@ module.exports = {
+       .PlatformColor;
+   },
+   get PushNotificationIOS() {
+-    warnOnce(
+-      'pushNotificationIOS-moved',
+-      'PushNotificationIOS has been extracted from react-native core and will be removed in a future release. ' +
+-        "It can now be installed and imported from '@react-native-community/push-notification-ios' instead of 'react-native'. " +
+-        'See https://github.com/react-native-push-notification/ios',
+-    );
+-    return require('./Libraries/PushNotificationIOS/PushNotificationIOS')
+-      .default;
++    return null;
+   },
+   get processColor() {
+     return require('./Libraries/StyleSheet/processColor').default;

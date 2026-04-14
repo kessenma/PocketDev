@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
+import { SvgAutoWrapText } from '../../../shared/SvgAutoWrapText'
 import { architectureTokens, architectureFonts } from '../../../shared/theme'
 import { BauhausPhone } from '../shared/BauhausPhone'
 import { BauhausLaptop } from '../shared/BauhausLaptop'
@@ -170,22 +171,21 @@ export function PortSecurityStage({
       </text>
 
       {/* Subtitle */}
-      <text x={subX} y={subY} fill={architectureTokens.colors.textSecondary} fontFamily={architectureFonts.body} fontSize={subSz} opacity={labelsP}>
-        {isDesktopLayout ? (
-          <>
-            <tspan x={subX} dy="0">Optional. Leave port 4387 open, or flip the switch in</tspan>
-            <tspan x={subX} dy={subLH}>mobile app settings to hide it at the firewall level —</tspan>
-            <tspan x={subX} dy={subLH}>invisible to scanners. Signed wake requests let you back in.</tspan>
-          </>
-        ) : (
-          <>
-            <tspan x={subX} dy="0">Optional — leave port 4387</tspan>
-            <tspan x={subX} dy={subLH}>open, or enable port locking</tspan>
-            <tspan x={subX} dy={subLH}>in mobile app settings to</tspan>
-            <tspan x={subX} dy={subLH}>hide it from scanners.</tspan>
-          </>
-        )}
-      </text>
+      <SvgAutoWrapText
+        x={subX}
+        y={subY}
+        font={`${subSz}px ${architectureFonts.body}`}
+        maxWidth={vpSize.w * (isDesktopLayout ? 0.38 : 0.42)}
+        lineHeight={subLH}
+        fill={architectureTokens.colors.textSecondary}
+        fontFamily={architectureFonts.body}
+        fontSize={subSz}
+        opacity={labelsP}
+      >
+        {isDesktopLayout
+          ? 'Optional. Leave port 4387 open, or flip the switch in mobile app settings to hide it at the firewall level — invisible to scanners. Signed wake requests let you back in.'
+          : 'Optional — leave port 4387 open, or enable port locking in mobile app settings to hide it from scanners.'}
+      </SvgAutoWrapText>
 
       {/* ── Main animation group ─────────────────────────────────────────── */}
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>

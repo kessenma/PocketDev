@@ -336,7 +336,7 @@ const LOGO_SIZE = 78
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 100,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoHalo: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     borderRadius: 28,
     opacity: 0.12,
   },

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
+import { measureTextWidth } from '../../../shared/pretext-measure'
+import { SvgAutoWrapText } from '../../../shared/SvgAutoWrapText'
 import { architectureTokens } from '../../../shared/theme'
 import { EXPLAINER_TIMINGS } from './constants'
 
@@ -241,6 +243,13 @@ export function RepoCloneTakeoverScene({
     : Math.min(vpSize.w * 0.032, 14)
   const legendY = subY + subLH * (isDesktopLayout ? 2 : 3) + 16
 
+  const legendFont = `500 ${legendFontSize}px var(--font-sans), sans-serif`
+  const legendPadX = legendFontSize * 1.2
+  const pillH = legendFontSize * 2
+  const githubW = measureTextWidth('GitHub', legendFont) + legendPadX * 2
+  const gitW = measureTextWidth('Git', legendFont) + legendPadX * 2
+  const gitPillX = titleX + githubW + legendFontSize * 0.8
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -267,42 +276,33 @@ export function RepoCloneTakeoverScene({
       </text>
 
       {/* Subtitle */}
-      <text
+      <SvgAutoWrapText
         x={titleX}
         y={subY}
+        font={`${subFontSize}px var(--font-sans), sans-serif`}
+        maxWidth={vpSize.w * (isDesktopLayout ? 0.44 : 0.80)}
+        lineHeight={subLH}
         fill={architectureTokens.colors.textSecondary}
         fontFamily="var(--font-sans), sans-serif"
         fontSize={subFontSize}
       >
-        {isDesktopLayout ? (
-          <>
-            <tspan x={titleX} dy="0">Clone from GitHub, browse files on your phone. The code lives on the</tspan>
-            <tspan x={titleX} dy={subLH}>server — only filenames sync to the app for instant navigation.</tspan>
-          </>
-        ) : (
-          <>
-            <tspan x={titleX} dy="0">Clone from GitHub, browse files on</tspan>
-            <tspan x={titleX} dy={subLH}>your phone. The code lives on the</tspan>
-            <tspan x={titleX} dy={subLH}>server — only filenames sync to the</tspan>
-            <tspan x={titleX} dy={subLH}>app for instant navigation.</tspan>
-          </>
-        )}
-      </text>
+        Clone from GitHub, browse files on your phone. The code lives on the server — only filenames sync to the app for instant navigation.
+      </SvgAutoWrapText>
 
-      {/* Legend pills */}
+      {/* Legend pills — sized from measured text widths */}
       <g>
         <rect
           x={titleX}
           y={legendY}
-          width={legendFontSize * 6}
-          height={legendFontSize * 2}
+          width={githubW}
+          height={pillH}
           rx={legendFontSize}
           fill="none"
           stroke={architectureTokens.colors.border}
           strokeWidth="1.5"
         />
         <text
-          x={titleX + legendFontSize * 3}
+          x={titleX + githubW / 2}
           y={legendY + legendFontSize * 1.3}
           fill={architectureTokens.colors.text}
           fontFamily="var(--font-sans), sans-serif"
@@ -314,17 +314,17 @@ export function RepoCloneTakeoverScene({
         </text>
 
         <rect
-          x={titleX + legendFontSize * 6.8}
+          x={gitPillX}
           y={legendY}
-          width={legendFontSize * 4.4}
-          height={legendFontSize * 2}
+          width={gitW}
+          height={pillH}
           rx={legendFontSize}
           fill="none"
           stroke={architectureTokens.colors.border}
           strokeWidth="1.5"
         />
         <text
-          x={titleX + legendFontSize * 6.8 + legendFontSize * 2.2}
+          x={gitPillX + gitW / 2}
           y={legendY + legendFontSize * 1.3}
           fill={architectureTokens.colors.text}
           fontFamily="var(--font-sans), sans-serif"

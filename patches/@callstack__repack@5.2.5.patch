@@ -1,0 +1,10 @@
+diff --git a/dist/loaders/babelSwcLoader/swc.js b/dist/loaders/babelSwcLoader/swc.js
+index 1234567..abcdefg 100644
+--- a/dist/loaders/babelSwcLoader/swc.js
++++ b/dist/loaders/babelSwcLoader/swc.js
+@@ -6,7 +6,7 @@
+ exports.getSupportedSwcConfigurableTransforms = getSupportedSwcConfigurableTransforms;
+ exports.getSupportedSwcCustomTransforms = getSupportedSwcCustomTransforms;
+ exports.getSupportedSwcNormalTransforms = getSupportedSwcNormalTransforms;
+-const SWC_SUPPORTED_NORMAL_RULES = new Set(['transform-block-scoping', 'transform-classes', 'transform-class-static-block', 'transform-destructuring', 'transform-async-to-generator', 'transform-async-generator-functions', 'transform-unicode-regex', 'transform-named-capturing-groups-regex', 'transform-spread', 'transform-parameters', 'transform-function-name', 'transform-logical-assignment-operators', 'transform-sticky-regex', 'transform-literals', 'transform-optional-catch-binding', 'transform-arrow-functions', 'transform-numeric-separator', 'transform-shorthand-properties', 'transform-computed-properties']);
++const SWC_SUPPORTED_NORMAL_RULES = new Set(['transform-block-scoping', 'transform-classes', 'transform-class-static-block', 'transform-async-to-generator', 'transform-async-generator-functions', 'transform-unicode-regex', 'transform-named-capturing-groups-regex', 'transform-spread', 'transform-parameters', 'transform-logical-assignment-operators', 'transform-sticky-regex', 'transform-literals', 'transform-optional-catch-binding', 'transform-arrow-functions', 'transform-numeric-separator', 'transform-shorthand-properties', 'transform-computed-properties']);

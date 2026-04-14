@@ -1,6 +1,6 @@
 /* eslint-env node */
 /* eslint-disable @react-native/no-deep-imports */
-const reactNativePreset = require('react-native/jest-preset')
+const reactNativePreset = require('@react-native/jest-preset')
 
 module.exports = {
   ...reactNativePreset,

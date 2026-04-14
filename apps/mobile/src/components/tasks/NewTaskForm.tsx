@@ -28,6 +28,7 @@ import { useTaskStore } from '../../stores/tasks'
 import { useFilesStore } from '../../stores/files'
 import { useProjectsStore } from '../../stores/projects'
 import { useConnectionStore } from '../../stores/connection'
+import { useSetupStore } from '../../stores/setup'
 import {
   MODEL_PROVIDERS,
   ModelSelector,
@@ -75,6 +76,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
   const projects = useProjectsStore((state) => state.projects)
   const activeProject = projects.find((project) => project.isActive) ?? null
   const server = useConnectionStore((state) => state.server)
+  const setupReport = useSetupStore((state) => state.report)
 
   const providers = useNewTaskDraftStore((state) => state.providers)
   const loadCapabilities = useNewTaskDraftStore((state) => state.loadCapabilities)
@@ -241,6 +243,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       ? contextPaths.map((path) => `- ${path}`).join('\n')
       : '- No specific files pinned'
 
+    const toolsHint = formatCompactToolsHint(setupReport)
     const taskPrompt = [
       'You are working in the active PocketDev repository context.',
       `Repository: ${activeProject?.name ?? rootLabel ?? 'Unknown repo'}`,
@@ -249,6 +252,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       `Current file focus: ${selectedFile?.path ?? 'None'}`,
       'Pinned file context:',
       contextSection,
+      ...(toolsHint ? [toolsHint] : []),
       '',
       'User request:',
       trimmedPrompt,
@@ -540,6 +544,39 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       </Modal>
     </KeyboardAvoidingView>
   )
+}
+
+const TOOLS_HINT_IDS = ['git', 'node', 'python', 'rust', 'go', 'typescript', 'docker', 'bun']
+
+const DB_CONNECT_CMD: Record<string, (port: number) => string> = {
+  postgres: (p) => `psql -h localhost -p ${p}`,
+  redis: (p) => `redis-cli -p ${p}`,
+  mongodb: (p) => `mongosh --port ${p}`,
+  mysql: (p) => `mysql -h localhost -P ${p}`,
+  supabase: (p) => `psql -h localhost -p ${p} -U postgres`,
+}
+
+function formatCompactToolsHint(report: import('@pocketdev/shared/types').PrerequisitesReport | null): string {
+  if (!report?.tools?.length) return ''
+  const installed = report.tools.filter((t) => t.status === 'installed' && TOOLS_HINT_IDS.includes(t.id))
+  if (!installed.length) return ''
+  const parts = installed.map((t) => {
+    const v = t.version ? ` ${t.version.split('.').slice(0, 2).join('.')}` : ''
+    const p = t.path ? ` (${t.path})` : ''
+    return `${t.name}${v}${p}`
+  })
+  const lines = [`Available tools: ${parts.join(', ')}`]
+
+  if (report.databases?.length) {
+    const dbParts = report.databases.map((db) => {
+      const v = db.version ? ` ${db.version}` : ''
+      const cmd = DB_CONNECT_CMD[db.type]?.(db.port)
+      return `${db.name}${v} (${db.status}, port ${db.port}${cmd ? ` — ${cmd}` : ''})`
+    })
+    lines.push(`Databases: ${dbParts.join(', ')}`)
+  }
+
+  return lines.join('\n')
 }
 
 function providerToAgentType(providerId: string): AgentType {

@@ -5,6 +5,20 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { useTerminalCommand } from '../../hooks/useTerminalCommand'
 import TerminalView, { type TerminalViewRef } from '../shared/TerminalView'
 import { typeStyles } from '../../theme/typography'
+import { useSetupStore } from '../../stores/setup'
+import type { PrerequisitesReport } from '@pocketdev/shared/types'
+
+function formatToolsContext(report: PrerequisitesReport | null): string {
+  if (!report?.tools?.length) return ''
+  const installed = report.tools.filter((t) => t.status === 'installed')
+  if (!installed.length) return ''
+  const lines = installed.map((t) => {
+    const version = t.version ? ` ${t.version}` : ''
+    const path = t.path ? ` (${t.path})` : ''
+    return `- ${t.name}${version}${path}`
+  })
+  return `Server environment (${report.os} ${report.arch}):\n${lines.join('\n')}\n\n`
+}
 
 const QUICK_ACTIONS = [
   { label: 'docker ps -a', command: 'docker ps -a' },
@@ -21,16 +35,18 @@ export default function DebugTerminalPane({ problemDescription }: Props) {
   const { colors } = useTheme()
   const terminalRef = useRef<TerminalViewRef>(null)
   const [sudoInput, setSudoInput] = React.useState('')
+  const report = useSetupStore((s) => s.report)
 
   const { output, connected, showSudoPrompt, sendCommand, submitSudoPassword, cancelSudoPrompt } =
     useTerminalCommand({ persistent: true })
 
   function handleAiAssist(prompt: string, terminalOutput: string) {
     const context = terminalOutput.slice(-3000)
+    const toolsCtx = formatToolsContext(report)
     const problemCtx = problemDescription.trim()
       ? `Server issue: ${problemDescription.trim()}\n\n`
       : ''
-    const fullPrompt = `${problemCtx}${prompt}\n\nRecent terminal output:\n${context}`
+    const fullPrompt = `${toolsCtx}${problemCtx}${prompt}\n\nRecent terminal output:\n${context}`
     // Escape single quotes in the prompt to prevent shell injection
     const escaped = fullPrompt.replace(/'/g, "'\\''")
     sendCommand(`claude --print '${escaped}'`)

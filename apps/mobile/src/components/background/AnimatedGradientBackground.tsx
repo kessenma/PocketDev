@@ -394,17 +394,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   baseBackground: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
   },
   softOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
   },
   noiseLayer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     opacity: 0.55,
   },
   blobLayer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
     overflow: 'hidden',
   },
   blob: {
