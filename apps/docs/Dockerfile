@@ -6,7 +6,13 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/docs/package.json ./apps/docs/package.json
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/agent/package.json ./apps/agent/package.json
+COPY apps/mobile/package.json ./apps/mobile/package.json
+COPY apps/agent/console/package.json ./apps/agent/console/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/shared/app-icon/package.json ./packages/shared/app-icon/package.json
+COPY packages/db/package.json ./packages/db/package.json
 RUN pnpm install --frozen-lockfile
 
 # Build shared package
