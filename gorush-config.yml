@@ -12,3 +12,6 @@ ios:
   production: true
   max_retry: 3
   max_concurrent_pushes: 100
+
+android:
+  enabled: false
