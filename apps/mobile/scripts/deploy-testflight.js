@@ -162,8 +162,7 @@ async function main() {
     });
 
     child.on('close', (code) => {
-      logStream.end();
-      resolve(code);
+      logStream.end(() => resolve(code));
     });
   });
 

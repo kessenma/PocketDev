@@ -198,7 +198,7 @@ platform :ios do
   desc "Upload pre-built IPA from Rock to TestFlight"
   lane :upload_rock_testflight do |options|
     # Default to the Rock-generated IPA location, but allow override
-    ipa_path = options[:ipa_path] || "../../.rock/cache/ios/export/Mobile.ipa"
+    ipa_path = options[:ipa_path] || "../../.rock/cache/ios/export/PocketDev.ipa"
 
     # Convert to absolute path for Fastlane
     ipa_path = File.absolute_path(ipa_path)
@@ -269,7 +269,7 @@ platform :ios do
   desc "Upload pre-built IPA from Rock to App Store Connect"
   lane :upload_rock_app_store do |options|
     # Default to the Rock-generated IPA location, but allow override
-    ipa_path = options[:ipa_path] || "../../.rock/cache/ios/export/Mobile.ipa"
+    ipa_path = options[:ipa_path] || "../../.rock/cache/ios/export/PocketDev.ipa"
 
     # Convert to absolute path for Fastlane
     ipa_path = File.absolute_path(ipa_path)
@@ -335,11 +335,11 @@ platform :ios do
 
     # Properly export the archive to IPA using xcodebuild -exportArchive with ExportOptions.plist
     sh("mkdir -p ../../.rock/cache/ios/export")
-    sh("rm -f ../../.rock/cache/ios/export/Mobile.ipa")
+    sh("rm -f ../../.rock/cache/ios/export/PocketDev.ipa")
     export_options_path = File.expand_path("../ExportOptions.plist", __dir__)
     sh("xcodebuild -exportArchive -archivePath ../../.rock/cache/ios/archive/Mobile.xcarchive -exportPath ../../.rock/cache/ios/export -exportOptionsPlist #{export_options_path}")
 
-    UI.success("IPA created successfully at: .rock/cache/ios/export/Mobile.ipa")
+    UI.success("IPA created successfully at: .rock/cache/ios/export/PocketDev.ipa")
 
     # Upload the built IPA to TestFlight
     upload_rock_testflight()
@@ -377,11 +377,11 @@ platform :ios do
 
     # Properly export the archive to IPA using xcodebuild -exportArchive with ExportOptions.plist
     sh("mkdir -p ../../.rock/cache/ios/export")
-    sh("rm -f ../../.rock/cache/ios/export/Mobile.ipa")
+    sh("rm -f ../../.rock/cache/ios/export/PocketDev.ipa")
     export_options_path = File.expand_path("../ExportOptions.plist", __dir__)
     sh("xcodebuild -exportArchive -archivePath ../../.rock/cache/ios/archive/Mobile.xcarchive -exportPath ../../.rock/cache/ios/export -exportOptionsPlist #{export_options_path}")
 
-    UI.success("IPA created successfully at: .rock/cache/ios/export/Mobile.ipa")
+    UI.success("IPA created successfully at: .rock/cache/ios/export/PocketDev.ipa")
 
     # Upload the built IPA to App Store Connect
     upload_rock_app_store(submit_for_review: options[:submit_for_review])

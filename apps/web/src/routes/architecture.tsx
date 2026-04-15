@@ -1,44 +1,22 @@
-import type { CSSProperties } from 'react'
 import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { buttonVariants } from '#/components/ui/button'
 import { HeroScrollSequence } from '#/components/architecture/animations/hero-sequence'
 import { HeroLaptopOverlay } from '#/components/architecture/animations/hero-sequence/HeroLaptopOverlay'
 import {
-  AgentEndpointsSection,
   HowPocketDevWorksSection,
   RepoHistoryTransitionSection,
-  SecurityModelSection,
-  SetupReadinessSection,
-  SystemOverviewSection,
-  TechStackSection,
-  WireProtocolSection,
 } from '#/components/architecture/sections'
 import { Footer } from '#/components/landing/Footer'
-import {
-  architectureTokens,
-  blendHexColors,
-} from '#/components/architecture/shared/theme'
+import { architectureTokens } from '#/components/architecture/shared/theme'
 
 export const Route = createFileRoute('/architecture')({
   component: ArchitecturePage,
 })
 
-const PAPER = '#f7f1e3'
-
 function ArchitecturePage() {
   const howItWorksRef = useRef<HTMLDivElement>(null)
   const [heroProgress, setHeroProgress] = useState(0)
-  const [lowerPageTakeoverProgress, setLowerPageTakeoverProgress] = useState(0)
-  const lowerPageStyle: CSSProperties & Record<string, string | number> = {
-    '--architecture-paper': blendHexColors(architectureTokens.colors.blue, PAPER, lowerPageTakeoverProgress),
-    '--architecture-panel-alt': blendHexColors(architectureTokens.colors.blue, '#efe5cb', lowerPageTakeoverProgress),
-    '--architecture-text': blendHexColors('#ffffff', '#201d18', lowerPageTakeoverProgress),
-    '--architecture-text-secondary': blendHexColors('#dbeafe', '#5c5549', lowerPageTakeoverProgress),
-    '--architecture-border': blendHexColors('#93c5fd', '#b7aa91', lowerPageTakeoverProgress),
-    '--architecture-surface': `rgba(255,255,255, ${0.08 - lowerPageTakeoverProgress * 0.06})`,
-    backgroundColor: blendHexColors(architectureTokens.colors.blue, PAPER, lowerPageTakeoverProgress),
-  }
 
   return (
     <div
@@ -58,24 +36,37 @@ function ArchitecturePage() {
 
       <HowPocketDevWorksSection sectionRef={howItWorksRef} />
 
-      <RepoHistoryTransitionSection onTransitionProgress={setLowerPageTakeoverProgress} />
+      <RepoHistoryTransitionSection />
 
-      <div style={lowerPageStyle}>
-        <SystemOverviewSection />
-        <SetupReadinessSection />
-        <AgentEndpointsSection />
-        <SecurityModelSection />
-        <WireProtocolSection />
-        <TechStackSection />
-
-        <div className="flex justify-center px-6 py-12">
+      <div className="flex flex-col items-center gap-6 px-6 py-20 text-center">
+        <p className="text-sm uppercase tracking-widest text-neutral-500" style={{ fontFamily: 'var(--font-mono), monospace' }}>
+          Want the full picture?
+        </p>
+        <h2
+          className="text-3xl font-bold tracking-tight sm:text-4xl"
+          style={{ fontFamily: 'var(--font-display), var(--font-heading), sans-serif', letterSpacing: '-0.03em' }}
+        >
+          Read the docs
+        </h2>
+        <p className="max-w-md text-base text-neutral-500">
+          Deep-dives on the wire protocol, security model, agent endpoints, and more.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <a
+            href="https://docs.pocketdev.run/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({ variant: 'default', size: 'lg' })}
+          >
+            Learn more in the docs
+          </a>
           <a href="/" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
             Back to home
           </a>
         </div>
-
-        <Footer />
       </div>
+
+      <Footer />
     </div>
   )
 }
