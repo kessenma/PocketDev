@@ -26,12 +26,22 @@ services:
     depends_on:
       gorush-init:
         condition: service_completed_successfully
+    restart: always
     volumes:
       - apns-keys:/keys:ro
-      - ./gorush-config.yml:/config/gorush.yml:ro
     environment:
-      APNS_KEY_ID: ${APNS_KEY_ID}
-      APNS_TEAM_ID: ${APNS_TEAM_ID}
+      GORUSH_CORE_PORT: "8088"
+      GORUSH_CORE_MODE: "release"
+      GORUSH_CORE_SYNC: "false"
+      GORUSH_CORE_MAX_NOTIFICATION: "1000"
+      GORUSH_IOS_ENABLED: "true"
+      GORUSH_IOS_KEY_PATH: "/keys/AuthKey.p8"
+      GORUSH_IOS_KEY_TYPE: "p8"
+      GORUSH_IOS_KEY_ID: ${APNS_KEY_ID}
+      GORUSH_IOS_TEAM_ID: ${APNS_TEAM_ID}
+      GORUSH_IOS_PRODUCTION: "true"
+      GORUSH_IOS_MAX_RETRY: "3"
+      GORUSH_ANDROID_ENABLED: "false"
     networks:
       - coolify
     # Port 8088 is internal only — NOT exposed externally.
