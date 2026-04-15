@@ -9,6 +9,8 @@ import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
 import { RefreshCw } from 'lucide-react-native'
+import ModelSelector from '../model-selector/ModelSelector'
+import type { ModelProvider, ModelProviderId } from '../model-selector/model'
 
 const METRIC_TONE_COLORS: Record<string, string> = {
   healthy: '#22c55e',
@@ -30,9 +32,21 @@ const CONTAINER_STATE_COLORS: Record<string, string> = {
 
 interface Props {
   onRefresh: () => void
+  providers: ModelProvider[]
+  selectedProviderId: ModelProviderId
+  selectedModelId: string
+  onSelectProvider: (providerId: ModelProviderId) => void
+  onSelectModel: (providerId: ModelProviderId, modelId: string) => void
 }
 
-export default function DebugContextPanel({ onRefresh }: Props) {
+export default function DebugContextPanel({
+  onRefresh,
+  providers,
+  selectedProviderId,
+  selectedModelId,
+  onSelectProvider,
+  onSelectModel,
+}: Props) {
   const { colors } = useTheme()
 
   const containers = useContainerStore((s) => s.containers)
@@ -139,6 +153,21 @@ export default function DebugContextPanel({ onRefresh }: Props) {
             </View>
           ))
         )}
+      </BauhausPanel>
+
+      {/* AI Model */}
+      <BauhausPanel style={styles.section} accentColor="#8b5cf6">
+        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Model</Text>
+        <Text style={[typeStyles.bodySmall, { color: colors.textTertiary }]}>
+          Used for AI Assist in the terminal.
+        </Text>
+        <ModelSelector
+          providers={providers}
+          selectedProviderId={selectedProviderId}
+          selectedModelId={selectedModelId}
+          onSelectProvider={onSelectProvider}
+          onSelectModel={onSelectModel}
+        />
       </BauhausPanel>
     </ScrollView>
   )

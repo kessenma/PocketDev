@@ -40,7 +40,7 @@ echo "  → Staging bundle..."
 mkdir -p "$STAGING_DIR/pocketdev-agent"
 
 # Extract version from install.sh and embed in bundle
-AGENT_VERSION=$(grep -oP 'POCKETDEV_VERSION="\K[^"]+' "$REPO_ROOT/apps/web/install.sh")
+AGENT_VERSION=$(sed -n 's/^POCKETDEV_VERSION="\([^"]*\)".*/\1/p' "$REPO_ROOT/apps/web/install.sh")
 echo "{\"version\":\"$AGENT_VERSION\"}" > "$STAGING_DIR/pocketdev-agent/version.json"
 echo "  → Agent version: $AGENT_VERSION"
 

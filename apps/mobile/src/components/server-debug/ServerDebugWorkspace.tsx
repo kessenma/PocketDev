@@ -6,12 +6,16 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../hooks/useAdaptiveLayout'
 import { useContainerStore } from '../../stores/containers'
 import { useServerActionsStore } from '../../stores/server-actions'
+import { useConnectionStore } from '../../stores/connection'
 import SwipeablePager from '../shared/SwipeablePager'
 import type { PageMeta } from '../shared/PagerIndicator'
 import SplitViewLayout from '../layout/SplitViewLayout'
 import DebugProblemBanner from './DebugProblemBanner'
 import DebugContextPanel from './DebugContextPanel'
 import DebugTerminalPane from './DebugTerminalPane'
+import { MODEL_PROVIDERS, mergeServerAvailability, getDefaultModelSelection } from '../model-selector/catalog'
+import type { ModelProvider, ModelProviderId } from '../model-selector/model'
+import { fetchCapabilities } from '../../services/api'
 
 const PAGES: PageMeta[] = [
   {

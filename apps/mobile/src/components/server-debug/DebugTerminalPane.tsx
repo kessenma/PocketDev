@@ -7,6 +7,8 @@ import TerminalView, { type TerminalViewRef } from '../shared/TerminalView'
 import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import type { PrerequisitesReport } from '@pocketdev/shared/types'
+import type { ModelProviderId } from '../model-selector/model'
+import { getCliModelId } from '../model-selector/catalog'
 
 function formatToolsContext(report: PrerequisitesReport | null): string {
   if (!report?.tools?.length) return ''
@@ -29,9 +31,11 @@ const QUICK_ACTIONS = [
 
 interface Props {
   problemDescription: string
+  selectedProviderId: ModelProviderId
+  selectedModelId: string
 }
 
-export default function DebugTerminalPane({ problemDescription }: Props) {
+export default function DebugTerminalPane({ problemDescription, selectedProviderId, selectedModelId }: Props) {
   const { colors } = useTheme()
   const terminalRef = useRef<TerminalViewRef>(null)
   const [sudoInput, setSudoInput] = React.useState('')
@@ -49,8 +53,12 @@ export default function DebugTerminalPane({ problemDescription }: Props) {
     const fullPrompt = `${toolsCtx}${problemCtx}${prompt}\n\nRecent terminal output:\n${context}`
     // Escape single quotes in the prompt to prevent shell injection
     const escaped = fullPrompt.replace(/'/g, "'\\''")
-    sendCommand(`claude --print '${escaped}'`)
+    // AI assist only supports claude (--print mode); other providers use interactive sessions
+    const cliModelId = getCliModelId('claude', selectedModelId)
+    sendCommand(`claude --print --model ${cliModelId} '${escaped}'`)
   }
+
+  const aiAssistAvailable = connected && selectedProviderId === 'claude'
 
   return (
     <View style={styles.container}>
@@ -91,7 +99,7 @@ export default function DebugTerminalPane({ problemDescription }: Props) {
           output={output}
           placeholder="Terminal connecting to server..."
           onAiAssist={handleAiAssist}
-          aiAssistAvailable={connected}
+          aiAssistAvailable={aiAssistAvailable}
         />
       </View>
 

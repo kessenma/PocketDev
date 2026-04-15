@@ -116,6 +116,20 @@ export function getDb() {
         }],
         [1775851998660, '0007_amusing_medusa', () => existingTables.some((t) => t.name === 'env_vars')],
         [1775882114599, '0008_confused_phalanx', () => existingTables.some((t) => t.name === 'device_offline_snapshots')],
+        [1776120399881, '0009_graceful_hex', () => {
+          if (!existingTables.some((t) => t.name === 'push_log')) return false
+          // 0009 also ALTERs devices — ensure the columns exist
+          const devCols = sqlite.query('PRAGMA table_info(devices)').all() as { name: string }[]
+          if (!devCols.some((c) => c.name === 'apns_token')) {
+            sqlite.exec('ALTER TABLE devices ADD COLUMN apns_token text;')
+            console.log('[db] Recovered missing apns_token column from partial 0009 migration')
+          }
+          if (!devCols.some((c) => c.name === 'apns_token_updated_at')) {
+            sqlite.exec('ALTER TABLE devices ADD COLUMN apns_token_updated_at text;')
+            console.log('[db] Recovered missing apns_token_updated_at column from partial 0009 migration')
+          }
+          return true
+        }],
       ]
 
       // Clear any bogus stamps (far-future, legacy_bootstrap, etc.)
