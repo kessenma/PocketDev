@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Badge } from '#/components/ui/badge'
-import { KeyRound, GitCommitHorizontal, ChevronDown, ChevronRight } from 'lucide-react'
+import { GitCommitHorizontal, ChevronDown, ChevronRight } from 'lucide-react'
+import { BrandIcon } from '#/components/ui/brand-icon'
 import type { GitHubAuthDebugInfo, OfflineSnapshot, ProjectsDebugInfo, GitHistoryDebugInfo, GitHistoryDebugCommit } from '#/lib/api'
 
 interface Props {
@@ -124,7 +125,7 @@ export function GitHubDiagnosticsTab({ githubInfo, projectsInfo, gitHistoryInfo,
       <div className="space-y-3">
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4 text-[#f0c419]" />
+            <BrandIcon brand="github" size={18} />
             <p className="text-sm font-medium">GitHub CLI Auth State</p>
           </div>
           <div className="mt-4 space-y-3">

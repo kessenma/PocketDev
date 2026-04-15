@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/com
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { Smartphone, Clock, Trash2, Pencil, Check, X } from 'lucide-react'
+import { Smartphone, Tablet, Monitor, Clock, Trash2, Pencil, Check, X } from 'lucide-react'
 import { removeDevice, renameDevice } from '#/lib/api'
 
 interface Device {
@@ -64,6 +64,7 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
           <Smartphone className="h-5 w-5" />
           Paired Devices
         </CardTitle>
+
         <CardDescription className="text-black/60">
           {devices.length === 0
             ? 'No devices paired yet.'
@@ -106,6 +107,11 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
                     </form>
                   ) : (
                     <div className="flex items-center gap-1.5">
+                      {device.platform === 'android'
+                        ? <Tablet className="h-3.5 w-3.5 shrink-0 text-black/50" />
+                        : device.platform === 'ios'
+                          ? <Smartphone className="h-3.5 w-3.5 shrink-0 text-black/50" />
+                          : <Monitor className="h-3.5 w-3.5 shrink-0 text-black/50" />}
                       <p className="text-sm font-medium truncate">{device.name || 'Unknown device'}</p>
                       <Button
                         variant="ghost"

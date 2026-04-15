@@ -25,6 +25,7 @@ import {
   toolIntentDetail,
 } from './setup-tool-utils'
 import { AlertTriangle, Check, HardDrive, RefreshCw, ShieldCheck, X } from 'lucide-react'
+import { BrandIcon, type BrandKey } from '#/components/ui/brand-icon'
 import { toast } from 'sonner'
 
 interface Props {
@@ -87,12 +88,39 @@ function GitHubCliDetails({ tool }: { tool: ToolCheck }) {
   )
 }
 
+const TOOL_BRAND_MAP: Record<string, BrandKey> = {
+  git: 'git',
+  python: 'python',
+  python3: 'python',
+  rust: 'rust',
+  cargo: 'rust',
+  go: 'go',
+  node: 'node',
+  npm: 'npm',
+  pnpm: 'pnpm',
+  bun: 'bun',
+  nvm: 'nvm',
+  docker: 'docker',
+  postgresql: 'postgresql',
+  psql: 'postgresql',
+  mongodb: 'mongodb',
+  claude: 'claude',
+  codex: 'codex',
+  copilot: 'copilot',
+  opencode: 'opencode',
+  typescript: 'typescript',
+  chromium: 'chromium',
+  java: 'java',
+}
+
 function ToolCard({ tool }: { tool: ToolCheck }) {
+  const brandKey = TOOL_BRAND_MAP[tool.id] ?? TOOL_BRAND_MAP[tool.name.toLowerCase()]
   return (
     <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
+            {brandKey ? <BrandIcon brand={brandKey} size={16} scale={1} /> : null}
             <p className="text-sm font-medium">{tool.name}</p>
             {tool.required ? (
               <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[#f0c419]">Required</span>
@@ -561,12 +589,16 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
             <ShieldCheck className="h-4 w-4 text-[#f0c419]" />
             <p className="text-sm font-medium">Provider Readiness</p>
           </div>
+
           <div className="mt-4 space-y-3">
             <div className={cn(
               'rounded-[1.2rem] border border-white/8 p-4',
               claude?.authenticated ? 'bg-[#f0c419] text-black' : 'bg-white/6',
             )}>
-              <p className={cn('text-[0.68rem] font-semibold uppercase tracking-[0.26em]', claude?.authenticated ? 'text-black/55' : 'text-[#f4f0e8]/45')}>Claude CLI</p>
+              <div className={cn('flex items-center gap-2', claude?.authenticated ? 'text-black/55' : 'text-[#f4f0e8]/45')}>
+                <BrandIcon brand="claude" size={14} scale={1} />
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">Claude CLI</p>
+              </div>
               <div className={cn('mt-2 space-y-1 text-sm', claude?.authenticated ? 'text-black/80' : 'text-[#f4f0e8]/80')}>
                 <p>Installed: {claude?.installed ? 'Yes' : 'No'}</p>
                 <p>Authenticated: {claude?.authenticated ? 'Yes' : 'No'}</p>
@@ -578,7 +610,10 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
               'rounded-[1.2rem] border border-white/8 p-4',
               codex?.authenticated ? 'bg-[#f0c419] text-black' : 'bg-white/6',
             )}>
-              <p className={cn('text-[0.68rem] font-semibold uppercase tracking-[0.26em]', codex?.authenticated ? 'text-black/55' : 'text-[#f4f0e8]/45')}>Codex CLI</p>
+              <div className={cn('flex items-center gap-2', codex?.authenticated ? 'text-black/55' : 'text-[#f4f0e8]/45')}>
+                <BrandIcon brand="codex" size={14} scale={1} />
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">Codex CLI</p>
+              </div>
               <div className={cn('mt-2 space-y-1 text-sm', codex?.authenticated ? 'text-black/80' : 'text-[#f4f0e8]/80')}>
                 <p>Installed: {codex?.installed ? 'Yes' : 'No'}</p>
                 <p>Authenticated: {codex?.authenticated ? 'Yes' : 'No'}</p>
@@ -590,7 +625,10 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
               'rounded-[1.2rem] border border-white/8 p-4',
               opencode?.verified ? 'bg-[#f0c419] text-black' : 'bg-white/6',
             )}>
-              <p className={cn('text-[0.68rem] font-semibold uppercase tracking-[0.26em]', opencode?.verified ? 'text-black/55' : 'text-[#f4f0e8]/45')}>OpenCode CLI</p>
+              <div className={cn('flex items-center gap-2', opencode?.verified ? 'text-black/55' : 'text-[#f4f0e8]/45')}>
+                <BrandIcon brand="opencode" size={14} scale={1} />
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">OpenCode CLI</p>
+              </div>
               <div className={cn('mt-2 space-y-1 text-sm', opencode?.verified ? 'text-black/80' : 'text-[#f4f0e8]/80')}>
                 <p>Installed: {opencode?.installed ? 'Yes' : 'No'}</p>
                 <p>Verified: {opencode?.verified ? 'Yes' : 'No'}</p>

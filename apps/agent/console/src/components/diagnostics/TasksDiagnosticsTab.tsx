@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -6,6 +6,7 @@ import { killTaskFromConsole, fetchTasksDebug, type TasksDebugInfo } from '#/lib
 import { cn } from '#/lib/utils'
 import { CopyButton } from '@pocketdev/shared/components'
 import { RefreshCw, Square, Zap } from 'lucide-react'
+import { BrandIcon, type BrandKey } from '#/components/ui/brand-icon'
 
 interface Props {
   tasksInfo?: TasksDebugInfo | null
@@ -21,14 +22,14 @@ type TaskStatusFilter = 'pending' | 'running' | 'completed' | 'failed' | 'killed
 type ProviderMeta = {
   id: ProviderFilter
   label: string
-  iconSrc: string
+  brandKey: BrandKey
 }
 
 const PROVIDERS: ProviderMeta[] = [
-  { id: 'claude', label: 'Claude', iconSrc: new URL('../../../../../../packages/shared/assets/brands/claude-black.png', import.meta.url).href },
-  { id: 'codex', label: 'Codex', iconSrc: new URL('../../../../../../packages/shared/assets/brands/codex-black.png', import.meta.url).href },
-  { id: 'minimax', label: 'MiniMax', iconSrc: new URL('../../../../../../packages/shared/assets/brands/minimax-black.png', import.meta.url).href },
-  { id: 'copilot', label: 'GitHub Copilot', iconSrc: new URL('../../../../../../packages/shared/assets/brands/github-copilot-black.png', import.meta.url).href },
+  { id: 'claude', label: 'Claude', brandKey: 'claude' },
+  { id: 'codex', label: 'Codex', brandKey: 'codex' },
+  { id: 'minimax', label: 'MiniMax', brandKey: 'minimax' },
+  { id: 'copilot', label: 'GitHub Copilot', brandKey: 'copilot' },
 ]
 
 const STATUS_FILTERS: Array<{ id: TaskStatusFilter, label: string }> = [
@@ -98,34 +99,13 @@ function providerMetaForTask(task: { agentType: string, model: string | null }) 
 }
 
 function BrandAssetIcon({
-  src,
-  alt,
+  brand,
   size = 15,
-  scale = 1.16,
 }: {
-  src: string
-  alt: string
+  brand: BrandKey
   size?: number
-  scale?: number
 }) {
-  const style = {
-    width: `${size}px`,
-    height: `${size}px`,
-    objectFit: 'contain',
-    transform: `scale(${scale})`,
-    transformOrigin: 'center',
-  } satisfies CSSProperties
-
-  return (
-    <img
-      src={src}
-      alt={alt}
-      width={size}
-      height={size}
-      style={style}
-      className="dark:invert"
-    />
-  )
+  return <BrandIcon brand={brand} size={size} />
 }
 
 function FilterChip({
@@ -368,7 +348,7 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                 active={providerFilters.has(provider.id)}
                 onClick={() => setProviderFilters((current) => toggleInSet(current, provider.id))}
               >
-                <BrandAssetIcon src={provider.iconSrc} alt={provider.label} />
+                <BrandAssetIcon brand={provider.brandKey} />
                 <span>{provider.label}</span>
               </FilterChip>
             ))}
@@ -446,7 +426,7 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                         <div className="flex items-center gap-2 text-xs text-[#f4f0e8]/55">
                           {provider ? (
                             <>
-                              <BrandAssetIcon src={provider.iconSrc} alt={provider.label} size={14} />
+                              <BrandAssetIcon brand={provider.brandKey} size={14} />
                               <span>{provider.label}</span>
                             </>
                           ) : (
@@ -494,8 +474,7 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                       {providerMetaForTask(selectedTask) ? (
                         <>
                           <BrandAssetIcon
-                            src={providerMetaForTask(selectedTask)!.iconSrc}
-                            alt={providerMetaForTask(selectedTask)!.label}
+                            brand={providerMetaForTask(selectedTask)!.brandKey}
                             size={16}
                           />
                           <span>{providerMetaForTask(selectedTask)!.label}</span>

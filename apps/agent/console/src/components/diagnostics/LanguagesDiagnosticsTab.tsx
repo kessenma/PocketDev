@@ -3,7 +3,8 @@ import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import type { PythonDebugInfo, RustDebugInfo, GoDebugInfo, TypeScriptDebugInfo } from '#/lib/api'
 import { cn } from '#/lib/utils'
-import { Code, Copy, Check } from 'lucide-react'
+import { Copy, Check } from 'lucide-react'
+import { BrandIcon } from '#/components/ui/brand-icon'
 
 interface Props {
   pythonInfo: PythonDebugInfo | null
@@ -46,7 +47,7 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo, tsInfo }
         {/* Python status */}
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
-            <Code className="h-4 w-4 text-[#f0c419]" />
+            <BrandIcon brand="python" size={18} />
             <p className="text-sm font-medium">Python Runtime</p>
           </div>
           <div className="mt-4 space-y-3">
@@ -89,7 +90,7 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo, tsInfo }
         {/* Rust status */}
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
-            <Code className="h-4 w-4 text-[#CE422B]" />
+            <BrandIcon brand="rust" size={18} />
             <p className="text-sm font-medium">Rust Toolchain</p>
           </div>
           <div className="mt-4 space-y-3">
@@ -132,7 +133,7 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo, tsInfo }
         {/* Go status */}
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
-            <Code className="h-4 w-4 text-[#00ADD8]" />
+            <BrandIcon brand="go" size={18} />
             <p className="text-sm font-medium">Go Runtime</p>
           </div>
           <div className="mt-4 space-y-3">
@@ -167,7 +168,7 @@ export function LanguagesDiagnosticsTab({ pythonInfo, rustInfo, goInfo, tsInfo }
         {/* TypeScript status */}
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
-            <Code className="h-4 w-4 text-[#3178C6]" />
+            <BrandIcon brand="typescript" size={18} />
             <p className="text-sm font-medium">TypeScript Compiler</p>
           </div>
           <div className="mt-4 space-y-3">

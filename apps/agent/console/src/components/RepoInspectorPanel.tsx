@@ -26,6 +26,7 @@ import {
   Search,
   Sparkles,
 } from 'lucide-react'
+import { BrandIcon } from '#/components/ui/brand-icon'
 
 type Props = {
   className?: string
@@ -183,7 +184,8 @@ export function RepoInspectorPanel({ className }: Props) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-xs text-[#f4f0e8]/55 sm:px-6">
-        <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/70">
+        <Badge variant="outline" className="flex items-center gap-1.5 border-white/10 text-[#f4f0e8]/70">
+          <BrandIcon brand="git" size={12} scale={1} />
           {summary?.branchName ?? 'No branch'}
         </Badge>
         {summary?.repoPath ? (

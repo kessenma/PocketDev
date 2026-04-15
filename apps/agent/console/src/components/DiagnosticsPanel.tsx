@@ -39,7 +39,8 @@ import {
   type PushDebugInfo,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
-import { Bug, Maximize2, RefreshCw, Smartphone, Waves, Sparkles } from 'lucide-react'
+import { Bug, Maximize2, RefreshCw, Smartphone, Waves } from 'lucide-react'
+import { BrandIcon, type BrandKey } from '#/components/ui/brand-icon'
 import { ClaudeDiagnosticsTab } from '#/components/diagnostics/ClaudeDiagnosticsTab'
 import { CodexDiagnosticsTab } from '#/components/diagnostics/CodexDiagnosticsTab'
 import { SetupDiagnosticsTab } from '#/components/diagnostics/SetupDiagnosticsTab'
@@ -287,6 +288,13 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
           <div className="rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d] p-1">
             {(['terminal', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'push', 'registry'] as const).map((tab) => {
               const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : tab === 'push' ? 'Push' : 'Registry'
+              const TAB_BRAND: Partial<Record<DiagnosticsTab, BrandKey>> = {
+                claude: 'claude',
+                codex: 'codex',
+                copilot: 'copilot',
+                github: 'github',
+              }
+              const brandKey = TAB_BRAND[tab]
               return (
                 <Button
                   key={tab}
@@ -298,6 +306,11 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                   )}
                   onClick={() => setActiveTab(tab)}
                 >
+                  {brandKey ? (
+                    <span className={cn('mr-1.5 inline-flex shrink-0', activeTab === tab ? '[&_img]:invert-0' : '')}>
+                      <BrandIcon brand={brandKey} size={13} scale={1} />
+                    </span>
+                  ) : null}
                   {label}
                 </Button>
               )
@@ -419,7 +432,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
             <div className="space-y-3">
               <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[#f0c419]" />
+                  <BrandIcon brand="copilot" size={18} />
                   <p className="text-sm font-medium">Copilot Trust State</p>
                 </div>
                 <div className="mt-4 space-y-3">

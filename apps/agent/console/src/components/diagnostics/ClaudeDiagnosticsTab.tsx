@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { answerTaskQuestion, type ClaudeAuthDebugInfo, type TasksDebugInfo } from '#/lib/api'
-import { ShieldCheck, ShieldAlert, Sparkles } from 'lucide-react'
+import { ShieldCheck, ShieldAlert } from 'lucide-react'
+import { BrandIcon } from '#/components/ui/brand-icon'
 
 interface Props {
   claudeInfo: ClaudeAuthDebugInfo | null
@@ -39,7 +40,7 @@ export function ClaudeDiagnosticsTab({ claudeInfo, tasksInfo }: Props) {
       <div className="space-y-3">
         <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#f0c419]" />
+            <BrandIcon brand="claude" size={18} />
             <p className="text-sm font-medium">Claude Auth State</p>
           </div>
           <div className="mt-4 space-y-3">
