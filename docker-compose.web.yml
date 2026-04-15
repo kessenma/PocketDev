@@ -15,3 +15,10 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       VITE_APP_URL: ${VITE_APP_URL}
+      GORUSH_URL: ${GORUSH_URL}
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true

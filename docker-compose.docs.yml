@@ -9,3 +9,9 @@ services:
     environment:
       PORT: 2222
       NODE_ENV: production
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true
