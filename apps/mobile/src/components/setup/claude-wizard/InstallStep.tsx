@@ -19,7 +19,7 @@ const MARKER_PATTERN = /^___CLAUDE_INSTALL_(OK|FAIL)___$/m
 // Strip ANSI escape codes before marker detection
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g
 
-const INSTALL_COMMAND = 'sudo npm install -g @anthropic-ai/claude-code'
+const INSTALL_COMMAND = 'curl -fsSL https://claude.ai/install.sh | sh'
 
 // Timeout (ms) — if no marker detected, fall back to API check
 const FALLBACK_TIMEOUT_MS = 90_000
@@ -36,7 +36,7 @@ interface Props {
 
 function wrapWithMarker(command: string): string {
   // Source shell profiles after install so `claude` is on PATH, then emit marker
-  return `( ${command} ) && { source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; echo "${MARKER_OK}"; } || echo "${MARKER_FAIL}"`
+  return `( ${command} ) && { source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; source ~/.nvm/nvm.sh 2>/dev/null; echo "${MARKER_OK}"; } || echo "${MARKER_FAIL}"`
 }
 
 export default function InstallStep({ dispatch }: Props) {

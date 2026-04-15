@@ -177,6 +177,69 @@ if [ -f "$DB_FILE" ] && [ "$ADMIN_RESET" = true ]; then
   ok "Admin account reset — you can create a new one after setup"
 fi
 
+# ─── Refresh tool paths in existing DB ───────────────────────────
+if [ -f "$DB_FILE" ]; then
+  info "Refreshing tool paths in database..."
+
+  # Source cargo env so rustc is discoverable if installed
+  # shellcheck disable=SC1091
+  . "$HOME/.cargo/env" 2>/dev/null || true
+
+  TOOL_UPSERTS=""
+  TOOL_DELETES=""
+
+  # Usage: _check_tool <tool_id> <candidate1> [candidate2 ...]
+  # Tries each candidate binary in order; upserts the first found, deletes if none.
+  _check_tool() {
+    local tool_id="$1"; shift
+    local found=""
+    for candidate in "$@"; do
+      found="$(command -v "$candidate" 2>/dev/null || true)"
+      [ -n "$found" ] && break
+      found=""
+    done
+    if [ -n "$found" ]; then
+      local ver
+      ver="$("$found" --version 2>/dev/null | head -1 | tr -d '\n' || echo '')"
+      TOOL_UPSERTS="${TOOL_UPSERTS}${tool_id}|${found}|${ver}"$'\n'
+    else
+      TOOL_DELETES="${TOOL_DELETES}${tool_id}"$'\n'
+    fi
+  }
+
+  _check_tool "git"          "git"
+  _check_tool "github_cli"   "gh"
+  _check_tool "node"         "node"
+  _check_tool "npm"          "npm"
+  _check_tool "pnpm"         "pnpm"
+  _check_tool "claude_cli"   "claude"
+  _check_tool "codex_cli"    "codex"
+  _check_tool "opencode_cli" "opencode"
+  _check_tool "docker"       "docker"
+  _check_tool "python"       "python3" "python"
+  _check_tool "rust"         "rustc"
+  _check_tool "go"           "go"
+  _check_tool "typescript"   "tsc"
+  _check_tool "tmux"         "tmux"
+
+  TOOL_UPSERTS="$TOOL_UPSERTS" TOOL_DELETES="$TOOL_DELETES" bun -e "
+const { Database } = require('bun:sqlite');
+const db = new Database('${DB_FILE}');
+const upsert = db.prepare(\"INSERT INTO tool_paths(tool_id,path,version,detected_at) VALUES(?,?,?,datetime('now')) ON CONFLICT(tool_id) DO UPDATE SET path=excluded.path,version=excluded.version,detected_at=excluded.detected_at\");
+const del = db.prepare('DELETE FROM tool_paths WHERE tool_id=?');
+for (const row of (process.env.TOOL_UPSERTS||'').split('\n').filter(Boolean)) {
+  const [id, path, version] = row.split('|');
+  upsert.run(id, path, version || null);
+}
+for (const id of (process.env.TOOL_DELETES||'').split('\n').filter(Boolean)) {
+  del.run(id);
+}
+db.close();
+" 2>/dev/null || true
+
+  ok "Tool paths refreshed"
+fi
+
 # Resolve bun path for systemd (must be absolute)
 BUN_PATH="$(which bun)"
 

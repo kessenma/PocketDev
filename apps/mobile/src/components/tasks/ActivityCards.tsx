@@ -26,7 +26,6 @@ import BauhausBadge from '../shared/BauhausBadge'
 import { getToolPresentation } from './task-stream-utils'
 import type { CardCategory, CardEntry, GroupedStreamItem } from './task-stream-utils'
 import FileViewerSheet from './FileViewerSheet'
-import { LogLine } from './TaskStreamer'
 
 // ── Dispatcher ───────────────────────────────────────────────────────────────
 
@@ -214,6 +213,15 @@ function ResultCard({ activity }: { activity: Extract<TaskActivity, { type: 'tex
   )
 }
 
+// ── LogLine (inlined to avoid circular import with TaskStreamer) ──────────────
+
+function LogLine({ line }: { line: string }) {
+  const { colors } = useTheme()
+  return (
+    <Text style={[styles.logLine, { color: colors.text }]}>{line}</Text>
+  )
+}
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
@@ -260,5 +268,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginLeft: spacing[2],
     marginTop: 2,
+  },
+  logLine: {
+    ...typeStyles.mono,
+    paddingVertical: 1,
+    maxWidth: 900,
   },
 })

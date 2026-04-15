@@ -12,7 +12,7 @@ import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import BauhausChatInput from '../shared/BauhausChatInput'
-import { LogLine, type StreamItem } from './TaskStreamer'
+import { type StreamItem } from './TaskStreamer'
 import { GroupedItemRow } from './ActivityCards'
 import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
@@ -30,8 +30,10 @@ type Props = {
   /** Controlled raw-logs state — if provided, overrides internal toggle */
   rawLogsActive?: boolean
   onRawLogsToggle?: () => void
-  /** Callback so parent can trigger the copy menu from outside */
-  onOpenCopyMenu?: () => void
+  /** Incrementing counter — parent increments to imperatively open the copy menu */
+  copyTrigger?: number
+  /** Called after a copy completes so parent can show its own feedback */
+  onCopied?: () => void
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -157,7 +159,8 @@ export default function TaskDetailPane({
   hideStatusBar = false,
   rawLogsActive,
   onRawLogsToggle,
-  onOpenCopyMenu,
+  copyTrigger,
+  onCopied,
 }: Props) {
   const { colors } = useTheme()
   const task = useTaskStore((s) => (taskId ? s.tasks.get(taskId) : undefined))
@@ -183,8 +186,12 @@ export default function TaskDetailPane({
   const showRawLogs = rawLogsActive ?? showRawLogsInternal
   const toggleRawLogs = onRawLogsToggle ?? (() => setShowRawLogsInternal((v) => !v))
   const [showCopyMenu, setShowCopyMenu] = useState(false)
-  const openCopyMenu = onOpenCopyMenu ? () => { onOpenCopyMenu(); setShowCopyMenu(true) } : () => setShowCopyMenu(true)
   const [copied, setCopied] = useState(false)
+
+  // Parent can open the copy menu by incrementing copyTrigger
+  useEffect(() => {
+    if (copyTrigger) setShowCopyMenu(true)
+  }, [copyTrigger])
 
   function buildHeader(): string {
     const provider = task?.agent_type ?? 'unknown'
@@ -225,6 +232,7 @@ export default function TaskDetailPane({
     Clipboard.setString(body)
     setShowCopyMenu(false)
     setCopied(true)
+    onCopied?.()
     toast({ title: 'Copied!', description: `${label} copied to clipboard.`, variant: 'success' })
     setTimeout(() => setCopied(false), 2000)
   }
@@ -326,7 +334,7 @@ export default function TaskDetailPane({
           </View>
           <View style={styles.statusActions}>
             <TouchableOpacity
-              onPress={openCopyMenu}
+              onPress={() => setShowCopyMenu(true)}
               activeOpacity={0.7}
               style={[styles.logToggle, { backgroundColor: copied ? '#22c55e18' : 'transparent', borderColor: copied ? '#22c55e' : colors.border }]}
             >

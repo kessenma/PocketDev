@@ -26,12 +26,28 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
   // Header state (only used when hasMorph)
   const [showRawLogs, setShowRawLogs] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
-  const [showCopyMenu, setShowCopyMenu] = React.useState(false)
+  const [copyTrigger, setCopyTrigger] = React.useState(0)
   const [promptExpanded, setPromptExpanded] = React.useState(false)
 
   function togglePrompt() {
     if (Platform.OS === 'ios' || Platform.OS === 'android') {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+      LayoutAnimation.configureNext({
+        duration: 420,
+        create: {
+          type: LayoutAnimation.Types.spring,
+          springDamping: 0.82,
+          property: LayoutAnimation.Properties.opacity,
+        },
+        update: {
+          type: LayoutAnimation.Types.spring,
+          springDamping: 0.82,
+        },
+        delete: {
+          type: LayoutAnimation.Types.spring,
+          springDamping: 0.82,
+          property: LayoutAnimation.Properties.opacity,
+        },
+      })
     }
     setPromptExpanded((v) => !v)
   }
@@ -54,6 +70,18 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
     } catch {}
     navigation.goBack()
   }
+
+  // Safety net: if the screen unmounts without going through handleClose (e.g. Fast Refresh
+  // after a code change, or unexpected navigation), release the native morph state so the
+  // source card can be tapped again.
+  React.useEffect(() => {
+    if (sourceTag == null) return
+    return () => {
+      if (!isClosingRef.current) {
+        void morphCollapse(sourceTag).catch(() => {})
+      }
+    }
+  }, [sourceTag]) // eslint-disable-line react-hooks/exhaustive-deps
 
   React.useEffect(() => {
     if (!hasMorph) return
@@ -98,7 +126,7 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
             </View>
             <View style={styles.actionRight}>
               <TouchableOpacity
-                onPress={() => setShowCopyMenu(true)}
+                onPress={() => setCopyTrigger((t) => t + 1)}
                 activeOpacity={0.7}
                 style={[styles.iconBtn, { backgroundColor: copied ? '#22c55e18' : 'transparent', borderColor: copied ? '#22c55e' : colors.border }]}
               >
@@ -125,9 +153,17 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
           </View>
 
           <View style={[styles.morphCard, { borderColor: colors.border }]}>
-            <MorphCardTarget sourceTag={sourceTag} width="100%" height={110} borderRadius={0} />
+            {/* Collapses to zero height when expanded, revealing the full prompt in its place */}
+            <View style={{ height: promptExpanded ? 0 : undefined, overflow: 'hidden' }}>
+              <MorphCardTarget sourceTag={sourceTag} width="100%" height={110} borderRadius={0} />
+            </View>
             {fullPrompt && (
               <>
+                {promptExpanded && (
+                  <Text style={[typeStyles.body, styles.morphCardExpandText, { color: colors.text }]}>
+                    {fullPrompt}
+                  </Text>
+                )}
                 <TouchableOpacity
                   style={[styles.morphCardMoreRow, { borderTopColor: colors.border }]}
                   onPress={togglePrompt}
@@ -140,11 +176,6 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
                     {promptExpanded ? 'less' : 'more'}
                   </Text>
                 </TouchableOpacity>
-                {promptExpanded && (
-                  <Text style={[typeStyles.body, styles.morphCardExpandText, { color: colors.text }]}>
-                    {fullPrompt}
-                  </Text>
-                )}
               </>
             )}
           </View>
@@ -157,7 +188,8 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
           hideStatusBar={hasMorph}
           rawLogsActive={hasMorph ? showRawLogs : undefined}
           onRawLogsToggle={hasMorph ? () => setShowRawLogs((v) => !v) : undefined}
-          onOpenCopyMenu={hasMorph ? () => setShowCopyMenu(true) : undefined}
+          copyTrigger={hasMorph ? copyTrigger : undefined}
+          onCopied={hasMorph ? () => { setCopied(true); setTimeout(() => setCopied(false), 2000) } : undefined}
           emptyTitle="Task not found"
           emptyBody="The selected task is no longer available in local state."
         />
