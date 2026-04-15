@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
 import { db } from '@pocketdev/db'
 import { pushRelayTokens, pushDeviceTokens, pushNotificationLog } from '@pocketdev/db/schema'
-import { sql, count } from 'drizzle-orm'
+import { sql, count, desc } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
 import {
@@ -15,6 +16,9 @@ import {
   TableRow,
 } from '#/components/ui/table'
 import { Button } from '#/components/ui/button'
+
+const GORUSH_URL = process.env.GORUSH_URL ?? 'http://gorush:8088'
+const APNS_BUNDLE_ID = 'run.pocketdev.mobile'
 
 const getPushStats = createServerFn().handler(async () => {
   const [
@@ -65,12 +69,81 @@ const getPushStats = createServerFn().handler(async () => {
   }
 })
 
+const getRegisteredDevices = createServerFn().handler(async () => {
+  const rows = await db
+    .select({
+      id: pushDeviceTokens.id,
+      relayTokenId: pushDeviceTokens.relayTokenId,
+      apnsToken: pushDeviceTokens.apnsToken,
+      environment: pushDeviceTokens.environment,
+      registeredAt: pushDeviceTokens.registeredAt,
+      lastUsedAt: pushDeviceTokens.lastUsedAt,
+    })
+    .from(pushDeviceTokens)
+    .orderBy(desc(pushDeviceTokens.registeredAt))
+
+  return rows.map((r) => ({
+    ...r,
+    registeredAt: r.registeredAt?.toISOString() ?? '',
+    lastUsedAt: r.lastUsedAt?.toISOString() ?? null,
+  }))
+})
+
+const sendTestPushFn = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ apnsToken: z.string(), environment: z.string() }))
+  .handler(async ({ data }) => {
+    const { apnsToken, environment } = data
+    const isDev = environment === 'development'
+
+    const gorushPayload = {
+      notifications: [
+        {
+          tokens: [apnsToken],
+          platform: 1, // iOS
+          topic: APNS_BUNDLE_ID,
+          title: 'PocketDev Test',
+          message: 'Test push notification from admin panel',
+          data: { type: 'test' },
+          sound: 'default',
+          development: isDev,
+        },
+      ],
+    }
+
+    let success = false
+    let gorushResponse: string | null = null
+
+    try {
+      const res = await fetch(`${GORUSH_URL}/api/push`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(gorushPayload),
+      })
+      gorushResponse = await res.text()
+      success = res.ok
+    } catch (err) {
+      gorushResponse = String(err)
+    }
+
+    // Log the test send
+    await db.insert(pushNotificationLog).values({
+      apnsToken,
+      type: 'test',
+      title: 'PocketDev Test',
+      success,
+      gorushResponse,
+    })
+
+    return { success, gorushResponse }
+  })
+
 export const Route = createFileRoute('/admin/push')({
-  loader: () => getPushStats(),
+  loader: () => Promise.all([getPushStats(), getRegisteredDevices()]),
   component: PushAdminPage,
 })
 
 type LogEntry = Awaited<ReturnType<typeof getPushStats>>['log'][number]
+type DeviceRow = Awaited<ReturnType<typeof getRegisteredDevices>>[number]
 type TypeFilter = 'all' | 'permission' | 'task_completed' | 'task_failed'
 
 const TYPE_FILTERS: { label: string; value: TypeFilter }[] = [
@@ -100,7 +173,8 @@ function truncate(s: string | null | undefined, start: number, end: number) {
 }
 
 function PushAdminPage() {
-  const { relayCount, deviceCount, totalSent, successRate7d, log } = Route.useLoaderData()
+  const [stats, devices] = Route.useLoaderData()
+  const { relayCount, deviceCount, totalSent, successRate7d, log } = stats
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
 
   const filteredLog = typeFilter === 'all' ? log : log.filter((e) => e.type === typeFilter)
@@ -119,6 +193,9 @@ function PushAdminPage() {
           value={successRate7d !== null ? `${successRate7d}%` : '—'}
         />
       </div>
+
+      {/* Registered devices */}
+      <RegisteredDevices devices={devices} />
 
       {/* Type filter */}
       <div className="flex gap-2">
@@ -167,6 +244,98 @@ function PushAdminPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function RegisteredDevices({ devices }: { devices: DeviceRow[] }) {
+  const [sending, setSending] = useState<string | null>(null)
+  const [results, setResults] = useState<Record<string, { success: boolean; msg: string }>>({})
+
+  async function handleSendTest(device: DeviceRow) {
+    setSending(device.id)
+    try {
+      const result = await sendTestPushFn({ data: { apnsToken: device.apnsToken, environment: device.environment } as { apnsToken: string; environment: string } })
+      setResults((prev) => ({
+        ...prev,
+        [device.id]: {
+          success: result.success,
+          msg: result.gorushResponse ?? (result.success ? 'Sent' : 'Failed'),
+        },
+      }))
+    } catch (err) {
+      setResults((prev) => ({
+        ...prev,
+        [device.id]: { success: false, msg: String(err) },
+      }))
+    } finally {
+      setSending(null)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Registered Devices ({devices.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {devices.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">No devices registered</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Device ID</TableHead>
+                <TableHead>Relay Token</TableHead>
+                <TableHead>APNs Token</TableHead>
+                <TableHead>Env</TableHead>
+                <TableHead>Registered</TableHead>
+                <TableHead>Last Used</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {devices.map((device) => {
+                const result = results[device.id]
+                const isSending = sending === device.id
+                return (
+                  <TableRow key={device.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{truncate(device.id, 8, 4)}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{truncate(device.relayTokenId, 8, 0)}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{truncate(device.apnsToken, 6, 6)}</TableCell>
+                    <TableCell>
+                      <Badge variant={device.environment === 'development' ? 'outline' : 'default'} className="text-xs">
+                        {device.environment === 'development' ? 'dev' : 'prod'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatTime(device.registeredAt)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{device.lastUsedAt ? formatTime(device.lastUsedAt) : '—'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={isSending}
+                          onClick={() => handleSendTest(device)}
+                        >
+                          {isSending ? 'Sending…' : 'Send Test'}
+                        </Button>
+                        {result && (
+                          <Badge variant={result.success ? 'default' : 'destructive'} className="text-xs max-w-[140px] truncate" title={result.msg}>
+                            {result.success ? 'sent' : result.msg}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
