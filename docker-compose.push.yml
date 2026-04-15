@@ -1,6 +1,7 @@
 services:
   gorush-init:
     image: alpine:latest
+    restart: "no"
     environment:
       APNS_KEY_BASE64: ${APNS_KEY_BASE64}
     volumes:
