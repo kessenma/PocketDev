@@ -1,7 +1,8 @@
 core:
   port: "8088"
-  sync_mode: false
   max_notification: 1000
+  sync: false
+  mode: "release"
 
 ios:
   enabled: true
@@ -15,3 +16,13 @@ ios:
 
 android:
   enabled: false
+  key_path: ""
+
+huawei:
+  enabled: false
+
+queue:
+  engine: "local"
+
+stat:
+  engine: "memory"
