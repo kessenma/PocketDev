@@ -47,9 +47,25 @@ export function createTerminalSession(
     },
   })
 
+  // Auto-accept Claude workspace trust dialog in interactive terminal sessions.
+  // The dialog arrives across multiple PTY chunks, so keep a rolling buffer.
+  let trustAccepted = false
+  let trustBuffer = ''
+  const trustRe = /Quick\s*safety\s*check|Is\s*this\s*a\s*project\s*you\s*created/i
+  const wrappedOnData = (chunk: string) => {
+    if (!trustAccepted) {
+      trustBuffer = (trustBuffer + chunk).slice(-2000)
+      if (trustRe.test(trustBuffer)) {
+        trustAccepted = true
+        proc.stdin.write(new TextEncoder().encode('\r'))
+      }
+    }
+    onData(chunk)
+  }
+
   // Stream stdout to WebSocket
-  streamOutput(proc.stdout as ReadableStream<Uint8Array> | null, onData)
-  streamOutput(proc.stderr as ReadableStream<Uint8Array> | null, onData)
+  streamOutput(proc.stdout as ReadableStream<Uint8Array> | null, wrappedOnData)
+  streamOutput(proc.stderr as ReadableStream<Uint8Array> | null, wrappedOnData)
 
   proc.exited.then((code) => {
     sessions.delete(sessionId)

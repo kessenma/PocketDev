@@ -464,6 +464,13 @@ export function claudeProviderConfig(): TmuxProviderConfig {
         return { type: 'continue', markPromptSent: true }
       }
 
+      // Auto-accept Claude workspace trust dialog — fires per new directory.
+      // The cursor defaults to option 1 (Yes, I trust this folder); Enter confirms.
+      if (/Quick\s*safety\s*check|Is\s*this\s*a\s*project\s*you\s*created/i.test(snapshot)) {
+        void exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`)
+        return { type: 'continue' }
+      }
+
       // After prompt sent, check for active TUI menu (permission/question)
       const tuiPrompt = parseTuiPrompt(snapshot)
 
