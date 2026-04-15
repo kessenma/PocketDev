@@ -1,5 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { InstallCommand } from '#/components/landing/InstallCommand'
+import { ExternalLink } from '#/components/ui/ExternalLink'
 
 export const Route = createFileRoute('/get-started')({
   component: GetStartedPage,
@@ -16,7 +17,7 @@ function GetStartedPage() {
 
       <h2>Prerequisites</h2>
       <ul>
-        <li>A Linux server (Ubuntu 24.04+ has been tested but other distributions may work) with SSH access</li>
+        <li>A Linux server (<ExternalLink href="https://releases.ubuntu.com/24.04/">Ubuntu 24.04+</ExternalLink> has been tested but other distributions may work) with SSH access</li>
         <li>At least 1 GB of RAM and 2 GB of disk space</li>
         <li>A mobile device running iOS 16+ (Android coming soon)</li>
       </ul>
@@ -76,8 +77,11 @@ function GetStartedPage() {
 
       <h2>Git &amp; SSH Setup</h2>
       <p>
-        The Git wizard is the most involved setup step. It walks you through the full SSH + GitHub
-        authentication flow from your phone — no need to SSH into the server yourself.
+        The Git wizard is the most involved setup step. It walks you through the{' '}
+        <ExternalLink href="https://docs.github.com/en/authentication/connecting-to-github-with-ssh">
+          full SSH + GitHub authentication flow
+        </ExternalLink>{' '}
+        from your phone — no need to SSH into the server yourself.
       </p>
       <h3>1. Detect</h3>
       <p>
@@ -168,7 +172,7 @@ function GetStartedPage() {
       <h2>Next Steps</h2>
       <p>
         More documentation is coming soon. In the meantime, check out the{' '}
-        <a href="https://pocketdev.run/architecture">architecture overview</a> for a deeper look at how PocketDev works.
+        <Link to="/architecture">architecture overview</Link> for a deeper look at how PocketDev works.
       </p>
     </>
   )

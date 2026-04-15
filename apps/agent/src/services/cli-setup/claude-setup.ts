@@ -39,6 +39,7 @@ const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07]*(?:\x07|\x1b\\)|\x1b[@-_]
 const CONTROL_RE = /[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g
 // PTY output often redraws the screen and strips spacing, so patterns allow
 // optional whitespace between words and support a few prompt variants.
+const TRUST_PATTERN = /Quick\s*safety\s*check|Is\s*this\s*a\s*project\s*you\s*created/i
 const THEME_PATTERN = /choose\s*the\s*text\s*style|Dark\s*mode|Light\s*mode/i
 const LOGIN_METHOD_PATTERN = /select\s*login\s*method|claude\s*account\s*with\s*subscription|anthropic\s*console\s*account/i
 const BROWSER_DIDNT_OPEN_PATTERN = /browser\s*didn.t\s*open|use\s*the\s*url\s*below/i
@@ -61,6 +62,7 @@ interface InternalAuthSession {
   authenticated: boolean
   completed: boolean
   error: string | null
+  trustHandled: boolean
   themeHandled: boolean
   methodHandled: boolean
   startedAt: number
@@ -191,6 +193,15 @@ function toAuthStatus(session: InternalAuthSession): ClaudeAuthSessionStatus {
 function refreshSessionState(session: InternalAuthSession) {
   session.cleanOutput = normalizeOutputForMatching(session.output)
   const derived = parseAuthState(session)
+
+  // Auto-accept workspace trust dialog — cursor defaults to option 1 (Yes, I trust this folder).
+  // Must be handled before other prompts since it blocks everything else.
+  if (TRUST_PATTERN.test(session.cleanOutput) && !session.trustHandled) {
+    session.trustHandled = true
+    session.terminal.send('\r')
+    session.updatedAt = Date.now()
+    return
+  }
 
   // Auto-answer theme selector — Claude Code uses an ink TUI in raw mode.
   // The cursor (❯) is already on option 1 (Dark mode). Send \r (carriage return)
@@ -351,6 +362,7 @@ export async function startClaudeAuth(): Promise<ClaudeAuthStartResult> {
     authenticated: false,
     completed: false,
     error: null,
+    trustHandled: false,
     themeHandled: false,
     methodHandled: false,
     startedAt: Date.now(),

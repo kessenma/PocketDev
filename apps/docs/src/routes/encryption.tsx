@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ExternalLink } from '#/components/ui/ExternalLink'
 
 export const Route = createFileRoute('/encryption')({
   component: EncryptionPage,
@@ -35,9 +36,9 @@ function EncryptionPage() {
       <p>
         <strong>Implementation note:</strong> This library runs in the JavaScript runtime and does
         not use Apple's CryptoKit or CommonCrypto APIs. It is publicly available at{' '}
-        <a href="https://github.com/paulmillr/noble-ed25519" target="_blank" rel="noreferrer">
+        <ExternalLink href="https://github.com/paulmillr/noble-ed25519">
           github.com/paulmillr/noble-ed25519
-        </a>
+        </ExternalLink>
         .
       </p>
 
@@ -51,7 +52,7 @@ function EncryptionPage() {
 
       <h2>Export Classification</h2>
       <p>
-        Per the US Bureau of Industry and Security (BIS) Export Administration Regulations (EAR),
+        Per the <ExternalLink href="https://www.bis.doc.gov">US Bureau of Industry and Security (BIS)</ExternalLink> Export Administration Regulations (EAR),
         Note 4 to Category 5, Part 2 (Information Security), the Ed25519 usage described above
         qualifies as an exemption: it is a publicly available, standard algorithm used solely for
         authentication (digital signature verification), not for encrypting or decrypting data.

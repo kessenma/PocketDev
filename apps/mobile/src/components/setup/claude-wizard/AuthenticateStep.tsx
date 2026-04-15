@@ -106,13 +106,9 @@ export default function AuthenticateStep({ dispatch }: Props) {
   }, [dispatch])
 
   useEffect(() => {
-    if (!session?.authenticated || showSuccessBanner) return
+    if (!session?.authenticated) return
     setShowSuccessBanner(true)
-    const timer = setTimeout(() => {
-      dispatch({ type: 'STEP_COMPLETE', step: 'authenticate' })
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [dispatch, session?.authenticated, showSuccessBanner])
+  }, [session?.authenticated])
 
   // ─── Derived state ────────────────────────────────────────────────
 
@@ -172,7 +168,7 @@ export default function AuthenticateStep({ dispatch }: Props) {
           <View style={[styles.successBanner, { backgroundColor: colors.successBackground, borderColor: colors.success }]}>
             <CheckCircle color={colors.success} size={18} strokeWidth={2.25} />
             <Text style={[styles.successBannerText, { color: colors.success }]}>
-              Claude authentication succeeded. Moving to verification...
+              Claude authentication succeeded.
             </Text>
           </View>
         )}
@@ -261,7 +257,6 @@ export default function AuthenticateStep({ dispatch }: Props) {
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: colors.primary }]}
           onPress={handleContinue}
-          disabled={showSuccessBanner}
           activeOpacity={0.7}
         >
           <CheckCircle color={colors.primaryText} size={18} strokeWidth={2.25} />

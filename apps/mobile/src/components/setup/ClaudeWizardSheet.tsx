@@ -4,7 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
-import { ChevronLeft, X, Check } from 'lucide-react-native'
+import { ChevronLeft, X, Check, RotateCcw } from 'lucide-react-native'
 import WizardStepper from './claude-wizard/WizardStepper'
 import DetectStep from './claude-wizard/DetectStep'
 import InstallStep from './claude-wizard/InstallStep'
@@ -36,6 +36,7 @@ type WizardAction =
   | { type: 'STEP_FAILED'; step: ClaudeWizardStep; error: string }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
+  | { type: 'FORCE_REINSTALL' }
 
 function getInitialState(): WizardState {
   const stepStatuses = {} as Record<ClaudeWizardStep, ClaudeWizardStepStatus>
@@ -148,6 +149,15 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, stepStatuses: newStatuses, error: null }
     }
 
+    case 'FORCE_REINSTALL': {
+      const newStatuses = { ...state.stepStatuses }
+      newStatuses['install'] = 'active'
+      // Re-pend authenticate/verify if they were skipped
+      if (newStatuses['authenticate'] === 'skipped') newStatuses['authenticate'] = 'pending'
+      if (newStatuses['verify'] === 'skipped') newStatuses['verify'] = 'pending'
+      return { ...state, currentStep: 'install', stepStatuses: newStatuses, error: null, allConfigured: false }
+    }
+
     default:
       return state
   }
@@ -193,6 +203,14 @@ export default function ClaudeWizardSheet({ visible, onClose, onComplete }: Prop
               v{state.claudeStatus.version}
             </Text>
           )}
+          <TouchableOpacity
+            style={styles.reinstallButton}
+            onPress={() => dispatch({ type: 'FORCE_REINSTALL' })}
+            activeOpacity={0.7}
+          >
+            <RotateCcw color={colors.textTertiary} size={14} strokeWidth={2.25} />
+            <Text style={[styles.reinstallText, { color: colors.textTertiary }]}>Reinstall</Text>
+          </TouchableOpacity>
         </View>
       )
     }
@@ -311,6 +329,18 @@ const styles = StyleSheet.create({
   completedDetail: {
     ...typographyScale.sm,
     fontFamily: 'monospace',
+  },
+  reinstallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+    marginTop: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  reinstallText: {
+    ...typographyScale.xs,
+    fontWeight: '500',
   },
   footer: {
     paddingHorizontal: spacing[6],

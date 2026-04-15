@@ -8,6 +8,7 @@ import { fetchClaudeSetupStatus } from '../../../services/api'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
 import { Check, Clock, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Download } from 'lucide-react-native'
+import CopyButton from '../../shared/CopyButton'
 
 // Marker pattern to detect success/failure
 const MARKER_OK = '___CLAUDE_INSTALL_OK___'
@@ -19,7 +20,10 @@ const MARKER_PATTERN = /^___CLAUDE_INSTALL_(OK|FAIL)___$/m
 // Strip ANSI escape codes before marker detection
 const ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g
 
-const INSTALL_COMMAND = 'curl -fsSL https://claude.ai/install.sh | sh'
+const INSTALL_COMMAND = 'curl -fsSL https://claude.ai/install.sh | bash'
+const TMUX_SESSION = 'claude-install'
+// Matches the Claude Code workspace trust prompt
+const CLAUDE_TRUST_PATTERN = /Quick safety check|Is this a project you created/i
 
 // Timeout (ms) — if no marker detected, fall back to API check
 const FALLBACK_TIMEOUT_MS = 90_000
@@ -34,9 +38,34 @@ interface Props {
   dispatch: (action: WizardAction) => void
 }
 
-function wrapWithMarker(command: string): string {
-  // Source shell profiles after install so `claude` is on PATH, then emit marker
-  return `( ${command} ) && { source ~/.bashrc 2>/dev/null; source ~/.profile 2>/dev/null; source ~/.nvm/nvm.sh 2>/dev/null; echo "${MARKER_OK}"; } || echo "${MARKER_FAIL}"`
+function buildTmuxInstallCommand(): string {
+  // Write script via heredoc to avoid quoting issues inside tmux new-session
+  const scriptLines = [
+    `( ${INSTALL_COMMAND} ) && {`,
+    `  source ~/.bashrc 2>/dev/null`,
+    `  source ~/.profile 2>/dev/null`,
+    `  source ~/.nvm/nvm.sh 2>/dev/null`,
+    `  echo "${MARKER_OK}"`,
+    `} || echo "${MARKER_FAIL}"`,
+  ].join('\n')
+
+  return [
+    `cat > /tmp/pocketdev-claude-install.sh << 'POCKETEOF'\n${scriptLines}\nPOCKETEOF`,
+    `tmux kill-session -t ${TMUX_SESSION} 2>/dev/null; true`,
+    `tmux new-session -d -s ${TMUX_SESSION} -x 220 -y 50 "bash /tmp/pocketdev-claude-install.sh"`,
+    `tmux attach-session -t ${TMUX_SESSION}`,
+  ].join('\n')
+}
+
+function buildStartCommand(): string {
+  // Reattach if a prior session is still running; otherwise start fresh
+  return [
+    `if tmux has-session -t ${TMUX_SESSION} 2>/dev/null; then`,
+    `  tmux attach-session -t ${TMUX_SESSION}`,
+    `else`,
+    buildTmuxInstallCommand(),
+    `fi`,
+  ].join('\n')
 }
 
 export default function InstallStep({ dispatch }: Props) {
@@ -53,20 +82,23 @@ export default function InstallStep({ dispatch }: Props) {
 
   const {
     output, hasError, done, showSudoPrompt, connected,
-    sendCommand, submitSudoPassword, cancelSudoPrompt,
+    sendCommand, sendInput, submitSudoPassword, cancelSudoPrompt, reset,
   } = useTerminalCommand({
     onOutput: (chunk) => {
       console.log('[claude-install] output chunk:', JSON.stringify(chunk.slice(0, 120)))
-      // Strip ANSI codes before checking for markers
+      // Strip ANSI codes before checking for patterns
       const clean = chunk.replace(ANSI_RE, '')
+
+      // Auto-accept Claude's workspace trust dialog (cursor defaults to option 1)
+      if (CLAUDE_TRUST_PATTERN.test(clean)) {
+        console.log('[claude-install] Trust dialog detected, auto-accepting')
+        sendInput('\n')
+      }
+
       const match = clean.match(MARKER_PATTERN)
       if (match) {
         console.log('[claude-install] Marker detected:', match[1])
-        if (match[1] === 'OK') {
-          setStatus('done')
-        } else {
-          setStatus('failed')
-        }
+        setStatus(match[1] === 'OK' ? 'done' : 'failed')
       }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
     },
@@ -118,7 +150,7 @@ export default function InstallStep({ dispatch }: Props) {
       console.log('[claude-install] WS connected, starting install...')
       setStatus('installing')
       setTimeout(() => {
-        const cmd = wrapWithMarker(INSTALL_COMMAND)
+        const cmd = buildStartCommand()
         console.log('[claude-install] Sending:', cmd.slice(0, 80))
         sendCommand(cmd)
       }, 300)
@@ -132,12 +164,14 @@ export default function InstallStep({ dispatch }: Props) {
   }
 
   function handleRetry() {
+    reset()
+    setStatus('installing')
     if (connected) {
-      setStatus('installing')
-      sendCommand(wrapWithMarker(INSTALL_COMMAND))
+      sendCommand([
+        `tmux kill-session -t ${TMUX_SESSION} 2>/dev/null; true`,
+        buildTmuxInstallCommand(),
+      ].join('\n'))
     } else {
-      // WS disconnected, just verify via API
-      setStatus('installing')
       checkViaApi()
     }
   }
@@ -233,15 +267,18 @@ export default function InstallStep({ dispatch }: Props) {
       </TouchableOpacity>
 
       {showOutput && (
-        <ScrollView
-          ref={scrollRef}
-          style={[styles.outputBox, { backgroundColor: colors.background }]}
-          nestedScrollEnabled
-        >
-          <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-            {output || 'Waiting for activity...'}
-          </Text>
-        </ScrollView>
+        <>
+          <ScrollView
+            ref={scrollRef}
+            style={[styles.outputBox, { backgroundColor: colors.background }]}
+            nestedScrollEnabled
+          >
+            <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
+              {output || 'Waiting for activity...'}
+            </Text>
+          </ScrollView>
+          {output ? <CopyButton value={output} label="Copy output" /> : null}
+        </>
       )}
 
       {/* Actions */}

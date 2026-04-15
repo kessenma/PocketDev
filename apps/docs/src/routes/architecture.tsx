@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { ExternalLink } from '#/components/ui/ExternalLink'
 
 export const Route = createFileRoute('/architecture')({
   component: ArchitecturePage,
@@ -159,11 +160,11 @@ function ArchitecturePage() {
         user-facing clients, but keeps them aligned with shared TypeScript contracts.
       </p>
       <ul>
-        <li><strong>Hosted web:</strong> TanStack Start, Vite, Postgres, and <code>@pocketdev/db</code></li>
-        <li><strong>Agent:</strong> Bun, Elysia, SQLite with Drizzle, and PTY/process orchestration</li>
-        <li><strong>Console:</strong> React 19, Vite, <code>react-router-dom</code>, xterm.js, shadcn/ui, and Tailwind 4</li>
-        <li><strong>Mobile:</strong> React Native 0.83, Rock CLI with Re.Pack, Zustand, MMKV, and Keychain-backed storage</li>
-        <li><strong>Shared:</strong> typed WebSocket protocol, Zod schemas, theme tokens, and <code>@noble/ed25519</code></li>
+        <li><strong>Hosted web:</strong> <ExternalLink href="https://tanstack.com/start">TanStack Start</ExternalLink>, Vite, Postgres, and <code>@pocketdev/db</code></li>
+        <li><strong>Agent:</strong> <ExternalLink href="https://bun.sh">Bun</ExternalLink>, <ExternalLink href="https://elysiajs.com">Elysia</ExternalLink>, SQLite with Drizzle, and PTY/process orchestration</li>
+        <li><strong>Console:</strong> React 19, Vite, <code>react-router-dom</code>, <ExternalLink href="https://xtermjs.org">xterm.js</ExternalLink>, <ExternalLink href="https://ui.shadcn.com">shadcn/ui</ExternalLink>, and Tailwind 4</li>
+        <li><strong>Mobile:</strong> <ExternalLink href="https://reactnative.dev">React Native 0.83</ExternalLink>, Rock CLI with Re.Pack, <ExternalLink href="https://zustand-demo.pmnd.rs">Zustand</ExternalLink>, MMKV, and Keychain-backed storage</li>
+        <li><strong>Shared:</strong> typed WebSocket protocol, Zod schemas, theme tokens, and <ExternalLink href="https://github.com/paulmillr/noble-ed25519"><code>@noble/ed25519</code></ExternalLink></li>
         <li><strong>Tooling:</strong> Claude, Codex, and Copilot CLIs plus git, ripgrep, and local dev servers</li>
       </ul>
 
