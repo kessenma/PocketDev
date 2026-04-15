@@ -32,11 +32,20 @@ const PAGES: PageMeta[] = [
   },
 ]
 
+const defaultSelection = getDefaultModelSelection()
+
 export default function ServerDebugWorkspace() {
   const { colors } = useTheme()
   const { layoutMode } = useAdaptiveLayout()
   const [problemDescription, setProblemDescription] = useState('')
 
+  const [providers, setProviders] = useState<ModelProvider[]>(MODEL_PROVIDERS)
+  const [selectedProviderId, setSelectedProviderId] = useState<ModelProviderId>(
+    defaultSelection.selectedProviderId as ModelProviderId,
+  )
+  const [selectedModelId, setSelectedModelId] = useState<string>(defaultSelection.selectedModelId)
+
+  const server = useConnectionStore((s) => s.server)
   const refreshContainers = useContainerStore((s) => s.refreshContainers)
   const refreshServer = useServerActionsStore((s) => s.refresh)
 
@@ -45,9 +54,27 @@ export default function ServerDebugWorkspace() {
     refreshServer()
   }, [refreshContainers, refreshServer])
 
+  useEffect(() => {
+    if (!server) return
+    fetchCapabilities(server.ip, server.port)
+      .then((caps) => setProviders(mergeServerAvailability(caps)))
+      .catch(() => {})
+  }, [server])
+
   function handleRefresh() {
     refreshContainers()
     refreshServer()
+  }
+
+  function handleSelectProvider(providerId: ModelProviderId) {
+    setSelectedProviderId(providerId)
+    const provider = providers.find((p) => p.id === providerId) ?? providers[0]
+    setSelectedModelId(provider.models[0].id)
+  }
+
+  function handleSelectModel(providerId: ModelProviderId, modelId: string) {
+    setSelectedProviderId(providerId)
+    setSelectedModelId(modelId)
   }
 
   const isTabletSplit = layoutMode === 'tabletSplit'
@@ -59,15 +86,41 @@ export default function ServerDebugWorkspace() {
       {isTabletSplit ? (
         <SplitViewLayout
           style={styles.split}
-          leadingWidth={380}
-          leading={<DebugContextPanel onRefresh={handleRefresh} />}
-          trailing={<DebugTerminalPane problemDescription={problemDescription} />}
+          leadingWidth={420}
+          leading={
+            <DebugContextPanel
+              onRefresh={handleRefresh}
+              providers={providers}
+              selectedProviderId={selectedProviderId}
+              selectedModelId={selectedModelId}
+              onSelectProvider={handleSelectProvider}
+              onSelectModel={handleSelectModel}
+            />
+          }
+          trailing={
+            <DebugTerminalPane
+              problemDescription={problemDescription}
+              selectedProviderId={selectedProviderId}
+              selectedModelId={selectedModelId}
+            />
+          }
         />
       ) : (
         <View style={styles.pager}>
           <SwipeablePager pages={PAGES}>
-            <DebugContextPanel onRefresh={handleRefresh} />
-            <DebugTerminalPane problemDescription={problemDescription} />
+            <DebugContextPanel
+              onRefresh={handleRefresh}
+              providers={providers}
+              selectedProviderId={selectedProviderId}
+              selectedModelId={selectedModelId}
+              onSelectProvider={handleSelectProvider}
+              onSelectModel={handleSelectModel}
+            />
+            <DebugTerminalPane
+              problemDescription={problemDescription}
+              selectedProviderId={selectedProviderId}
+              selectedModelId={selectedModelId}
+            />
           </SwipeablePager>
         </View>
       )}
