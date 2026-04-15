@@ -1424,6 +1424,72 @@ PODS:
     - Yoga
   - react-native-get-random-values (1.11.0):
     - React-Core
+  - react-native-morph-card (0.4.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - react-native-morph-card/common (= 0.4.0)
+    - react-native-morph-card/fabric (= 0.4.0)
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - react-native-morph-card/common (0.4.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - react-native-morph-card/fabric (0.4.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - react-native-morph-card/common
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-safe-area-context (5.7.0):
     - hermes-engine
     - RCTRequired
@@ -2267,6 +2333,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - react-native-executorch (from `../node_modules/react-native-executorch`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
+  - react-native-morph-card (from `../node_modules/react-native-morph-card`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - "react-native-vector-icons-material-design-icons (from `../node_modules/@react-native-vector-icons/material-design-icons`)"
   - react-native-webview (from `../node_modules/react-native-webview`)
@@ -2418,6 +2485,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-executorch"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
+  react-native-morph-card:
+    :path: "../node_modules/react-native-morph-card"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-vector-icons-material-design-icons:
@@ -2571,6 +2640,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 8953ac6f45cd0e6b460dbf1de748a0b7ff25fb31
   react-native-executorch: 80b45408da2ac3ac7506a08ec5d1c9798ae24651
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
+  react-native-morph-card: b9b8b8b6e0041d3c9b5e49fe32aa4cf3adee31df
   react-native-safe-area-context: 866dbfc3292621c18abe9857bda29485bf20607a
   react-native-vector-icons-material-design-icons: 1955bd08457a8310e6a2d3c87c7f1ebaca159098
   react-native-webview: d2b92fc3878f206cc5fecd618f4fb5b8d1652bd6

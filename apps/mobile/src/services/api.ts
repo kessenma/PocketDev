@@ -134,7 +134,7 @@ export async function registerPushToken(
   pushToken: string,
   environment: 'development' | 'production',
 ): Promise<void> {
-  await fetch(apiUrl(ip, port, `/devices/${deviceId}/push-token`), {
+  const res = await fetch(apiUrl(ip, port, `/devices/${deviceId}/push-token`), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -142,6 +142,10 @@ export async function registerPushToken(
     },
     body: JSON.stringify({ pushToken, environment }),
   })
+  if (!res.ok) {
+    const body = await res.text().catch(() => res.status.toString())
+    throw new Error(`Push token registration failed: ${body}`)
+  }
 }
 
 export async function deregisterPushToken(

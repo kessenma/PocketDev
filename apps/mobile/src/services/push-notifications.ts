@@ -25,15 +25,21 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 /** Get the APNs device token, triggering registration if needed.
+ *  Pass force=true to clear any cached token and request a fresh one from APNs.
  *  Returns null on timeout or if running outside iOS. */
-export async function getApnsToken(): Promise<string | null> {
+export async function getApnsToken(force = false): Promise<string | null> {
   if (!apnsDiagnostics.isAvailable()) return null
 
-  // Check if a token was already delivered (race condition recovery)
-  const existing = await apnsDiagnostics.getLastDeliveredToken()
-  if (existing?.hasToken && existing.token) {
+  if (force) {
+    // Clear any stale cached token so we get a fresh one from APNs
     await apnsDiagnostics.clearStoredToken()
-    return existing.token
+  } else {
+    // Check if a token was already delivered (race condition recovery)
+    const existing = await apnsDiagnostics.getLastDeliveredToken()
+    if (existing?.hasToken && existing.token) {
+      await apnsDiagnostics.clearStoredToken()
+      return existing.token
+    }
   }
 
   // Trigger registration and poll for the token
@@ -67,13 +73,19 @@ export async function enablePushNotifications(server: {
     return { success: false, error: 'Permission denied' }
   }
 
-  const token = await getApnsToken()
+  // Force a fresh token from APNs — ensures we don't use a stale cached token
+  // that was never registered with the server.
+  const token = await getApnsToken(true)
   if (!token) {
     return { success: false, error: 'Could not get APNs token from Apple. Try again.' }
   }
 
   const env = __DEV__ ? 'development' : 'production'
-  await registerPushToken(server.ip, server.port, server.deviceId, token, env)
+  try {
+    await registerPushToken(server.ip, server.port, server.deviceId, token, env)
+  } catch (err) {
+    return { success: false, error: 'Could not register with server. Try again.' }
+  }
   return { success: true }
 }
 

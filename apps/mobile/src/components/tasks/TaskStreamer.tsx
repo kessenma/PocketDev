@@ -23,7 +23,9 @@ import { useTaskStore } from '../../stores/tasks'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
-import { getToolPresentation } from './task-stream-utils'
+import { getToolPresentation, groupActivitiesIntoCards } from './task-stream-utils'
+import type { GroupedStreamItem } from './task-stream-utils'
+import { GroupedItemRow } from './ActivityCards'
 import FileViewerSheet from './FileViewerSheet'
 
 export type StreamItem =
@@ -41,7 +43,7 @@ export default function TaskStreamer({ taskId }: Props) {
 
   // Merge activities + fallback logs into a single stream.
   // When activities exist, show them. When they don't (non-stream-json agents), show raw logs.
-  const items: StreamItem[] = useMemo(() => {
+  const rawItems: StreamItem[] = useMemo(() => {
     const activities = activitiesRaw ?? []
     const logs = logsRaw ?? []
 
@@ -52,7 +54,9 @@ export default function TaskStreamer({ taskId }: Props) {
     return logs.map((l) => ({ kind: 'log' as const, data: l }))
   }, [activitiesRaw, logsRaw])
 
-  const flatListRef = useRef<FlashListRef<StreamItem>>(null)
+  const items: GroupedStreamItem[] = useMemo(() => groupActivitiesIntoCards(rawItems), [rawItems])
+
+  const flatListRef = useRef<FlashListRef<GroupedStreamItem>>(null)
   const [autoScroll, setAutoScroll] = useState(true)
 
   useEffect(() => {
@@ -79,11 +83,7 @@ export default function TaskStreamer({ taskId }: Props) {
         data={items}
         keyExtractor={(_, i) => String(i)}
         getItemType={(item) => item.kind}
-        renderItem={({ item }) =>
-          item.kind === 'activity'
-            ? <ActivityRow activity={item.data} />
-            : <LogLine line={item.data} />
-        }
+        renderItem={({ item }) => <GroupedItemRow item={item} />}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
         onScroll={handleScroll}
@@ -115,7 +115,7 @@ export function TaskStreamerInline({ taskId }: Props) {
   const activitiesRaw = useTaskStore((s) => s.taskActivities.get(taskId))
   const logsRaw = useTaskStore((s) => s.taskLogs.get(taskId))
 
-  const items: StreamItem[] = useMemo(() => {
+  const rawItems: StreamItem[] = useMemo(() => {
     const activities = activitiesRaw ?? []
     const logs = logsRaw ?? []
     if (activities.length > 0) {
@@ -123,6 +123,8 @@ export function TaskStreamerInline({ taskId }: Props) {
     }
     return logs.map((l) => ({ kind: 'log' as const, data: l }))
   }, [activitiesRaw, logsRaw])
+
+  const items: GroupedStreamItem[] = useMemo(() => groupActivitiesIntoCards(rawItems), [rawItems])
 
   if (items.length === 0) {
     return (
@@ -134,11 +136,7 @@ export function TaskStreamerInline({ taskId }: Props) {
 
   return (
     <View style={styles.inlineContent}>
-      {items.map((item, i) =>
-        item.kind === 'activity'
-          ? <ActivityRow key={i} activity={item.data} />
-          : <LogLine key={i} line={item.data} />,
-      )}
+      {items.map((item, i) => <GroupedItemRow key={i} item={item} />)}
     </View>
   )
 }

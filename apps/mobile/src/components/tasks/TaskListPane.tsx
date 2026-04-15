@@ -1,35 +1,23 @@
 import React from 'react'
 import {
-  Image,
+  NativeModules,
   Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native'
-import { Terminal } from 'lucide-react-native'
+import { MorphCardSource } from 'react-native-morph-card'
+
+const MORPH_AVAILABLE = !!NativeModules.RNCMorphCardModule
 import { FlashList } from '@shopify/flash-list'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { Task } from '@pocketdev/shared/types'
-import type { AgentType, TaskStatus } from '@pocketdev/shared/schema'
+import type { TaskStatus } from '@pocketdev/shared/schema'
 import { useTheme } from '../../contexts/ThemeContext'
 import { getRecentPrompts } from '../../services/storage'
-import BauhausBadge from '../shared/BauhausBadge'
 import { typeStyles } from '../../theme/typography'
-import { Assets } from '../../../assets'
-
-function AgentIcon({ agentType, isDark }: { agentType: AgentType; isDark: boolean }) {
-  if (agentType === 'shell') {
-    return <Terminal size={18} color={isDark ? '#888' : '#666'} strokeWidth={1.5} />
-  }
-  const source = {
-    claude: isDark ? Assets.claudeWhite : Assets.claudeBlack,
-    codex: isDark ? Assets.codexWhite : Assets.codexBlack,
-    copilot: isDark ? Assets.githubCopilotWhite : Assets.githubCopilotBlack,
-  }[agentType]
-  if (!source) return null
-  return <Image source={source} style={styles.agentIcon} resizeMode="contain" />
-}
 
 function getDisplayPrompt(prompt: string): string {
   const marker = 'User request:\n'
@@ -40,7 +28,7 @@ function getDisplayPrompt(prompt: string): string {
 type Props = {
   tasks: Task[]
   activeTaskId?: string | null
-  onTaskPress: (task: Task) => void
+  onTaskPress: (task: Task, sourceTag?: number) => void
   onRecentPromptPress?: (prompt: string) => void
   refreshing: boolean
   onRefresh: () => void
@@ -64,7 +52,9 @@ export default function TaskListPane({
   onRefresh,
   tablet = false,
 }: Props) {
-  const { colors, isDark } = useTheme()
+  const { colors } = useTheme()
+  const { width: windowWidth } = useWindowDimensions()
+  const cardWidth = windowWidth - 2 * spacing[4]
   const recentPrompts = getRecentPrompts()
 
   if (tasks.length === 0 && !refreshing) {
@@ -95,31 +85,38 @@ export default function TaskListPane({
         const statusColor = STATUS_COLORS[item.status]
         const isActive = item.id === activeTaskId
 
-        return (
-          <TouchableOpacity
-            style={[
-              styles.taskCard,
-              {
-                backgroundColor: isActive ? colors.panelAlt : colors.panel,
-                borderColor: colors.border,
-              },
-            ]}
-            onPress={() => onTaskPress(item)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.taskHeader}>
-              <BauhausBadge label={item.status} color={statusColor} />
-              <View style={styles.agentBadge}>
-                <AgentIcon agentType={item.agent_type} isDark={isDark} />
-              </View>
-            </View>
+        const cardContent = (
+          <View style={[styles.taskCard, { backgroundColor: isActive ? colors.panelAlt : colors.panel }]}>
             <Text style={[styles.taskPrompt, { color: colors.text }]} numberOfLines={2}>
               {getDisplayPrompt(item.prompt)}
             </Text>
             <Text style={[styles.taskTime, { color: colors.textTertiary }]}>
               {formatTime(item.created_at)}
             </Text>
-          </TouchableOpacity>
+          </View>
+        )
+
+        return (
+          <View style={[styles.taskCardFrame, { borderColor: statusColor }]}>
+            {MORPH_AVAILABLE ? (
+              <MorphCardSource
+                width={cardWidth - 4}
+                height={106}
+                borderRadius={borderRadius.lg - 2}
+                backgroundColor={isActive ? colors.panelAlt : colors.panel}
+                onPress={(sourceTag) => onTaskPress(item, sourceTag)}
+              >
+                {cardContent}
+              </MorphCardSource>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => onTaskPress(item)}
+              >
+                {cardContent}
+              </TouchableOpacity>
+            )}
+          </View>
         )
       }}
       contentContainerStyle={styles.list}
@@ -166,25 +163,14 @@ const styles = StyleSheet.create({
   listSeparator: {
     height: spacing[3],
   },
-  taskCard: {
+  taskCardFrame: {
     borderWidth: 2,
     borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+  },
+  taskCard: {
     padding: spacing[4],
     gap: spacing[2],
-  },
-  taskHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-  },
-  agentBadge: {
-    marginLeft: 'auto',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  agentIcon: {
-    width: 18,
-    height: 18,
   },
   taskPrompt: {
     ...typeStyles.body,

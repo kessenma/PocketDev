@@ -268,6 +268,9 @@ importers:
       react-native-mmkv:
         specifier: ^4.3.0
         version: 4.3.0(react-native-nitro-modules@0.35.2)(react-native@0.85.1)(react@19.2.3)
+      react-native-morph-card:
+        specifier: ^0.4.0
+        version: 0.4.0(react-native@0.85.1)(react@19.2.3)
       react-native-nitro-modules:
         specifier: ^0.35.2
         version: 0.35.2(react-native@0.85.1)(react@19.2.3)
@@ -11471,6 +11474,16 @@ packages:
       react: 19.2.3
       react-native: 0.85.1(patch_hash=bjdslkbxkamr3vl4jv6od4kmze)(@babel/core@7.29.0)(@react-native/jest-preset@0.85.1)(@react-native/metro-config@0.84.1)(@types/react@19.2.14)(react@19.2.3)
       react-native-nitro-modules: 0.35.2(react-native@0.85.1)(react@19.2.3)
+    dev: false
+
+  /react-native-morph-card@0.4.0(react-native@0.85.1)(react@19.2.3):
+    resolution: {integrity: sha512-Ez7HpRNTSflPXjKLWZhpIB3JIB0BEsYW1Sk+vcmCMKLmSJsHhv9WczMPIe4wa3we8w6UEUheBooxnx3Ou4Udng==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+    dependencies:
+      react: 19.2.3
+      react-native: 0.85.1(patch_hash=bjdslkbxkamr3vl4jv6od4kmze)(@babel/core@7.29.0)(@react-native/jest-preset@0.85.1)(@react-native/metro-config@0.84.1)(@types/react@19.2.14)(react@19.2.3)
     dev: false
 
   /react-native-nitro-modules@0.35.2(react-native@0.85.1)(react@19.2.3):

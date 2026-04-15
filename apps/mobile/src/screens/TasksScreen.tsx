@@ -74,14 +74,14 @@ export default function TasksScreen({ navigation }: Props) {
     navigation.navigate('NewTask')
   }
 
-  function handleTaskPress(task: Task) {
+  function handleTaskPress(task: Task, sourceTag?: number) {
     setActiveTask(task.id)
 
     if (layoutMode === 'tabletSplit') {
       return
     }
 
-    navigation.navigate('TaskDetail', { taskId: task.id })
+    navigation.navigate('TaskDetail', { taskId: task.id, sourceTag })
   }
 
   return (

@@ -5,23 +5,33 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
-import { Check, Code, Copy, FileText, Info, Layers, MessageSquare, ShieldAlert, Terminal } from 'lucide-react-native'
+import { Check, Copy, FileText, GalleryVerticalEnd, Info, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
 import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import BauhausChatInput from '../shared/BauhausChatInput'
-import { ActivityRow, LogLine, type StreamItem } from './TaskStreamer'
+import { LogLine, type StreamItem } from './TaskStreamer'
+import { GroupedItemRow } from './ActivityCards'
 import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
-import { getToolUseDetail } from './task-stream-utils'
+import { getToolUseDetail, groupActivitiesIntoCards } from './task-stream-utils'
+import type { GroupedStreamItem } from './task-stream-utils'
 import { typeStyles } from '../../theme/typography'
 
 type Props = {
   taskId: string | null
   emptyTitle?: string
   emptyBody?: string
+  hideHeader?: boolean
+  /** When true the entire status bar row is hidden (parent renders its own controls) */
+  hideStatusBar?: boolean
+  /** Controlled raw-logs state — if provided, overrides internal toggle */
+  rawLogsActive?: boolean
+  onRawLogsToggle?: () => void
+  /** Callback so parent can trigger the copy menu from outside */
+  onOpenCopyMenu?: () => void
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -43,6 +53,7 @@ function DetailHeader({
   taskId,
   clearPermissions,
   startTask,
+  hidePromptPreview,
 }: {
   task: any
   isRunning: boolean
@@ -54,11 +65,12 @@ function DetailHeader({
   taskId: string | null
   clearPermissions: (id: string) => void
   startTask: (...args: any[]) => void
+  hidePromptPreview?: boolean
 }) {
   return (
     <>
       {/* For multi-turn tasks, show conversation thread instead of single prompt card */}
-      {isMultiTurn && turns.length > 0 ? (
+      {!hidePromptPreview && (isMultiTurn && turns.length > 0 ? (
         <TaskConversation turns={turns} />
       ) : (
         <View style={[styles.promptCard, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
@@ -67,7 +79,7 @@ function DetailHeader({
             {extractUserRequest(task.prompt)}
           </Text>
         </View>
-      )}
+      ))}
 
       {/* Only show result card for single-turn completed tasks (multi-turn has results in conversation) */}
       {!isRunning && !isMultiTurn && resultText ? (
@@ -141,6 +153,11 @@ export default function TaskDetailPane({
   taskId,
   emptyTitle = 'Select a task',
   emptyBody = 'Choose a task to inspect logs, timing, and status without leaving the list.',
+  hideHeader = false,
+  hideStatusBar = false,
+  rawLogsActive,
+  onRawLogsToggle,
+  onOpenCopyMenu,
 }: Props) {
   const { colors } = useTheme()
   const task = useTaskStore((s) => (taskId ? s.tasks.get(taskId) : undefined))
@@ -160,10 +177,13 @@ export default function TaskDetailPane({
   const loadTurnsForTask = useTaskStore((s) => s.loadTurnsForTask)
   const { toast } = useToast()
 
-  const flashListRef = useRef<FlashListRef<StreamItem>>(null)
+  const flashListRef = useRef<FlashListRef<GroupedStreamItem>>(null)
   const [autoScroll, setAutoScroll] = useState(true)
-  const [showRawLogs, setShowRawLogs] = useState(false)
+  const [showRawLogsInternal, setShowRawLogsInternal] = useState(false)
+  const showRawLogs = rawLogsActive ?? showRawLogsInternal
+  const toggleRawLogs = onRawLogsToggle ?? (() => setShowRawLogsInternal((v) => !v))
   const [showCopyMenu, setShowCopyMenu] = useState(false)
+  const openCopyMenu = onOpenCopyMenu ? () => { onOpenCopyMenu(); setShowCopyMenu(true) } : () => setShowCopyMenu(true)
   const [copied, setCopied] = useState(false)
 
   function buildHeader(): string {
@@ -228,11 +248,16 @@ export default function TaskDetailPane({
     }
   }, [task?.turn_count, taskId, turns.length, loadTurnsForTask])
 
-  const streamItems: StreamItem[] = useMemo(() => {
+  const rawStreamItems: StreamItem[] = useMemo(() => {
     if (showRawLogs) return logs.map((l) => ({ kind: 'log' as const, data: l }))
     if (activities.length > 0) return activities.map((a) => ({ kind: 'activity' as const, data: a }))
     return logs.map((l) => ({ kind: 'log' as const, data: l }))
   }, [showRawLogs, activities, logs])
+
+  const streamItems: GroupedStreamItem[] = useMemo(
+    () => groupActivitiesIntoCards(rawStreamItems),
+    [rawStreamItems],
+  )
 
   const itemCount = streamItems.length
   useEffect(() => {
@@ -293,46 +318,47 @@ export default function TaskDetailPane({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
-        <View style={styles.statusMeta}>
-          <BauhausBadge label={task.status} color={statusColor} />
-          <Text style={[styles.elapsed, { color: colors.textTertiary }]}>{elapsed}</Text>
+      {!hideStatusBar && (
+        <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
+          <View style={styles.statusMeta}>
+            {!hideHeader && <BauhausBadge label={task.status} color={statusColor} />}
+            <Text style={[styles.elapsed, { color: colors.textTertiary }]}>{elapsed}</Text>
+          </View>
+          <View style={styles.statusActions}>
+            <TouchableOpacity
+              onPress={openCopyMenu}
+              activeOpacity={0.7}
+              style={[styles.logToggle, { backgroundColor: copied ? '#22c55e18' : 'transparent', borderColor: copied ? '#22c55e' : colors.border }]}
+            >
+              {copied
+                ? <Check color="#22c55e" size={14} strokeWidth={2.25} />
+                : <Copy color={colors.textTertiary} size={14} strokeWidth={2.25} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={toggleRawLogs}
+              activeOpacity={0.7}
+              style={[styles.logToggle, { backgroundColor: showRawLogs ? colors.primary + '18' : 'transparent', borderColor: colors.border }]}
+            >
+              {showRawLogs
+                ? <SquareTerminal color={colors.primary} size={14} strokeWidth={2.25} />
+                : <GalleryVerticalEnd color={colors.textTertiary} size={14} strokeWidth={2.25} />
+              }
+            </TouchableOpacity>
+            {isRunning ? (
+              <BauhausButton variant="danger" compact onPress={() => killTask(task.id)}>
+                Kill
+              </BauhausButton>
+            ) : null}
+          </View>
         </View>
-        <View style={styles.statusActions}>
-          <TouchableOpacity
-            onPress={() => setShowCopyMenu(true)}
-            activeOpacity={0.7}
-            style={[styles.logToggle, { backgroundColor: copied ? '#22c55e18' : 'transparent', borderColor: copied ? '#22c55e' : colors.border }]}
-          >
-            {copied
-              ? <Check color="#22c55e" size={14} strokeWidth={2.25} />
-              : <Copy color={colors.textTertiary} size={14} strokeWidth={2.25} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setShowRawLogs((v) => !v)}
-            activeOpacity={0.7}
-            style={[styles.logToggle, { backgroundColor: showRawLogs ? colors.primary + '18' : 'transparent', borderColor: colors.border }]}
-          >
-            <Code color={showRawLogs ? colors.primary : colors.textTertiary} size={14} strokeWidth={2.25} />
-          </TouchableOpacity>
-          {isRunning ? (
-            <BauhausButton variant="danger" compact onPress={() => killTask(task.id)}>
-              Kill
-            </BauhausButton>
-          ) : null}
-        </View>
-      </View>
+      )}
 
       <FlashList
         ref={flashListRef}
         data={streamItems}
         keyExtractor={(_, i) => String(i)}
         getItemType={(item) => item.kind}
-        renderItem={({ item }) =>
-          item.kind === 'activity'
-            ? <ActivityRow activity={item.data} />
-            : <LogLine line={item.data} />
-        }
+        renderItem={({ item }) => <GroupedItemRow item={item} />}
         contentContainerStyle={styles.scrollAreaContent}
         ItemSeparatorComponent={() => <View style={styles.streamSeparator} />}
         onScroll={handleScroll}
@@ -349,6 +375,7 @@ export default function TaskDetailPane({
             taskId={taskId}
             clearPermissions={clearPermissions}
             startTask={startTask}
+            hidePromptPreview={hideHeader}
           />
         }
         ListEmptyComponent={

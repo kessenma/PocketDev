@@ -40,6 +40,7 @@
     "react-native-get-random-values": "^1.11.0",
     "react-native-keychain": "^9.2.2",
     "react-native-mmkv": "^4.3.0",
+    "react-native-morph-card": "^0.4.0",
     "react-native-nitro-modules": "^0.35.2",
     "react-native-pulsar": "^1.0.2",
     "react-native-reanimated": "^4.3.0",

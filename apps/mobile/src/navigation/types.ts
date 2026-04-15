@@ -4,7 +4,7 @@ export type RootStackParamList = {
   Connect: { url?: string } | undefined
   ServerSetup: undefined
   Main: NavigatorScreenParams<MainTabParamList> | undefined
-  TaskDetail: { taskId: string }
+  TaskDetail: { taskId: string; sourceTag?: number }
   Containers: undefined
   Plan: undefined
   Projects: undefined

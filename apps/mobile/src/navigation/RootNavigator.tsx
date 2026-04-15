@@ -53,7 +53,11 @@ export default function RootNavigator() {
       <Stack.Screen
         name="TaskDetail"
         component={TaskDetailScreen}
-        options={{ title: 'Task' }}
+        options={{
+          title: 'Task',
+          presentation: 'transparentModal',
+          animation: 'none',
+        }}
       />
       <Stack.Screen
         name="Containers"

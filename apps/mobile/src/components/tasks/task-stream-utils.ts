@@ -1,4 +1,5 @@
-import type { TaskQuestionOption, ToolUseActivity } from '@pocketdev/shared/types'
+import type { TaskActivity, TaskQuestionOption, ToolUseActivity } from '@pocketdev/shared/types'
+import type { StreamItem } from './TaskStreamer'
 
 export type TaskToolPresentation = {
   kind: 'read' | 'search' | 'write' | 'create' | 'run' | 'agent' | 'plan' | 'mcp' | 'web' | 'image' | 'info'
@@ -80,4 +81,104 @@ export function getToolPresentation(activity: ToolUseActivity): TaskToolPresenta
 
 export function getQuestionOptionLabel(option: TaskQuestionOption) {
   return option.label || option.value
+}
+
+// ── Card grouping ────────────────────────────────────────────────────────────
+
+export type CardCategory = 'researching' | 'writing' | 'planning' | 'running'
+
+const KIND_TO_CATEGORY: Record<TaskToolPresentation['kind'], CardCategory> = {
+  read:    'researching',
+  search:  'researching',
+  web:     'researching',
+  agent:   'researching',
+  mcp:     'researching',
+  image:   'researching',
+  info:    'researching',
+  write:   'writing',
+  create:  'writing',
+  plan:    'planning',
+  run:     'running',
+}
+
+export type CardEntry =
+  | { kind: 'tool'; toolUse: Extract<TaskActivity, { type: 'tool_use' }>; toolResult: Extract<TaskActivity, { type: 'tool_result' }> | null }
+  | { kind: 'thinking'; preview: string }
+
+export type GroupedStreamItem =
+  | { kind: 'card';   category: CardCategory; entries: CardEntry[] }
+  | { kind: 'result'; activity: Extract<TaskActivity, { type: 'text' }> }
+  | { kind: 'status'; activity: Extract<TaskActivity, { type: 'status' }> }
+  | { kind: 'log';    line: string }
+
+export function groupActivitiesIntoCards(items: StreamItem[]): GroupedStreamItem[] {
+  const result: GroupedStreamItem[] = []
+  let currentCard: { category: CardCategory; entries: CardEntry[] } | null = null
+
+  function flushCard() {
+    if (currentCard) {
+      result.push({ kind: 'card', category: currentCard.category, entries: currentCard.entries })
+      currentCard = null
+    }
+  }
+
+  for (const item of items) {
+    if (item.kind === 'log') {
+      flushCard()
+      result.push({ kind: 'log', line: item.data })
+      continue
+    }
+
+    const activity = item.data
+
+    if (activity.type === 'tool_use') {
+      const presentation = getToolPresentation(activity)
+      const category = KIND_TO_CATEGORY[presentation.kind]
+      if (currentCard && currentCard.category === category) {
+        currentCard.entries.push({ kind: 'tool', toolUse: activity, toolResult: null })
+      } else {
+        flushCard()
+        currentCard = { category, entries: [{ kind: 'tool', toolUse: activity, toolResult: null }] }
+      }
+      continue
+    }
+
+    if (activity.type === 'tool_result') {
+      if (currentCard) {
+        const last = currentCard.entries[currentCard.entries.length - 1]
+        if (last?.kind === 'tool' && last.toolResult === null) {
+          last.toolResult = activity
+          continue
+        }
+      }
+      // Orphaned result — drop silently
+      continue
+    }
+
+    if (activity.type === 'thinking') {
+      const category: CardCategory = 'researching'
+      if (currentCard && currentCard.category === category) {
+        currentCard.entries.push({ kind: 'thinking', preview: activity.preview })
+      } else {
+        flushCard()
+        currentCard = { category, entries: [{ kind: 'thinking', preview: activity.preview }] }
+      }
+      continue
+    }
+
+    if (activity.type === 'text') {
+      flushCard()
+      result.push({ kind: 'result', activity })
+      continue
+    }
+
+    if (activity.type === 'status') {
+      flushCard()
+      result.push({ kind: 'status', activity })
+      continue
+    }
+  }
+
+  flushCard()
+  return result
 }
