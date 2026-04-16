@@ -505,7 +505,11 @@ export function claudeProviderConfig(): TmuxProviderConfig {
       if (!ctx.promptSent && isClaudeReady(snapshot)) {
         const singleLinePrompt = ctx.prompt.replace(/\r?\n/g, ' ').trim()
         ctx.broadcastOutput('[claude] TUI ready — sending prompt...')
-        ctx.sendLine(singleLinePrompt)
+        // Delay before injecting the prompt: Claude Code v2.x shows a home dashboard
+        // on startup, and the chat input isn't ready until that screen fully renders.
+        // node-pty fires processPtySnapshot only ~150ms after the welcome box appears,
+        // which is too early. 800ms matches the previous tmux poll cadence (~750ms).
+        setTimeout(() => ctx.sendLine(singleLinePrompt), 800)
         return { type: 'continue', markPromptSent: true }
       }
 
