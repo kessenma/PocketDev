@@ -72,8 +72,10 @@ async function start() {
           const ext = path.extname(filePath)
           const headers: Record<string, string> = {}
           if (MIME_TYPES[ext]) headers['Content-Type'] = MIME_TYPES[ext]
-          if (url.pathname.startsWith('/assets/')) {
+          if (url.pathname.startsWith('/assets/') && !url.pathname.endsWith('.css')) {
             headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+          } else if (url.pathname.startsWith('/assets/') && url.pathname.endsWith('.css')) {
+            headers['Cache-Control'] = 'public, max-age=86400'
           } else {
             headers['Cache-Control'] = 'public, max-age=3600'
           }

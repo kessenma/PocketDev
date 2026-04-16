@@ -53,6 +53,23 @@ const config = defineConfig({
       conditions: ['bun'],
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Use a fixed name for CSS to avoid hash mismatch between client and
+        // server builds.  Tailwind v4's Vite plugin generates CSS independently
+        // in each pass, which produces different content hashes.  Pinning the
+        // name ensures the server-rendered <link> always resolves to the client
+        // asset that's actually served.
+        assetFileNames: (info) => {
+          if (info.names?.some((n: string) => n.endsWith('.css'))) {
+            return 'assets/styles.css'
+          }
+          return 'assets/[name]-[hash][extname]'
+        },
+      },
+    },
+  },
   plugins: [
     devMiddleware(),
     tsconfigPaths({ projects: ['./tsconfig.json'] }),
