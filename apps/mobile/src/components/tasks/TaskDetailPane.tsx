@@ -5,19 +5,23 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
-import { Check, Copy, FileText, GalleryVerticalEnd, Info, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal } from 'lucide-react-native'
+import { Bug, Check, Copy, FileText, GalleryVerticalEnd, Info, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
+import { useSetupStore } from '../../stores/setup'
 import { useTaskStore } from '../../stores/tasks'
 import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import BauhausChatInput from '../shared/BauhausChatInput'
+import CodexWizardSheet from '../setup/CodexWizardSheet'
 import { type StreamItem } from './TaskStreamer'
 import { GroupedItemRow } from './ActivityCards'
+import TaskDebugSheet from './TaskDebugSheet'
 import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
-import { getToolUseDetail, groupActivitiesIntoCards } from './task-stream-utils'
+import { getToolUseDetail, groupActivitiesIntoCards, parseCodexRawLogToActivity } from './task-stream-utils'
 import type { GroupedStreamItem } from './task-stream-utils'
+import { inferTaskDebugSelection, type TaskDebugSelection } from './task-debug-utils'
 import { typeStyles } from '../../theme/typography'
 
 type Props = {
@@ -178,6 +182,7 @@ export default function TaskDetailPane({
   const turns = useMemo(() => turnsRaw ?? [], [turnsRaw])
   const continueTask = useTaskStore((s) => s.continueTask)
   const loadTurnsForTask = useTaskStore((s) => s.loadTurnsForTask)
+  const setupReport = useSetupStore((s) => s.report)
   const { toast } = useToast()
 
   const flashListRef = useRef<FlashListRef<GroupedStreamItem>>(null)
@@ -187,6 +192,10 @@ export default function TaskDetailPane({
   const toggleRawLogs = onRawLogsToggle ?? (() => setShowRawLogsInternal((v) => !v))
   const [showCopyMenu, setShowCopyMenu] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showDebugSheet, setShowDebugSheet] = useState(false)
+  const [showCodexWizard, setShowCodexWizard] = useState(false)
+  const [debugSelection, setDebugSelection] = useState<TaskDebugSelection>(null)
+  const [codexWizardKey, setCodexWizardKey] = useState(0)
 
   // Parent can open the copy menu by incrementing copyTrigger
   useEffect(() => {
@@ -259,8 +268,16 @@ export default function TaskDetailPane({
   const rawStreamItems: StreamItem[] = useMemo(() => {
     if (showRawLogs) return logs.map((l) => ({ kind: 'log' as const, data: l }))
     if (activities.length > 0) return activities.map((a) => ({ kind: 'activity' as const, data: a }))
+    if (task?.agent_type === 'codex') {
+      const fallbackActivities = logs
+        .map(parseCodexRawLogToActivity)
+        .filter((activity): activity is TaskActivity => activity != null)
+      if (fallbackActivities.length > 0) {
+        return fallbackActivities.map((activity) => ({ kind: 'activity' as const, data: activity }))
+      }
+    }
     return logs.map((l) => ({ kind: 'log' as const, data: l }))
-  }, [showRawLogs, activities, logs])
+  }, [showRawLogs, activities, logs, task?.agent_type])
 
   const streamItems: GroupedStreamItem[] = useMemo(
     () => groupActivitiesIntoCards(rawStreamItems),
@@ -285,12 +302,61 @@ export default function TaskDetailPane({
     setAutoScroll(true)
   }
 
+  const inferredDebugSelection = useMemo(
+    () => inferTaskDebugSelection({
+      task: task ?? null,
+      logs,
+      activities,
+      pendingPermissions,
+      report: setupReport,
+    }),
+    [task, logs, activities, pendingPermissions, setupReport],
+  )
+
+  useEffect(() => {
+    if (!showDebugSheet) return
+    setDebugSelection(inferredDebugSelection)
+  }, [showDebugSheet, inferredDebugSelection])
+
+  function handleOpenDebugSheet() {
+    setDebugSelection(inferredDebugSelection)
+    setShowDebugSheet(true)
+  }
+
+  function handleDebugContinue() {
+    if (debugSelection === 'auth') {
+      setShowDebugSheet(false)
+      setCodexWizardKey((value) => value + 1)
+      setShowCodexWizard(true)
+      return
+    }
+    setShowDebugSheet(false)
+  }
+
   if (!task) {
     return (
-      <View style={[styles.emptyState, { backgroundColor: colors.panel, borderColor: colors.border }]}>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>{emptyTitle}</Text>
-        <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>{emptyBody}</Text>
-      </View>
+      <>
+        <View style={[styles.emptyState, { backgroundColor: colors.panel, borderColor: colors.border }]}>
+          <View style={styles.emptyStateBugRow}>
+            <TouchableOpacity
+              onPress={handleOpenDebugSheet}
+              activeOpacity={0.7}
+              style={[styles.logToggle, { borderColor: colors.border }]}
+            >
+              <Bug color={colors.textTertiary} size={14} strokeWidth={2.25} />
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>{emptyTitle}</Text>
+          <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>{emptyBody}</Text>
+        </View>
+        <TaskDebugSheet
+          visible={showDebugSheet}
+          selection={debugSelection}
+          onClose={() => setShowDebugSheet(false)}
+          onSelect={setDebugSelection}
+          onContinue={handleDebugContinue}
+        />
+      </>
     )
   }
 
@@ -326,6 +392,17 @@ export default function TaskDetailPane({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      {hideStatusBar ? (
+        <View pointerEvents="box-none" style={styles.overlayActions}>
+          <TouchableOpacity
+            onPress={handleOpenDebugSheet}
+            activeOpacity={0.7}
+            style={[styles.logToggle, { backgroundColor: colors.panel, borderColor: colors.border }]}
+          >
+            <Bug color={colors.textTertiary} size={14} strokeWidth={2.25} />
+          </TouchableOpacity>
+        </View>
+      ) : null}
       {!hideStatusBar && (
         <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
           <View style={styles.statusMeta}>
@@ -341,6 +418,13 @@ export default function TaskDetailPane({
               {copied
                 ? <Check color="#22c55e" size={14} strokeWidth={2.25} />
                 : <Copy color={colors.textTertiary} size={14} strokeWidth={2.25} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleOpenDebugSheet}
+              activeOpacity={0.7}
+              style={[styles.logToggle, { borderColor: colors.border }]}
+            >
+              <Bug color={colors.textTertiary} size={14} strokeWidth={2.25} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={toggleRawLogs}
@@ -410,6 +494,22 @@ export default function TaskDetailPane({
       ) : null}
 
       {taskId ? <TaskInteractionSheet taskId={taskId} /> : null}
+      <TaskDebugSheet
+        visible={showDebugSheet}
+        selection={debugSelection}
+        onClose={() => setShowDebugSheet(false)}
+        onSelect={setDebugSelection}
+        onContinue={handleDebugContinue}
+      />
+      {showCodexWizard ? (
+        <CodexWizardSheet
+          key={`codex-auth-repair-${codexWizardKey}`}
+          visible={showCodexWizard}
+          entryMode="auth_repair"
+          onClose={() => setShowCodexWizard(false)}
+          onComplete={() => setShowCodexWizard(false)}
+        />
+      ) : null}
 
       {/* Copy option menu */}
       <Modal visible={showCopyMenu} transparent animationType="fade" onRequestClose={() => setShowCopyMenu(false)}>
@@ -503,6 +603,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     ...typeStyles.screenTitle,
     textAlign: 'center',
+  },
+  emptyStateBugRow: {
+    width: '100%',
+    alignItems: 'flex-end',
+    marginBottom: spacing[4],
   },
   emptyBody: {
     ...typeStyles.body,
@@ -642,6 +747,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: spacing[4],
     alignSelf: 'center',
+  },
+  overlayActions: {
+    position: 'absolute',
+    top: spacing[3],
+    right: spacing[3],
+    zIndex: 10,
   },
 
   // ── Copy Menu ──

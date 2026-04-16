@@ -83,6 +83,66 @@ export function getQuestionOptionLabel(option: TaskQuestionOption) {
   return option.label || option.value
 }
 
+export function parseCodexRawLogToActivity(line: string): TaskActivity | null {
+  const trimmed = line.trim()
+  if (!trimmed) return null
+
+  if (trimmed.startsWith('[thinking] ')) {
+    return {
+      type: 'thinking',
+      provider: 'codex',
+      preview: trimmed.slice('[thinking] '.length).trim(),
+    }
+  }
+
+  if (trimmed.startsWith('[tool] ')) {
+    const body = trimmed.slice('[tool] '.length).trim()
+    const separatorIndex = body.indexOf(':')
+    const tool = separatorIndex >= 0 ? body.slice(0, separatorIndex).trim() : body
+    const detail = separatorIndex >= 0 ? body.slice(separatorIndex + 1).trim() : undefined
+    return {
+      type: 'tool_use',
+      provider: 'codex',
+      tool: tool || 'codex_tool',
+      detail,
+    }
+  }
+
+  if (trimmed.startsWith('[result] ') || trimmed.startsWith('[error] ')) {
+    const isError = trimmed.startsWith('[error] ')
+    return {
+      type: 'tool_result',
+      provider: 'codex',
+      toolName: 'unknown',
+      isError,
+      preview: trimmed.slice(isError ? '[error] '.length : '[result] '.length).trim(),
+    }
+  }
+
+  if (trimmed.startsWith('[done] ')) {
+    return {
+      type: 'status',
+      provider: 'codex',
+      message: trimmed.slice('[done] '.length).trim(),
+    }
+  }
+
+  if (trimmed.startsWith('[system] ') || trimmed.startsWith('[agent] ')) {
+    const prefixLength = trimmed.startsWith('[system] ') ? '[system] '.length : '[agent] '.length
+    return {
+      type: 'status',
+      provider: 'codex',
+      message: trimmed.slice(prefixLength).trim(),
+    }
+  }
+
+  return {
+    type: 'text',
+    provider: 'codex',
+    content: trimmed,
+  }
+}
+
 // ── Card grouping ────────────────────────────────────────────────────────────
 
 export type CardCategory = 'researching' | 'writing' | 'planning' | 'running'

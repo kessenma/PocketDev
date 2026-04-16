@@ -22,6 +22,7 @@ interface Props {
   visible: boolean
   onClose: () => void
   onComplete: () => void
+  entryMode?: 'full' | 'auth_repair'
 }
 
 const ALL_STEPS: CodexWizardStep[] = ['detect', 'review', 'install', 'authenticate', 'verify']
@@ -45,10 +46,34 @@ type WizardAction =
   | { type: 'RETRY' }
 
 function getInitialState(): WizardState {
+  return getInitialStateForMode('full')
+}
+
+function getInitialStateForMode(entryMode: Props['entryMode'] = 'full'): WizardState {
   const stepStatuses = {} as Record<CodexWizardStep, CodexWizardStepStatus>
   for (const step of ALL_STEPS) {
-    stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
+    stepStatuses[step] = 'pending'
   }
+
+  if (entryMode === 'auth_repair') {
+    stepStatuses.detect = 'skipped'
+    stepStatuses.review = 'skipped'
+    stepStatuses.install = 'skipped'
+    stepStatuses.authenticate = 'active'
+    stepStatuses.verify = 'pending'
+
+    return {
+      currentStep: 'authenticate',
+      stepStatuses,
+      codexStatus: null,
+      npmReady: true,
+      authSession: null,
+      error: null,
+      allConfigured: false,
+    }
+  }
+
+  stepStatuses.detect = 'active'
   return {
     currentStep: 'detect',
     stepStatuses,
@@ -170,10 +195,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-export default function CodexWizardSheet({ visible, onClose, onComplete }: Props) {
+export default function CodexWizardSheet({ visible, onClose, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
-  const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
+  const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
 
   const handleClose = useCallback(() => {
     fetchPrerequisites()
@@ -185,7 +210,7 @@ export default function CodexWizardSheet({ visible, onClose, onComplete }: Props
     onComplete()
   }, [fetchPrerequisites, onComplete])
 
-  const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
+  const canGoBack = entryMode === 'full' && ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
   function renderStep() {
     if (state.allConfigured) {

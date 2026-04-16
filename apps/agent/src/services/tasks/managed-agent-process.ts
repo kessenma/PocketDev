@@ -218,7 +218,13 @@ function parsePaneLineToActivity(line: string): TaskActivity | null {
       : { type: 'status', provider: 'claude', message: msg }
   }
 
-  return null
+  // Filter prompt echo (❯ ...), completion/check marks, and the idle cursor (>).
+  if (/^[❯✔✓✗⟳]/.test(t) || t === '>') return null
+  // Filter indented TUI status lines (progress, sub-task status, auto-updating, etc.)
+  if (line.startsWith(' ') || line.startsWith('\t')) return null
+
+  // Plain text lines are Claude's response output.
+  return { type: 'text', provider: 'claude', content: t }
 }
 
 // ── Claude hook event parsing ─────────────────────────────────────────────────
@@ -875,7 +881,6 @@ export class ManagedAgentProcess {
   }
 
   private async pollPane() {
-    await this.pollHooksFile()
     if (this._status !== 'running' || this.finished) return
 
     const { stdout: paneContent, exitCode } = await exec(
@@ -919,10 +924,15 @@ export class ManagedAgentProcess {
           }
         }
       }
-    } else if (!this.promptSent) {
-      // Pane unchanged and prompt not yet sent — nothing to do yet
-      return
     }
+
+    // Poll hooks AFTER capturing the pane so a Stop hook can't skip the final response.
+    // If Stop fires in the same cycle that Claude outputs its response, the pane diff above
+    // already captures and emits that text before cleanup() kills the tmux session.
+    await this.pollHooksFile()
+    if (this._status !== 'running' || this.finished) return
+
+    if (!paneChanged && !this.promptSent) return
     // If pane is stable but prompt has been sent, fall through to onPaneSnapshot
     // so the provider can detect idle completion.
 

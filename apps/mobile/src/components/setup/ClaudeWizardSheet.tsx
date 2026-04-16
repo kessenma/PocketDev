@@ -16,6 +16,7 @@ interface Props {
   visible: boolean
   onClose: () => void
   onComplete: () => void
+  entryMode?: 'full' | 'auth_repair'
 }
 
 // ─── State machine ──────────────────────────────────────
@@ -38,11 +39,27 @@ type WizardAction =
   | { type: 'RETRY' }
   | { type: 'FORCE_REINSTALL' }
 
-function getInitialState(): WizardState {
+function getInitialStateForMode(entryMode: Props['entryMode'] = 'full'): WizardState {
   const stepStatuses = {} as Record<ClaudeWizardStep, ClaudeWizardStepStatus>
   for (const step of ALL_STEPS) {
-    stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
+    stepStatuses[step] = 'pending'
   }
+
+  if (entryMode === 'auth_repair') {
+    stepStatuses.detect = 'skipped'
+    stepStatuses.install = 'skipped'
+    stepStatuses.authenticate = 'active'
+    stepStatuses.verify = 'pending'
+    return {
+      currentStep: 'authenticate',
+      stepStatuses,
+      claudeStatus: null,
+      error: null,
+      allConfigured: false,
+    }
+  }
+
+  stepStatuses.detect = 'active'
   return {
     currentStep: 'detect',
     stepStatuses,
@@ -50,6 +67,10 @@ function getInitialState(): WizardState {
     error: null,
     allConfigured: false,
   }
+}
+
+function getInitialState(): WizardState {
+  return getInitialStateForMode('full')
 }
 
 function findNextActiveStep(statuses: Record<ClaudeWizardStep, ClaudeWizardStepStatus>, afterIndex: number): ClaudeWizardStep | null {
