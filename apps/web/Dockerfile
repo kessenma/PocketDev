@@ -63,7 +63,7 @@ COPY apps/agent/ ./apps/agent/
 COPY packages/shared/ ./packages/shared/
 COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
 COPY package.json ./
-RUN cd apps/agent && bun build src/index.ts --outdir dist --target bun
+RUN cd apps/agent && bun build src/index.ts --outdir dist --target bun --external node-pty-prebuilt-multiarch
 # Stage the tarball contents
 COPY apps/web/install.sh /tmp/install.sh
 RUN mkdir -p /tmp/bundle/pocketdev-agent \
