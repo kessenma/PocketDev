@@ -17,6 +17,7 @@ import GoWizardSheet from '../components/setup/GoWizardSheet'
 import TypeScriptWizardSheet from '../components/setup/TypeScriptWizardSheet'
 import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
 import DockerWizardSheet from '../components/setup/DockerWizardSheet'
+import MinimaxWizardSheet from '../components/setup/MinimaxWizardSheet'
 import DockerSetupAnimation from '../components/animations/DockerSetupAnimation'
 import RustSetupAnimation from '../components/animations/RustSetupAnimation'
 import TypeScriptSetupAnimation from '../components/animations/TypeScriptSetupAnimation'
@@ -30,7 +31,7 @@ import GitHubSetupAnimation from '../components/animations/GitHubSetupAnimation'
 import Dialogue from '../components/shared/Dialogue'
 import { ArrowRight, Check, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
 import { Assets } from '../../assets'
-import { getCodexBlockedReason, getCopilotBlockedReason, getServerSetupStatus, getSetupProgress } from '../components/setup/setup-tool-utils'
+import { getCodexBlockedReason, getCopilotBlockedReason, getMinimaxBlockedReason, getServerSetupStatus, getSetupProgress } from '../components/setup/setup-tool-utils'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ServerSetup'>
@@ -46,6 +47,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const bauhaus = palette.bauhaus
   const codexBlockedReason = getCodexBlockedReason(report)
   const copilotBlockedReason = getCopilotBlockedReason(report)
+  const minimaxBlockedReason = getMinimaxBlockedReason(report)
   const setupStatus = getServerSetupStatus(report)
   const setupProgress = getSetupProgress(report)
   const showingCachedSetup = !!report && revalidating && reportSource === 'cache'
@@ -78,6 +80,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showTypeScriptWizard, setShowTypeScriptWizard] = useState(false)
   const [showTypeScriptAnimation, setShowTypeScriptAnimation] = useState(false)
   const [showMissingDialogue, setShowMissingDialogue] = useState(false)
+  const [showMinimaxWizard, setShowMinimaxWizard] = useState(false)
 
   const handleConnectedComplete = useCallback(() => {
     navigation.replace('Main')
@@ -208,6 +211,25 @@ export default function ServerSetupScreen({ navigation }: Props) {
 
   const handleDockerAnimationComplete = useCallback(() => {
     setShowDockerAnimation(false)
+  }, [])
+
+  const handleMinimaxWizard = useCallback(() => {
+    if (minimaxBlockedReason) {
+      Alert.alert(
+        'Install OpenCode first',
+        minimaxBlockedReason,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open OpenCode Setup', onPress: () => setShowOpenCodeWizard(true) },
+        ],
+      )
+      return
+    }
+    setShowMinimaxWizard(true)
+  }, [minimaxBlockedReason])
+
+  const handleMinimaxWizardComplete = useCallback(() => {
+    setShowMinimaxWizard(false)
   }, [])
 
   const handlePythonWizard = useCallback(() => {
@@ -473,6 +495,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
           onGoWizard={handleGoWizard}
           onTypeScriptWizard={handleTypeScriptWizard}
           onDockerWizard={handleDockerWizard}
+          onMinimaxWizard={handleMinimaxWizard}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
             { useNativeDriver: false },
@@ -592,6 +615,12 @@ export default function ServerSetupScreen({ navigation }: Props) {
           visible={showDockerWizard}
           onClose={() => setShowDockerWizard(false)}
           onComplete={handleDockerWizardComplete}
+        />
+
+        <MinimaxWizardSheet
+          visible={showMinimaxWizard}
+          onClose={() => setShowMinimaxWizard(false)}
+          onComplete={handleMinimaxWizardComplete}
         />
 
         <Dialogue

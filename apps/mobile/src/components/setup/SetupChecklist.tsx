@@ -12,6 +12,7 @@ import {
   getAiAssistantTools,
   getCodexBlockedReason,
   getCopilotBlockedReason,
+  getMinimaxBlockedReason,
   getLanguageTools,
   getRequiredSetupTools,
   getServerSetupStatus,
@@ -34,6 +35,7 @@ interface Props {
   onGoWizard: (tool: ToolCheck) => void
   onTypeScriptWizard: (tool: ToolCheck) => void
   onDockerWizard: (tool: ToolCheck) => void
+  onMinimaxWizard: (tool: ToolCheck) => void
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
 }
 
@@ -53,6 +55,7 @@ export default function SetupChecklist({
   onGoWizard,
   onTypeScriptWizard,
   onDockerWizard,
+  onMinimaxWizard,
   onScroll,
 }: Props) {
   const { colors } = useTheme()
@@ -95,6 +98,7 @@ export default function SetupChecklist({
   const dockerInstalled = dockerTool?.status === 'installed'
   const codexBlockedReason = getCodexBlockedReason(report)
   const copilotBlockedReason = getCopilotBlockedReason(report)
+  const minimaxBlockedReason = getMinimaxBlockedReason(report)
   const setupStatus = getServerSetupStatus(report)
 
   function renderTools(tools: ToolCheck[]) {
@@ -117,12 +121,15 @@ export default function SetupChecklist({
         onGoWizard={onGoWizard}
         onTypeScriptWizard={onTypeScriptWizard}
         onDockerWizard={onDockerWizard}
+        onMinimaxWizard={onMinimaxWizard}
         disabledReason={
           tool.id === 'codex_cli'
             ? codexBlockedReason
             : tool.id === 'copilot_cli'
               ? copilotBlockedReason
-              : null
+              : tool.id === 'minimax_provider'
+                ? minimaxBlockedReason
+                : null
         }
         disabled={showCachedLoadingState}
         showLoadingState={showCachedLoadingState}

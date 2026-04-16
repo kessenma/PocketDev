@@ -439,7 +439,6 @@ export function claudeProviderConfig(): TmuxProviderConfig {
 
     async setup(ctx) {
       taskMode = ctx.mode
-      const claudePath = getToolPath('claude_cli') ?? 'claude'
       const permissionMode = ctx.mode === 'plan' ? 'plan' : 'default'
 
       const hooksFilePath = `/tmp/pocketdev-events-${ctx.taskId}.jsonl`
@@ -462,7 +461,7 @@ export function claudeProviderConfig(): TmuxProviderConfig {
       }))
 
       const args: string[] = [
-        shellEscape(claudePath),
+        'claude',
         '--permission-mode', permissionMode,
         '--settings', shellEscape(hooksSettingsPath),
       ]
@@ -477,6 +476,7 @@ export function claudeProviderConfig(): TmuxProviderConfig {
 
       const script = [
         '#!/bin/bash',
+        'export PATH="$HOME/.local/bin:/usr/local/bin:$PATH"',
         `cd ${shellEscape(ctx.cwd)}`,
         args.join(' '),
       ].join('\n')

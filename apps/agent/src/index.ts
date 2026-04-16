@@ -16,6 +16,7 @@ import { claudeSetupRoutes } from './routes/claude-setup.ts'
 import { copilotSetupRoutes } from './routes/copilot-setup.ts'
 import { codexSetupRoutes } from './routes/codex-setup.ts'
 import { opencodeSetupRoutes } from './routes/opencode-setup.ts'
+import { minimaxSetupRoutes } from './routes/minimax-setup.ts'
 import { pkgSetupRoutes } from './routes/pkg-setup.ts'
 import { pythonSetupRoutes } from './routes/python-setup.ts'
 import { rustSetupRoutes } from './routes/rust-setup.ts'
@@ -87,6 +88,7 @@ new Elysia()
       .use(copilotSetupRoutes)
       .use(codexSetupRoutes)
       .use(opencodeSetupRoutes)
+      .use(minimaxSetupRoutes)
       .use(pkgSetupRoutes)
       .use(pythonSetupRoutes)
       .use(rustSetupRoutes)

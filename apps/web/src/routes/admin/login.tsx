@@ -16,7 +16,10 @@ import { Input } from '#/components/ui/input'
 export const Route = createFileRoute('/admin/login')({
   validateSearch: z.object({ redirect: z.string().optional() }),
   loader: async () => {
-    const [authed, passkeyCount] = await Promise.all([checkAdminSession(), getPasskeyCount()])
+    const [authed, passkeyCount] = await Promise.all([
+      checkAdminSession(),
+      getPasskeyCount().catch(() => 0),
+    ])
     if (authed) throw redirect({ to: '/admin/beta' })
     return { passkeyCount }
   },

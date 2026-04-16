@@ -52,7 +52,7 @@ function statusColor(status: string): string {
     case 'failed': return 'border-red-500/50 text-red-400'
     case 'killed': return 'border-orange-500/50 text-orange-400'
     case 'pending': return 'border-yellow-500/50 text-yellow-400'
-    default: return 'border-white/10 text-[#f4f0e8]/75'
+    default: return 'border-border/50 text-foreground/75'
   }
 }
 
@@ -124,8 +124,8 @@ function FilterChip({
       className={cn(
         'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors',
         active
-          ? 'border-[#f0c419]/70 bg-[#f0c419] text-black'
-          : 'border-white/10 bg-white/5 text-[#f4f0e8]/70 hover:bg-white/10',
+          ? 'border-[var(--bauhaus-yellow)]/70 bg-[var(--bauhaus-yellow)] text-black'
+          : 'border-border/50 bg-foreground/5 text-foreground/70 hover:bg-foreground/10',
       )}
     >
       {children}
@@ -244,13 +244,13 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
       {standalone && (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-[#f0c419]" />
+            <Zap className="h-5 w-5 text-[var(--bauhaus-yellow)]" />
             <h2 className="font-heading text-lg font-semibold uppercase tracking-[0.08em]">Tasks</h2>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
             onClick={refresh}
             disabled={standaloneLoading}
           >
@@ -260,47 +260,47 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
         </div>
       )}
       <div className="grid gap-3 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]">
-        <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+        <div className="rounded-[1.5rem] border border-border/40 bg-background/50 p-4">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-[#f0c419]" />
+            <Zap className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
             <p className="text-sm font-medium">Task Overview</p>
           </div>
           <div className="mt-4 space-y-3">
-            <div className="rounded-[1.2rem] border border-white/8 bg-[#f0c419] p-4 text-black">
+            <div className="rounded-[1.2rem] border border-border/40 bg-[var(--bauhaus-yellow)] p-4 text-black">
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Total Tasks</p>
               <p className="mt-2 text-3xl font-semibold">{tasksInfo?.totalCount ?? 0}</p>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-3 text-center">
-                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-[#f4f0e8]/45">Running</p>
+              <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-3 text-center">
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-foreground/45">Running</p>
                 <p className="mt-1 text-xl font-semibold text-green-400">{runningCount}</p>
               </div>
-              <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-3 text-center">
-                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-[#f4f0e8]/45">Done</p>
+              <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-3 text-center">
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-foreground/45">Done</p>
                 <p className="mt-1 text-xl font-semibold text-blue-400">{completedCount}</p>
               </div>
-              <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-3 text-center">
-                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-[#f4f0e8]/45">Failed</p>
+              <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-3 text-center">
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.2em] text-foreground/45">Failed</p>
                 <p className="mt-1 text-xl font-semibold text-red-400">{failedCount}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+        <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
           <p className="text-sm font-medium">Active Processes</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             {tasksInfo?.activeProcesses.length ? (
               tasksInfo.activeProcesses.map((proc) => (
-                <div key={proc.taskId} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3">
-                  <p className="truncate font-mono text-xs text-[#9df6cd]">{proc.taskId}</p>
-                  <div className="mt-1 text-xs text-[#f4f0e8]/60">
+                <div key={proc.taskId} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-3">
+                  <p className="truncate font-mono text-xs text-text-terminal">{proc.taskId}</p>
+                  <div className="mt-1 text-xs text-foreground/60">
                     Process: {proc.hasProcess ? 'Active' : 'Missing'} · Status: {proc.status ?? 'Unknown'}
                   </div>
                 </div>
               ))
             ) : (
-              <div className="rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+              <div className="rounded-[1.2rem] border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/52">
                 No running tasks.
               </div>
             )}
@@ -308,24 +308,24 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+      <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="text-sm font-medium">Filters</p>
-            <p className="mt-1 text-xs text-[#f4f0e8]/45">{filteredTasks.length} of {tasks.length} tasks shown</p>
+            <p className="mt-1 text-xs text-foreground/45">{filteredTasks.length} of {tasks.length} tasks shown</p>
           </div>
           <div className="flex flex-col gap-3 xl:min-w-[280px] xl:max-w-[360px] xl:flex-1">
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search prompt, task id, project, cwd..."
-              className="border-white/10 bg-black/30 text-sm"
+              className="border-border/50 bg-background/40 text-sm"
             />
             <div className="flex justify-start xl:justify-end">
               <Button
                 size="sm"
                 variant="outline"
-                className="border-white/10 bg-white/5 text-xs text-[#f4f0e8]/75 hover:bg-white/10"
+                className="border-border/50 bg-foreground/5 text-xs text-foreground/75 hover:bg-foreground/10"
                 onClick={() => {
                   setProviderFilters(new Set())
                   setModelFilters(new Set())
@@ -364,7 +364,7 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                 <span>{model}</span>
               </FilterChip>
             )) : (
-              <div className="rounded-full border border-dashed border-white/10 px-3 py-1.5 text-xs text-[#f4f0e8]/45">
+              <div className="rounded-full border border-dashed border-border/50 px-3 py-1.5 text-xs text-foreground/45">
                 No models match the current provider filters
               </div>
             )}
@@ -397,10 +397,10 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
       </div>
 
       <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)]">
-        <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
+        <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-border/40 bg-background p-3">
           <div className="flex items-center justify-between gap-3 px-1">
             <p className="text-sm font-medium">Recent Tasks</p>
-            <p className="text-xs text-[#f4f0e8]/45">{filteredTasks.length} visible</p>
+            <p className="text-xs text-foreground/45">{filteredTasks.length} visible</p>
           </div>
 
           <div className="mt-3 h-full space-y-2 overflow-y-auto pr-1">
@@ -417,35 +417,35 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                     className={cn(
                       'block w-full rounded-[1.2rem] border p-3 text-left transition-colors',
                       isSelected
-                        ? 'border-[#f0c419]/40 bg-[#f0c419]/10'
-                        : 'border-white/8 bg-black/30 hover:bg-white/5',
+                        ? 'border-[var(--bauhaus-yellow)]/40 bg-[var(--bauhaus-yellow)]/10'
+                        : 'border-border/40 bg-background/40 hover:bg-foreground/5',
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 text-xs text-[#f4f0e8]/55">
+                        <div className="flex items-center gap-2 text-xs text-foreground/55">
                           {provider ? (
                             <>
                               <BrandAssetIcon brand={provider.brandKey} size={14} />
                               <span>{provider.label}</span>
                             </>
                           ) : (
-                            <span className="rounded-full border border-white/10 px-2 py-0.5">Unknown provider</span>
+                            <span className="rounded-full border border-border/50 px-2 py-0.5">Unknown provider</span>
                           )}
                           <span>•</span>
                           <span>{task.model ?? 'default'}</span>
                         </div>
-                        <p className="mt-2 line-clamp-2 text-sm font-medium text-[#f4f0e8]/90">
+                        <p className="mt-2 line-clamp-2 text-sm font-medium text-foreground/90">
                           {task.prompt}
                         </p>
-                        <p className="mt-2 truncate font-mono text-[11px] text-[#f4f0e8]/38">{task.id}</p>
+                        <p className="mt-2 truncate font-mono text-[11px] text-foreground/38">{task.id}</p>
                       </div>
                       <Badge variant="outline" className={cn(statusColor(task.status), 'shrink-0')}>
                         {task.status}
                       </Badge>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[#f4f0e8]/50">
-                      <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/70">
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-foreground/50">
+                      <Badge variant="outline" className="border-border/50 text-foreground/70">
                         {task.mode === 'plan' ? 'Plan' : 'Execute'}
                       </Badge>
                       <span>{formatShortTime(task.createdAt)}</span>
@@ -456,21 +456,21 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                 )
               })
             ) : (
-              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+              <div className="rounded-xl border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/52">
                 No tasks match the current filters.
               </div>
             )}
           </div>
         </div>
 
-        <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+        <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-border/40 bg-background p-4">
           <p className="text-sm font-medium">Task Details</p>
           <div className="mt-3 h-full overflow-y-auto pr-1">
             {selectedTask ? (
-              <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+              <div className="rounded-[1.2rem] border border-border/40 bg-background/40 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#f4f0e8]/55">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-foreground/55">
                       {providerMetaForTask(selectedTask) ? (
                         <>
                           <BrandAssetIcon
@@ -485,8 +485,8 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                       <span>•</span>
                       <span>{selectedTask.model ?? 'default'}</span>
                     </div>
-                    <p className="mt-2 text-sm font-medium text-[#f4f0e8]/92">{selectedTask.prompt}</p>
-                    <p className="mt-2 font-mono text-[11px] text-[#f4f0e8]/40">{selectedTask.id}</p>
+                    <p className="mt-2 text-sm font-medium text-foreground/92">{selectedTask.prompt}</p>
+                    <p className="mt-2 font-mono text-[11px] text-foreground/40">{selectedTask.id}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     {selectedTask.status === 'running' && (
@@ -522,7 +522,7 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                       variant="outline"
                       size="sm"
                       title="Copy task debug info"
-                      className="h-7 border-white/15 bg-white/5 px-2 text-xs text-[#f4f0e8]/70 hover:bg-white/10"
+                      className="h-7 border-border/40 bg-foreground/5 px-2 text-xs text-foreground/70 hover:bg-foreground/10"
                     />
                     <Badge variant="outline" className={cn(statusColor(selectedTask.status))}>
                       {selectedTask.status}
@@ -543,8 +543,8 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                 </div>
 
                 {selectedTask.sessionId && (
-                  <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Session</p>
+                  <div className="mt-4 rounded-xl border border-border/40 bg-background/40 p-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Session</p>
                     <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">{selectedTask.sessionId}</p>
                   </div>
                 )}
@@ -556,8 +556,8 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                 )}
 
                 {tasksInfo?.taskCommands[selectedTask.id] && (
-                  <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Command</p>
+                  <div className="mt-4 rounded-xl border border-border/40 bg-background/40 p-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Command</p>
                     <p className="mt-1 break-all font-mono text-[11px] text-[#c4b5fd]">
                       {tasksInfo.taskCommands[selectedTask.id]}
                     </p>
@@ -565,18 +565,18 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                 )}
 
                 {selectedTask.workingDirectory && (
-                  <div className="mt-4 rounded-xl border border-white/8 bg-black/30 p-3">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Working Directory</p>
-                    <p className="mt-1 break-all font-mono text-[11px] text-[#f4f0e8]/45">{selectedTask.workingDirectory}</p>
+                  <div className="mt-4 rounded-xl border border-border/40 bg-background/40 p-3">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Working Directory</p>
+                    <p className="mt-1 break-all font-mono text-[11px] text-foreground/45">{selectedTask.workingDirectory}</p>
                   </div>
                 )}
 
                 {tasksInfo?.taskFiles[selectedTask.id]?.length ? (
                   <div className="mt-4">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">
                       Files Touched ({tasksInfo.taskFiles[selectedTask.id].length})
                     </p>
-                    <div className="mt-2 max-h-60 space-y-1 overflow-y-auto rounded-xl border border-white/8 bg-black/30 p-3">
+                    <div className="mt-2 max-h-60 space-y-1 overflow-y-auto rounded-xl border border-border/40 bg-background/40 p-3">
                       {tasksInfo.taskFiles[selectedTask.id].map((touch, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs">
                           <span className={cn(
@@ -588,7 +588,7 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                           )}>
                             {touch.action}
                           </span>
-                          <span className="min-w-0 truncate font-mono text-[11px] text-[#f4f0e8]/70">{touch.filePath}</span>
+                          <span className="min-w-0 truncate font-mono text-[11px] text-foreground/70">{touch.filePath}</span>
                         </div>
                       ))}
                     </div>
@@ -597,10 +597,10 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
 
                 {tasksInfo?.taskLogs[selectedTask.id]?.length ? (
                   <div className="mt-4">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output</p>
-                    <pre className="mt-2 max-h-[28rem] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-white/8 bg-black/40 p-3 font-mono text-xs">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Output</p>
+                    <pre className="mt-2 max-h-[28rem] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-border/40 bg-background/40 p-3 font-mono text-xs">
                       {tasksInfo.taskLogs[selectedTask.id].map((log, i) => (
-                        <span key={i} className={log.stream === 'stderr' ? 'text-red-400' : 'text-[#9df6cd]'}>
+                        <span key={i} className={log.stream === 'stderr' ? 'text-red-400' : 'text-text-terminal'}>
                           {log.line}
                           {'\n'}
                         </span>
@@ -610,7 +610,7 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                 ) : null}
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+              <div className="rounded-xl border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/52">
                 No task selected. Start a task from the mobile app or adjust the current filters.
               </div>
             )}
@@ -659,9 +659,9 @@ function buildTaskDebugString(task: TasksDebugInfo['tasks'][number], tasksInfo: 
 
 function DetailStat({ label, value }: { label: string, value: string }) {
   return (
-    <div className="rounded-xl border border-white/8 bg-black/30 p-3">
-      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">{label}</p>
-      <p className="mt-1 text-sm text-[#f4f0e8]/82">{value}</p>
+    <div className="rounded-xl border border-border/40 bg-background/40 p-3">
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">{label}</p>
+      <p className="mt-1 text-sm text-foreground/82">{value}</p>
     </div>
   )
 }
@@ -669,7 +669,7 @@ function DetailStat({ label, value }: { label: string, value: string }) {
 function FilterGroup({ label, children }: { label: string, children: ReactNode }) {
   return (
     <div>
-      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">{label}</p>
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">{label}</p>
       <div className="mt-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
         {children}
       </div>

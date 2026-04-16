@@ -3,6 +3,7 @@ import type { ServerCapabilities, ServerProvider, ProviderAvailability, ServerPr
 import { authenticateRequest } from '../services/auth/auth.ts'
 import { getToolRecord, type ToolPathRow } from '../db/index.ts'
 import { discoverCopilotModels } from '../services/cli-setup/copilot-models.ts'
+import { checkMinimaxStatus } from '../services/cli-setup/minimax-setup.ts'
 
 function toAvailability(row: ToolPathRow | undefined): ProviderAvailability {
   if (!row?.path) return 'not_installed'
@@ -14,7 +15,14 @@ async function buildProviders(): Promise<ServerProvider[]> {
   const claude = getToolRecord('claude_cli')
   const codex = getToolRecord('codex_cli')
   const copilot = getToolRecord('copilot_cli')
-  const copilotModels = await discoverCopilotModels()
+  const [copilotModels, minimaxStatus] = await Promise.all([
+    discoverCopilotModels(),
+    checkMinimaxStatus(),
+  ])
+
+  const minimaxAvailability: ProviderAvailability = minimaxStatus.api_key_configured && minimaxStatus.opencode_installed
+    ? 'available'
+    : 'not_installed'
 
   return [
     {
@@ -36,6 +44,12 @@ async function buildProviders(): Promise<ServerProvider[]> {
       version: copilot?.version ?? null,
       models: copilotModels.models,
       modelDiscovery: copilotModels.modelDiscovery,
+    },
+    {
+      id: 'minimax',
+      label: 'Minimax',
+      availability: minimaxAvailability,
+      version: minimaxStatus.opencode_version ?? null,
     },
   ]
 }

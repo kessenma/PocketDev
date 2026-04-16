@@ -51,6 +51,7 @@ import { checkPythonStatus } from '../services/cli-setup/python-setup.ts'
 import { checkRustStatus } from '../services/cli-setup/rust-setup.ts'
 import { checkGoStatus } from '../services/cli-setup/go-setup.ts'
 import { checkTypeScriptStatus } from '../services/cli-setup/typescript-setup.ts'
+import { checkMinimaxStatus } from '../services/cli-setup/minimax-setup.ts'
 import { getTaskList, getProcess, buildCommand, killTask } from '../services/tasks/task-manager.ts'
 import { updateTaskStatus } from '../db/index.ts'
 import { getGitSummary } from '../services/git/git.ts'
@@ -782,6 +783,20 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
         },
       },
       swap,
+    }
+  })
+
+  // ─── Minimax debug ────────────────────────────────────
+  .get('/debug/minimax-setup', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+    try {
+      const status = await checkMinimaxStatus()
+      return { status }
+    } catch (error) {
+      set.status = 500
+      return { error: error instanceof Error ? error.message : 'Failed to check Minimax status' }
     }
   })
 

@@ -646,6 +646,25 @@ export async function fetchSetupDebug(): Promise<SetupDebugInfo> {
   return res.json()
 }
 
+// ─── Minimax debug ──────────────────────────────────────
+
+export interface MinimaxSetupDebugInfo {
+  status: {
+    opencode_installed: boolean
+    opencode_version: string | null
+    api_key_configured: boolean
+    api_key_masked: string | null
+    verified: boolean
+    verify_output: string | null
+  }
+}
+
+export async function fetchMinimaxSetupDebug(): Promise<MinimaxSetupDebugInfo> {
+  const res = await get('/debug/minimax-setup')
+  if (!res.ok) throw new Error('Failed to fetch Minimax setup debug')
+  return res.json()
+}
+
 export async function enableManagedSwap(sizeGb: number): Promise<SwapDebugInfo> {
   const res = await post('/swap/enable', { sizeGb })
   if (!res.ok) {

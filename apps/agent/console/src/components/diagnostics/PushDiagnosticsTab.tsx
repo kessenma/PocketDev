@@ -11,7 +11,7 @@ function typeColor(type: string): string {
     case 'permission': return 'border-yellow-500/50 text-yellow-400'
     case 'task_completed': return 'border-green-500/50 text-green-400'
     case 'task_failed': return 'border-red-500/50 text-red-400'
-    default: return 'border-white/10 text-[#f4f0e8]/75'
+    default: return 'border-border/50 text-foreground/75'
   }
 }
 
@@ -37,7 +37,7 @@ function formatTime(iso: string) {
 export function PushDiagnosticsTab({ data }: Props) {
   if (!data) {
     return (
-      <div className="p-6 text-[#f4f0e8]/50 text-sm">No push data available.</div>
+      <div className="p-6 text-sm text-foreground/50">No push data available.</div>
     )
   }
 
@@ -48,23 +48,23 @@ export function PushDiagnosticsTab({ data }: Props) {
       {/* Status summary */}
       <div className="flex flex-wrap gap-6">
         <div className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-widest text-[#f4f0e8]/40">Relay Token</span>
-          <span className="font-mono text-sm text-[#f4f0e8]">
-            {relayToken ?? <span className="text-[#f4f0e8]/40">Not provisioned</span>}
+          <span className="text-xs uppercase tracking-widest text-foreground/40">Relay Token</span>
+          <span className="font-mono text-sm text-foreground">
+            {relayToken ?? <span className="text-foreground/40">Not provisioned</span>}
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-widest text-[#f4f0e8]/40">Registered Devices</span>
-          <span className="font-mono text-sm text-[#f4f0e8]">{registeredDevices}</span>
+          <span className="text-xs uppercase tracking-widest text-foreground/40">Registered Devices</span>
+          <span className="font-mono text-sm text-foreground">{registeredDevices}</span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs uppercase tracking-widest text-[#f4f0e8]/40">Log Entries</span>
-          <span className="font-mono text-sm text-[#f4f0e8]">{log.length}</span>
+          <span className="text-xs uppercase tracking-widest text-foreground/40">Log Entries</span>
+          <span className="font-mono text-sm text-foreground">{log.length}</span>
         </div>
         {log.length > 0 && (
           <div className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-widest text-[#f4f0e8]/40">Success Rate</span>
-            <span className="font-mono text-sm text-[#f4f0e8]">
+            <span className="text-xs uppercase tracking-widest text-foreground/40">Success Rate</span>
+            <span className="font-mono text-sm text-foreground">
               {Math.round((log.filter((e) => e.success).length / log.length) * 100)}%
             </span>
           </div>
@@ -73,15 +73,15 @@ export function PushDiagnosticsTab({ data }: Props) {
 
       {/* Log table */}
       {log.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-12 text-[#f4f0e8]/40">
+        <div className="flex flex-col items-center gap-3 py-12 text-foreground/40">
           <Bell className="w-8 h-8 opacity-40" />
           <span className="text-sm">No push notifications sent yet.</span>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-lg border border-border/50">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 text-xs uppercase tracking-widest text-[#f4f0e8]/40">
+              <tr className="border-b border-border/50 text-xs uppercase tracking-widest text-foreground/40">
                 <th className="px-3 py-2 text-left">Time</th>
                 <th className="px-3 py-2 text-left">Type</th>
                 <th className="px-3 py-2 text-left">Title</th>
@@ -92,8 +92,8 @@ export function PushDiagnosticsTab({ data }: Props) {
             </thead>
             <tbody>
               {log.map((entry) => (
-                <tr key={entry.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                  <td className="px-3 py-2 font-mono text-xs text-[#f4f0e8]/60 whitespace-nowrap">
+                <tr key={entry.id} className="border-b border-border/25 hover:bg-foreground/5 transition-colors">
+                  <td className="px-3 py-2 font-mono text-xs text-foreground/60 whitespace-nowrap">
                     {formatTime(entry.sentAt)}
                   </td>
                   <td className="px-3 py-2">
@@ -101,10 +101,10 @@ export function PushDiagnosticsTab({ data }: Props) {
                       {typeLabel(entry.type)}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 text-[#f4f0e8]/80 max-w-[200px] truncate" title={entry.title}>
+                  <td className="px-3 py-2 text-foreground/80 max-w-[200px] truncate" title={entry.title}>
                     {entry.title}
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-[#f4f0e8]/50 max-w-[120px] truncate" title={entry.deviceId ?? ''}>
+                  <td className="px-3 py-2 font-mono text-xs text-foreground/50 max-w-[120px] truncate" title={entry.deviceId ?? ''}>
                     {entry.deviceId ? `${entry.deviceId.slice(0, 12)}…` : '—'}
                   </td>
                   <td className="px-3 py-2">
@@ -114,7 +114,7 @@ export function PushDiagnosticsTab({ data }: Props) {
                       <XCircle className="w-4 h-4 text-red-400" />
                     )}
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-[#f4f0e8]/50">
+                  <td className="px-3 py-2 font-mono text-xs text-foreground/50">
                     {entry.relayStatusCode ?? '—'}
                   </td>
                 </tr>

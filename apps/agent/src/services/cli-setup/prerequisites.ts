@@ -10,6 +10,7 @@ import {
 } from './pkg-setup.ts'
 import { checkCopilotStatus } from './copilot-setup.ts'
 import { checkOpenCodeStatus } from './opencode-setup.ts'
+import { checkMinimaxStatus } from './minimax-setup.ts'
 
 const EXEC_TIMEOUT_MS = 15_000
 const PREREQUISITES_CACHE_TTL_MS = 2 * 60_000
@@ -296,6 +297,26 @@ async function checkCopilotCli(): Promise<ToolCheck> {
       auth_output: status.auth_output,
       trust_configured: status.trust_configured ? 'true' : 'false',
       trust_target: status.trust_target,
+    },
+  }
+}
+
+async function checkMinimaxProvider(): Promise<ToolCheck> {
+  const status = await checkMinimaxStatus()
+  const configured = status.opencode_installed && status.api_key_configured
+  return {
+    id: 'minimax_provider',
+    name: 'Minimax',
+    status: configured ? 'installed' : 'missing',
+    auth_status: 'not_applicable',
+    version: status.opencode_version,
+    path: null,
+    required: false,
+    install_command: null,
+    auth_command: null,
+    details: {
+      api_key_masked: status.api_key_masked ?? '',
+      opencode_installed: String(status.opencode_installed),
     },
   }
 }
@@ -618,6 +639,7 @@ const HEAVY_TOOL_CHECKS: ReadonlyArray<ToolCheckFn> = [
   checkCodexCli,
   checkCopilotCli,
   checkOpenCodeCli,
+  checkMinimaxProvider,
 ]
 
 const TOOL_ORDER = [
@@ -629,6 +651,7 @@ const TOOL_ORDER = [
   'codex_cli',
   'copilot_cli',
   'opencode_cli',
+  'minimax_provider',
   'docker',
   'bun',
   'pnpm',

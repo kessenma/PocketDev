@@ -19,6 +19,7 @@ const toolAssetMap: Record<string, { light: ImageSourcePropType; dark: ImageSour
   codex_cli: { light: Assets.codexBlack, dark: Assets.codexWhite },
   copilot_cli: { light: Assets.githubBlack, dark: Assets.githubWhite },
   opencode_cli: { light: Assets.opencodeBlack, dark: Assets.opencodeWhite },
+  minimax_provider: { light: Assets.minimaxBlack, dark: Assets.minimaxWhite },
   rust: { light: Assets.rustBlack, dark: Assets.rustWhite },
   go: { light: Assets.goBlack, dark: Assets.goWhite },
   typescript: { light: Assets.typescriptBlack, dark: Assets.typescriptWhite },
@@ -46,6 +47,7 @@ interface Props {
   onGoWizard?: (tool: ToolCheck) => void
   onTypeScriptWizard?: (tool: ToolCheck) => void
   onDockerWizard?: (tool: ToolCheck) => void
+  onMinimaxWizard?: (tool: ToolCheck) => void
   disabledReason?: string | null
   disabled?: boolean
   showLoadingState?: boolean
@@ -83,6 +85,7 @@ export default function SetupCheckItem({
   onGoWizard,
   onTypeScriptWizard,
   onDockerWizard,
+  onMinimaxWizard,
   disabledReason,
   disabled = false,
   showLoadingState = false,
@@ -143,7 +146,12 @@ export default function SetupCheckItem({
   const dockerNeedsAction = isDocker && (tool.status === 'missing' || tool.status === 'misconfigured')
   const showDockerWizard = isDocker && !!onDockerWizard
 
-  const hasWizard = isGit || isClaude || isCodex || isCopilot || isOpenCode || isPkgManager || isPython || isRust || isGo || isTypeScript || isDocker
+  const isMinimax = tool.id === 'minimax_provider'
+  const minimaxNeedsAction = isMinimax && tool.status !== 'installed'
+  const showMinimaxWizard = isMinimax && !!onMinimaxWizard
+  const minimaxBlocked = showMinimaxWizard && !!disabledReason
+
+  const hasWizard = isGit || isClaude || isCodex || isCopilot || isOpenCode || isPkgManager || isPython || isRust || isGo || isTypeScript || isDocker || isMinimax
   const showInstall = !hasWizard && tool.status === 'missing' && tool.install_command
   const showAuth =
     !hasWizard &&
@@ -424,6 +432,36 @@ export default function SetupCheckItem({
               {dockerNeedsAction ? 'Enable Docker' : 'Open Docker'}
             </Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {showMinimaxWizard && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              { backgroundColor: colors.primary },
+              minimaxBlocked && styles.actionButtonDisabled,
+            ]}
+            onPress={() => {
+              if (disabled) {
+                onDisabledPress?.(tool)
+                return
+              }
+              if (minimaxBlocked) return
+              onMinimaxWizard?.(tool)
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.actionText, { color: colors.primaryText }]}>
+              {minimaxNeedsAction ? 'Enable Minimax' : 'Open Minimax'}
+            </Text>
+          </TouchableOpacity>
+          {minimaxBlocked && (
+            <Text style={[styles.inlineHint, { color: colors.textSecondary }]}>
+              {disabledReason}
+            </Text>
+          )}
         </View>
       )}
 

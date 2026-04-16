@@ -42,6 +42,7 @@ body {
   --color-surface-strong: var(--surface-strong);
   --color-surface-soft: var(--surface-soft);
   --color-text-soft: var(--text-soft);
+  --color-text-terminal: var(--text-terminal);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -79,6 +80,7 @@ body {
   --bauhaus-red: #D93025;
   --bauhaus-yellow: #E8B83D;
   --bauhaus-black: #1a1a1a;
+  --text-terminal: #1b8a5a;
   --space-4: 1rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
@@ -112,6 +114,7 @@ html.dark {
   --surface-soft: #1d1a16;
   --surface-paper: #f4efdf;
   --text-soft: #d1c4af;
+  --text-terminal: #9df6cd;
 }
 
 @layer base {

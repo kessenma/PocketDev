@@ -11,6 +11,8 @@ type Props = {
   items?: string[]
   children: React.ReactNode
   direction?: Direction
+  /** Optional callback fired alongside the tooltip show on press. */
+  onPress?: () => void
 }
 
 type AnchorRect = { x: number; y: number; width: number; height: number }
@@ -20,7 +22,7 @@ const TOOLTIP_MAX_WIDTH = 230
 const SCREEN_MARGIN = 10
 const MAX_ITEMS = 5
 
-export default function BauhausTooltip({ label, items, children, direction = 'top' }: Props) {
+export default function BauhausTooltip({ label, items, children, direction = 'top', onPress }: Props) {
   const { colors, isDark } = useTheme()
   const [visible, setVisible] = useState(false)
   const [anchor, setAnchor] = useState<AnchorRect | null>(null)
@@ -67,7 +69,7 @@ export default function BauhausTooltip({ label, items, children, direction = 'to
 
   return (
     <View ref={triggerRef} collapsable={false}>
-      <TouchableOpacity onPress={show} activeOpacity={0.7}>
+      <TouchableOpacity onPress={() => { show(); onPress?.() }} activeOpacity={0.7}>
         {children}
       </TouchableOpacity>
       {visible && (

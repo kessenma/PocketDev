@@ -11,6 +11,7 @@ const PROVIDER_LOGOS: Record<ModelProviderId, { light: ReturnType<typeof require
   claude: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
   codex: { light: Assets.codexBlack, dark: Assets.codexWhite },
   copilot: { light: Assets.githubCopilotBlack, dark: Assets.githubCopilotWhite },
+  minimax: { light: Assets.minimaxBlack, dark: Assets.minimaxWhite },
 }
 
 type Props = {

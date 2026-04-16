@@ -322,6 +322,30 @@ export interface OpenCodeInstallResult {
 export type OpenCodeWizardStep = 'detect' | 'review' | 'install' | 'verify'
 export type OpenCodeWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
+// ─── Minimax wizard types ─────────────────────────────────────────
+
+export interface MinimaxSetupStatus {
+  opencode_installed: boolean
+  opencode_version: string | null
+  api_key_configured: boolean
+  api_key_masked: string | null
+  verified: boolean
+  verify_output: string | null
+}
+
+export interface MinimaxConfigureRequest {
+  api_key: string
+}
+
+export interface MinimaxConfigureResult {
+  success: boolean
+  api_key_masked: string | null
+  error: string | null
+}
+
+export type MinimaxWizardStep = 'detect' | 'review' | 'configure' | 'verify'
+export type MinimaxWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
 // ─── Python wizard types ──────────────────────────────────────────
 
 export interface PythonSetupStatus {

@@ -6,6 +6,7 @@ import { useConnectionStore } from '../../stores/connection'
 import BauhausButton from './BauhausButton'
 import CopyButton from './CopyButton'
 import { typeStyles } from '../../theme/typography'
+import ConnectingAnimation from '../animations/ConnectingAnimation'
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -40,16 +41,21 @@ export default function ServerDisconnected() {
   const connectionLog = useConnectionStore((s) => s.connectionLog)
   const getConnectionLogText = useConnectionStore((s) => s.getConnectionLogText)
 
+  // Track whether we've ever reached a connected state this session.
+  // Used to decide which animation to show:
+  //   - never connected yet → ConnectingAnimation (first launch / initial connect)
+  //   - was connected, now lost → SignalBars + X (mid-use disconnect)
+  const [hasEverConnected, setHasEverConnected] = useState(false)
+
   // Debounce: stay visible until connected for STABLE_CONNECTED_DELAY_MS
   const [visible, setVisible] = useState(status !== 'connected')
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (status === 'connected') {
-      // Wait before hiding — if we disconnect again quickly, stay visible
+      setHasEverConnected(true)
       hideTimer.current = setTimeout(() => setVisible(false), STABLE_CONNECTED_DELAY_MS)
     } else if (status === 'disconnected' || status === 'error') {
-      // Show immediately on disconnect/error
       if (hideTimer.current) clearTimeout(hideTimer.current)
       hideTimer.current = null
       setVisible(true)
@@ -59,9 +65,22 @@ export default function ServerDisconnected() {
     }
   }, [status])
 
-  if (!visible || !server) return null
-  // Still hide during initial connecting if we haven't shown yet
-  if (status === 'connecting' && !visible) return null
+  if (!server) return null
+
+  // First-launch connecting state: show the connecting animation, no error UI
+  if (!hasEverConnected && (status === 'connecting' || status === 'disconnected')) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ConnectingAnimation />
+        <Text style={[styles.title, { color: colors.text }]}>Connecting…</Text>
+        <Text style={[styles.body, { color: colors.textSecondary }]}>
+          Reaching {server.ip}:{server.port}
+        </Text>
+      </View>
+    )
+  }
+
+  if (!visible) return null
 
   const isError = status === 'error'
 
@@ -155,7 +174,7 @@ function SignalBar({ index }: { index: number }) {
           withTiming(0.2, { duration: PULSE_DURATION, easing: Easing.in(Easing.quad) }),
           withTiming(0.2, { duration: PULSE_PAUSE }),
         ),
-        -1, // infinite
+        -1,
       ),
     )
   }, [index, opacity])

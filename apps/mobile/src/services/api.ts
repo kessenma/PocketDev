@@ -56,6 +56,9 @@ import type {
   CopilotTrustSessionStatus,
   OpenCodeSetupStatus,
   OpenCodeInstallResult,
+  MinimaxSetupStatus,
+  MinimaxConfigureRequest,
+  MinimaxConfigureResult,
   BrowserSessionCreateResult,
   PythonSetupStatus,
   RustSetupStatus,
@@ -1051,6 +1054,39 @@ export async function postVerifyOpenCode(ip: string, port: number): Promise<Open
   })
   if (!response.ok) throw new Error(`Failed to verify OpenCode CLI (${response.status})`)
   return response.json() as Promise<OpenCodeSetupStatus>
+}
+
+// ─── Minimax Provider Setup ────────────────────────────────────────
+
+export async function fetchMinimaxSetupStatus(ip: string, port: number): Promise<MinimaxSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/minimax-setup/status'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Minimax status (${response.status})`)
+  return response.json() as Promise<MinimaxSetupStatus>
+}
+
+export async function postConfigureMinimax(
+  ip: string,
+  port: number,
+  apiKey: string,
+): Promise<MinimaxConfigureResult> {
+  const response = await fetch(apiUrl(ip, port, '/minimax-setup/configure'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey } satisfies MinimaxConfigureRequest),
+  })
+  if (!response.ok) throw new Error(`Failed to configure Minimax (${response.status})`)
+  return response.json() as Promise<MinimaxConfigureResult>
+}
+
+export async function postVerifyMinimax(ip: string, port: number): Promise<MinimaxSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/minimax-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to verify Minimax (${response.status})`)
+  return response.json() as Promise<MinimaxSetupStatus>
 }
 
 // ─── GitHub Copilot CLI Setup ──────────────────────────────────────

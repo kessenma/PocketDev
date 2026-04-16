@@ -20,6 +20,7 @@ import {
   fetchGitHistoryDebug,
   fetchOfflineSnapshots,
   fetchPushDebug,
+  fetchMinimaxSetupDebug,
   type AuthDebugInfo,
   type CodexAuthDebugInfo,
   type ClaudeAuthDebugInfo,
@@ -37,6 +38,7 @@ import {
   type GitHistoryDebugInfo,
   type OfflineSnapshot,
   type PushDebugInfo,
+  type MinimaxSetupDebugInfo,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
 import { Bug, Maximize2, RefreshCw, Smartphone, Waves } from 'lucide-react'
@@ -48,8 +50,9 @@ import { LanguagesDiagnosticsTab } from '#/components/diagnostics/LanguagesDiagn
 import { NetworkDiagnosticsTab } from '#/components/diagnostics/NetworkDiagnosticsTab'
 import { GitHubDiagnosticsTab } from '#/components/diagnostics/GitHubDiagnosticsTab'
 import { PushDiagnosticsTab } from '#/components/diagnostics/PushDiagnosticsTab'
+import { MinimaxDiagnosticsTab } from '#/components/diagnostics/MinimaxDiagnosticsTab'
 
-type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot' | 'languages' | 'network' | 'push'
+type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot' | 'languages' | 'network' | 'push' | 'minimax'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -81,6 +84,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [gitHistoryInfo, setGitHistoryInfo] = useState<GitHistoryDebugInfo | null>(null)
   const [offlineSnapshots, setOfflineSnapshots] = useState<OfflineSnapshot[]>([])
   const [pushInfo, setPushInfo] = useState<PushDebugInfo | null>(null)
+  const [minimaxInfo, setMinimaxInfo] = useState<MinimaxSetupDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,11 +112,12 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
       fetchGitHistoryDebug(),
       fetchOfflineSnapshots(),
       fetchPushDebug(),
+      fetchMinimaxSetupDebug(),
     ])
 
     const failures: string[] = []
 
-    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult, rustResult, goResult, tsResult, networkResult, gitHistoryResult, offlineSnapshotsResult, pushResult] = results
+    const [authResult, termResult, codexResult, claudeResult, copilotResult, githubResult, projectsResult, tasksResult, setupResult, pythonResult, rustResult, goResult, tsResult, networkResult, gitHistoryResult, offlineSnapshotsResult, pushResult, minimaxResult] = results
 
     if (authResult.status === 'fulfilled') setInfo(authResult.value)
     else failures.push(`auth: ${authResult.reason instanceof Error ? authResult.reason.message : 'failed'}`)
@@ -163,6 +168,9 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
     if (pushResult.status === 'fulfilled') setPushInfo(pushResult.value)
     else failures.push(`push: ${pushResult.reason instanceof Error ? pushResult.reason.message : 'failed'}`)
+
+    if (minimaxResult.status === 'fulfilled') setMinimaxInfo(minimaxResult.value)
+    else failures.push(`minimax: ${minimaxResult.reason instanceof Error ? minimaxResult.reason.message : 'failed'}`)
 
     setLastUpdated(new Date().toISOString())
     setError(failures.length ? `Partial refresh failure: ${failures.join(' | ')}` : null)
@@ -250,6 +258,15 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return `${events} event${events === 1 ? '' : 's'} captured`
   }, [networkInfo])
 
+  const minimaxSummary = useMemo(() => {
+    if (!minimaxInfo) return 'No Minimax data yet.'
+    const { status } = minimaxInfo
+    if (status.api_key_configured && status.verified) return `API key configured · ${status.api_key_masked ?? ''}`
+    if (status.api_key_configured) return 'Key present, not verified'
+    if (!status.opencode_installed) return 'OpenCode not installed'
+    return 'API key not configured'
+  }, [minimaxInfo])
+
   const copilotSummary = useMemo(() => {
     if (!copilotInfo) return 'No Copilot trust diagnostics yet.'
     if (copilotInfo.activeSessionCount > 0) {
@@ -286,13 +303,14 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-[0.85rem] border-2 border-border bg-background p-1">
-            {(['terminal', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'push', 'registry'] as const).map((tab) => {
-              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : tab === 'push' ? 'Push' : 'Registry'
+            {(['terminal', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'minimax', 'push', 'registry'] as const).map((tab) => {
+              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : tab === 'minimax' ? 'Minimax' : tab === 'push' ? 'Push' : 'Registry'
               const TAB_BRAND: Partial<Record<DiagnosticsTab, BrandKey>> = {
                 claude: 'claude',
                 codex: 'codex',
                 copilot: 'copilot',
                 github: 'github',
+                minimax: 'minimax',
               }
               const brandKey = TAB_BRAND[tab]
               return (
@@ -351,9 +369,11 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                         ? copilotSummary
                         : activeTab === 'github'
                           ? githubSummary
-                          : activeTab === 'push'
-                            ? (pushInfo ? `${pushInfo.registeredDevices} device${pushInfo.registeredDevices === 1 ? '' : 's'} · ${pushInfo.log.length} log entries` : 'No push data yet.')
-                            : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
+                          : activeTab === 'minimax'
+                            ? minimaxSummary
+                            : activeTab === 'push'
+                              ? (pushInfo ? `${pushInfo.registeredDevices} device${pushInfo.registeredDevices === 1 ? '' : 's'} · ${pushInfo.log.length} log entries` : 'No push data yet.')
+                              : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
         </Badge>
         {lastUpdated ? (
           <span>Updated {formatShortTime(lastUpdated)}</span>
@@ -405,11 +425,11 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                 ) : (
                   <div className="space-y-2">
                     {termLog.map((entry, index) => (
-                      <div key={`${entry.ts}-${index}`} className="rounded-[0.8rem] border-2 border-[var(--border)] bg-black/30 p-3 text-[#7fffd4]">
-                        <div className="mb-1 font-heading text-[10px] uppercase tracking-[0.22em] text-[#f5eedf]/35">
+                      <div key={`${entry.ts}-${index}`} className="rounded-[0.8rem] border-2 border-border bg-background/40 p-3 text-text-terminal">
+                        <div className="mb-1 font-heading text-[10px] uppercase tracking-[0.22em] text-foreground/35">
                           {formatShortTime(entry.ts)}
                         </div>
-                        <div className="break-all text-[#9df6cd]">{entry.msg}</div>
+                        <div className="break-all text-text-terminal">{entry.msg}</div>
                       </div>
                     ))}
                   </div>
@@ -430,28 +450,28 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
         ) : activeTab === 'copilot' ? (
           <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
             <div className="space-y-3">
-              <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+              <div className="rounded-[1.5rem] border border-border/40 bg-background/50 p-4">
                 <div className="flex items-center gap-2">
                   <BrandIcon brand="copilot" size={18} />
                   <p className="text-sm font-medium">Copilot Trust State</p>
                 </div>
                 <div className="mt-4 space-y-3">
-                  <div className="rounded-[1.2rem] border border-white/8 bg-[#f0c419] p-4 text-black">
+                  <div className="rounded-[1.2rem] border border-border/40 bg-[var(--bauhaus-yellow)] p-4 text-black">
                     <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Active Sessions</p>
                     <p className="mt-2 text-3xl font-semibold">{copilotInfo?.activeSessionCount ?? 0}</p>
                   </div>
-                  <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Persisted CLI State</p>
-                    <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                  <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-foreground/45">Persisted CLI State</p>
+                    <div className="mt-2 space-y-1 text-sm text-foreground/80">
                       <p>Path: {copilotInfo?.persistedState?.path ?? 'Not stored'}</p>
                       <p>Version: {copilotInfo?.persistedState?.version ?? 'Unknown'}</p>
                       <p>Authenticated: {copilotInfo?.persistedState ? (copilotInfo.persistedState.authenticated ? 'Yes' : 'No') : 'Unknown'}</p>
                       <p>Updated: {copilotInfo?.persistedState?.updatedAt ? new Date(copilotInfo.persistedState.updatedAt).toLocaleString() : 'Unknown'}</p>
                     </div>
                   </div>
-                  <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Live Trust Check</p>
-                    <div className="mt-2 space-y-1 text-sm text-[#f4f0e8]/80">
+                  <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-foreground/45">Live Trust Check</p>
+                    <div className="mt-2 space-y-1 text-sm text-foreground/80">
                       <p>Target: {copilotInfo?.liveStatusTarget ?? 'Unknown'}</p>
                       <p>Trust configured: {copilotInfo?.liveStatus.trustConfigured ? 'Yes' : 'No'}</p>
                       <p>Markers: {copilotInfo?.trustMarkers.length ?? 0}</p>
@@ -460,37 +480,37 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                 </div>
               </div>
 
-              <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+              <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
                 <p className="text-sm font-medium">Trust Marker Paths</p>
                 <div className="mt-3 space-y-2">
                   {copilotInfo?.trustMarkers.length ? (
                     copilotInfo.trustMarkers.map((marker) => (
-                      <div key={marker} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3 font-mono text-xs text-[#9df6cd]">
+                      <div key={marker} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-3 font-mono text-xs text-text-terminal">
                         {marker}
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                    <div className="rounded-[1.2rem] border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/50">
                       No remembered Copilot trust markers yet.
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+              <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
                 <p className="text-sm font-medium">Recent Copilot Events</p>
                 <div className="mt-3 space-y-2">
                   {copilotInfo?.events.length ? (
                     copilotInfo.events.map((event, index) => (
-                      <div key={`${event.ts}-${index}`} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3">
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-[#f4f0e8]/38">
+                      <div key={`${event.ts}-${index}`} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-3">
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-foreground/38">
                           {formatShortTime(event.ts)} {event.sessionId ? `· ${event.sessionId.slice(0, 8)}` : ''}
                         </p>
-                        <p className="mt-2 break-words font-mono text-xs text-[#9df6cd]">{event.message}</p>
+                        <p className="mt-2 break-words font-mono text-xs text-text-terminal">{event.message}</p>
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                    <div className="rounded-[1.2rem] border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/50">
                       No Copilot trust events captured yet.
                     </div>
                   )}
@@ -498,22 +518,22 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
               </div>
             </div>
 
-            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
+            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-border/40 bg-background p-3">
               <p className="text-sm font-medium">Active Copilot Sessions</p>
               <div className="mt-3 space-y-3">
                 {copilotInfo?.sessions.length ? (
                   copilotInfo.sessions.map((session) => (
-                    <div key={session.sessionId} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                    <div key={session.sessionId} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">{session.state}</p>
-                          <p className="mt-1 break-all font-mono text-xs text-[#f4f0e8]/50">{session.sessionId}</p>
+                          <p className="mt-1 break-all font-mono text-xs text-foreground/50">{session.sessionId}</p>
                         </div>
-                        <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/75">
+                        <Badge variant="outline" className="border-border/50 text-foreground/75">
                           {session.trusted ? 'Trusted' : session.completed ? 'Completed' : 'Active'}
                         </Badge>
                       </div>
-                        <div className="mt-3 space-y-2 text-xs text-[#f4f0e8]/72">
+                        <div className="mt-3 space-y-2 text-xs text-foreground/72">
                           <p>Trust handled: {session.trustHandled ? 'Yes' : 'No'}</p>
                           <p>Fallback attempted: {session.fallbackTrustAttempted ? 'Yes' : 'No'}</p>
                           <p>UI ready: {session.uiReady ? 'Yes' : 'No'}</p>
@@ -524,14 +544,14 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                         </div>
                       {session.outputExcerpt ? (
                         <div className="mt-3">
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Output Excerpt</p>
-                          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#9df6cd]">
+                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Output Excerpt</p>
+                          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-text-terminal">
                             {session.outputExcerpt}
                           </pre>
                           {session.rawOutputExcerpt ? (
                             <>
-                              <p className="mt-3 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Raw Output Excerpt</p>
-                              <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-[#f7c8ff]">
+                              <p className="mt-3 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Raw Output Excerpt</p>
+                              <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground">
                                 {session.rawOutputExcerpt}
                               </pre>
                             </>
@@ -541,7 +561,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                  <div className="rounded-xl border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/50">
                     No active Copilot trust sessions. Open the Copilot wizard on the mobile app to start one.
                   </div>
                 )}
@@ -550,56 +570,58 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
           </div>
         ) : activeTab === 'github' ? (
           <GitHubDiagnosticsTab githubInfo={githubInfo} projectsInfo={projectsInfo} gitHistoryInfo={gitHistoryInfo} offlineSnapshots={offlineSnapshots} />
+        ) : activeTab === 'minimax' ? (
+          <MinimaxDiagnosticsTab minimaxInfo={minimaxInfo} />
         ) : activeTab === 'push' ? (
           <PushDiagnosticsTab data={pushInfo} />
         ) : (
           <div className="grid h-full gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+            <div className="rounded-[1.5rem] border border-border/40 bg-background/50 p-4">
               <p className="text-sm font-medium">Registry Snapshot</p>
               <div className="mt-4 space-y-3">
-                <div className="rounded-[1.2rem] border border-white/8 bg-[#f0c419] p-4 text-black">
+                <div className="rounded-[1.2rem] border border-border/40 bg-[var(--bauhaus-yellow)] p-4 text-black">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Devices</p>
                   <p className="mt-2 text-3xl font-semibold">{info?.deviceCount ?? 0}</p>
                 </div>
-                <div className="rounded-[1.2rem] border border-white/8 bg-white/6 p-4">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">Health</p>
-                  <p className="mt-2 text-sm text-[#f4f0e8]/80">
+                <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-foreground/45">Health</p>
+                  <p className="mt-2 text-sm text-foreground/80">
                     {info?.deviceCount ? 'Registry populated and ready for auth checks.' : 'No devices in DB. Reconnect attempts will fail until a device is paired again.'}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
+            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-border/40 bg-background p-3">
               {info?.devices.length ? (
                 <div className="space-y-3">
                   {info.devices.map((device) => (
-                    <div key={device.id} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+                    <div key={device.id} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <Smartphone className="h-4 w-4 text-[#f0c419]" />
+                            <Smartphone className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
                             <p className="truncate text-sm font-medium">{device.name ?? 'Unnamed device'}</p>
                           </div>
-                          <p className="mt-1 text-xs text-[#f4f0e8]/50">{device.id}</p>
+                          <p className="mt-1 text-xs text-foreground/50">{device.id}</p>
                         </div>
-                        <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/75">{device.platform ?? 'unknown'}</Badge>
+                        <Badge variant="outline" className="border-border/50 text-foreground/75">{device.platform ?? 'unknown'}</Badge>
                       </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-2">
                         <div>
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Public Key</p>
-                          <p className="mt-1 font-mono text-xs text-[#f4f0e8]/72">{device.publicKeyPrefix}</p>
+                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Public Key</p>
+                          <p className="mt-1 font-mono text-xs text-foreground/72">{device.publicKeyPrefix}</p>
                         </div>
                         <div>
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#f4f0e8]/38">Last Seen</p>
-                          <p className="mt-1 text-xs text-[#f4f0e8]/72">{device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : 'Never'}</p>
+                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Last Seen</p>
+                          <p className="mt-1 text-xs text-foreground/72">{device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : 'Never'}</p>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="flex h-full items-center justify-center rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-6 text-center text-sm text-[#f4f0e8]/52">
+                <div className="flex h-full items-center justify-center rounded-[1.2rem] border border-dashed border-border/50 bg-background/30 p-6 text-center text-sm text-foreground/50">
                   Pair a device first, then this panel becomes the registry view for auth-oriented debugging.
                 </div>
               )}

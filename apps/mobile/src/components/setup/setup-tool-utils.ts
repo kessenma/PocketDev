@@ -143,3 +143,12 @@ export function getCopilotBlockedReason(report: PrerequisitesReport | null): str
 
   return null
 }
+
+export function getMinimaxBlockedReason(report: PrerequisitesReport | null): string | null {
+  if (!report) return null
+  const opencodeTool = getToolById(report, 'opencode_cli')
+  if (!opencodeTool || opencodeTool.status !== 'installed') {
+    return 'OpenCode must be installed first. Minimax is configured as an OpenCode provider.'
+  }
+  return null
+}

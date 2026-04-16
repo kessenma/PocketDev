@@ -123,6 +123,29 @@ export const MODEL_PROVIDERS: ModelProvider[] = [
       },
     ],
   },
+  {
+    id: 'minimax',
+    label: 'Minimax',
+    summary: 'Minimax AI models via OpenCode provider config. Requires OpenCode and a Minimax API key.',
+    models: [
+      {
+        id: 'minimax-text-01',
+        cliModelId: 'minimax/minimax-text-01',
+        name: 'Text-01',
+        headline: 'General-purpose text and coding model',
+        description: 'Minimax Text-01 for general-purpose tasks via OpenCode.',
+        contextWindow: 'Large context',
+      },
+      {
+        id: 'minimax-abab6.5s',
+        cliModelId: 'minimax/abab6.5s-chat',
+        name: 'ABAB 6.5s',
+        headline: 'Fast, efficient chat model',
+        description: 'Lightweight Minimax model optimised for speed.',
+        contextWindow: 'Large context',
+      },
+    ],
+  },
 ]
 
 export function getProviderById(

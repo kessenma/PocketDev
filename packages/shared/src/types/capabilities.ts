@@ -1,6 +1,6 @@
 export type ProviderAvailability = 'available' | 'installed_no_auth' | 'not_installed'
 
-export type ServerProviderId = 'claude' | 'codex' | 'copilot'
+export type ServerProviderId = 'claude' | 'codex' | 'copilot' | 'minimax'
 
 export type ServerModelDiscoverySource = 'picker' | 'fallback' | null
 

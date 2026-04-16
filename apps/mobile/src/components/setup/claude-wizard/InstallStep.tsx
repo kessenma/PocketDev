@@ -99,6 +99,8 @@ export default function InstallStep({ dispatch }: Props) {
       if (match) {
         console.log('[claude-install] Marker detected:', match[1])
         setStatus(match[1] === 'OK' ? 'done' : 'failed')
+        // Refresh the stored tool path in SQLite so tasks use the correct binary
+        if (match[1] === 'OK') void checkViaApi()
       }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)
     },

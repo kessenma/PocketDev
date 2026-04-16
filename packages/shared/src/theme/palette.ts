@@ -84,5 +84,6 @@ export const palette = {
     typescript: '#3178C6',
     java: '#5382A1',
     cpp: '#00599C',
+    minimax: '#0F0F1A',
   },
 } as const

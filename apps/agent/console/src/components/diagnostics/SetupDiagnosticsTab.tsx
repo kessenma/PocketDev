@@ -38,7 +38,7 @@ function StatusPill({ ok, label }: { ok: boolean, label: string }) {
     <Badge
       variant="outline"
       className={cn(
-        'border-white/10',
+        'border-border/50',
         ok ? 'bg-green-500/10 text-green-300' : 'bg-yellow-500/10 text-yellow-200',
       )}
     >
@@ -54,7 +54,7 @@ function GitDetails({ tool }: { tool: ToolCheck }) {
   const privateRepoSource = tool.details.private_repo_access_source
 
   return (
-    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#f4f0e8]/58">
+    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground/58">
       {tool.details.user_name && (
         <span>{tool.details.user_name} &lt;{tool.details.user_email}&gt;</span>
       )}
@@ -78,7 +78,7 @@ function GitHubCliDetails({ tool }: { tool: ToolCheck }) {
   const privateRepoAccess = tool.details.private_repo_access === 'true'
 
   return (
-    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#f4f0e8]/58">
+    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground/58">
       {tool.details.github_username ? <span>@{tool.details.github_username}</span> : null}
       <span className="flex items-center gap-1">
         {privateRepoAccess ? <Check className="h-3 w-3 text-green-400" /> : <X className="h-3 w-3 text-red-400" />}
@@ -116,22 +116,22 @@ const TOOL_BRAND_MAP: Record<string, BrandKey> = {
 function ToolCard({ tool }: { tool: ToolCheck }) {
   const brandKey = TOOL_BRAND_MAP[tool.id] ?? TOOL_BRAND_MAP[tool.name.toLowerCase()]
   return (
-    <div className="rounded-[1.2rem] border border-white/8 bg-black/30 p-4">
+    <div className="rounded-[1.2rem] border border-border/40 bg-background/40 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             {brandKey ? <BrandIcon brand={brandKey} size={16} scale={1} /> : null}
             <p className="text-sm font-medium">{tool.name}</p>
             {tool.required ? (
-              <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[#f0c419]">Required</span>
+              <span className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--bauhaus-yellow)]">Required</span>
             ) : null}
           </div>
           <p className={cn('mt-1 text-sm', statusColor(tool))}>{statusLabel(tool)}</p>
           {tool.version && tool.status !== 'missing' ? (
-            <p className="mt-1 font-mono text-xs text-[#f4f0e8]/45">v{tool.version}</p>
+            <p className="mt-1 font-mono text-xs text-foreground/45">v{tool.version}</p>
           ) : null}
           {toolIntentDetail(tool) ? (
-            <p className="mt-2 text-xs text-[#f4f0e8]/58">{toolIntentDetail(tool)}</p>
+            <p className="mt-2 text-xs text-foreground/58">{toolIntentDetail(tool)}</p>
           ) : null}
         </div>
         <div className={cn('mt-1 h-2.5 w-2.5 shrink-0 rounded-full', statusDotColor(tool))} />
@@ -156,8 +156,8 @@ function ToolSection({
   return (
     <section className="space-y-3">
       <div>
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[#f4f0e8]/45">{title}</p>
-        <p className="mt-1 text-sm text-[#f4f0e8]/60">{hint}</p>
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-foreground/45">{title}</p>
+        <p className="mt-1 text-sm text-foreground/60">{hint}</p>
       </div>
       <div className="grid gap-2 xl:grid-cols-2">
         {tools.map((tool) => (
@@ -215,7 +215,7 @@ function DonutChart({
             cy="90"
             r={radius}
             fill="none"
-            stroke="rgba(244,240,232,0.08)"
+            stroke="color-mix(in srgb, var(--foreground) 8%, transparent)"
             strokeWidth={strokeWidth}
           />
           {segments
@@ -243,26 +243,26 @@ function DonutChart({
             })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.24em] text-[#f4f0e8]/45">
+          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.24em] text-foreground/45">
             {valueLabel}
           </p>
-          <p className="mt-2 text-2xl font-semibold text-[#f4f0e8]">{value}</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
         </div>
       </div>
 
       <div className="space-y-2">
         {segments.map((segment) => (
-          <div key={segment.label} className="flex items-center justify-between gap-3 rounded-[1rem] border border-white/8 bg-black/20 px-3 py-2">
+          <div key={segment.label} className="flex items-center justify-between gap-3 rounded-[1rem] border border-border/40 bg-background/30 px-3 py-2">
             <div className="flex min-w-0 items-center gap-2">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: segment.color }}
               />
-              <span title={segment.label} className="truncate text-sm text-[#f4f0e8]/76">
+              <span title={segment.label} className="truncate text-sm text-foreground/76">
                 {segment.label}
               </span>
             </div>
-            <span title={segment.detail} className="shrink-0 text-xs text-[#f4f0e8]/52">
+            <span title={segment.detail} className="shrink-0 text-xs text-foreground/52">
               {segment.detail}
             </span>
           </div>
@@ -387,21 +387,21 @@ function SwapCard({
   }
 
   return (
-    <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+    <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <HardDrive className="h-4 w-4 text-[#f0c419]" />
+            <HardDrive className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
             <p className="text-sm font-medium">Swap Safety Net</p>
           </div>
-          <p className="mt-1 text-sm text-[#f4f0e8]/58">
+          <p className="mt-1 text-sm text-foreground/58">
             Optional PocketDev-managed swap file for small servers. PocketDev only tracks and reverses swap it created.
           </p>
         </div>
         <Button
           variant="outline"
           size="sm"
-          className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+          className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
           onClick={() => void loadMetrics()}
           disabled={metricsLoading}
         >
@@ -411,8 +411,8 @@ function SwapCard({
       </div>
 
       <div className="mt-4 grid gap-3">
-        <div className="rounded-[1.2rem] border border-white/8 bg-black/25 p-4">
-          <div className="grid gap-3 text-sm text-[#f4f0e8]/78 md:grid-cols-2">
+        <div className="rounded-[1.2rem] border border-border/40 bg-background/30 p-4">
+          <div className="grid gap-3 text-sm text-foreground/78 md:grid-cols-2">
             <div className="space-y-1">
               <p>Swap active: {swap?.totalBytes ? 'Yes' : 'No'}</p>
               <p>Swap used: {formatBytes(swap?.usedBytes)} / {formatBytes(swap?.totalBytes)}</p>
@@ -427,9 +427,9 @@ function SwapCard({
           {swap?.entries.length ? (
             <div className="mt-3 space-y-2">
               {swap.entries.map((entry) => (
-                <div key={entry.path} className="rounded-[0.95rem] border border-white/8 bg-black/20 px-3 py-2 text-xs text-[#f4f0e8]/62">
+                <div key={entry.path} className="rounded-[0.95rem] border border-border/40 bg-background/30 px-3 py-2 text-xs text-foreground/62">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-mono text-[#9df6cd]">{entry.path}</span>
+                    <span className="font-mono text-text-terminal">{entry.path}</span>
                     <span>{formatBytes(entry.usedBytes)} used / {formatBytes(entry.sizeBytes)}</span>
                   </div>
                 </div>
@@ -438,7 +438,7 @@ function SwapCard({
           ) : null}
         </div>
 
-        <div className="rounded-[1.2rem] border border-white/8 bg-black/25 p-4">
+        <div className="rounded-[1.2rem] border border-border/40 bg-background/30 p-4">
           {storageSegments.length > 0 ? (
             <>
               <DonutChart
@@ -446,30 +446,30 @@ function SwapCard({
                 valueLabel="Swap Load"
                 value={`${swapUsedPercent}%`}
               />
-              <div className="mt-4 grid gap-2 text-xs text-[#f4f0e8]/58 sm:grid-cols-2">
-                <div className="rounded-[0.95rem] border border-white/8 bg-black/20 p-3">
-                  <p className="font-semibold uppercase tracking-[0.2em] text-[#f4f0e8]/38">Storage Free</p>
-                  <p className="mt-2 text-sm text-[#f4f0e8]/82">{formatBytes(metrics?.storage?.availableBytes)}</p>
+              <div className="mt-4 grid gap-2 text-xs text-foreground/58 sm:grid-cols-2">
+                <div className="rounded-[0.95rem] border border-border/40 bg-background/30 p-3">
+                  <p className="font-semibold uppercase tracking-[0.2em] text-foreground/38">Storage Free</p>
+                  <p className="mt-2 text-sm text-foreground/82">{formatBytes(metrics?.storage?.availableBytes)}</p>
                   <p className="mt-1">{metrics?.storage?.path ?? '/'}</p>
                 </div>
-                <div className="rounded-[0.95rem] border border-white/8 bg-black/20 p-3">
-                  <p className="font-semibold uppercase tracking-[0.2em] text-[#f4f0e8]/38">App Footprint</p>
-                  <p className="mt-2 text-sm text-[#f4f0e8]/82">{formatBytes(metrics?.app?.footprintBytes)}</p>
+                <div className="rounded-[0.95rem] border border-border/40 bg-background/30 p-3">
+                  <p className="font-semibold uppercase tracking-[0.2em] text-foreground/38">App Footprint</p>
+                  <p className="mt-2 text-sm text-foreground/82">{formatBytes(metrics?.app?.footprintBytes)}</p>
                   <p className="mt-1 break-all">{metrics?.app?.path ?? 'Current PocketDev install'}</p>
                 </div>
               </div>
-              <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-[#f4f0e8]/35">
+              <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-foreground/35">
                 Manual storage snapshot{metrics?.generatedAt ? ` · ${new Date(metrics.generatedAt).toLocaleTimeString()}` : ''}
               </p>
             </>
           ) : (
-            <div className="rounded-[1rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+            <div className="rounded-[1rem] border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/52">
               {metricsError ?? 'Storage metrics are not available yet. Use refresh to inspect disk capacity and PocketDev footprint.'}
             </div>
           )}
         </div>
 
-        <div className="rounded-[1.2rem] border border-white/8 bg-black/25 p-4">
+        <div className="rounded-[1.2rem] border border-border/40 bg-background/30 p-4">
           <div className="flex flex-wrap gap-2">
             {(recommendations?.suggestedGb ?? []).map((sizeGb) => {
               const requiredBytes = sizeGb * 1024 * 1024 * 1024
@@ -481,7 +481,7 @@ function SwapCard({
                   key={sizeGb}
                   size="sm"
                   variant="secondary"
-                  className="bg-[#f0c419] text-black hover:bg-[#f0c419]/90 disabled:bg-[#5e4f15] disabled:text-black/60"
+                  className="bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90 disabled:opacity-50"
                   disabled={disabled}
                   onClick={() => void runAction({ type: 'enable', sizeGb })}
                 >
@@ -492,7 +492,7 @@ function SwapCard({
             <Button
               size="sm"
               variant="outline"
-              className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
               disabled={!swap?.actions.canDisable || actionPending !== null}
               onClick={() => void runAction({ type: 'disable' })}
             >
@@ -501,16 +501,16 @@ function SwapCard({
           </div>
 
           {recommendations?.suggestedGb.length ? (
-            <p className="mt-3 text-sm text-[#f4f0e8]/58">
+            <p className="mt-3 text-sm text-foreground/58">
               Suggested sizes based on current free storage: {recommendations.suggestedGb.map((size) => `${size} GB`).join(', ')}
               {recommendations.recommendedGb ? ` · Recommended: ${recommendations.recommendedGb} GB` : ''}
             </p>
           ) : null}
 
-          <div className="mt-4 rounded-[1rem] border border-white/8 bg-black/20 p-3">
+          <div className="mt-4 rounded-[1rem] border border-border/40 bg-background/30 p-3">
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-[180px] flex-1">
-                <Label htmlFor="swap-custom-size" className="text-xs uppercase tracking-[0.2em] text-[#f4f0e8]/45">
+                <Label htmlFor="swap-custom-size" className="text-xs uppercase tracking-[0.2em] text-foreground/45">
                   Custom Swap Size (GB)
                 </Label>
                 <Input
@@ -521,14 +521,14 @@ function SwapCard({
                   inputMode="numeric"
                   value={customSizeGb}
                   onChange={(event) => setCustomSizeGb(event.target.value)}
-                  className="mt-2 bg-[#17130f] text-[#f5eedf]"
+                  className="mt-2 bg-background text-foreground"
                   placeholder={recommendations?.recommendedGb ? `${recommendations.recommendedGb}` : 'Enter GB'}
                 />
               </div>
               <Button
                 size="sm"
                 variant="secondary"
-                className="bg-[#f0c419] text-black hover:bg-[#f0c419]/90 disabled:bg-[#5e4f15] disabled:text-black/60"
+                className="bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90 disabled:opacity-50"
                 disabled={!customCanSubmit}
                 onClick={() => void runAction({ type: 'enable', sizeGb: customParsedGb })}
               >
@@ -548,15 +548,15 @@ function SwapCard({
                 <p>{recommendations?.customWarning}</p>
               </div>
             ) : recommendations?.customWarning ? (
-              <p className="mt-3 text-sm text-[#f4f0e8]/52">{recommendations.customWarning}</p>
+              <p className="mt-3 text-sm text-foreground/52">{recommendations.customWarning}</p>
             ) : null}
           </div>
 
           {swap?.actions.enableBlockedReason ? (
-            <p className="mt-3 text-sm text-[#f4f0e8]/58">{swap.actions.enableBlockedReason}</p>
+            <p className="mt-3 text-sm text-foreground/58">{swap.actions.enableBlockedReason}</p>
           ) : null}
           {storageAvailableBytes !== null ? (
-            <p className="mt-2 text-sm text-[#f4f0e8]/58">
+            <p className="mt-2 text-sm text-foreground/58">
               Free space available for a swap file: {formatBytes(storageAvailableBytes)}
             </p>
           ) : null}
@@ -584,22 +584,22 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
   return (
     <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
       <div className="space-y-3">
-        <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+        <div className="rounded-[1.5rem] border border-border/40 bg-background/50 p-4">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-[#f0c419]" />
+            <ShieldCheck className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
             <p className="text-sm font-medium">Provider Readiness</p>
           </div>
 
           <div className="mt-4 space-y-3">
             <div className={cn(
-              'rounded-[1.2rem] border border-white/8 p-4',
-              claude?.authenticated ? 'bg-[#f0c419] text-black' : 'bg-white/6',
+              'rounded-[1.2rem] border border-border/40 p-4',
+              claude?.authenticated ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-foreground/6',
             )}>
-              <div className={cn('flex items-center gap-2', claude?.authenticated ? 'text-black/55' : 'text-[#f4f0e8]/45')}>
+              <div className={cn('flex items-center gap-2', claude?.authenticated ? 'text-black/55' : 'text-foreground/45')}>
                 <BrandIcon brand="claude" size={14} scale={1} />
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">Claude CLI</p>
               </div>
-              <div className={cn('mt-2 space-y-1 text-sm', claude?.authenticated ? 'text-black/80' : 'text-[#f4f0e8]/80')}>
+              <div className={cn('mt-2 space-y-1 text-sm', claude?.authenticated ? 'text-black/80' : 'text-foreground/80')}>
                 <p>Installed: {claude?.installed ? 'Yes' : 'No'}</p>
                 <p>Authenticated: {claude?.authenticated ? 'Yes' : 'No'}</p>
                 <p>Version: {claude?.version ?? 'Unknown'}</p>
@@ -607,14 +607,14 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
               </div>
             </div>
             <div className={cn(
-              'rounded-[1.2rem] border border-white/8 p-4',
-              codex?.authenticated ? 'bg-[#f0c419] text-black' : 'bg-white/6',
+              'rounded-[1.2rem] border border-border/40 p-4',
+              codex?.authenticated ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-foreground/6',
             )}>
-              <div className={cn('flex items-center gap-2', codex?.authenticated ? 'text-black/55' : 'text-[#f4f0e8]/45')}>
+              <div className={cn('flex items-center gap-2', codex?.authenticated ? 'text-black/55' : 'text-foreground/45')}>
                 <BrandIcon brand="codex" size={14} scale={1} />
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">Codex CLI</p>
               </div>
-              <div className={cn('mt-2 space-y-1 text-sm', codex?.authenticated ? 'text-black/80' : 'text-[#f4f0e8]/80')}>
+              <div className={cn('mt-2 space-y-1 text-sm', codex?.authenticated ? 'text-black/80' : 'text-foreground/80')}>
                 <p>Installed: {codex?.installed ? 'Yes' : 'No'}</p>
                 <p>Authenticated: {codex?.authenticated ? 'Yes' : 'No'}</p>
                 <p>Version: {codex?.version ?? 'Unknown'}</p>
@@ -622,14 +622,14 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
               </div>
             </div>
             <div className={cn(
-              'rounded-[1.2rem] border border-white/8 p-4',
-              opencode?.verified ? 'bg-[#f0c419] text-black' : 'bg-white/6',
+              'rounded-[1.2rem] border border-border/40 p-4',
+              opencode?.verified ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-foreground/6',
             )}>
-              <div className={cn('flex items-center gap-2', opencode?.verified ? 'text-black/55' : 'text-[#f4f0e8]/45')}>
+              <div className={cn('flex items-center gap-2', opencode?.verified ? 'text-black/55' : 'text-foreground/45')}>
                 <BrandIcon brand="opencode" size={14} scale={1} />
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">OpenCode CLI</p>
               </div>
-              <div className={cn('mt-2 space-y-1 text-sm', opencode?.verified ? 'text-black/80' : 'text-[#f4f0e8]/80')}>
+              <div className={cn('mt-2 space-y-1 text-sm', opencode?.verified ? 'text-black/80' : 'text-foreground/80')}>
                 <p>Installed: {opencode?.installed ? 'Yes' : 'No'}</p>
                 <p>Verified: {opencode?.verified ? 'Yes' : 'No'}</p>
                 <p>Version: {opencode?.version ?? 'Unknown'}</p>
@@ -640,9 +640,9 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
           </div>
         </div>
 
-        <div className="rounded-[1.5rem] border border-white/8 bg-[#101010] p-4">
+        <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
           <p className="text-sm font-medium">System Info</p>
-          <div className="mt-3 rounded-[1.2rem] border border-white/8 bg-black/30 p-3 text-sm text-[#f4f0e8]/78">
+          <div className="mt-3 rounded-[1.2rem] border border-border/40 bg-background/40 p-3 text-sm text-foreground/78">
             <p>OS: {prerequisites?.os ?? 'Unknown'}</p>
             <p>Arch: {prerequisites?.arch ?? 'Unknown'}</p>
             <p>Overall ready: {setupStatus.ready ? 'Yes' : 'No'}</p>
@@ -657,7 +657,7 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
         <SwapCard swap={swap} onRefresh={onRefresh} />
       </div>
 
-      <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-white/8 bg-[#101010] p-3">
+      <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-border/40 bg-background p-3">
         <p className="text-sm font-medium">Prerequisites</p>
         <div className="mt-3 space-y-5">
           {prerequisites?.tools.length ? (
@@ -684,7 +684,7 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
               />
             </>
           ) : (
-            <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+            <div className="rounded-xl border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/52">
               No prerequisites data. Refresh to load.
             </div>
           )}

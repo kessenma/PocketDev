@@ -22,6 +22,7 @@ import { addRecentPrompt } from '../../services/storage'
 import { listDirectory, searchFiles, fetchFileTree } from '../../services/api'
 import AISuggestions from './AISuggestions'
 import FindFilesButton from './FindFilesButton'
+import SelectionSearchButton from './SelectionSearchButton'
 import { useOnDeviceAIStore } from '../../stores/on-device-ai'
 import { useNewTaskDraftStore } from '../../stores/new-task-draft'
 import { useTaskStore } from '../../stores/tasks'
@@ -52,6 +53,7 @@ const PROVIDER_LOGOS: Record<string, { light: ReturnType<typeof require>; dark: 
   claude: { light: Assets.claudeBlack, dark: Assets.claudeWhite },
   codex: { light: Assets.codexBlack, dark: Assets.codexWhite },
   copilot: { light: Assets.githubCopilotBlack, dark: Assets.githubCopilotWhite },
+  minimax: { light: Assets.minimaxBlack, dark: Assets.minimaxWhite },
 }
 
 export default function NewTaskForm({ onSubmitted }: Props) {
@@ -146,14 +148,23 @@ export default function NewTaskForm({ onSubmitted }: Props) {
   const [aiSearching, setAiSearching] = React.useState(false)
   const [aiNoResults, setAiNoResults] = React.useState(false)
 
-  async function handleFindRelatedFiles() {
+  // --- Prompt selection tracking (for selection-scoped file search) ---
+  const selectionRef = React.useRef<{ start: number; end: number } | null>(null)
+  const [promptSelection, setPromptSelection] = React.useState<{ start: number; end: number } | null>(null)
+
+  const selectedText = promptSelection
+    ? prompt.slice(promptSelection.start, promptSelection.end).trim()
+    : null
+
+  async function handleFindRelatedFiles(textOverride?: string) {
+    const searchText = textOverride ?? prompt
     const fileIndex = useOnDeviceAIStore.getState().fileIndex
     console.log('[FindFiles] Button pressed')
     console.log('[FindFiles] modelStatus:', aiModelStatus)
-    console.log('[FindFiles] prompt:', prompt.trim().substring(0, 80))
+    console.log('[FindFiles] searchText:', searchText.trim().substring(0, 80))
     console.log('[FindFiles] fileIndex:', fileIndex ? `${fileIndex.paths.length} files indexed for ${fileIndex.rootPath}` : 'null')
-    if (aiModelStatus !== 'ready' || !prompt.trim()) {
-      console.log('[FindFiles] Aborting — model not ready or prompt empty')
+    if (aiModelStatus !== 'ready' || !searchText.trim()) {
+      console.log('[FindFiles] Aborting — model not ready or text empty')
       return
     }
     setAiSearching(true)
@@ -168,7 +179,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       }
 
       console.log('[FindFiles] Running suggest...')
-      await aiSuggest(prompt)
+      await aiSuggest(searchText)
       const { suggestions, restSuggestions } = useOnDeviceAIStore.getState()
       console.log('[FindFiles] Results:', suggestions.length, 'top,', restSuggestions.length, 'rest')
       suggestions.forEach((s) => console.log(`  [FindFiles] top  ${s.score.toFixed(3)} → ${s.path}`))
@@ -284,6 +295,13 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             style={[styles.promptInput, { backgroundColor: colors.panelAlt, color: colors.text, borderColor: colors.border }]}
             value={prompt}
             onChangeText={(text) => { setPrompt(text); setAiNoResults(false) }}
+            onSelectionChange={(e) => {
+              const sel = e.nativeEvent.selection
+              const hasSelection = sel.end > sel.start
+              selectionRef.current = hasSelection ? sel : null
+              setPromptSelection(hasSelection ? sel : null)
+            }}
+            onBlur={() => setPromptSelection(null)}
             placeholder="What should the agent do?"
             placeholderTextColor={colors.textTertiary}
             multiline
@@ -311,7 +329,22 @@ export default function NewTaskForm({ onSubmitted }: Props) {
 
         {/* ── AI File Suggestions ── */}
         {aiModelStatus === 'ready' && prompt.trim().length > 0 ? (
-          <FindFilesButton searching={aiSearching} onPress={handleFindRelatedFiles} />
+          <View style={styles.findFilesRow}>
+            <View style={styles.findFilesMain}>
+              <FindFilesButton searching={aiSearching} onPress={handleFindRelatedFiles} />
+            </View>
+            {selectedText && selectedText.length >= 5 ? (
+              <SelectionSearchButton
+                searching={aiSearching}
+                selectedText={selectedText}
+                onPress={() => {
+                  const sel = selectionRef.current
+                  if (!sel) return
+                  handleFindRelatedFiles(prompt.slice(sel.start, sel.end).trim())
+                }}
+              />
+            ) : null}
+          </View>
         ) : null}
         <AISuggestions />
         {aiNoResults ? (
@@ -590,6 +623,7 @@ function providerToAgentType(providerId: string): AgentType {
   if (providerId === 'codex') return 'codex'
   if (providerId === 'claude') return 'claude'
   if (providerId === 'copilot') return 'copilot'
+  if (providerId === 'minimax') return 'minimax'
   return 'codex'
 }
 
@@ -682,6 +716,14 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     minHeight: 120,
     maxHeight: 360,
+  },
+  findFilesRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing[2],
+  },
+  findFilesMain: {
+    flex: 1,
   },
   aiNoResults: {
     ...typeStyles.bodySmall,
