@@ -33,7 +33,7 @@ export function ConsoleLayout() {
         timeStyle: 'short',
       }).format(new Date(status.lastUpgradeAt))}`
     : 'No completed upgrades recorded yet'
-  const mobileUpgradeLabel = status?.lastUpgradeAt
+  const upgradeMetaLabel = status?.lastUpgradeAt
     ? `Updated ${new Intl.DateTimeFormat(undefined, {
         dateStyle: 'medium',
         timeStyle: 'short',
@@ -117,8 +117,8 @@ export function ConsoleLayout() {
                   <span className="hidden sm:inline">Sign Out</span>
                 </Button>
               </div>
-              <p className="mt-1 text-right text-[0.62rem] font-medium uppercase tracking-[0.14em] text-[#f5eedf]/55 sm:hidden">
-                {mobileUpgradeLabel}
+              <p className="mt-1 text-right text-[0.62rem] font-medium uppercase tracking-[0.14em] text-[#f5eedf]/55">
+                {upgradeMetaLabel}
               </p>
             </div>
           </div>

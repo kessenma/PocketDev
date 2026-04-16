@@ -226,6 +226,17 @@ async function finalizeSession(sessionId: string) {
   refreshSessionState(session)
 }
 
+async function syncSessionWithCodexStatus(session: InternalAuthSession) {
+  const status = await checkCodexStatus()
+  if (status.authenticated) {
+    session.authenticated = true
+    session.completed = true
+    session.error = null
+    refreshSessionState(session)
+  }
+  return status
+}
+
 function getSessionOrThrow(sessionId: string): InternalAuthSession {
   const session = authSessions.get(sessionId)
   if (!session) {
@@ -405,8 +416,11 @@ export async function startCodexAuth(mode: CodexAuthMode): Promise<CodexAuthStar
   return toAuthStatus(session)
 }
 
-export function getCodexAuthStatus(sessionId: string): CodexAuthSessionStatus {
+export async function getCodexAuthStatus(sessionId: string): Promise<CodexAuthSessionStatus> {
   const session = getSessionOrThrow(sessionId)
+  if (!session.authenticated && !session.completed) {
+    await syncSessionWithCodexStatus(session)
+  }
   refreshSessionState(session)
   return toAuthStatus(session)
 }
@@ -485,6 +499,7 @@ export async function replayCodexAuthCallback(
       session.updatedAt = Date.now()
 
       if (response.status >= 200 && response.status < 400) {
+        await syncSessionWithCodexStatus(session)
         const attempts = failures.length > 0 ? [...failures, `${candidate} -> HTTP ${response.status}`] : [`${candidate} -> HTTP ${response.status}`]
         lastReplayDebug = {
           sessionId,

@@ -26,6 +26,12 @@ interface Props {
 
 type Method = 'browser' | 'device_code'
 
+function suggestsDeviceAuth(session: CodexAuthSessionStatus | null) {
+  const prompt = session?.prompt?.toLowerCase() ?? ''
+  const output = session?.output_excerpt?.toLowerCase() ?? ''
+  return prompt.includes('device-auth') || output.includes('device-auth') || prompt.includes('headless machine')
+}
+
 export default function AuthenticateStep({ dispatch, authSession }: Props) {
   const { colors, isDark } = useTheme()
   const server = useConnectionStore((s) => s.server)
@@ -36,6 +42,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
   const [loading, setLoading] = useState(false)
   const [started, setStarted] = useState(false)
   const [openedBrowser, setOpenedBrowser] = useState(false)
+  const [callbackPending, setCallbackPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const syncSession = useCallback((next: CodexAuthSessionStatus) => {
@@ -47,6 +54,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     setSession(null)
     setStarted(false)
     setOpenedBrowser(false)
+    setCallbackPending(false)
     setInput('')
     setCallbackUrl('')
     setError(null)
@@ -60,6 +68,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     setInput('')
     setCallbackUrl('')
     setOpenedBrowser(false)
+    setCallbackPending(false)
     try {
       const next = await postStartCodexAuth(server.ip, server.port, mode)
       syncSession(next)
@@ -118,28 +127,53 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
     if (!server || !session?.session_id || !callbackUrl.trim()) return
     setLoading(true)
     setError(null)
+    setCallbackPending(true)
     try {
       const replay = await postReplayCodexAuthCallback(server.ip, server.port, session.session_id, callbackUrl.trim())
       if (!replay.success) {
+        setCallbackPending(false)
         setError(replay.error ?? 'Failed to complete Codex auth callback.')
         return
       }
-      const next = await fetchCodexAuthStatus(server.ip, server.port, session.session_id)
-      syncSession(next)
-      if (next.authenticated) {
-        dispatch({ type: 'STEP_COMPLETE', step: 'authenticate', authSession: next })
-      } else if (next.state === 'failed') {
-        const message = next.error ?? 'Codex authentication failed.'
+      // The localhost callback can return before the CLI session updates its auth state.
+      // Poll briefly so the UI shows a concrete transition instead of clearing the field
+      // and appearing stuck.
+      let latest = await fetchCodexAuthStatus(server.ip, server.port, session.session_id)
+      syncSession(latest)
+
+      if (!latest.authenticated && latest.state !== 'failed') {
+        for (let i = 0; i < 7; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 700))
+          latest = await fetchCodexAuthStatus(server.ip, server.port, session.session_id)
+          syncSession(latest)
+          if (latest.authenticated || latest.state === 'failed') break
+        }
+      }
+
+      if (latest.authenticated) {
+        setCallbackUrl('')
+        setCallbackPending(false)
+        dispatch({ type: 'STEP_COMPLETE', step: 'authenticate', authSession: latest })
+      } else if (latest.state === 'failed') {
+        setCallbackPending(false)
+        const message = latest.error ?? 'Codex authentication failed.'
         setError(message)
         dispatch({ type: 'STEP_FAILED', step: 'authenticate', error: message })
+      } else {
+        setCallbackPending(false)
+        setError(
+          latest.state === 'awaiting_code' && selectedMethod === 'browser' && suggestsDeviceAuth(latest)
+            ? 'Codex accepted the callback, but this workspace is asking for `codex login --device-auth`. Tap "Change method" and continue with ChatGPT app.'
+            : 'Sign-in callback accepted, but Codex did not finish authentication yet. Check the recent activity below and try the ChatGPT app method if this workspace appears headless.',
+        )
       }
-      setCallbackUrl('')
     } catch (err) {
+      setCallbackPending(false)
       setError(err instanceof Error ? err.message : 'Failed to complete Codex auth callback.')
     } finally {
       setLoading(false)
     }
-  }, [callbackUrl, server, session])
+  }, [callbackUrl, dispatch, server, session, syncSession])
 
   const helperText = !started
     ? 'Choose how you want to authenticate before PocketDev starts the Codex sign-in flow for this workspace.'
@@ -148,7 +182,9 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
       : session?.state === 'awaiting_code'
         ? selectedMethod === 'device_code'
           ? 'Open the verification page, then enter the one-time code shown by Codex if the CLI asks for it.'
-          : 'Complete sign-in in your browser or ChatGPT app, then finish the sign-in return step in PocketDev.'
+          : suggestsDeviceAuth(session)
+            ? 'This Codex session is asking for `codex login --device-auth`. Use the ChatGPT app path instead of the browser callback flow for this workspace.'
+            : 'Complete sign-in in your browser or ChatGPT app, then finish the sign-in return step in PocketDev.'
         : session?.state === 'awaiting_browser'
           ? selectedMethod === 'device_code'
             ? 'Open the verification page in your browser or ChatGPT app and complete sign-in with the code below.'
@@ -185,7 +221,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
               {session?.authenticated ? 'Signed in' : 'OpenAI sign-in'}
             </Text>
           </View>
-          <Text style={[styles.statusCopy, { color: error || session?.state === 'failed' ? colors.error : colors.textSecondary }]}>
+          <Text style={[styles.statusCopy, { color: error && !callbackPending || session?.state === 'failed' ? colors.error : colors.textSecondary }]}>
             {error ?? helperText}
           </Text>
           {session?.prompt && (
@@ -274,13 +310,24 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
             <TextInput
               style={[styles.multilineInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
               value={callbackUrl}
-              onChangeText={setCallbackUrl}
-                placeholder="Paste sign-in return link..."
+              onChangeText={(text) => {
+                setCallbackUrl(text)
+                if (callbackPending) {
+                  setCallbackPending(false)
+                  setError(null)
+                }
+              }}
+              placeholder="Paste sign-in return link..."
               placeholderTextColor={colors.textTertiary}
               autoCapitalize="none"
               autoCorrect={false}
               multiline
             />
+            {callbackPending ? (
+              <Text style={[styles.pendingCopy, { color: colors.textTertiary }]}>
+                Callback received. Waiting for Codex to finish signing in...
+              </Text>
+            ) : null}
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: callbackUrl.trim() ? colors.primary : colors.border }]}
               onPress={() => void handleReplayCallback()}
@@ -288,7 +335,9 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
               activeOpacity={0.7}
             >
               <Send color={colors.primaryText} size={18} strokeWidth={2.25} />
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Finish sign-in</Text>
+              <Text style={[styles.buttonText, { color: colors.primaryText }]}>
+                {callbackPending ? 'Checking sign-in...' : 'Finish sign-in'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -329,6 +378,7 @@ export default function AuthenticateStep({ dispatch, authSession }: Props) {
                 {session.output_excerpt}
               </Text>
             </View>
+            <CopyButton value={session.output_excerpt} label="Copy activity" />
           </View>
         )}
       </ScrollView>
@@ -546,6 +596,10 @@ const styles = StyleSheet.create({
   outputText: {
     ...typographyScale.xs,
     fontFamily: 'monospace',
+  },
+  pendingCopy: {
+    ...typographyScale.xs,
+    lineHeight: 18,
   },
   footerActions: {
     gap: spacing[2],

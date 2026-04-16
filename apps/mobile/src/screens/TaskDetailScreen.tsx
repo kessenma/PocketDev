@@ -1,6 +1,6 @@
 import React from 'react'
 import { Image, LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { Check, ChevronDown, ChevronUp, Copy, GalleryVerticalEnd, SquareTerminal, Terminal, X } from 'lucide-react-native'
+import { Bug, Check, ChevronDown, ChevronUp, Copy, GalleryVerticalEnd, SquareTerminal, Terminal, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { AgentType } from '@pocketdev/shared/schema'
 import { useTheme } from '../contexts/ThemeContext'
@@ -27,6 +27,7 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
   const [showRawLogs, setShowRawLogs] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
   const [copyTrigger, setCopyTrigger] = React.useState(0)
+  const [debugTrigger, setDebugTrigger] = React.useState(0)
   const [promptExpanded, setPromptExpanded] = React.useState(false)
 
   function togglePrompt() {
@@ -135,6 +136,13 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
                   : <Copy color={colors.textTertiary} size={14} strokeWidth={2.25} />}
               </TouchableOpacity>
               <TouchableOpacity
+                onPress={() => setDebugTrigger((t) => t + 1)}
+                activeOpacity={0.7}
+                style={[styles.iconBtn, { borderColor: colors.border }]}
+              >
+                <Bug color={colors.textTertiary} size={14} strokeWidth={2.25} />
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => setShowRawLogs((v) => !v)}
                 activeOpacity={0.7}
                 style={[styles.iconBtn, { backgroundColor: showRawLogs ? colors.primary + '18' : 'transparent', borderColor: colors.border }]}
@@ -189,6 +197,7 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
           rawLogsActive={hasMorph ? showRawLogs : undefined}
           onRawLogsToggle={hasMorph ? () => setShowRawLogs((v) => !v) : undefined}
           copyTrigger={hasMorph ? copyTrigger : undefined}
+          debugTrigger={hasMorph ? debugTrigger : undefined}
           onCopied={hasMorph ? () => { setCopied(true); setTimeout(() => setCopied(false), 2000) } : undefined}
           emptyTitle="Task not found"
           emptyBody="The selected task is no longer available in local state."

@@ -37,6 +37,8 @@ type Props = {
   onRawLogsToggle?: () => void
   /** Incrementing counter — parent increments to imperatively open the copy menu */
   copyTrigger?: number
+  /** Incrementing counter — parent increments to imperatively open the debug sheet */
+  debugTrigger?: number
   /** Called after a copy completes so parent can show its own feedback */
   onCopied?: () => void
 }
@@ -165,6 +167,7 @@ export default function TaskDetailPane({
   rawLogsActive,
   onRawLogsToggle,
   copyTrigger,
+  debugTrigger,
   onCopied,
 }: Props) {
   const { colors } = useTheme()
@@ -204,6 +207,11 @@ export default function TaskDetailPane({
   useEffect(() => {
     if (copyTrigger) setShowCopyMenu(true)
   }, [copyTrigger])
+
+  useEffect(() => {
+    if (!debugTrigger) return
+    handleOpenDebugSheet()
+  }, [debugTrigger])
 
   function buildHeader(): string {
     const provider = task?.agent_type ?? 'unknown'
@@ -400,17 +408,6 @@ export default function TaskDetailPane({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      {hideStatusBar ? (
-        <View pointerEvents="box-none" style={styles.overlayActions}>
-          <TouchableOpacity
-            onPress={handleOpenDebugSheet}
-            activeOpacity={0.7}
-            style={[styles.logToggle, { backgroundColor: colors.panel, borderColor: colors.border }]}
-          >
-            <Bug color={colors.textTertiary} size={14} strokeWidth={2.25} />
-          </TouchableOpacity>
-        </View>
-      ) : null}
       {!hideStatusBar && (
         <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
           <View style={styles.statusMeta}>
@@ -765,13 +762,6 @@ const styles = StyleSheet.create({
     bottom: spacing[4],
     alignSelf: 'center',
   },
-  overlayActions: {
-    position: 'absolute',
-    top: spacing[3],
-    right: spacing[3],
-    zIndex: 10,
-  },
-
   // ── Copy Menu ──
   copyMenuBackdrop: {
     flex: 1,

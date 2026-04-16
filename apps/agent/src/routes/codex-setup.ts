@@ -45,7 +45,7 @@ export const codexSetupRoutes = new Elysia({ prefix: '/codex-setup' })
     if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
 
     try {
-      return getCodexAuthStatus(params.sessionId)
+      return await getCodexAuthStatus(params.sessionId)
     } catch (error) {
       set.status = 404
       return { error: error instanceof Error ? error.message : 'Codex auth session not found' }

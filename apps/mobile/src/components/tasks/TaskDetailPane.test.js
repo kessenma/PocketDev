@@ -124,6 +124,13 @@ jest.mock('../setup/CodexWizardSheet', () => {
   }
 })
 
+jest.mock('../setup/ClaudeWizardSheet', () => {
+  const React = require('react')
+  return function ClaudeWizardSheet(props) {
+    return React.createElement('ClaudeWizardSheet', props)
+  }
+})
+
 jest.mock('lucide-react-native', () => {
   const React = require('react')
   const makeIcon = (name) => (props) => React.createElement(name, props)
