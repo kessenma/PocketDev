@@ -866,8 +866,10 @@ export class ManagedAgentProcess {
     this.hooksFilePath = setupResult.hooksFilePath ?? null
     this.tempFiles = setupResult.tempFiles ?? []
 
+    // Try PTY path for Claude — falls back to tmux if node-pty is not available
+    // (node-pty-prebuilt-multiarch is an optional dependency; may not compile on all systems)
+    let useTmux = !setupResult.usePty
     if (setupResult.usePty) {
-      // ── Claude path: spawn inside a real PTY via node-pty ──────────────────
       this.ptyRunner = new ClaudePtyRunner()
       try {
         await this.ptyRunner.spawn(setupResult.command, {
@@ -882,18 +884,20 @@ export class ManagedAgentProcess {
           onData: (chunk) => this.onPtyData(chunk),
           onExit: (code) => this.onPtyExit(code),
         })
+        this.lastPtyDataMs = Date.now()
+        const permTag = `permission-mode: ${this.mode}`
+        console.log(`[managed-agent] Started PTY process for task ${this.taskId}`)
+        this.broadcastOutput(`[system] Session started — ${permTag}`)
       } catch (err) {
-        console.error(`[managed-agent] Failed to spawn PTY for task ${this.taskId}:`, err)
-        this.broadcastOutput('[agent] Failed to start PTY process')
-        this.finish('failed')
-        return
+        // node-pty unavailable (optional dep not compiled) — fall through to tmux
+        console.warn(`[managed-agent] PTY unavailable for task ${this.taskId}, falling back to tmux:`, err)
+        this.ptyRunner = null
+        useTmux = true
       }
-      this.lastPtyDataMs = Date.now()
-      const permTag = `permission-mode: ${this.mode}`
-      console.log(`[managed-agent] Started PTY process for task ${this.taskId}`)
-      this.broadcastOutput(`[system] Session started — ${permTag}`)
-    } else {
-      // ── Copilot path: launch in tmux (unchanged) ───────────────────────────
+    }
+
+    if (useTmux) {
+      // ── Tmux path: Copilot always, Claude fallback when node-pty not available ─
       const { exitCode } = await exec(
         `tmux new-session -d -s ${this.tmuxSession} -x ${this.provider.tmuxWidth} -y ${this.provider.tmuxHeight} ${shellEscape(setupResult.command)}`,
       )
