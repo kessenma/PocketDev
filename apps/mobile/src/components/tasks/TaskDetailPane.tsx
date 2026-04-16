@@ -13,6 +13,7 @@ import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import BauhausChatInput from '../shared/BauhausChatInput'
+import ClaudeWizardSheet from '../setup/ClaudeWizardSheet'
 import CodexWizardSheet from '../setup/CodexWizardSheet'
 import { type StreamItem } from './TaskStreamer'
 import { GroupedItemRow } from './ActivityCards'
@@ -194,8 +195,10 @@ export default function TaskDetailPane({
   const [copied, setCopied] = useState(false)
   const [showDebugSheet, setShowDebugSheet] = useState(false)
   const [showCodexWizard, setShowCodexWizard] = useState(false)
+  const [showClaudeWizard, setShowClaudeWizard] = useState(false)
   const [debugSelection, setDebugSelection] = useState<TaskDebugSelection>(null)
   const [codexWizardKey, setCodexWizardKey] = useState(0)
+  const [claudeWizardKey, setClaudeWizardKey] = useState(0)
 
   // Parent can open the copy menu by incrementing copyTrigger
   useEffect(() => {
@@ -326,8 +329,13 @@ export default function TaskDetailPane({
   function handleDebugContinue() {
     if (debugSelection === 'auth') {
       setShowDebugSheet(false)
-      setCodexWizardKey((value) => value + 1)
-      setShowCodexWizard(true)
+      if (task?.agent_type === 'claude') {
+        setClaudeWizardKey((v) => v + 1)
+        setShowClaudeWizard(true)
+      } else {
+        setCodexWizardKey((v) => v + 1)
+        setShowCodexWizard(true)
+      }
       return
     }
     setShowDebugSheet(false)
@@ -508,6 +516,15 @@ export default function TaskDetailPane({
           entryMode="auth_repair"
           onClose={() => setShowCodexWizard(false)}
           onComplete={() => setShowCodexWizard(false)}
+        />
+      ) : null}
+      {showClaudeWizard ? (
+        <ClaudeWizardSheet
+          key={`claude-auth-repair-${claudeWizardKey}`}
+          visible={showClaudeWizard}
+          entryMode="auth_repair"
+          onClose={() => setShowClaudeWizard(false)}
+          onComplete={() => setShowClaudeWizard(false)}
         />
       ) : null}
 

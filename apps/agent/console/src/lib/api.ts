@@ -121,6 +121,7 @@ export interface ConsoleStatus {
   serverIp: string
   port: number
   secure: boolean
+  lastUpgradeAt: string | null
 }
 
 export async function fetchStatus(): Promise<ConsoleStatus> {

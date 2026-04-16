@@ -33,7 +33,7 @@ const OPTIONS: Array<{
   {
     key: 'auth',
     title: 'Auth',
-    description: 'Re-authenticate Codex and verify the CLI session without stepping through reinstall.',
+    description: 'Re-authenticate the agent CLI and verify the session without stepping through reinstall.',
     Icon: LockKeyhole,
   },
   {

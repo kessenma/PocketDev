@@ -378,6 +378,16 @@ export function deleteConfig(key: string) {
     .run()
 }
 
+const LAST_UPGRADE_AT_KEY = 'last_upgrade_at'
+
+export function getLastUpgradeAt(): string | null {
+  return getConfig(LAST_UPGRADE_AT_KEY)
+}
+
+export function setLastUpgradeAt(value: string) {
+  setConfig(LAST_UPGRADE_AT_KEY, value)
+}
+
 // ─── Task operations ────────────────────────────────────
 
 export function insertTask(

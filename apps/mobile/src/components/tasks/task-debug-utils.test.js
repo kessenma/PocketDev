@@ -45,4 +45,49 @@ describe('inferTaskDebugSelection', () => {
       pendingPermissions: [{ tool_name: 'Read' }],
     })).toBe('permissions')
   })
+
+  // Claude auth inference
+  it('preselects auth for Claude task with "not logged in" log', () => {
+    expect(inferTaskDebugSelection({
+      task: { ...baseTask, agent_type: 'claude' },
+      logs: ['Error: not logged in. Please authenticate.'],
+    })).toBe('auth')
+  })
+
+  it('preselects auth for Claude task with 401 Unauthorized log', () => {
+    expect(inferTaskDebugSelection({
+      task: { ...baseTask, agent_type: 'claude' },
+      logs: ['[error] 401 Unauthorized'],
+    })).toBe('auth')
+  })
+
+  it('preselects auth for Claude task with authentication_error in logs', () => {
+    expect(inferTaskDebugSelection({
+      task: { ...baseTask, agent_type: 'claude' },
+      logs: ['{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}'],
+    })).toBe('auth')
+  })
+
+  it('preselects auth for Claude task when setup report says unauthenticated', () => {
+    expect(inferTaskDebugSelection({
+      task: { ...baseTask, agent_type: 'claude' },
+      logs: [],
+      report: { tools: [{ id: 'claude_cli', auth_status: 'unauthenticated' }] },
+    })).toBe('auth')
+  })
+
+  it('returns null for Claude task with no failure signals', () => {
+    expect(inferTaskDebugSelection({
+      task: { ...baseTask, agent_type: 'claude' },
+      logs: ['Working on it...'],
+    })).toBeNull()
+  })
+
+  it('prefers auth over permissions when both signals present for Claude', () => {
+    expect(inferTaskDebugSelection({
+      task: { ...baseTask, agent_type: 'claude' },
+      logs: ['not logged in'],
+      pendingPermissions: [{ tool_name: 'Bash' }],
+    })).toBe('auth')
+  })
 })

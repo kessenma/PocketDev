@@ -186,10 +186,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function ClaudeWizardSheet({ visible, onClose, onComplete }: Props) {
+export default function ClaudeWizardSheet({ visible, onClose, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
-  const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
+  const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
 
   const handleClose = useCallback(() => {
     fetchPrerequisites()

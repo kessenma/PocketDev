@@ -13,8 +13,11 @@ NewTaskForm
   ├── Choose task mode
   └── Submit
       │
-      ├── taskStore.startTask(prompt, agentType, cwd, model, mode)
+      ├── taskStore.startTask(prompt, agentType, cwd, model, mode)     [new task]
       │   └── ws.send('task.start', { prompt, agentType, workingDirectory, model, mode })
+      │
+      ├── taskStore.continueTask(taskId, prompt, model?)               [continuation]
+      │   └── ws.send('task.continue', { taskId, prompt, model? })
       │
       └── Agent server spawns ManagedProcess
           │
@@ -74,14 +77,64 @@ This lets Claude permission prompts and Codex structured user-input requests ren
 
 `TaskDetailPane` remains the main task surface:
 
-1. Status bar and task controls
-2. Prompt or multi-turn conversation
+1. Status bar and task controls (kill button, raw-logs toggle, copy button, debug button on failure)
+2. Prompt card (single-turn) or `TaskConversation` bubbles (multi-turn Claude)
 3. Result card from normalized `text` activities when available
 4. Pending approval summary for unresolved permission-style requests
 5. Unified stream output (`TaskStreamerInline`) or raw logs
 6. `TaskInteractionSheet` for live agent questions
+7. `TaskDebugSheet` for auth/permission repair (failed tasks)
+
+`TaskDetailPane` supports controlled-mode props for parent components (e.g. tablet workspace):
+- `hideHeader?` / `hideStatusBar?` — layout control; parent renders its own header/controls
+- `rawLogsActive?` / `onRawLogsToggle?` — parent-controlled raw log view toggle
+- `copyTrigger?` / `onCopied?` — increment to imperatively trigger the copy menu
 
 Completed-task history still relies on cached raw logs. Structured activities remain live/in-memory only.
+
+## Multi-Turn Conversations
+
+Completed Claude tasks can be continued with a follow-up message:
+
+```
+TaskDetailPane
+  └── "Continue" input → continueTask(taskId, prompt, model?)
+                              │
+                              └── ws.send('task.continue', { taskId, prompt, model? })
+                                        │
+                                        ▼
+                              Agent server: resetTaskForContinuation()
+                              Spawns new ManagedAgentProcess (same taskId + sessionId)
+                                        │
+                              task.turn_started { taskId, turnNumber } ──► Mobile
+                              ... task.activity / task.output stream ...
+                              task.completed ──────────────────────────► Mobile
+```
+
+- `continueTask(taskId, prompt, model?)` in the store sends `task.continue` and optimistically appends the user's message to `taskTurns`
+- `task.turn_started { taskId, turnNumber }` is broadcast at the start of each new turn when `turnNumber > 1`
+- `taskTurns: Map<string, TaskTurn[]>` stores conversation history — loaded lazily via `loadTurnsForTask()` (SQLite cache → server `/tasks/:id/turns`)
+- When `turn_count > 1`, `TaskDetailPane` renders `TaskConversation` (user/assistant bubble pairs) instead of the single prompt card
+- Continuation is only available for Claude tasks — Codex, Copilot, and Shell are single-turn
+
+## Debug Tools
+
+Failed tasks surface a debug button in the `TaskDetailPane` status bar. Tapping it opens `TaskDebugSheet`.
+
+**Automatic issue detection:**
+
+`inferTaskDebugSelection(opts)` from `task-debug-utils.ts` inspects the task's logs, activities, and the workspace `PrerequisitesReport` to pre-select the most likely issue:
+
+| Signal | Selection |
+|---|---|
+| Auth error patterns in logs/activities (401, token_expired, etc.) | `'auth'` |
+| `report.tools[codex_cli].auth_status === 'unauthenticated'` | `'auth'` |
+| `pendingPermissions.length > 0` | `'permissions'` |
+| No signal | `null` (sheet opens without pre-selection) |
+
+**Repair flows:**
+- **Auth**: opens `CodexWizardSheet` in `auth_repair` mode — walks through re-authentication without reinstalling the CLI tool
+- **Permissions**: placeholder; future repair tooling will live here
 
 ## Historical Replay
 

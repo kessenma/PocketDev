@@ -27,6 +27,19 @@ export function ConsoleLayout() {
         ? 'debug'
         : 'security'
 
+  const upgradeTooltip = status?.lastUpgradeAt
+    ? `Last upgraded ${new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(status.lastUpgradeAt))}`
+    : 'No completed upgrades recorded yet'
+  const mobileUpgradeLabel = status?.lastUpgradeAt
+    ? `Updated ${new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(status.lastUpgradeAt))}`
+    : 'No upgrades recorded yet'
+
   if (loading || !status) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#12100d]">
@@ -72,34 +85,41 @@ export function ConsoleLayout() {
               </Badge>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
-                onClick={() => setTerminalOpen(true)}
-              >
-                <Maximize2 className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Terminal</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
-                onClick={handleUpgrade}
-                disabled={upgrading}
-              >
-                {upgrading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowUpCircle className="mr-2 h-4 w-4" />
-                )}
-                <span className="hidden sm:inline">{upgrading ? 'Upgrading...' : 'Upgrade'}</span>
-              </Button>
-              <Button variant="outline" size="sm" className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </Button>
+            <div className="shrink-0">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                  onClick={() => setTerminalOpen(true)}
+                >
+                  <Maximize2 className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Terminal</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                  onClick={handleUpgrade}
+                  disabled={upgrading}
+                  title={upgradeTooltip}
+                  aria-label={`${upgrading ? 'Upgrading' : 'Upgrade'}. ${upgradeTooltip}`}
+                >
+                  {upgrading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUpCircle className="mr-2 h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline">{upgrading ? 'Upgrading...' : 'Upgrade'}</span>
+                </Button>
+                <Button variant="outline" size="sm" className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </Button>
+              </div>
+              <p className="mt-1 text-right text-[0.62rem] font-medium uppercase tracking-[0.14em] text-[#f5eedf]/55 sm:hidden">
+                {mobileUpgradeLabel}
+              </p>
             </div>
           </div>
         </header>

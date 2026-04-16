@@ -35,6 +35,8 @@ import {
   getProjects,
   getConfig,
   getPushLog,
+  getLastUpgradeAt,
+  setLastUpgradeAt,
   type AdminAccountRow,
 } from '../db/index.ts'
 import { checkAllPrerequisites } from '../services/cli-setup/prerequisites.ts'
@@ -295,6 +297,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       serverIp: serverHost,
       port: externalPort,
       secure,
+      lastUpgradeAt: getLastUpgradeAt(),
     }
   })
 
@@ -1149,10 +1152,17 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
           ['tar', '-xzf', tmpFile, '-C', installDir, '--strip-components=1'],
           { stdout: 'pipe', stderr: 'pipe' },
         )
-        await extractProc.exited
+        const extractExitCode = await extractProc.exited
 
         // Clean up temp file
         Bun.spawn(['rm', '-f', tmpFile])
+
+        if (extractExitCode !== 0) {
+          console.error('[console:update] Failed to extract update bundle')
+          return
+        }
+
+        setLastUpgradeAt(new Date().toISOString())
 
         // Clear cached version so the new version.json is read
         clearVersionCache()

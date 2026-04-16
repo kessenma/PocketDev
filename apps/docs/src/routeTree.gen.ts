@@ -10,15 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UserAgreementRouteImport } from './routes/user-agreement'
+import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as MobileAppRouteImport } from './routes/mobile-app'
 import { Route as GetStartedRouteImport } from './routes/get-started'
+import { Route as EncryptionRouteImport } from './routes/encryption'
 import { Route as ArchitectureRouteImport } from './routes/architecture'
 import { Route as IndexRouteImport } from './routes/index'
 
 const UserAgreementRoute = UserAgreementRouteImport.update({
   id: '/user-agreement',
   path: '/user-agreement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
@@ -36,6 +43,11 @@ const GetStartedRoute = GetStartedRouteImport.update({
   path: '/get-started',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EncryptionRoute = EncryptionRouteImport.update({
+  id: '/encryption',
+  path: '/encryption',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ArchitectureRoute = ArchitectureRouteImport.update({
   id: '/architecture',
   path: '/architecture',
@@ -50,26 +62,32 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/architecture': typeof ArchitectureRoute
+  '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/tasks': typeof TasksRoute
   '/user-agreement': typeof UserAgreementRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/architecture': typeof ArchitectureRoute
+  '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/tasks': typeof TasksRoute
   '/user-agreement': typeof UserAgreementRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/architecture': typeof ArchitectureRoute
+  '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
+  '/tasks': typeof TasksRoute
   '/user-agreement': typeof UserAgreementRoute
 }
 export interface FileRouteTypes {
@@ -77,34 +95,42 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/architecture'
+    | '/encryption'
     | '/get-started'
     | '/mobile-app'
     | '/privacy-policy'
+    | '/tasks'
     | '/user-agreement'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/architecture'
+    | '/encryption'
     | '/get-started'
     | '/mobile-app'
     | '/privacy-policy'
+    | '/tasks'
     | '/user-agreement'
   id:
     | '__root__'
     | '/'
     | '/architecture'
+    | '/encryption'
     | '/get-started'
     | '/mobile-app'
     | '/privacy-policy'
+    | '/tasks'
     | '/user-agreement'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArchitectureRoute: typeof ArchitectureRoute
+  EncryptionRoute: typeof EncryptionRoute
   GetStartedRoute: typeof GetStartedRoute
   MobileAppRoute: typeof MobileAppRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  TasksRoute: typeof TasksRoute
   UserAgreementRoute: typeof UserAgreementRoute
 }
 
@@ -115,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/user-agreement'
       fullPath: '/user-agreement'
       preLoaderRoute: typeof UserAgreementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy-policy': {
@@ -138,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GetStartedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/encryption': {
+      id: '/encryption'
+      path: '/encryption'
+      fullPath: '/encryption'
+      preLoaderRoute: typeof EncryptionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/architecture': {
       id: '/architecture'
       path: '/architecture'
@@ -158,20 +198,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArchitectureRoute: ArchitectureRoute,
+  EncryptionRoute: EncryptionRoute,
   GetStartedRoute: GetStartedRoute,
   MobileAppRoute: MobileAppRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
+  TasksRoute: TasksRoute,
   UserAgreementRoute: UserAgreementRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
