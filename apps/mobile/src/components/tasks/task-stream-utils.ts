@@ -1,4 +1,4 @@
-import type { TaskActivity, TaskQuestionOption, ToolUseActivity } from '@pocketdev/shared/types'
+import type { TaskActivity, TaskQuestionOption, TodoItem, ToolUseActivity } from '@pocketdev/shared/types'
 import type { StreamItem } from './TaskStreamer'
 
 export type TaskToolPresentation = {
@@ -143,6 +143,25 @@ export function parseCodexRawLogToActivity(line: string): TaskActivity | null {
   }
 }
 
+// ── Progress helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Returns the todos from the most recent TodoWrite / update_plan activity in the stream,
+ * or null if none exist. Used by TaskDetailPane to derive the progress bar.
+ */
+export function extractLatestTodos(activities: TaskActivity[]): TodoItem[] | null {
+  for (let i = activities.length - 1; i >= 0; i--) {
+    const a = activities[i]
+    if (a.type === 'tool_use' && a.kind === 'plan') {
+      const todos = Array.isArray((a.metadata as any)?.todos)
+        ? ((a.metadata as any).todos as TodoItem[])
+        : null
+      if (todos && todos.length > 0) return todos
+    }
+  }
+  return null
+}
+
 // ── Card grouping ────────────────────────────────────────────────────────────
 
 export type CardCategory = 'researching' | 'writing' | 'planning' | 'running'
@@ -166,10 +185,14 @@ export type CardEntry =
   | { kind: 'thinking'; preview: string }
 
 export type GroupedStreamItem =
-  | { kind: 'card';   category: CardCategory; entries: CardEntry[] }
-  | { kind: 'result'; activity: Extract<TaskActivity, { type: 'text' }> }
-  | { kind: 'status'; activity: Extract<TaskActivity, { type: 'status' }> }
-  | { kind: 'log';    line: string }
+  | { kind: 'card';      category: CardCategory; entries: CardEntry[] }
+  | { kind: 'checklist'; todos: TodoItem[] }
+  | { kind: 'result';    activity: Extract<TaskActivity, { type: 'text' }> }
+  | { kind: 'status';    activity: Extract<TaskActivity, { type: 'status' }> }
+  | { kind: 'log';       line: string }
+
+/** Re-export for consumers that need the type without importing from shared */
+export type { TodoItem }
 
 export function groupActivitiesIntoCards(items: StreamItem[]): GroupedStreamItem[] {
   const result: GroupedStreamItem[] = []
@@ -193,6 +216,19 @@ export function groupActivitiesIntoCards(items: StreamItem[]): GroupedStreamItem
 
     if (activity.type === 'tool_use') {
       const presentation = getToolPresentation(activity)
+
+      // Plan activities with a todos array become a checklist card instead of a planning card.
+      if (presentation.kind === 'plan') {
+        const todos = Array.isArray((activity.metadata as any)?.todos)
+          ? ((activity.metadata as any).todos as TodoItem[])
+          : null
+        if (todos && todos.length > 0) {
+          flushCard()
+          result.push({ kind: 'checklist', todos })
+          continue
+        }
+      }
+
       const category = KIND_TO_CATEGORY[presentation.kind]
       if (currentCard && currentCard.category === category) {
         currentCard.entries.push({ kind: 'tool', toolUse: activity, toolResult: null })

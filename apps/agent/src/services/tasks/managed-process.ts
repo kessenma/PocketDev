@@ -80,6 +80,7 @@ export interface ManagedProcessOptions {
   agentType: string
   prompt?: string | null
   model?: string | null
+  sessionId?: string | null
   turnNumber?: number
   onComplete?: () => void
 }
@@ -97,6 +98,7 @@ export class ManagedProcess {
   private readonly turnNumber: number
   private readonly prompt: string | null
   private readonly model: string | null
+  private readonly sessionId: string | null
   private readonly onComplete?: () => void
   private readonly questionResponders = new Map<string, (answer: string) => void | Promise<void>>()
   private readonly questionDetails = new Map<string, TaskQuestion>()
@@ -118,6 +120,7 @@ export class ManagedProcess {
     this.agentType = opts.agentType
     this.prompt = opts.prompt ?? null
     this.model = opts.model ?? null
+    this.sessionId = opts.sessionId ?? null
     this.turnNumber = opts.turnNumber ?? 1
     this.onComplete = opts.onComplete
     this.adapter = createTaskStreamAdapter({
@@ -426,10 +429,17 @@ export class ManagedProcess {
 
       this.writeJsonRpcNotification('initialized', {})
 
-      const threadResult = await this.sendCodexRpcRequest('thread/start', this.buildCodexThreadStartParams())
-      const threadId = this.extractCodexThreadId(threadResult)
-      if (!threadId) throw new Error('thread/start response missing thread.id')
-      this.persistSessionId(threadId)
+      let threadId: string
+      if (this.sessionId) {
+        // Resuming an existing thread — skip thread/start
+        threadId = this.sessionId
+      } else {
+        const threadResult = await this.sendCodexRpcRequest('thread/start', this.buildCodexThreadStartParams())
+        const tid = this.extractCodexThreadId(threadResult)
+        if (!tid) throw new Error('thread/start response missing thread.id')
+        this.persistSessionId(tid)
+        threadId = tid
+      }
 
       await this.sendCodexRpcRequest('turn/start', this.buildCodexTurnStartParams(threadId))
     } catch (err) {

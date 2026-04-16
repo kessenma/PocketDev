@@ -18,16 +18,16 @@ import { Check, Shield, UserCog, UserRoundCheck, UserRoundX } from 'lucide-react
 type UserManagementPanelProps = Pick<ConsoleStatus, 'currentUser' | 'permissions' | 'signupEnabled'>
 
 function roleBadgeClass(role: ConsoleUser['role']) {
-  if (role === 'owner') return 'bg-[#f0c419] text-black'
-  if (role === 'admin') return 'bg-[#d93025] text-white'
-  return 'bg-[#2a241d] text-[#f5eedf]'
+  if (role === 'owner') return 'bg-[var(--bauhaus-yellow)] text-black'
+  if (role === 'admin') return 'bg-[var(--bauhaus-red)] text-white'
+  return 'bg-secondary text-secondary-foreground'
 }
 
 function statusBadgeClass(status: ConsoleUser['status']) {
   if (status === 'active') return 'bg-[#9df6cd] text-black'
-  if (status === 'pending') return 'bg-[#f0c419] text-black'
-  if (status === 'denied') return 'bg-[#6d1f1f] text-[#f5eedf]'
-  return 'bg-[#3c3329] text-[#f5eedf]'
+  if (status === 'pending') return 'bg-[var(--bauhaus-yellow)] text-black'
+  if (status === 'denied') return 'bg-destructive/25 text-foreground'
+  return 'bg-secondary text-secondary-foreground'
 }
 
 function formatDate(value: string | null) {
@@ -112,7 +112,7 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
   }
 
   return (
-    <Card className="border-2 border-[var(--border)] bg-[#1a1713] text-[#f5eedf] shadow-[0_18px_42px_rgba(0,0,0,0.28)]">
+    <Card className="border-2 border-border shadow-[0_18px_42px_rgba(0,0,0,0.18)]">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
@@ -134,7 +134,7 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
         {resolved.permissions.canToggleSignup && (
           <button
             type="button"
-            className="flex w-full items-center justify-between rounded-[0.9rem] border-2 border-[var(--border)] bg-[#221d18] px-4 py-3 text-left transition hover:bg-[#2a241d]"
+            className="flex w-full items-center justify-between rounded-[0.9rem] border-2 border-border bg-muted px-4 py-3 text-left transition hover:bg-secondary"
             onClick={() => void runAction(
               'signup-toggle',
               () => updateSignupSetting(!resolved.signupEnabled),
@@ -143,15 +143,15 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
             disabled={busyKey === 'signup-toggle'}
           >
             <div>
-              <p className="font-heading text-[0.75rem] uppercase tracking-[0.18em] text-[#f5eedf]">Public Sign-up</p>
-              <p className="mt-1 text-sm text-[#f5eedf]/70">
+              <p className="font-heading text-[0.75rem] uppercase tracking-[0.18em] text-foreground">Public Sign-up</p>
+              <p className="mt-1 text-sm text-foreground/70">
                 When enabled, the sign-up form stays visible on the login page and new requests land in pending review.
               </p>
             </div>
             <span
               className={cn(
-                'flex h-6 w-6 items-center justify-center rounded border-2 border-[var(--border)] bg-[#12100d]',
-                resolved.signupEnabled && 'bg-[#f0c419] text-black',
+                'flex h-6 w-6 items-center justify-center rounded border-2 border-border bg-background',
+                resolved.signupEnabled && 'bg-[var(--bauhaus-yellow)] text-black',
               )}
             >
               {resolved.signupEnabled ? <Check className="h-4 w-4" /> : null}
@@ -160,14 +160,14 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
         )}
 
         {error && (
-          <div className="rounded-lg border border-[#d93025]/60 bg-[#3b1612] px-3 py-2 text-sm text-[#ffd7d3]">
+          <div className="rounded-lg border border-destructive/60 bg-destructive/15 px-3 py-2 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <div className="rounded-[0.9rem] border-2 border-[var(--border)] bg-[#221d18] px-4 py-3">
-          <p className="font-heading text-[0.72rem] uppercase tracking-[0.18em] text-[#f5eedf]/70">Pending Requests</p>
-          <p className="mt-1 text-2xl font-semibold text-[#f5eedf]">{pendingUsers.length}</p>
+        <div className="rounded-[0.9rem] border-2 border-border bg-muted px-4 py-3">
+          <p className="font-heading text-[0.72rem] uppercase tracking-[0.18em] text-foreground/70">Pending Requests</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{pendingUsers.length}</p>
         </div>
 
         {loading ? (
@@ -183,21 +183,21 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
               return (
                 <div
                   key={user.id}
-                  className="rounded-[0.9rem] border-2 border-[var(--border)] bg-[#221d18] px-4 py-4"
+                  className="rounded-[0.9rem] border-2 border-border bg-muted px-4 py-4"
                 >
                   <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-[#f5eedf]">{user.email}</p>
+                        <p className="text-sm font-semibold text-foreground">{user.email}</p>
                         <Badge className={roleBadgeClass(user.role)}>{user.role}</Badge>
                         <Badge className={statusBadgeClass(user.status)}>{user.status}</Badge>
                         {user.role === 'owner' && (
-                          <Badge variant="outline" className="border-[var(--border)] text-[#f5eedf]">
+                          <Badge variant="outline" className="border-border text-foreground">
                             Protected
                           </Badge>
                         )}
                       </div>
-                      <div className="space-y-1 text-xs text-[#f5eedf]/60">
+                      <div className="space-y-1 text-xs text-foreground/60">
                         <p>Created {formatDate(user.createdAt)}</p>
                         <p>Reviewed {formatDate(user.reviewedAt)}</p>
                         <p>Last login {formatDate(user.lastLoginAt)}</p>
@@ -209,7 +209,7 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
                         <>
                           <Button
                             size="sm"
-                            className="bg-[#f0c419] text-black hover:bg-[#ddb010]"
+                            className="bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90"
                             disabled={busyKey === `approve-${user.id}`}
                             onClick={() => void runAction(
                               `approve-${user.id}`,
@@ -223,7 +223,7 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
                           <Button
                             variant="outline"
                             size="sm"
-                            className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                            className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                             disabled={busyKey === `deny-${user.id}`}
                             onClick={() => void runAction(
                               `deny-${user.id}`,
@@ -238,7 +238,7 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
                       )}
 
                       {user.status !== 'pending' && user.role === 'owner' && (
-                        <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[#f5eedf]/70">
+                        <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-foreground/70">
                           <Shield className="h-3.5 w-3.5" />
                           The owner account cannot be removed or downgraded.
                         </div>
@@ -248,7 +248,7 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                          className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                           disabled={busyKey === `status-${user.id}`}
                           onClick={() => void runAction(
                             `status-${user.id}`,
@@ -265,7 +265,7 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
                           <Button
                             variant={user.role === 'member' ? 'default' : 'outline'}
                             size="sm"
-                            className={cn(user.role !== 'member' && 'bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]')}
+                            className={cn(user.role !== 'member' && 'bg-secondary text-secondary-foreground hover:bg-secondary/80')}
                             disabled={user.role === 'member' || busyKey === `role-member-${user.id}`}
                             onClick={() => void runAction(
                               `role-member-${user.id}`,
@@ -278,7 +278,7 @@ export function UserManagementPanel({ currentUser, permissions, signupEnabled }:
                           <Button
                             variant={user.role === 'admin' ? 'default' : 'outline'}
                             size="sm"
-                            className={cn(user.role !== 'admin' && 'bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]')}
+                            className={cn(user.role !== 'admin' && 'bg-secondary text-secondary-foreground hover:bg-secondary/80')}
                             disabled={user.role === 'admin' || busyKey === `role-admin-${user.id}`}
                             onClick={() => void runAction(
                               `role-admin-${user.id}`,

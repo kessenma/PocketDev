@@ -8,35 +8,36 @@ import { SetupPage } from './pages/SetupPage'
 import { LoginPage } from './pages/LoginPage'
 import { ConsoleDataProvider } from './context/ConsoleDataContext'
 import { LockStatusProvider } from './context/LockStatusContext'
+import { ThemeProvider } from './context/ThemeContext'
 import { ConsoleLayout } from './components/layout/ConsoleLayout'
-import { applyConsoleTheme } from './theme'
 
 document.documentElement.style.setProperty('--font-sans', webFontStacks.body)
 document.documentElement.style.setProperty('--font-display', webFontStacks.display)
 document.documentElement.style.setProperty('--font-heading', webFontStacks.display)
 document.documentElement.style.setProperty('--font-mono', webFontStacks.mono)
-applyConsoleTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter basename="/PocketDev">
-      <Routes>
-        <Route path="/setup" element={<SetupPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/console/*"
-          element={
-            <ConsoleDataProvider>
-              <LockStatusProvider>
-                <ConsoleLayout />
-              </LockStatusProvider>
-            </ConsoleDataProvider>
-          }
-        />
-        {/* Legacy /console route — redirect handled inside ConsoleLayout via display:none logic */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-      <Toaster theme="dark" position="bottom-center" richColors />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter basename="/PocketDev">
+        <Routes>
+          <Route path="/setup" element={<SetupPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/console/*"
+            element={
+              <ConsoleDataProvider>
+                <LockStatusProvider>
+                  <ConsoleLayout />
+                </LockStatusProvider>
+              </ConsoleDataProvider>
+            }
+          />
+          {/* Legacy /console route — redirect handled inside ConsoleLayout via display:none logic */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+        <Toaster position="bottom-center" richColors />
+      </BrowserRouter>
+    </ThemeProvider>
   </StrictMode>,
 )

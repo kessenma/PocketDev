@@ -38,6 +38,10 @@ body {
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-surface-paper: var(--surface-paper);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-soft: var(--surface-soft);
+  --color-text-soft: var(--text-soft);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -45,7 +49,47 @@ body {
   --radius-2xl: calc(var(--radius) * 1.8);
 }
 
+/* Light mode (default) — sourced from lightTheme in @pocketdev/shared */
 :root {
+  --background: #f4efdf;
+  --foreground: #171512;
+  --card: #fbf7ec;
+  --card-foreground: #171512;
+  --popover: #fbf7ec;
+  --popover-foreground: #171512;
+  --primary: #2d5fe5;
+  --primary-foreground: #ffffff;
+  --secondary: #e6dcc4;
+  --secondary-foreground: #171512;
+  --muted: #e8dfc8;
+  --muted-foreground: #4b453b;
+  --accent: #d93025;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --border: rgb(31 27 22 / 0.35);
+  --input: rgb(31 27 22 / 0.2);
+  --ring: #d93025;
+  --radius: 0.5rem;
+  --surface-strong: #f4efdf;
+  --surface-soft: #e8dfc8;
+  --surface-paper: #fbf7ec;
+  --text-soft: #736a5e;
+  /* Bauhaus brand constants — same in both themes */
+  --bauhaus-blue: #2D5FE5;
+  --bauhaus-red: #D93025;
+  --bauhaus-yellow: #E8B83D;
+  --bauhaus-black: #1a1a1a;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --text-base-size: 1rem;
+  --text-base-line: 1.5rem;
+  --text-2xl-size: 1.5rem;
+  --text-2xl-line: 2rem;
+}
+
+/* Dark mode — sourced from darkTheme in @pocketdev/shared */
+html.dark {
   --background: #12100d;
   --foreground: #f5eedf;
   --card: #1a1713;
@@ -60,26 +104,14 @@ body {
   --muted-foreground: #998d79;
   --accent: #f05244;
   --accent-foreground: #ffffff;
-  --destructive: #f05244;
+  --destructive: #ef4444;
   --border: rgb(125 116 104 / 0.72);
   --input: rgb(125 116 104 / 0.48);
-  --ring: #4c79f0;
-  --radius: 0.5rem;
+  --ring: #ff6b5f;
   --surface-strong: #12100d;
   --surface-soft: #1d1a16;
   --surface-paper: #f4efdf;
   --text-soft: #d1c4af;
-  --bauhaus-blue: #2D5FE5;
-  --bauhaus-red: #D93025;
-  --bauhaus-yellow: #E8B83D;
-  --bauhaus-black: #1a1a1a;
-  --space-4: 1rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --text-base-size: 1rem;
-  --text-base-line: 1.5rem;
-  --text-2xl-size: 1.5rem;
-  --text-2xl-line: 2rem;
 }
 
 @layer base {

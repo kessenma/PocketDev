@@ -20,7 +20,7 @@ import { GroupedItemRow } from './ActivityCards'
 import TaskDebugSheet from './TaskDebugSheet'
 import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
-import { getToolUseDetail, groupActivitiesIntoCards, parseCodexRawLogToActivity } from './task-stream-utils'
+import { extractLatestTodos, getToolUseDetail, groupActivitiesIntoCards, parseCodexRawLogToActivity } from './task-stream-utils'
 import type { GroupedStreamItem } from './task-stream-utils'
 import { inferTaskDebugSelection, type TaskDebugSelection } from './task-debug-utils'
 import { typeStyles } from '../../theme/typography'
@@ -158,6 +158,29 @@ function DetailHeader({
   )
 }
 
+const QUICK_COMMANDS = [
+  { label: '/compact', cmd: '/compact\n' },
+  { label: '/clear', cmd: '/clear\n' },
+  { label: '/init', cmd: '/init\n' },
+]
+
+function QuickCommandBar({ taskId, onSend, colors }: { taskId: string; onSend: (data: string) => void; colors: any }) {
+  return (
+    <View style={[styles.quickCmdBar, { borderTopColor: colors.border }]}>
+      {QUICK_COMMANDS.map(({ label, cmd }) => (
+        <TouchableOpacity
+          key={label}
+          activeOpacity={0.7}
+          onPress={() => onSend(cmd)}
+          style={[styles.quickCmdBtn, { borderColor: colors.border, backgroundColor: colors.panelAlt }]}
+        >
+          <Text style={[styles.quickCmdLabel, { color: colors.textSecondary }]}>{label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  )
+}
+
 export default function TaskDetailPane({
   taskId,
   emptyTitle = 'Select a task',
@@ -185,6 +208,7 @@ export default function TaskDetailPane({
   const turnsRaw = useTaskStore((s) => (taskId ? s.taskTurns.get(taskId) : undefined))
   const turns = useMemo(() => turnsRaw ?? [], [turnsRaw])
   const continueTask = useTaskStore((s) => s.continueTask)
+  const sendInput = useTaskStore((s) => s.sendInput)
   const loadTurnsForTask = useTaskStore((s) => s.loadTurnsForTask)
   const setupReport = useSetupStore((s) => s.report)
   const { toast } = useToast()
@@ -313,6 +337,13 @@ export default function TaskDetailPane({
     setAutoScroll(true)
   }
 
+  const latestTodos = useMemo(() => extractLatestTodos(activities), [activities])
+  const todoProgress = useMemo(() => {
+    if (!latestTodos || latestTodos.length === 0) return null
+    const done = latestTodos.filter((t) => t.status === 'completed').length
+    return { done, total: latestTodos.length }
+  }, [latestTodos])
+
   const inferredDebugSelection = useMemo(
     () => inferTaskDebugSelection({
       task: task ?? null,
@@ -328,6 +359,19 @@ export default function TaskDetailPane({
     if (!showDebugSheet) return
     setDebugSelection(inferredDebugSelection)
   }, [showDebugSheet, inferredDebugSelection])
+
+  // Auto-open the debug sheet when an auth error is detected in a live running task.
+  // Debounced 1.5s to avoid flashing on the very first output lines.
+  useEffect(() => {
+    if (!task || task.status !== 'running') return
+    if (showDebugSheet || showCodexWizard || showClaudeWizard) return
+    if (inferredDebugSelection !== 'auth') return
+    const t = setTimeout(() => {
+      setDebugSelection('auth')
+      setShowDebugSheet(true)
+    }, 1500)
+    return () => clearTimeout(t)
+  }, [inferredDebugSelection, task?.status, showDebugSheet, showCodexWizard, showClaudeWizard])
 
   function handleOpenDebugSheet() {
     setDebugSelection(inferredDebugSelection)
@@ -371,6 +415,7 @@ export default function TaskDetailPane({
           onClose={() => setShowDebugSheet(false)}
           onSelect={setDebugSelection}
           onContinue={handleDebugContinue}
+          pendingPermissions={pendingPermissions}
         />
       </>
     )
@@ -378,7 +423,7 @@ export default function TaskDetailPane({
 
   const isRunning = task.status === 'running'
   const isTerminal = task.status === 'completed' || task.status === 'failed'
-  const canContinue = isTerminal && task.agent_type === 'claude' && !!task.session_id
+  const canContinue = isTerminal && (task.agent_type === 'claude' || task.agent_type === 'codex') && !!task.session_id
   const isMultiTurn = (task.turn_count ?? 1) > 1
   const statusColor = STATUS_COLORS[task.status ?? 'pending']
   const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '--'
@@ -450,6 +495,25 @@ export default function TaskDetailPane({
         </View>
       )}
 
+      {todoProgress && (
+        <View style={styles.progressStrip}>
+          <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${Math.round((todoProgress.done / todoProgress.total) * 100)}%`,
+                  backgroundColor: colors.primary,
+                },
+              ]}
+            />
+          </View>
+          <Text style={[styles.progressLabel, { color: colors.textTertiary }]}>
+            {todoProgress.done} of {todoProgress.total} tasks
+          </Text>
+        </View>
+      )}
+
       <FlashList
         ref={flashListRef}
         data={streamItems}
@@ -490,7 +554,18 @@ export default function TaskDetailPane({
         </View>
       ) : null}
 
-      {/* Chat input for continuing Claude tasks */}
+      {/* Running: quick commands (Claude only) + steering input */}
+      {isRunning && task.agent_type === 'claude' ? (
+        <QuickCommandBar taskId={task.id} onSend={(data) => sendInput(task.id, data)} colors={colors} />
+      ) : null}
+      {isRunning ? (
+        <BauhausChatInput
+          placeholder="Steer the agent..."
+          onSend={(text) => sendInput(task.id, text + '\n')}
+        />
+      ) : null}
+
+      {/* Completed: continue input */}
       {canContinue && !isRunning ? (
         <BauhausChatInput
           placeholder="Send a follow-up..."
@@ -505,6 +580,7 @@ export default function TaskDetailPane({
         onClose={() => setShowDebugSheet(false)}
         onSelect={setDebugSelection}
         onContinue={handleDebugContinue}
+        pendingPermissions={pendingPermissions}
       />
       {showCodexWizard ? (
         <CodexWizardSheet
@@ -798,6 +874,40 @@ const styles = StyleSheet.create({
     ...typeStyles.bodyStrong,
   },
   copyMenuItemHint: {
+    ...typeStyles.meta,
+  },
+  quickCmdBar: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  quickCmdBtn: {
+    borderWidth: 1,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1],
+  },
+  quickCmdLabel: {
+    ...typeStyles.meta,
+    fontWeight: '700',
+  },
+  progressStrip: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[1],
+    gap: 3,
+  },
+  progressTrack: {
+    height: 3,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 3,
+    borderRadius: 2,
+  },
+  progressLabel: {
     ...typeStyles.meta,
   },
 })

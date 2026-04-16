@@ -152,16 +152,29 @@ Notifications consumed: `thread/started`, `turn/started`, `item/agentMessage/del
 | `insertTaskFileTouch` | recordCollectedToolUse | Files touched per turn |
 | `updateTaskStatus` | setStatus (both process classes) | Status transitions |
 
+## Context-Limit Detection (Claude)
+
+`managed-agent-process.ts` watches every pane snapshot for Claude's built-in context-window warning via:
+
+```
+CONTEXT_LIMIT_PATTERN = /context window.*(?:full|limit|approaching|at \d{2,3}%)|use \/compact|run \/compact/i
+```
+
+Fires at most once per task (guarded by `contextLimitWarned` flag). On match:
+1. Broadcasts `task.output`: `[claude] Context window approaching limit`
+2. Emits `task.question` (yes/no): "Claude's context window is nearly full. Run /compact to summarise and free space?"
+3. If user answers `"yes"`, sends `/compact\n` to the tmux session via `tmux send-keys`
+
 ## WebSocket Commands (ws.ts)
 
-| Type | Handler |
-|---|---|
-| `task.start` | `startTask()` |
-| `task.kill` | `killTask()` |
-| `task.input` | `proc.sendInput()` |
-| `task.answer` | `proc.answerQuestion()` |
-| `task.continue` | `continueTask()` — Claude only |
-| `task.list` | `getTaskList()` |
+| Type | Handler | Notes |
+|---|---|---|
+| `task.start` | `startTask()` | |
+| `task.kill` | `killTask()` | |
+| `task.input` | `proc.sendInput()` | Claude: tmux send-keys; Codex: stdin write |
+| `task.answer` | `proc.answerQuestion()` | |
+| `task.continue` | `continueTask()` | Claude/Codex only (requires `sessionId`) |
+| `task.list` | `getTaskList()` | |
 
 ## task-manager.ts Key Functions
 

@@ -398,6 +398,12 @@ importers:
       '@pocketdev/shared':
         specifier: workspace:^
         version: link:../../packages/shared
+      '@simplewebauthn/browser':
+        specifier: ^13.2.2
+        version: 13.3.0
+      '@simplewebauthn/server':
+        specifier: ^13.2.2
+        version: 13.3.0
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.2.2(vite@7.3.1)

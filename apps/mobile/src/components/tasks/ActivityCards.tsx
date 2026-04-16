@@ -2,12 +2,16 @@ import React, { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import {
   Brain,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   ChevronUp,
+  Circle,
   FileEdit,
   FileSearch,
+  ListChecks,
   ListTodo,
+  Loader,
   Sparkles,
   Terminal,
 } from 'lucide-react-native'
@@ -24,7 +28,7 @@ import {
 } from '../shared/BauhausPanel'
 import BauhausBadge from '../shared/BauhausBadge'
 import { getToolPresentation } from './task-stream-utils'
-import type { CardCategory, CardEntry, GroupedStreamItem } from './task-stream-utils'
+import type { CardCategory, CardEntry, GroupedStreamItem, TodoItem } from './task-stream-utils'
 import FileViewerSheet from './FileViewerSheet'
 
 // ── Dispatcher ───────────────────────────────────────────────────────────────
@@ -35,6 +39,8 @@ export function GroupedItemRow({ item }: { item: GroupedStreamItem }) {
   switch (item.kind) {
     case 'card':
       return <ActivityCard category={item.category} entries={item.entries} />
+    case 'checklist':
+      return <ChecklistCard todos={item.todos} />
     case 'result':
       return <ResultCard activity={item.activity} />
     case 'status':
@@ -185,6 +191,62 @@ function CardEntryRow({ entry, accentColor }: { entry: CardEntry; accentColor: s
   )
 }
 
+// ── ChecklistCard ─────────────────────────────────────────────────────────────
+
+function ChecklistCard({ todos }: { todos: TodoItem[] }) {
+  const { colors } = useTheme()
+  const [isExpanded, setIsExpanded] = useState(true)
+
+  const done = todos.filter((t) => t.status === 'completed').length
+  const accentColor = colors.primary
+
+  return (
+    <BauhausPanel accentColor={accentColor}>
+      <Pressable onPress={() => setIsExpanded((v) => !v)} accessibilityRole="button">
+        <BauhausPanelHeader style={styles.cardHeader}>
+          <ListChecks color={accentColor} size={14} strokeWidth={2.25} />
+          <Text style={[styles.cardTitle, { color: accentColor }]}>Tasks</Text>
+          <BauhausBadge label={`${done} / ${todos.length}`} color={accentColor} />
+          <View style={styles.chevronSpacer} />
+          {isExpanded
+            ? <ChevronUp color={colors.textTertiary} size={14} strokeWidth={2.25} />
+            : <ChevronDown color={colors.textTertiary} size={14} strokeWidth={2.25} />}
+        </BauhausPanelHeader>
+      </Pressable>
+
+      {isExpanded && (
+        <BauhausPanelContent style={styles.cardBody}>
+          {todos.map((todo) => {
+            const isComplete = todo.status === 'completed'
+            const isActive = todo.status === 'in_progress'
+            const textColor = isComplete ? colors.textTertiary : colors.text
+
+            return (
+              <View key={todo.id} style={styles.checklistRow}>
+                {isComplete
+                  ? <CheckCircle2 color={accentColor} size={13} strokeWidth={2.25} style={styles.checklistIcon} />
+                  : isActive
+                    ? <Loader color={accentColor} size={13} strokeWidth={2.25} style={styles.checklistIcon} />
+                    : <Circle color={colors.textTertiary} size={13} strokeWidth={2.25} style={styles.checklistIcon} />}
+                <Text
+                  style={[
+                    styles.checklistText,
+                    { color: textColor },
+                    isComplete && styles.checklistTextDone,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {todo.content}
+                </Text>
+              </View>
+            )
+          })}
+        </BauhausPanelContent>
+      )}
+    </BauhausPanel>
+  )
+}
+
 // ── ResultCard ────────────────────────────────────────────────────────────────
 
 function ResultCard({ activity }: { activity: Extract<TaskActivity, { type: 'text' }> }) {
@@ -273,5 +335,21 @@ const styles = StyleSheet.create({
     ...typeStyles.mono,
     paddingVertical: 1,
     maxWidth: 900,
+  },
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  checklistIcon: {
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  checklistText: {
+    ...typeStyles.bodySmall,
+    flex: 1,
+  },
+  checklistTextDone: {
+    textDecorationLine: 'line-through',
   },
 })

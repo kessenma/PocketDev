@@ -271,6 +271,8 @@ function parseHookEvent(raw: string): { activity: TaskActivity | null; isStop: b
   if (eventName === 'Stop') return { activity: null, isStop: true }
 
   if (eventName === 'PreToolUse' && toolName) {
+    // Carry the todos array in metadata for TodoWrite — enables the checklist card + progress bar on mobile.
+    const todos = toolName === 'TodoWrite' && Array.isArray(toolInput?.todos) ? toolInput.todos : undefined
     return {
       isStop: false,
       activity: {
@@ -280,6 +282,7 @@ function parseHookEvent(raw: string): { activity: TaskActivity | null; isStop: b
         kind: inferToolKindFromName(toolName),
         title: toolName,
         detail: toolInput ? extractToolDetail(toolName, toolInput) : undefined,
+        ...(todos ? { metadata: { todos } } : {}),
       },
     }
   }
@@ -308,18 +311,37 @@ interface TuiPrompt {
 }
 
 function parseTuiPrompt(pane: string): TuiPrompt | null {
-  if (!/❯\s*\d+\./.test(pane)) return null
-  const questionMatch = pane.match(
-    /(Is this a project[^\n]+\?|Do you want to[^\n]+\?|Quick safety check[^\n]*)/i,
-  )
-  const prompt = questionMatch?.[1]?.trim() ?? 'Permission required'
-  const optionMatches = [...pane.matchAll(/\d+\.\s+([^\n]+)/g)]
-  if (optionMatches.length < 2) return null
-  const options = optionMatches.map((m, i) => ({
-    value: String(i + 1),
-    label: m[1].trim(),
-  }))
-  return { prompt, options }
+  // Numbered menu style: ❯ 1. Yes  2. No  (classic Claude permission dialog)
+  if (/❯\s*\d+\./.test(pane)) {
+    const questionMatch = pane.match(
+      /(Do you want to (?:allow|proceed|continue|run)[^\n]*\?|Is this a project[^\n]+\?|Quick safety check[^\n]*|Allow (?:Claude|this)[^\n]*\?|This action requires[^\n]*\?|Would you like to[^\n]*\?)/i,
+    )
+    const prompt = questionMatch?.[1]?.trim() ?? 'Permission required'
+    const optionMatches = [...pane.matchAll(/\d+\.\s+([^\n]+)/g)]
+    if (optionMatches.length < 2) return null
+    const options = optionMatches.map((m, i) => ({
+      value: String(i + 1),
+      label: m[1].trim(),
+    }))
+    return { prompt, options }
+  }
+
+  // Two-button style: "Allow for this session" / "Deny" (newer Claude versions)
+  if (/Allow\s+for\s+this\s+session/i.test(pane)) {
+    const questionMatch = pane.match(
+      /(Do you want to (?:allow|proceed|continue|run)[^\n]*\?|Allow (?:Claude|this)[^\n]*\?|This action requires[^\n]*\?|Would you like to[^\n]*\?)/i,
+    )
+    const prompt = questionMatch?.[1]?.trim() ?? 'Permission required'
+    return {
+      prompt,
+      options: [
+        { value: '1', label: 'Allow for this session' },
+        { value: '2', label: 'Deny' },
+      ],
+    }
+  }
+
+  return null
 }
 
 function toolUseToPlanStep(tool: CollectedToolUse): PlanStep {
@@ -389,6 +411,15 @@ const CLAUDE_READY_PATTERNS = [
 // With hooks enabled, the Stop hook fires first for normal completion — this is a fallback.
 const CLAUDE_IDLE_TIMEOUT_MS = 120_000
 
+// Claude prints a warning when the context window is nearly full.
+// We surface this as a question so the user can decide to run /compact.
+const CONTEXT_LIMIT_PATTERN = /context window.*(?:full|limit|approaching|at \d{2,3}%)|use \/compact|run \/compact/i
+
+// Claude's TUI prints "✻ Worked for 2m 46s" (or similar) on task completion.
+// This is the fastest completion signal — fires well before the Stop hook's 120s fallback.
+// Reference: apps/0-examples/tmux/codeman (respawn-controller.ts COMPLETION_TIME_PATTERN)
+const WORKED_FOR_PATTERN = /\bWorked\s+for\s+[\d]+[hms]/i
+
 function isClaudeReady(normalized: string): boolean {
   return CLAUDE_READY_PATTERNS.some((p) => p.test(normalized))
 }
@@ -396,6 +427,8 @@ function isClaudeReady(normalized: string): boolean {
 export function claudeProviderConfig(): TmuxProviderConfig {
   // Capture mode in closure so onFinish can use it without adding it to FinishCtx
   let taskMode: 'default' | 'plan' = 'default'
+  // Only fire the /compact question once per task
+  let contextLimitWarned = false
 
   return {
     pollIntervalMs: 250,
@@ -479,6 +512,42 @@ export function claudeProviderConfig(): TmuxProviderConfig {
 
       // After prompt sent, check for active TUI menu (permission/question)
       const tuiPrompt = parseTuiPrompt(snapshot)
+
+      // Fast completion signal: Claude prints "Worked for Xm Xs" when a task finishes.
+      // This fires well before the 120s idle fallback. The Stop hook covers most cases,
+      // but this catches any gap between Stop hook delivery and pane capture.
+      if (ctx.promptSent && !tuiPrompt) {
+        const workedMatch = snapshot.match(WORKED_FOR_PATTERN)
+        if (workedMatch) {
+          ctx.broadcastOutput(`[claude] ${workedMatch[0]}`)
+          return { type: 'complete', status: 'completed' }
+        }
+      }
+
+      // Context limit warning: Claude prints a message when context is nearly full.
+      // Surface a question so the user can run /compact to free space.
+      if (ctx.promptSent && !contextLimitWarned && !tuiPrompt && CONTEXT_LIMIT_PATTERN.test(snapshot)) {
+        contextLimitWarned = true
+        ctx.broadcastOutput('[claude] Context window approaching limit')
+        const questionId = newUUID()
+        return {
+          type: 'question',
+          question: {
+            questionId,
+            taskId: ctx.taskId,
+            provider: 'claude',
+            prompt: "Claude's context window is nearly full. Run /compact to summarize and free space?",
+            type: 'yes_no',
+            options: [{ value: 'yes', label: 'Run /compact' }, { value: 'no', label: 'Skip' }],
+          },
+          onAnswer: (answer) => {
+            if (answer === 'yes') {
+              void exec(`tmux send-keys -t ${ctx.tmuxSession} -l '/compact'`)
+                .then(() => exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`))
+            }
+          },
+        }
+      }
 
       // Idle completion: pane stable for N seconds with no active menu → task done
       if (ctx.promptSent && !tuiPrompt && ctx.lastChangeMs > CLAUDE_IDLE_TIMEOUT_MS) {

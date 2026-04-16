@@ -85,7 +85,7 @@ export function PasskeySettings({ disabled }: { disabled?: boolean }) {
   }
 
   return (
-    <Card className="border-2 border-[var(--border)] bg-[#1a1713] text-[#f5eedf] shadow-[0_18px_42px_rgba(0,0,0,0.28)]">
+    <Card className="border-2 border-border shadow-[0_18px_42px_rgba(0,0,0,0.28)]">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 font-heading text-sm uppercase tracking-[0.2em]">
           <Fingerprint className="h-4 w-4" />
@@ -95,7 +95,7 @@ export function PasskeySettings({ disabled }: { disabled?: boolean }) {
           <Button
             variant="outline"
             size="sm"
-            className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
             onClick={() => setShowNameInput(true)}
           >
             <Plus className="mr-1 h-3 w-3" />
@@ -105,26 +105,26 @@ export function PasskeySettings({ disabled }: { disabled?: boolean }) {
       </CardHeader>
       <CardContent className="space-y-3">
         {disabled && (
-          <div className="rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-3">
+          <div className="rounded-lg border border-border bg-secondary px-3 py-3">
             <p className="text-sm text-muted-foreground">
               Configure a custom domain above to enable passkey registration.
             </p>
           </div>
         )}
         {!disabled && !webAuthnAvailable && (
-          <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-3">
+          <div className="space-y-2 rounded-lg border border-border bg-secondary px-3 py-3">
             <p className="text-sm text-muted-foreground">
               Passkeys require a domain name — browsers don't support WebAuthn on IP addresses.
             </p>
             {accessedViaIp && (
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p className="font-medium text-[#f0c419]">Quick fix:</p>
-                <p>1. Add to <code className="rounded bg-[#12100d] px-1">/etc/hosts</code> on your computer:</p>
-                <code className="block rounded bg-[#12100d] px-2 py-1">
+                <p className="font-medium text-[var(--bauhaus-yellow)]">Quick fix:</p>
+                <p>1. Add to <code className="rounded bg-background px-1">/etc/hosts</code> on your computer:</p>
+                <code className="block rounded bg-background px-2 py-1">
                   {window.location.hostname} pocketdev.local
                 </code>
-                <p>2. Set on your server: <code className="rounded bg-[#12100d] px-1">POCKETDEV_HOSTNAME=pocketdev.local</code></p>
-                <p>3. Access via <code className="rounded bg-[#12100d] px-1">http://pocketdev.local:{window.location.port || '4387'}/PocketDev/console</code></p>
+                <p>2. Set on your server: <code className="rounded bg-background px-1">POCKETDEV_HOSTNAME=pocketdev.local</code></p>
+                <p>3. Access via <code className="rounded bg-background px-1">http://pocketdev.local:{window.location.port || '4387'}/PocketDev/console</code></p>
               </div>
             )}
           </div>
@@ -148,7 +148,7 @@ export function PasskeySettings({ disabled }: { disabled?: boolean }) {
             <Button
               variant="outline"
               size="sm"
-              className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
               onClick={() => { setShowNameInput(false); setDeviceName('') }}
             >
               Cancel
@@ -168,7 +168,7 @@ export function PasskeySettings({ disabled }: { disabled?: boolean }) {
                 {passkeys.map((pk) => (
                   <div
                     key={pk.id}
-                    className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-2"
+                    className="flex items-center justify-between rounded-lg border border-border bg-secondary px-3 py-2"
                   >
                     <div className="space-y-0.5">
                       <p className="text-sm font-medium">{pk.deviceName || 'Unnamed passkey'}</p>

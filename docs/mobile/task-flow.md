@@ -73,6 +73,22 @@ Mobile consumes a shared `TaskQuestion` model:
 
 This lets Claude permission prompts and Codex structured user-input requests render through the same `TaskInteractionSheet`.
 
+## Mid-Task Interaction
+
+While a task is running, `TaskDetailPane` exposes two input areas at the bottom of the screen:
+
+```
+TaskDetailPane (running)
+  ├── [Quick Command Bar]  /compact | /clear | /init   ← Claude only
+  └── [BauhausChatInput]  "Steer the agent..."         ← all running tasks
+```
+
+**Quick Command Bar** — Pill buttons for `/compact`, `/clear`, `/init`. Each tap sends the command string + newline via `sendInput(taskId, cmd + '\n')` → `task.input` WebSocket → `proc.sendInput()` → `tmux send-keys` (Claude) or stdin (Codex). Only shown for Claude tasks.
+
+**Steering Input** — Free-text field. Submitted text is sent via `sendInput(taskId, text + '\n')`. Works for Claude (tmux) and Codex (stdin). Hidden once the task completes; the continuation input (`task.continue`) appears in its place for eligible tasks.
+
+**Context-Limit Auto-Prompt** — Handled entirely server-side in `managed-agent-process.ts`. When Claude's pane output matches the context-window warning pattern, the server emits a `task.question` (yes/no: "Run /compact?"). `TaskInteractionSheet` surfaces it automatically; answering "yes" triggers `/compact` in the tmux session. No mobile-side changes required.
+
 ## Task Detail Behavior
 
 `TaskDetailPane` remains the main task surface:
@@ -82,8 +98,9 @@ This lets Claude permission prompts and Codex structured user-input requests ren
 3. Result card from normalized `text` activities when available
 4. Pending approval summary for unresolved permission-style requests
 5. Unified stream output (`TaskStreamerInline`) or raw logs
-6. `TaskInteractionSheet` for live agent questions
-7. `TaskDebugSheet` for auth/permission repair (failed tasks)
+6. `TaskInteractionSheet` for live agent questions and context-limit prompts
+7. Quick command bar + steering input while running; continue input after completion
+8. `TaskDebugSheet` for auth/permission repair (failed tasks)
 
 `TaskDetailPane` supports controlled-mode props for parent components (e.g. tablet workspace):
 - `hideHeader?` / `hideStatusBar?` — layout control; parent renders its own header/controls

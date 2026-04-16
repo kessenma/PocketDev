@@ -16,6 +16,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       VITE_APP_URL: ${VITE_APP_URL}
       GORUSH_URL: ${GORUSH_URL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
     networks:
       - coolify
 

@@ -35,6 +35,7 @@ import {
   getProjects,
   getConfig,
   getPushLog,
+  getDeviceOfflineSnapshots,
   getLastUpgradeAt,
   setLastUpgradeAt,
   type AdminAccountRow,
@@ -1260,18 +1261,27 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     set.status = 204
     return null
   })
+  .get('/offline-snapshots', ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    return { snapshots: getDeviceOfflineSnapshots() }
+  })
   .get('/debug/push', ({ request, set }) => {
     if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
 
-    const rawToken = getConfig('push_relay_token')
-    const relayToken = rawToken ? `${rawToken.slice(0, 8)}...` : null
+    try {
+      const rawToken = getConfig('push_relay_token')
+      const relayToken = rawToken ? `${rawToken.slice(0, 8)}...` : null
 
-    const devices = getDevices()
-    const registeredDevices = devices.filter((d) => d.apnsToken).length
+      const devices = getDevices()
+      const registeredDevices = devices.filter((d) => d.apnsToken).length
 
-    const log = getPushLog(100)
+      const log = getPushLog(100)
 
-    return { relayToken, registeredDevices, log }
+      return { relayToken, registeredDevices, log }
+    } catch (err) {
+      // push_log table may not exist on older agent installs — return empty state
+      return { relayToken: null, registeredDevices: 0, log: [] }
+    }
   })
 
 // ─── Static file serving for console SPA ────────────────

@@ -1,3 +1,12 @@
+// ── Task checklist items (from TodoWrite / update_plan tool calls) ──
+
+export interface TodoItem {
+  id: string
+  content: string
+  status: 'pending' | 'in_progress' | 'completed'
+  priority?: 'high' | 'medium' | 'low'
+}
+
 // ── Task Activity (structured events from AI CLI stream) ──
 
 export type TaskActivity =

@@ -50,7 +50,7 @@ export function AuthDebugPanel() {
   }, [expanded, info, live, refresh])
 
   return (
-    <Card className="rounded-[2rem] border border-dashed border-yellow-500/40 bg-[#161616] shadow-[0_10px_32px_rgba(0,0,0,0.18)]">
+    <Card className="rounded-[2rem] border border-dashed border-yellow-500/40 bg-card shadow-[0_10px_32px_rgba(0,0,0,0.18)]">
       <CardHeader className="cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <CardTitle className="flex items-center gap-2 text-sm">
           <Bug className="h-4 w-4 text-yellow-500" />

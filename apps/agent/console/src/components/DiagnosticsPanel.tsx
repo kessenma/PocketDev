@@ -261,31 +261,31 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return 'No Copilot trust activity yet.'
   }, [copilotInfo])
 
-  const panelShell = 'rounded-[0.95rem] border-2 border-[var(--border)] bg-[#1a1713]'
-  const panelInset = 'rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d]'
-  const panelAccent = 'rounded-[0.85rem] border-2 border-[var(--border)] bg-[#f0c419] text-black'
+  const panelShell = 'rounded-[0.95rem] border-2 border-border bg-card'
+  const panelInset = 'rounded-[0.85rem] border-2 border-border bg-background'
+  const panelAccent = 'rounded-[0.85rem] border-2 border-border bg-[var(--bauhaus-yellow)] text-black'
   const sectionEyebrow = 'font-heading text-[0.68rem] font-semibold uppercase tracking-[0.26em]'
   const sectionTitle = 'font-heading text-sm font-semibold uppercase tracking-[0.12em]'
 
   return (
-    <section className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-[1.1rem] border-2 border-[var(--border)] bg-[linear-gradient(180deg,#1a1713_0%,#1d1a16_100%)] text-[#f5eedf] shadow-[0_14px_40px_rgba(0,0,0,0.18)]">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-[var(--border)] px-5 py-4 sm:px-6">
+    <section className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-[1.1rem] border-2 border-border bg-card text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.18)]">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-border px-5 py-4 sm:px-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <p className="font-heading text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-[#f5eedf]/45">Diagnostics Desk</p>
-            <Badge variant="outline" className="border-yellow-500/45 text-yellow-300">dev</Badge>
+            <p className="font-heading text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-foreground/45">Diagnostics Desk</p>
+            <Badge variant="outline" className="border-yellow-500/45 text-yellow-600 dark:text-yellow-300">dev</Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Bug className="h-5 w-5 text-[#f0c419]" />
+            <Bug className="h-5 w-5 text-[var(--bauhaus-yellow)]" />
             <h2 className="font-heading text-lg font-semibold uppercase tracking-[0.08em]">Terminal & Device Debug</h2>
           </div>
-          <p className="text-sm text-[#f5eedf]/58">
+          <p className="text-sm text-foreground/60">
             One surface for the live shell, websocket trace, and registered device state.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="rounded-[0.85rem] border-2 border-[var(--border)] bg-[#12100d] p-1">
+          <div className="rounded-[0.85rem] border-2 border-border bg-background p-1">
             {(['terminal', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'push', 'registry'] as const).map((tab) => {
               const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : tab === 'push' ? 'Push' : 'Registry'
               const TAB_BRAND: Partial<Record<DiagnosticsTab, BrandKey>> = {
@@ -301,14 +301,14 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                   size="sm"
                   variant={activeTab === tab ? 'secondary' : 'ghost'}
                   className={cn(
-                    'rounded-[0.7rem] px-3 text-[#f5eedf]',
-                    activeTab === tab ? 'bg-[#f0c419] text-black hover:bg-[#f0c419]/90' : 'hover:bg-[#2a241d]',
+                    'rounded-[0.7rem] px-3 text-foreground',
+                    activeTab === tab ? 'bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90' : 'hover:bg-secondary',
                   )}
                   onClick={() => setActiveTab(tab)}
                 >
                   {brandKey ? (
-                    <span className={cn('mr-1.5 inline-flex shrink-0', activeTab === tab ? '[&_img]:invert-0' : '')}>
-                      <BrandIcon brand={brandKey} size={13} scale={1} />
+                    <span className="mr-1.5 inline-flex shrink-0">
+                      <BrandIcon brand={brandKey} size={13} scale={1} scheme={activeTab === tab ? 'light' : 'auto'} />
                     </span>
                   ) : null}
                   {label}
@@ -320,21 +320,21 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
             variant={live ? 'secondary' : 'outline'}
             size="sm"
             className={cn(
-              live ? 'bg-[#f0c419] text-black hover:bg-[#f0c419]/90' : 'bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]',
+              live ? 'bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
             )}
             onClick={() => setLive((current) => !current)}
           >
             Live {live ? 'On' : 'Off'}
           </Button>
-          <Button variant="outline" size="sm" className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]" onClick={refresh} disabled={loading}>
+          <Button variant="outline" size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={refresh} disabled={loading}>
             <RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-xs text-[#f5eedf]/55 sm:px-6">
-        <Badge variant="outline" className="border-[var(--border)] text-[#f5eedf]/70">
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-xs text-foreground/55 sm:px-6">
+        <Badge variant="outline" className="border-border text-foreground/70">
           {activeTab === 'terminal'
             ? logSummary
             : activeTab === 'setup'
@@ -367,12 +367,12 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
         {activeTab === 'terminal' ? (
           <div className="grid h-full gap-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
             <div className={cn('flex min-h-0 flex-col overflow-hidden', panelShell)}>
-              <div className="flex items-center justify-between gap-3 border-b-2 border-[var(--border)] px-4 py-3">
+              <div className="flex items-center justify-between gap-3 border-b-2 border-border px-4 py-3">
                 <div>
                   <p className={sectionTitle}>Live Shell</p>
-                  <p className="text-xs text-[#f5eedf]/50">Use the full-screen terminal for longer sessions.</p>
+                  <p className="text-xs text-foreground/50">Use the full-screen terminal for longer sessions.</p>
                 </div>
-                <Button variant="outline" size="sm" className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]" onClick={onOpenTerminal}>
+                <Button variant="outline" size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={onOpenTerminal}>
                   <Maximize2 className="mr-2 h-4 w-4" />
                   Full Screen
                 </Button>
@@ -390,16 +390,16 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
             <div className={cn('flex min-h-0 flex-col overflow-hidden', panelInset)}>
               <div className="border-b-2 border-[var(--border)] px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <Waves className="h-4 w-4 text-[#f0c419]" />
+                  <Waves className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
                   <p className={sectionTitle}>Terminal WS Log</p>
                 </div>
-                <p className="mt-1 text-xs text-[#f5eedf]/50">
+                <p className="mt-1 text-xs text-foreground/50">
                   Scrollable trace panel, fixed to this card so it never forces the layout outward.
                 </p>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-xs">
                 {termLog.length === 0 ? (
-                  <p className="rounded-[0.8rem] border-2 border-[var(--border)] bg-black/30 p-3 text-[#f5eedf]/50">
+                  <p className="rounded-[0.8rem] border-2 border-border bg-muted/50 p-3 text-foreground/50">
                     No websocket activity yet. Open a mobile workflow or use the shell to generate traffic.
                   </p>
                 ) : (

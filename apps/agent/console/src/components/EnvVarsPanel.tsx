@@ -216,7 +216,7 @@ export function EnvVarsPanel() {
   const activeProject = projects.find((p) => p.absolutePath === projectPath)
 
   return (
-    <div className="overflow-hidden rounded-[1.1rem] border-2 border-[var(--border)] bg-[#1a1713] text-[#f5eedf] shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
+    <div className="overflow-hidden rounded-[1.1rem] border-2 border-border bg-card text-foreground shadow-[0_8px_24px_rgba(0,0,0,0.22)]">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
         <div className="flex items-center gap-3">
@@ -224,11 +224,11 @@ export function EnvVarsPanel() {
             <span className="text-sm font-bold">{'{ }'}</span>
           </div>
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-[#f5eedf]/50">Project</p>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-foreground/50">Project</p>
             <h2 className="text-base font-bold uppercase tracking-wide">Environment Variables</h2>
           </div>
           {envVars.length > 0 && (
-            <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-xs text-[#f5eedf]/60">
+            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-foreground/60">
               {envVars.length}
             </span>
           )}
@@ -239,7 +239,7 @@ export function EnvVarsPanel() {
           <select
             value={projectPath ?? ''}
             onChange={(e) => { void handleProjectChange(e.target.value) }}
-            className="rounded-lg border border-[var(--border)] bg-[#2a241d] px-3 py-1.5 text-sm text-[#f5eedf] focus:outline-none focus:ring-1 focus:ring-[#22c55e]"
+            className="rounded-lg border border-border bg-secondary px-3 py-1.5 text-sm text-secondary-foreground focus:outline-none focus:ring-1 focus:ring-green-500"
           >
             {projects.map((p) => (
               <option key={p.id} value={p.absolutePath}>{p.name}</option>
@@ -261,7 +261,7 @@ export function EnvVarsPanel() {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="mr-1.5 h-3.5 w-3.5" />
@@ -270,7 +270,7 @@ export function EnvVarsPanel() {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 onClick={() => { setShowImport(!showImport); setImportError(null) }}
               >
                 Paste .env
@@ -278,7 +278,7 @@ export function EnvVarsPanel() {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 onClick={startAdd}
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -289,7 +289,7 @@ export function EnvVarsPanel() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-[#f5eedf]/50 hover:text-[#f5eedf]"
+            className="text-foreground/50 hover:text-foreground"
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
@@ -299,28 +299,28 @@ export function EnvVarsPanel() {
 
       {/* Active project path hint */}
       {!collapsed && activeProject && (
-        <div className="border-t border-[var(--border)] px-5 py-1.5">
-          <p className="font-mono text-[0.65rem] text-[#f5eedf]/30">{activeProject.absolutePath}</p>
+        <div className="border-t border-border px-5 py-1.5">
+          <p className="font-mono text-[0.65rem] text-foreground/30">{activeProject.absolutePath}</p>
         </div>
       )}
 
       {!collapsed && (
-        <div className="border-t border-[var(--border)]">
+        <div className="border-t border-border">
           {/* Import panel (paste) */}
           {showImport && (
-            <div className="border-b border-[var(--border)] bg-[#1a1713] p-4">
-              <p className="mb-2 text-xs text-[#f5eedf]/50">
+            <div className="border-b border-border bg-card p-4">
+              <p className="mb-2 text-xs text-foreground/50">
                 Paste the contents of a .env file. Lines starting with # are ignored.
               </p>
               <textarea
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder={'DATABASE_URL=postgres://...\nAPI_KEY=sk-...'}
-                className="w-full rounded-lg border border-[var(--border)] bg-[#12100d] p-3 font-mono text-sm text-[#f5eedf] placeholder-[#f5eedf]/25 focus:outline-none focus:ring-1 focus:ring-[#22c55e]"
+                className="w-full rounded-lg border border-border bg-background p-3 font-mono text-sm text-foreground placeholder-foreground/25 focus:outline-none focus:ring-1 focus:ring-green-500"
                 rows={5}
               />
               {parsedImport.length > 0 && (
-                <p className="mt-1 text-xs text-[#f5eedf]/50">
+                <p className="mt-1 text-xs text-foreground/50">
                   {parsedImport.length} variable{parsedImport.length !== 1 ? 's' : ''} detected
                 </p>
               )}
@@ -337,7 +337,7 @@ export function EnvVarsPanel() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-[#f5eedf]/50"
+                  className="text-foreground/50"
                   onClick={() => { setShowImport(false); setImportText(''); setImportError(null) }}
                 >
                   Cancel
@@ -348,42 +348,42 @@ export function EnvVarsPanel() {
 
           {/* Add/Edit form */}
           {editing && (
-            <div className="border-b border-[var(--border)] bg-[#1f1b16] p-4">
+            <div className="border-b border-border bg-muted p-4">
               <div className="grid gap-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-widest text-[#f5eedf]/50">Key</label>
+                    <label className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-widest text-foreground/50">Key</label>
                     <Input
                       value={editing.key}
                       onChange={(e) => setEditing({ ...editing, key: e.target.value })}
                       placeholder="VARIABLE_NAME"
-                      className="border-[var(--border)] bg-[#12100d] font-mono text-[#f5eedf] focus-visible:ring-[#22c55e]"
+                      className="font-mono focus-visible:ring-green-500"
                       autoFocus
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-widest text-[#f5eedf]/50">Value</label>
+                    <label className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-widest text-foreground/50">Value</label>
                     <Input
                       value={editing.value}
                       onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                       placeholder="value"
                       type={editing.isSecret ? 'password' : 'text'}
-                      className="border-[var(--border)] bg-[#12100d] font-mono text-[#f5eedf] focus-visible:ring-[#22c55e]"
+                      className="font-mono focus-visible:ring-green-500"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-widest text-[#f5eedf]/50">Comment (optional)</label>
+                  <label className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-widest text-foreground/50">Comment (optional)</label>
                   <Input
                     value={editing.comment}
                     onChange={(e) => setEditing({ ...editing, comment: e.target.value })}
                     placeholder="Describe this variable"
                     maxLength={256}
-                    className="border-[var(--border)] bg-[#12100d] text-[#f5eedf] focus-visible:ring-[#22c55e]"
+                    className="focus-visible:ring-green-500"
                   />
                 </div>
                 <div className="flex items-center gap-6">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm text-[#f5eedf]/70">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground/70">
                     <input
                       type="checkbox"
                       checked={editing.isSecret}
@@ -392,7 +392,7 @@ export function EnvVarsPanel() {
                     />
                     Secret
                   </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm text-[#f5eedf]/70">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground/70">
                     <input
                       type="checkbox"
                       checked={editing.isMultiline}
@@ -412,7 +412,7 @@ export function EnvVarsPanel() {
                   >
                     {saving ? 'Saving…' : (editing.id === null ? 'Add Variable' : 'Save')}
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-[#f5eedf]/50" onClick={cancelEdit}>
+                  <Button variant="ghost" size="sm" className="text-foreground/50" onClick={cancelEdit}>
                     Cancel
                   </Button>
                 </div>
@@ -422,19 +422,19 @@ export function EnvVarsPanel() {
 
           {/* Content */}
           {!projectPath ? (
-            <div className="p-6 text-center text-sm text-[#f5eedf]/40">No project selected.</div>
+            <div className="p-6 text-center text-sm text-foreground/40">No project selected.</div>
           ) : loading ? (
-            <div className="p-6 text-center text-sm text-[#f5eedf]/40">Loading…</div>
+            <div className="p-6 text-center text-sm text-foreground/40">Loading…</div>
           ) : error ? (
             <div className="p-4 text-sm text-red-400">{error}</div>
           ) : envVars.length === 0 ? (
-            <div className="p-6 text-center text-sm text-[#f5eedf]/40">
+            <div className="p-6 text-center text-sm text-foreground/40">
               No environment variables yet. Click Add to create one.
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-[0.65rem] font-semibold uppercase tracking-widest text-[#f5eedf]/40">
+                <tr className="border-b border-border text-[0.65rem] font-semibold uppercase tracking-widest text-foreground/40">
                   <th className="px-4 py-2 text-left">Key</th>
                   <th className="px-4 py-2 text-left">Value</th>
                   <th className="px-4 py-2 text-left">Comment</th>
@@ -445,10 +445,10 @@ export function EnvVarsPanel() {
                 {envVars.map((item) => {
                   const revealed = revealedIds.has(item.id)
                   return (
-                    <tr key={item.id} className="border-b border-[var(--border)]/40 hover:bg-[#1f1b16]">
+                    <tr key={item.id} className="border-b border-border/40 hover:bg-muted">
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
-                          <code className="font-mono text-[#f5eedf]">{item.key}</code>
+                          <code className="font-mono text-foreground">{item.key}</code>
                           {item.isSecret && (
                             <span className="rounded-full border border-[#22c55e]/40 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-wider text-[#22c55e]">
                               secret
@@ -458,9 +458,9 @@ export function EnvVarsPanel() {
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-1.5">
-                          <code className="font-mono text-[#f5eedf]/70">
+                          <code className="font-mono text-foreground/70">
                             {item.value === null
-                              ? <span className="text-[#f5eedf]/30">(empty)</span>
+                              ? <span className="text-foreground/30">(empty)</span>
                               : item.isSecret && !revealed
                                 ? '••••••••'
                                 : item.value}
@@ -468,7 +468,7 @@ export function EnvVarsPanel() {
                           {item.isSecret && (
                             <button
                               onClick={() => toggleReveal(item.id)}
-                              className="text-[#f5eedf]/30 hover:text-[#f5eedf]/60"
+                              className="text-foreground/30 hover:text-foreground/60"
                             >
                               {revealed
                                 ? <EyeOff className="h-3.5 w-3.5" />
@@ -477,20 +477,20 @@ export function EnvVarsPanel() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 text-[#f5eedf]/40 italic">
+                      <td className="px-4 py-2.5 text-foreground/40 italic">
                         {item.comment ?? ''}
                       </td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => startEdit(item)}
-                            className="rounded p-1 text-[#f5eedf]/30 hover:text-[#f5eedf]/70"
+                            className="rounded p-1 text-foreground/30 hover:text-foreground/70"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => { void handleDelete(item.id) }}
-                            className="rounded p-1 text-[#f5eedf]/30 hover:text-red-400"
+                            className="rounded p-1 text-foreground/30 hover:text-red-400"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

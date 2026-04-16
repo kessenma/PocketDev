@@ -41,7 +41,7 @@ function TasksPage() {
           <tr>
             <td>Codex</td>
             <td>stdio JSON-RPC</td>
-            <td>OpenAI-backed coding tasks</td>
+            <td>OpenAI-backed coding tasks, multi-turn conversations</td>
           </tr>
           <tr>
             <td>Shell</td>
@@ -115,6 +115,23 @@ function TasksPage() {
         (thinking) are shown inline within activity cards.
       </p>
 
+      <h3>Task Checklist</h3>
+      <p>
+        When an agent calls <code>TodoWrite</code> (Claude) or <code>update_plan</code> (Codex),
+        the stream displays a collapsible <strong>Tasks</strong> card showing each to-do item with
+        its current status — pending, in progress, or completed. A slim progress strip also appears
+        below the status bar showing how many items are done out of the total. Both are only shown
+        when the agent actually produces a checklist; tasks that don't use TodoWrite show neither.
+      </p>
+
+      <h3>Context Limit</h3>
+      <p>
+        When Claude's context window approaches capacity, PocketDev detects the warning in the
+        terminal output and surfaces a prompt asking whether to run <code>/compact</code>. Choosing
+        "Run /compact" sends the command to the Claude session, which summarises the conversation
+        history to free context space and lets the task continue.
+      </p>
+
       <h3>Raw Logs</h3>
       <p>
         Toggle the raw log view to see unprocessed output lines directly from the agent CLI. Raw
@@ -164,10 +181,53 @@ function TasksPage() {
         needed, you'll receive a push notification so you can respond.
       </p>
 
+      <h2>Steering a Running Task</h2>
+      <p>
+        While a task is running you can interact with it directly from the task detail screen without
+        stopping or restarting it.
+      </p>
+
+      <h3>Quick Commands (Claude)</h3>
+      <p>
+        A row of one-tap command buttons appears at the bottom of the screen when a Claude task is
+        active. Tapping a button sends the command directly to the Claude session:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Button</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>/compact</code></td>
+            <td>Summarises the conversation history to free context space</td>
+          </tr>
+          <tr>
+            <td><code>/clear</code></td>
+            <td>Clears the current conversation context</td>
+          </tr>
+          <tr>
+            <td><code>/init</code></td>
+            <td>Re-reads the repo's CLAUDE.md and refreshes project context</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Steering Input</h3>
+      <p>
+        A text field labelled <em>Steer the agent…</em> is shown for all running tasks. Type a
+        message and tap send to inject it as raw input into the agent's session. Use this to redirect
+        the agent mid-task — for example to refocus it on a different file or correct a
+        misunderstanding — without killing and restarting.
+      </p>
+
       <h2>Multi-Turn Conversations</h2>
       <p>
-        Claude tasks support continuation. After a task completes, you can send a follow-up message
-        and Claude will resume the same session, retaining full context from the previous exchange.
+        Claude and Codex tasks support continuation. After a task completes, you can send a
+        follow-up message and the agent will resume the same session, retaining full context from
+        the previous exchange.
       </p>
       <p>
         When a task has more than one turn, the prompt card is replaced by a conversation view
@@ -175,8 +235,7 @@ function TasksPage() {
         Each new turn is tracked and stored for history alongside the original task.
       </p>
       <p>
-        Continuation is only available for Claude tasks. Codex, Copilot, and Shell tasks are
-        single-turn.
+        Continuation is not available for Copilot or Shell tasks.
       </p>
 
       <h2>Debug Tools</h2>
@@ -229,7 +288,7 @@ function TasksPage() {
           <tr>
             <td><code>task.continue</code></td>
             <td><code>{'{'} taskId, prompt, model? {'}'}</code></td>
-            <td>Continue a completed Claude task with a follow-up message</td>
+            <td>Continue a completed Claude or Codex task with a follow-up message</td>
           </tr>
           <tr>
             <td><code>task.kill</code></td>

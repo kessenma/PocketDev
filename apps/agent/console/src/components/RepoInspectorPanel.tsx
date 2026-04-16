@@ -142,20 +142,20 @@ export function RepoInspectorPanel({ className }: Props) {
 
   return (
     <section className={cn(
-      'flex h-full min-h-[520px] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#111111_0%,#181818_100%)] text-[#f4f0e8] shadow-[0_14px_40px_rgba(0,0,0,0.18)]',
+      'flex h-full min-h-[520px] flex-col overflow-hidden rounded-[2rem] border-2 border-border bg-card text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.18)]',
       className,
     )}>
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/8 px-5 py-4 sm:px-6">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-border px-5 py-4 sm:px-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-[#f4f0e8]/45">Repo Inspector</p>
-            <Badge variant="outline" className="border-emerald-500/35 text-emerald-300">read only</Badge>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-foreground/45">Repo Inspector</p>
+            <Badge variant="outline" className="border-emerald-500/35 text-emerald-600 dark:text-emerald-300">read only</Badge>
           </div>
           <div className="flex items-center gap-2">
-            <FolderOpen className="h-5 w-5 text-[#f0c419]" />
+            <FolderOpen className="h-5 w-5 text-[var(--bauhaus-yellow)]" />
             <h2 className="text-lg font-semibold">{summary?.repoName ?? 'Repository Workspace'}</h2>
           </div>
-          <p className="text-sm text-[#f4f0e8]/58">
+          <p className="text-sm text-foreground/60">
             Search files, inspect source, pin context, and open the localhost preview without leaving the console.
           </p>
         </div>
@@ -164,7 +164,7 @@ export function RepoInspectorPanel({ className }: Props) {
           <Button
             variant="outline"
             size="sm"
-            className="border-white/15 bg-white/8 text-[#f4f0e8] hover:bg-white/14"
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
             onClick={refresh}
             disabled={loading}
           >
@@ -173,7 +173,7 @@ export function RepoInspectorPanel({ className }: Props) {
           </Button>
           <Button
             size="sm"
-            className="bg-[#f0c419] text-black hover:bg-[#f0c419]/90"
+            className="bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90"
             onClick={handlePreviewLaunch}
             disabled={previewing}
           >
@@ -183,21 +183,21 @@ export function RepoInspectorPanel({ className }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-xs text-[#f4f0e8]/55 sm:px-6">
-        <Badge variant="outline" className="flex items-center gap-1.5 border-white/10 text-[#f4f0e8]/70">
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3 text-xs text-foreground/55 sm:px-6">
+        <Badge variant="outline" className="flex items-center gap-1.5 border-border text-foreground/70">
           <BrandIcon brand="git" size={12} scale={1} />
           {summary?.branchName ?? 'No branch'}
         </Badge>
         {summary?.repoPath ? (
-          <Badge variant="outline" className="max-w-full border-white/10 text-[#f4f0e8]/70">
+          <Badge variant="outline" className="max-w-full border-border text-foreground/70">
             <span className="truncate">{summary.repoPath}</span>
           </Badge>
         ) : null}
-        <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/70">
+        <Badge variant="outline" className="border-border text-foreground/70">
           {pinnedPaths.length} pinned
         </Badge>
         {offlineSnapshots.length > 0 ? (
-          <Badge variant="outline" className="border-emerald-500/35 text-emerald-300">
+          <Badge variant="outline" className="border-emerald-500/35 text-emerald-600 dark:text-emerald-300">
             offline on {offlineSnapshots.length} device{offlineSnapshots.length !== 1 ? 's' : ''}
           </Badge>
         ) : null}
@@ -206,10 +206,10 @@ export function RepoInspectorPanel({ className }: Props) {
 
       <div className="grid min-h-0 flex-1 gap-3 px-3 pb-3 sm:px-4 sm:pb-4 xl:grid-cols-[minmax(320px,0.92fr)_minmax(0,1.08fr)]">
         <div className="flex min-h-0 flex-col gap-3">
-          <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+          <div className="rounded-[1.5rem] border-2 border-border bg-secondary/40 p-4">
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#f4f0e8]/35" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/35" />
                 <Input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -217,12 +217,12 @@ export function RepoInspectorPanel({ className }: Props) {
                     if (event.key === 'Enter') void handleSearch()
                   }}
                   placeholder={`Search in ${currentPath === '.' ? summary?.repoName ?? 'repo' : currentPath}`}
-                  className="border-white/10 bg-white/6 pl-9 text-[#f4f0e8] placeholder:text-[#f4f0e8]/35"
+                  className="pl-9"
                 />
               </div>
               <Button
                 variant="outline"
-                className="border-white/15 bg-white/8 text-[#f4f0e8] hover:bg-white/14"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 onClick={handleSearch}
                 disabled={searching}
               >
@@ -230,15 +230,15 @@ export function RepoInspectorPanel({ className }: Props) {
               </Button>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#f4f0e8]/55">
-              <Badge variant="outline" className="border-white/10 text-[#f4f0e8]/70">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-foreground/55">
+              <Badge variant="outline" className="border-border text-foreground/70">
                 {currentPath === '.' ? 'Project root' : currentPath}
               </Badge>
               {currentPath !== '.' ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-auto px-2 py-1 text-[#f0c419] hover:bg-white/8 hover:text-[#f0c419]"
+                  className="h-auto px-2 py-1 text-[var(--bauhaus-yellow)] hover:bg-secondary"
                   onClick={() => {
                     const parts = currentPath.split('/').filter(Boolean)
                     void openPath(parts.length <= 1 ? '.' : parts.slice(0, -1).join('/'))
@@ -251,7 +251,7 @@ export function RepoInspectorPanel({ className }: Props) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-auto px-2 py-1 text-[#f0c419] hover:bg-white/8 hover:text-[#f0c419]"
+                  className="h-auto px-2 py-1 text-[var(--bauhaus-yellow)] hover:bg-secondary"
                   onClick={() => {
                     setSearchQuery('')
                     setSearchResults([])
@@ -263,10 +263,10 @@ export function RepoInspectorPanel({ className }: Props) {
             </div>
           </div>
 
-          <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010]">
-            <div className="border-b border-white/8 px-4 py-3">
+          <div className="min-h-0 overflow-hidden rounded-[1.5rem] border-2 border-border bg-muted/50">
+            <div className="border-b-2 border-border px-4 py-3">
               <p className="text-sm font-medium">{searchQuery.trim().length > 0 ? 'Search Results' : 'Current Folder'}</p>
-              <p className="mt-1 text-xs text-[#f4f0e8]/50">
+              <p className="mt-1 text-xs text-foreground/50">
                 {searchQuery.trim().length > 0
                   ? `${searchResults.length} matches in ${currentPath === '.' ? 'the repository' : currentPath}`
                   : `${visibleItems.length} entries in ${currentPath === '.' ? 'project root' : currentPath}`}
@@ -275,20 +275,20 @@ export function RepoInspectorPanel({ className }: Props) {
             <div className="min-h-0 max-h-[28rem] overflow-y-auto p-3">
               <div className="space-y-2">
                 {searchQuery.trim().length > 0 ? searchResults.map((result) => (
-                  <div key={`${result.path}-${result.line_number}`} className="rounded-[1.2rem] border border-white/8 bg-black/30 p-3">
+                  <div key={`${result.path}-${result.line_number}`} className="rounded-[1.2rem] border border-border bg-background p-3">
                     <div className="flex items-start justify-between gap-3">
                       <button
                         type="button"
                         className="min-w-0 text-left"
                         onClick={() => void openFile(result.path)}
                       >
-                        <p className="truncate text-sm font-medium text-[#f4f0e8]">{result.path}</p>
-                        <p className="mt-1 text-xs text-[#f4f0e8]/45">Line {result.line_number}</p>
+                        <p className="truncate text-sm font-medium text-foreground">{result.path}</p>
+                        <p className="mt-1 text-xs text-foreground/45">Line {result.line_number}</p>
                       </button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 px-2 text-[#f0c419] hover:bg-white/8 hover:text-[#f0c419]"
+                        className="h-8 px-2 text-[var(--bauhaus-yellow)] hover:bg-secondary"
                         onClick={() => togglePinned(result.path)}
                       >
                         {pinnedPaths.includes(result.path) ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -297,7 +297,7 @@ export function RepoInspectorPanel({ className }: Props) {
                     <p className="mt-2 break-all font-mono text-xs text-[#9df6cd]">{result.text}</p>
                   </div>
                 )) : visibleItems.map((entry) => (
-                  <div key={entry.path} className="flex items-center justify-between gap-3 rounded-[1.2rem] border border-white/8 bg-black/30 p-3">
+                  <div key={entry.path} className="flex items-center justify-between gap-3 rounded-[1.2rem] border border-border bg-background p-3">
                     <button
                       type="button"
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
@@ -310,11 +310,11 @@ export function RepoInspectorPanel({ className }: Props) {
                       }}
                     >
                       {entry.type === 'dir'
-                        ? <FolderOpen className="h-4 w-4 shrink-0 text-[#f0c419]" />
+                        ? <FolderOpen className="h-4 w-4 shrink-0 text-[var(--bauhaus-yellow)]" />
                         : <FileCode2 className="h-4 w-4 shrink-0 text-[#9df6cd]" />}
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[#f4f0e8]">{entry.name}</p>
-                        <p className="mt-1 truncate text-xs text-[#f4f0e8]/45">{entry.path}</p>
+                        <p className="truncate text-sm font-medium text-foreground">{entry.name}</p>
+                        <p className="mt-1 truncate text-xs text-foreground/45">{entry.path}</p>
                       </div>
                     </button>
 
@@ -322,7 +322,7 @@ export function RepoInspectorPanel({ className }: Props) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 px-2 text-[#f0c419] hover:bg-white/8 hover:text-[#f0c419]"
+                        className="h-8 px-2 text-[var(--bauhaus-yellow)] hover:bg-secondary"
                         onClick={() => togglePinned(entry.path)}
                       >
                         {pinnedPaths.includes(entry.path) ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -332,7 +332,7 @@ export function RepoInspectorPanel({ className }: Props) {
                 ))}
 
                 {!loading && searchQuery.trim().length > 0 && searchResults.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                  <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-sm text-foreground/52">
                     No matches for this query in the current folder scope.
                   </div>
                 ) : null}
@@ -340,20 +340,20 @@ export function RepoInspectorPanel({ className }: Props) {
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-white/8 bg-black/35 p-4">
+          <div className="rounded-[1.5rem] border-2 border-border bg-secondary/40 p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-[#f0c419]" />
+                  <Sparkles className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
                   <p className="text-sm font-medium">Pinned Context</p>
                 </div>
-                <p className="mt-1 text-xs text-[#f4f0e8]/50">Useful file paths to copy into prompts or terminal sessions.</p>
+                <p className="mt-1 text-xs text-foreground/50">Useful file paths to copy into prompts or terminal sessions.</p>
               </div>
               {pinnedPaths.length > 0 ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-[#f0c419] hover:bg-white/8 hover:text-[#f0c419]"
+                  className="text-[var(--bauhaus-yellow)] hover:bg-secondary"
                   onClick={() => setPinnedPaths([])}
                 >
                   Clear
@@ -362,20 +362,20 @@ export function RepoInspectorPanel({ className }: Props) {
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {pinnedPaths.length > 0 ? pinnedPaths.map((path) => (
-                <Badge key={path} variant="outline" className="max-w-full border-white/10 text-[#f4f0e8]/75">
+                <Badge key={path} variant="outline" className="max-w-full border-border text-foreground/75">
                   <span className="truncate">{path}</span>
                 </Badge>
               )) : (
-                <p className="text-sm text-[#f4f0e8]/52">Pin files from the search results or folder list.</p>
+                <p className="text-sm text-foreground/52">Pin files from the search results or folder list.</p>
               )}
             </div>
           </div>
         </div>
 
         <div className="grid min-h-0 gap-3 xl:grid-rows-[minmax(0,0.92fr)_minmax(260px,0.88fr)]">
-          <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010]">
-            <div className="border-b border-white/8 px-4 py-3">
-              <p className="text-sm font-medium">File Preview</p>
+          <div className="min-h-0 overflow-hidden rounded-[1.5rem] border-2 border-border bg-[#101010]">
+            <div className="border-b border-border/30 px-4 py-3">
+              <p className="text-sm font-medium text-[#f4f0e8]">File Preview</p>
               <p className="mt-1 text-xs text-[#f4f0e8]/50">
                 {selectedFile?.path ?? 'Open a file from the list or search results.'}
               </p>
@@ -403,18 +403,18 @@ export function RepoInspectorPanel({ className }: Props) {
             </div>
           </div>
 
-          <div className="min-h-0 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[#101010]">
-            <div className="flex items-center justify-between gap-3 border-b border-white/8 px-4 py-3">
+          <div className="min-h-0 overflow-hidden rounded-[1.5rem] border-2 border-border bg-muted/50">
+            <div className="flex items-center justify-between gap-3 border-b-2 border-border px-4 py-3">
               <div>
                 <p className="text-sm font-medium">Inline Preview</p>
-                <p className="mt-1 text-xs text-[#f4f0e8]/50">Loads the proxied localhost dev server in the console.</p>
+                <p className="mt-1 text-xs text-foreground/50">Loads the proxied localhost dev server in the console.</p>
               </div>
               {previewUrl ? (
                 <a
                   href={previewUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-medium text-[#f0c419]"
+                  className="inline-flex items-center gap-2 text-xs font-medium text-[var(--bauhaus-yellow)]"
                 >
                   Open in new tab
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -429,7 +429,7 @@ export function RepoInspectorPanel({ className }: Props) {
                   className="h-full w-full rounded-[1.2rem] border border-white/8 bg-white"
                 />
               ) : (
-                <div className="flex h-full items-center justify-center rounded-[1.2rem] border border-dashed border-white/10 bg-black/20 p-4 text-sm text-[#f4f0e8]/52">
+                <div className="flex h-full items-center justify-center rounded-[1.2rem] border border-dashed border-border bg-muted/30 p-4 text-sm text-foreground/52">
                   Launch preview to load `localhost:3000` from the paired server.
                 </div>
               )}

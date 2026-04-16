@@ -57,15 +57,15 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
   }
 
   return (
-    <Card className="h-full rounded-[2rem] border border-black/12 bg-[#f4f0e8] text-black shadow-[0_14px_40px_rgba(0,0,0,0.12)]">
+    <Card className="h-full rounded-[2rem]">
       <CardHeader>
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-black/45">Device Roster</p>
-        <CardTitle className="flex items-center gap-2 text-black">
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-foreground/45">Device Roster</p>
+        <CardTitle className="flex items-center gap-2">
           <Smartphone className="h-5 w-5" />
           Paired Devices
         </CardTitle>
 
-        <CardDescription className="text-black/60">
+        <CardDescription>
           {devices.length === 0
             ? 'No devices paired yet.'
             : `${devices.length} device${devices.length > 1 ? 's' : ''} paired`}
@@ -79,7 +79,7 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
         ) : (
           <div className="space-y-3">
             {devices.map((device) => (
-              <div key={device.id} className="flex items-center justify-between rounded-[1.4rem] border border-black/10 bg-white/70 p-3">
+              <div key={device.id} className="flex items-center justify-between rounded-[1.4rem] border border-border bg-muted/50 p-3">
                 <div className="space-y-1 min-w-0 flex-1 mr-3">
                   {editingId === device.id ? (
                     <form
@@ -108,10 +108,10 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
                   ) : (
                     <div className="flex items-center gap-1.5">
                       {device.platform === 'android'
-                        ? <Tablet className="h-3.5 w-3.5 shrink-0 text-black/50" />
+                        ? <Tablet className="h-3.5 w-3.5 shrink-0 text-foreground/50" />
                         : device.platform === 'ios'
-                          ? <Smartphone className="h-3.5 w-3.5 shrink-0 text-black/50" />
-                          : <Monitor className="h-3.5 w-3.5 shrink-0 text-black/50" />}
+                          ? <Smartphone className="h-3.5 w-3.5 shrink-0 text-foreground/50" />
+                          : <Monitor className="h-3.5 w-3.5 shrink-0 text-foreground/50" />}
                       <p className="text-sm font-medium truncate">{device.name || 'Unknown device'}</p>
                       <Button
                         variant="ghost"
@@ -123,7 +123,7 @@ export function DeviceList({ devices, onDeviceRemoved, onDeviceRenamed }: Props)
                       </Button>
                     </div>
                   )}
-                  <div className="flex items-center gap-2 text-xs text-black/55">
+                  <div className="flex items-center gap-2 text-xs text-foreground/55">
                     <Clock className="h-3 w-3" />
                     {device.lastSeenAt
                       ? `Last seen ${new Date(device.lastSeenAt).toLocaleString()}`

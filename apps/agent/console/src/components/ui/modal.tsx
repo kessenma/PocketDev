@@ -46,7 +46,7 @@ export function Modal({ open, onClose, title, description, children, className }
       />
       <div
         className={cn(
-          'relative z-10 flex h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-black bg-[linear-gradient(135deg,#f4f0e8_0%,#f4f0e8_72%,#d93a2f_72%,#d93a2f_100%)] text-black shadow-[0_32px_120px_rgba(0,0,0,0.45)]',
+          'relative z-10 flex h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-black bg-[linear-gradient(135deg,var(--surface-paper)_0%,var(--surface-paper)_72%,var(--bauhaus-red)_72%,var(--bauhaus-red)_100%)] text-black shadow-[0_32px_120px_rgba(0,0,0,0.45)]',
           className,
         )}
       >

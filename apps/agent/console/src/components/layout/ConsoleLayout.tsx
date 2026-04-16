@@ -7,14 +7,16 @@ import { ServerTerminal } from '#/components/ServerTerminal'
 import { UpdateBanner } from '#/components/UpdateBanner'
 import { Modal } from '#/components/ui/modal'
 import { useConsoleData } from '#/context/ConsoleDataContext'
+import { useTheme } from '#/context/ThemeContext'
 import { SecuritySection } from '#/pages/sections/SecuritySection'
 import { RepositoriesSection } from '#/pages/sections/RepositoriesSection'
 import { TasksSection } from '#/pages/sections/TasksSection'
 import { DebugSection } from '#/pages/sections/DebugSection'
-import { Server, LogOut, Maximize2, Shield, ArrowUpCircle, Loader2, Menu } from 'lucide-react'
+import { Server, LogOut, Maximize2, Shield, ArrowUpCircle, Loader2, Menu, Sun, Moon } from 'lucide-react'
 
 export function ConsoleLayout() {
   const { status, loading, agentVersion, updateInfo, upgrading, handleUpgrade, handleLogout } = useConsoleData()
+  const { theme, toggle } = useTheme()
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
@@ -42,44 +44,44 @@ export function ConsoleLayout() {
 
   if (loading || !status) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#12100d]">
-        <p className="text-[#f5eedf]/60">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-foreground/60">Loading...</p>
       </div>
     )
   }
 
   return (
     <>
-      <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,rgba(240,196,25,0.16),transparent_24%),linear-gradient(180deg,#12100d_0%,#12100d_100%)] text-[#f5eedf]">
+      <div className="flex min-h-screen flex-col text-foreground">
         {/* Header */}
-        <header className="shrink-0 overflow-hidden border-b-2 border-[var(--border)] bg-[linear-gradient(135deg,#1a1713_0%,#1a1713_72%,#d93025_72%,#d93025_100%)] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+        <header className="shrink-0 overflow-hidden border-b-2 border-border bg-[linear-gradient(135deg,var(--card)_0%,var(--card)_72%,var(--bauhaus-red)_72%,var(--bauhaus-red)_100%)] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
           <div className="flex items-center gap-4 px-4 py-4 sm:px-6">
             {/* Mobile hamburger */}
             <button
-              className="rounded-md p-2 text-[#f5eedf]/60 transition-colors hover:bg-[#2a241d] hover:text-[#f5eedf] lg:hidden"
+              className="rounded-md p-2 text-foreground/60 transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.55rem] border-2 border-black/75 bg-[#f0c419] text-black shadow-[6px_6px_0_0_rgba(0,0,0,0.28)]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.55rem] border-2 border-black/75 bg-[var(--bauhaus-yellow)] text-black shadow-[6px_6px_0_0_rgba(0,0,0,0.28)]">
               <Server className="h-4 w-4" />
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="font-heading text-[0.6rem] font-semibold uppercase tracking-[0.34em] text-[#f5eedf]/58">PocketDev Console</p>
+              <p className="font-heading text-[0.6rem] font-semibold uppercase tracking-[0.34em] text-foreground/60">PocketDev Console</p>
               <h1 className="font-heading text-lg font-semibold uppercase leading-none tracking-[0.08em] sm:text-xl">Server Control Board</h1>
             </div>
 
             <div className="hidden shrink-0 flex-wrap items-center gap-2 text-sm sm:flex">
-              <Badge variant="outline" className="border-[var(--border)] text-[#f5eedf]">
+              <Badge variant="outline" className="border-border text-foreground">
                 Build v{agentVersion}
               </Badge>
-              <Badge className="bg-[#f4efdf] text-black">{status.serverIp}:{status.port}</Badge>
-              <Badge className={status.paired ? 'bg-[#f0c419] text-black' : 'bg-[#2a241d] text-[#f5eedf]'}>
+              <Badge className="bg-secondary text-secondary-foreground">{status.serverIp}:{status.port}</Badge>
+              <Badge className={status.paired ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-secondary text-secondary-foreground'}>
                 {status.paired ? 'Paired' : 'Awaiting Pairing'}
               </Badge>
-              <Badge className={status.currentUser.role === 'owner' ? 'bg-[#d93025] text-white' : 'bg-[#2a241d] text-[#f5eedf]'}>
+              <Badge className={status.currentUser.role === 'owner' ? 'bg-[var(--bauhaus-red)] text-white' : 'bg-secondary text-secondary-foreground'}>
                 <Shield className="mr-1 h-3 w-3" />
                 {status.currentUser.role}
               </Badge>
@@ -88,9 +90,18 @@ export function ConsoleLayout() {
             <div className="shrink-0">
               <div className="flex items-center gap-2">
                 <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-foreground/70 hover:text-foreground"
+                  onClick={toggle}
+                  aria-label="Toggle theme"
+                >
+                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
-                  className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   onClick={() => setTerminalOpen(true)}
                 >
                   <Maximize2 className="mr-2 h-4 w-4" />
@@ -99,7 +110,7 @@ export function ConsoleLayout() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                   onClick={handleUpgrade}
                   disabled={upgrading}
                   title={upgradeTooltip}
@@ -112,12 +123,12 @@ export function ConsoleLayout() {
                   )}
                   <span className="hidden sm:inline">{upgrading ? 'Upgrading...' : 'Upgrade'}</span>
                 </Button>
-                <Button variant="outline" size="sm" className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]" onClick={handleLogout}>
+                <Button variant="outline" size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Sign Out</span>
                 </Button>
               </div>
-              <p className="mt-1 text-right text-[0.62rem] font-medium uppercase tracking-[0.14em] text-[#f5eedf]/55">
+              <p className="mt-1 text-right text-[0.62rem] font-medium uppercase tracking-[0.14em] text-foreground/55">
                 {upgradeMetaLabel}
               </p>
             </div>
@@ -154,7 +165,7 @@ export function ConsoleLayout() {
         title="Server Terminal"
         description="A full-screen terminal surface for server commands, logs, and focused debugging."
       >
-        <ServerTerminal className="h-full rounded-[0.9rem] border-2 border-[var(--border)] bg-black text-[#f5eedf] shadow-none" heightClassName="h-full" />
+        <ServerTerminal className="h-full rounded-[0.9rem] border-2 border-border bg-black text-[#f5eedf] shadow-none" heightClassName="h-full" />
       </Modal>
     </>
   )

@@ -167,6 +167,7 @@ export type {
   ScriptsResponse,
 } from './scripts.js'
 export type {
+  TodoItem,
   TaskActivity,
   TaskToolKind,
   ToolUseActivity,

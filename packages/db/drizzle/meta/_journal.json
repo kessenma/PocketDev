@@ -15,6 +15,20 @@
       "when": 1776120279999,
       "tag": "0001_messy_tattoo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776321455786,
+      "tag": "0002_flippant_jigsaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776322490655,
+      "tag": "0003_faithful_ironclad",
+      "breakpoints": true
     }
   ]
 }

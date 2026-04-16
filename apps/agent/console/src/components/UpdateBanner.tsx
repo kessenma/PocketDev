@@ -78,24 +78,24 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
   }
 
   return (
-    <div className="mb-4 overflow-hidden rounded-[1.1rem] border-2 border-[#f0c419]/40 bg-[#1a1713]">
+    <div className="mb-4 overflow-hidden rounded-[1.1rem] border-2 border-[var(--bauhaus-yellow)]/40 bg-card">
       <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f0c419]/15 text-[#f0c419]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--bauhaus-yellow)]/15 text-[var(--bauhaus-yellow)]">
             <ArrowUpCircle className="h-5 w-5" />
           </div>
           <div>
             {update.updateAvailable ? (
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[#f5eedf]">Update available</span>
-                <Badge className="bg-[#2a241d] text-[#f5eedf]/70 text-xs">v{version}</Badge>
-                <span className="text-[#f5eedf]/40">→</span>
-                <Badge className="bg-[#f0c419] text-black text-xs">v{update.latest}</Badge>
+                <span className="text-sm font-medium text-foreground">Update available</span>
+                <Badge className="bg-secondary text-secondary-foreground/70 text-xs">v{version}</Badge>
+                <span className="text-foreground/40">→</span>
+                <Badge className="bg-[var(--bauhaus-yellow)] text-black text-xs">v{update.latest}</Badge>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-[#f5eedf]">Agent up to date</span>
-                <Badge className="bg-[#f0c419] text-black text-xs">v{version}</Badge>
+                <span className="text-sm font-medium text-foreground">Agent up to date</span>
+                <Badge className="bg-[var(--bauhaus-yellow)] text-black text-xs">v{version}</Badge>
               </div>
             )}
             {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
@@ -109,7 +109,7 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25] text-xs"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs"
                 onClick={() => setRollbackOpen(!rollbackOpen)}
                 disabled={updating}
               >
@@ -119,14 +119,14 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
               </Button>
 
               {rollbackOpen && (
-                <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border-2 border-[var(--border)] bg-[#1a1713] py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border-2 border-border bg-card py-1 shadow-lg">
                   {otherVersions
                     .slice()
                     .reverse()
                     .map((v) => (
                       <button
                         key={v}
-                        className="block w-full px-3 py-1.5 text-left text-xs text-[#f5eedf] hover:bg-[#2a241d]"
+                        className="block w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-secondary"
                         onClick={() => {
                           setRollbackOpen(false)
                           handleUpdate(v)
@@ -144,7 +144,7 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
           {update.updateAvailable && (
             <Button
               size="sm"
-              className="bg-[#f0c419] text-black hover:bg-[#d4ac16] text-xs font-semibold"
+              className="bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90 text-xs font-semibold"
               onClick={() => handleUpdate()}
               disabled={updating}
             >

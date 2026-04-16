@@ -24,14 +24,43 @@ PocketDev tasks run AI CLI providers on the agent server and stream a normalized
 | FindFilesButton | `tasks/FindFilesButton.tsx` | Trigger for local file search. |
 | TaskConversation | `tasks/TaskConversation.tsx` | User/assistant turn bubbles for multi-turn Claude tasks. Receives `turns: TaskTurn[]`. |
 | TaskDebugSheet | `tasks/TaskDebugSheet.tsx` | Modal bottom sheet for selecting a debug issue (`auth` / `permissions`) and triggering repair (auth → CodexWizardSheet). |
-| ActivityCards | `tasks/ActivityCards.tsx` | `GroupedItemRow` dispatcher + `ActivityCard` (collapsible category cards) + `ResultCard` (markdown result). Categories: researching/writing/planning/running. |
+| ActivityCards | `tasks/ActivityCards.tsx` | `GroupedItemRow` dispatcher + `ActivityCard` (collapsible category cards) + `ChecklistCard` (TodoWrite checklist with per-item status icons) + `ResultCard` (markdown result). Categories: researching/writing/planning/running. |
 
 ## Utilities
 
 | File | Purpose |
 |---|---|
-| `tasks/task-stream-utils.ts` | `groupActivitiesIntoCards()`, `getToolPresentation()`, `parseCodexRawLogToActivity()` — shared logic between `TaskStreamer` and `ActivityCards` |
+| `tasks/task-stream-utils.ts` | `groupActivitiesIntoCards()`, `getToolPresentation()`, `parseCodexRawLogToActivity()`, `extractLatestTodos()` — shared logic between `TaskStreamer` and `ActivityCards` |
 | `tasks/task-debug-utils.ts` | `inferTaskDebugSelection()` — inspects task logs/activities/report to pre-select the most likely debug issue. Types: `TaskDebugIssueKind`, `TaskDebugSelection` |
+
+## Task Checklist and Progress Strip
+
+When an agent calls `TodoWrite` (Claude) or `update_plan` (Codex), the activity stream renders a collapsible `ChecklistCard` instead of a plain planning card. Each item shows a status icon (Circle = pending, Loader = in progress, CheckCircle2 = completed) and strikethrough text for completed items.
+
+`extractLatestTodos(activities)` scans the activities array backwards for the most recent plan `tool_use` with a `metadata.todos` array. `TaskDetailPane` calls this to derive `todoProgress: { done, total } | null`, which drives a slim 3px progress strip rendered between the status bar and the stream list. Neither the checklist card nor the progress strip appear for tasks that never call TodoWrite.
+
+## Mid-Task Interaction
+
+While a task is running, `TaskDetailPane` renders two interactive elements at the bottom of the screen:
+
+### Quick Command Bar (Claude only)
+
+A horizontal pill-button strip shown when `isRunning && task.agent_type === 'claude'`. Buttons: `/compact`, `/clear`, `/init`. Each tap calls `sendInput(taskId, cmd + '\n')` via the `task.input` WebSocket command, which the server routes to `proc.sendInput()` → `tmux send-keys`.
+
+### Steering Input (all running tasks)
+
+`BauhausChatInput` shown when `isRunning`. Placeholder: "Steer the agent…". On send, calls `sendInput(taskId, text + '\n')` — raw stdin injection for Claude (tmux) and Codex (process stdin). Mutually exclusive with the continue input (which only appears after completion).
+
+### Context-Limit Detection (server-side, no mobile code required)
+
+`managed-agent-process.ts` watches every pane snapshot for Claude's context-window warning text via `CONTEXT_LIMIT_PATTERN`. When matched (once per task):
+
+1. Broadcasts `task.output` log: `[claude] Context window approaching limit`
+2. Emits `task.question` (yes/no type): "Claude's context window is nearly full. Run /compact to summarise and free space?"
+3. `TaskInteractionSheet` renders it automatically as a standard yes/no question
+4. If the user answers "yes", the server sends `/compact\n` to the Claude tmux session
+
+No mobile-side changes are needed for this feature — it flows through the existing question/answer infrastructure.
 
 ## TaskDetailPane Controlled Props
 
@@ -175,6 +204,12 @@ Providers own how answers are sent back to the running CLI. Mobile only sends `t
 - `null` — no signal found
 
 When the debug sheet opens, it pre-selects the inferred issue. Continuing with `'auth'` opens `CodexWizardSheet` (Codex) in `auth_repair` mode for re-authentication without reinstall. The `'permissions'` path is a placeholder for future repair tooling.
+
+The debug sheet also auto-opens when an auth error is detected in a live running task (1.5 s debounce to avoid flashing on first output lines).
+
+## Context Limit Detection
+
+For Claude tasks, `onPaneSnapshot` in `managed-agent-process.ts` monitors the pane for the `CONTEXT_LIMIT_PATTERN` regex. When matched (once per task, via `contextLimitWarned` flag), it broadcasts a status line and surfaces a `yes_no` question — "Run /compact?" — via the normal question flow. If the user answers yes, `/compact` + Enter is sent to the tmux session. On mobile, this appears as a standard interaction sheet prompt.
 
 ## Persistence
 

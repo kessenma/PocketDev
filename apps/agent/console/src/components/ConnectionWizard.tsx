@@ -55,14 +55,14 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
   }
 
   return (
-    <Card className="h-full rounded-[2rem] border border-black/12 bg-[linear-gradient(180deg,#f4f0e8_0%,#f4f0e8_100%)] text-black shadow-[0_14px_40px_rgba(0,0,0,0.12)]">
+    <Card className="h-full rounded-[2rem]">
       <CardHeader>
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-black/45">Pairing Studio</p>
-        <CardTitle className="flex items-center gap-2 text-black">
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-foreground/45">Pairing Studio</p>
+        <CardTitle className="flex items-center gap-2">
           <Smartphone className="h-5 w-5" />
           Connect Mobile App
         </CardTitle>
-        <CardDescription className="text-black/60">
+        <CardDescription>
           Scan the QR code with the PocketDev mobile app, or enter the connection details manually.
         </CardDescription>
       </CardHeader>
@@ -79,10 +79,10 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
             />
           </div>
           <div className="flex items-end gap-2">
-            <Button type="submit" variant="secondary" className="bg-black text-[#f4f0e8] hover:bg-black/85" disabled={loading || !customCode.trim()}>
+            <Button type="submit" variant="secondary" disabled={loading || !customCode.trim()}>
               Set
             </Button>
-            <Button type="button" variant="outline" size="icon" className="border-black/15 bg-white/60 hover:bg-white" onClick={handleRefresh} disabled={loading}>
+            <Button type="button" variant="outline" size="icon" onClick={handleRefresh} disabled={loading}>
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
@@ -106,7 +106,7 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
             {/* Manual connection info */}
             <div className="space-y-3">
               <p className="text-sm font-medium">Manual Connection</p>
-              <div className="flex items-center gap-2 rounded-[1.4rem] border border-black/10 bg-black p-4 font-mono text-sm text-[#f4f0e8]">
+              <div className="flex items-center gap-2 rounded-[1.4rem] border border-border bg-black p-4 font-mono text-sm text-[#f4f0e8]">
                 <p className="flex-1 break-all font-bold">{connectionUrl}</p>
                 <CopyButton
                   value={connectionUrl!}
@@ -116,7 +116,7 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
                   onCopied={showCopyToast}
                 />
               </div>
-              <div className="space-y-0.5 px-1 text-xs text-black/55">
+              <div className="space-y-0.5 px-1 text-xs text-foreground/55">
                 <p>Server: {serverIp}:{port}</p>
                 <p>Passcode: {passcode}</p>
               </div>
@@ -129,8 +129,8 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
             </div>
           </>
         ) : (
-          <div className="rounded-[1.4rem] border border-black/10 bg-white/70 p-6 text-center">
-            <p className="text-sm text-black/60">
+          <div className="rounded-[1.4rem] border border-border bg-muted/50 p-6 text-center">
+            <p className="text-sm text-foreground/60">
               Set a passcode above or click refresh to generate one automatically.
             </p>
           </div>

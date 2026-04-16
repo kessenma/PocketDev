@@ -631,6 +631,8 @@ class CodexTaskStreamAdapter extends BaseTaskStreamAdapter {
         const pending = itemId ? this.pendingToolCalls.get(itemId) : undefined
         const preview = truncate(extractCodexToolResult(itemType, item), 300)
         if (!preview) return
+        // Surface context compaction as a visible status so it's not lost in the stream.
+        this.sink.emitActivity({ type: 'status', provider: 'codex', message: 'Context compacted by Codex' })
         this.sink.emitActivity({
           type: 'tool_result',
           provider: 'codex',
@@ -790,7 +792,16 @@ function classifyToolUse(tool: string, input: Record<string, unknown>): {
     return { kind: 'agent', title: 'Agent Action', detail: description ?? command }
   }
   if (normalizedTool === 'todowrite' || normalizedTool === 'update_plan' || normalizedTool === 'codextodolist' || normalizedTool === 'plan') {
-    return { kind: 'plan', title: 'Planning', detail: description ?? summarizeTodoList(input) }
+    // Include the raw todos/items array in metadata for the checklist card + progress bar on mobile.
+    const todos = Array.isArray(input.todos) ? input.todos
+      : Array.isArray(input.items) ? input.items
+      : undefined
+    return {
+      kind: 'plan',
+      title: 'Planning',
+      detail: description ?? summarizeTodoList(input),
+      ...(todos ? { metadata: { todos } } : {}),
+    }
   }
   if (normalizedTool.startsWith('mcp:') || normalizedTool === 'mcp_tool_call') {
     return { kind: 'mcp', title: 'MCP', detail: description ?? command ?? tool }

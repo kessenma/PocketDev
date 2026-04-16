@@ -73,16 +73,16 @@ export function DomainSettings({ onSettingsChanged }: { onSettingsChanged?: (set
   const hasChanged = (domainInput.trim() || '') !== (settings?.domain || '')
 
   return (
-    <Card className="rounded-[1.1rem] border-2 border-[var(--border)] bg-[#1a1713] text-[#f5eedf] shadow-[0_18px_42px_rgba(0,0,0,0.28)]">
+    <Card className="rounded-[1.1rem] border-2 border-border shadow-[0_18px_42px_rgba(0,0,0,0.18)]">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black/75 bg-[#2d5fe5] text-white shadow-[4px_4px_0_0_rgba(0,0,0,0.28)]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border-2 border-black/75 bg-[var(--bauhaus-blue)] text-white shadow-[4px_4px_0_0_rgba(0,0,0,0.28)]">
             <Globe className="h-4 w-4" />
           </div>
           <div className="flex items-center gap-3">
             <span className="font-heading text-sm font-semibold uppercase tracking-[0.32em]">Domain & HTTPS</span>
             {settings && (
-              <Badge className={settings.httpsEnabled ? 'bg-[#f0c419] text-black' : 'bg-[#2a241d] text-[#f5eedf]'}>
+              <Badge className={settings.httpsEnabled ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-secondary text-secondary-foreground'}>
                 {settings.httpsEnabled ? (
                   <><ShieldCheck className="mr-1 h-3 w-3" /> HTTPS Active</>
                 ) : (
@@ -95,13 +95,13 @@ export function DomainSettings({ onSettingsChanged }: { onSettingsChanged?: (set
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
-          <p className="text-sm text-[#f5eedf]/60">Loading...</p>
+          <p className="text-sm text-foreground/60">Loading...</p>
         ) : error && !settings ? (
           <p className="text-sm text-red-400">{error}</p>
         ) : (
           <>
             <div className="space-y-2">
-              <p className="text-xs text-[#f5eedf]/60">
+              <p className="text-xs text-foreground/60">
                 {settings?.domain
                   ? `Currently using domain: ${settings.domain} (Let's Encrypt certificate)`
                   : `Currently using IP-only mode: ${settings?.serverIp} (self-signed certificate)`}
@@ -117,12 +117,11 @@ export function DomainSettings({ onSettingsChanged }: { onSettingsChanged?: (set
                   setSuccess(null)
                 }}
                 placeholder="agent.example.com"
-                className="border-[var(--border)] bg-[#12100d] text-[#f5eedf] placeholder:text-[#f5eedf]/30"
               />
               <Button
                 onClick={handleApply}
                 disabled={saving || !hasChanged}
-                className="bg-[#f0c419] text-black hover:bg-[#d4ab14] disabled:opacity-50"
+                className="bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90 disabled:opacity-50"
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
               </Button>
@@ -131,7 +130,7 @@ export function DomainSettings({ onSettingsChanged }: { onSettingsChanged?: (set
                   variant="outline"
                   onClick={handleClear}
                   disabled={saving}
-                  className="border-[var(--border)] bg-[#2a241d] text-[#f5eedf] hover:bg-[#342d25]"
+                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 >
                   Clear
                 </Button>
@@ -141,7 +140,7 @@ export function DomainSettings({ onSettingsChanged }: { onSettingsChanged?: (set
             {error && <p className="text-sm text-red-400">{error}</p>}
             {success && <p className="text-sm text-green-400">{success}</p>}
 
-            <p className="text-xs text-[#f5eedf]/40">
+            <p className="text-xs text-foreground/40">
               Point your domain's DNS A record to this server's IP ({settings?.serverIp}), then enter it above.
               Caddy will automatically obtain a free Let's Encrypt certificate. Leave blank for a self-signed certificate.
             </p>

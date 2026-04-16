@@ -1,13 +1,14 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { Check, Minus, X } from 'lucide-react-native'
 import type { OpenCodeWizardStep, OpenCodeWizardStepStatus } from '@pocketdev/shared/types'
 
-const STEPS: Array<{ id: OpenCodeWizardStep; label: string }> = [
-  { id: 'review', label: 'Review' },
-  { id: 'install', label: 'Install' },
-  { id: 'verify', label: 'Verify' },
+const VISIBLE_STEPS: { key: OpenCodeWizardStep; label: string }[] = [
+  { key: 'review', label: 'Review' },
+  { key: 'install', label: 'Install' },
+  { key: 'verify', label: 'Verify' },
 ]
 
 interface Props {
@@ -20,41 +21,113 @@ export default function WizardStepper({ currentStep, stepStatuses }: Props) {
 
   return (
     <View style={styles.container}>
-      {STEPS.map((step) => {
-        const status = stepStatuses[step.id]
-        const active = currentStep === step.id
-        const complete = status === 'completed' || status === 'skipped'
-        const backgroundColor = active ? colors.primary : complete ? `${colors.primary}22` : colors.surface
-        const textColor = active ? colors.primaryText : colors.textSecondary
+      {VISIBLE_STEPS.map((step, index) => {
+        const status = stepStatuses[step.key]
+        const isActive = currentStep === step.key
+        const isLast = index === VISIBLE_STEPS.length - 1
 
         return (
-          <View key={step.id} style={[styles.pill, { backgroundColor, borderColor: colors.border }]}>
-            <Text style={[styles.pillText, { color: textColor }]}>{step.label}</Text>
-          </View>
+          <React.Fragment key={step.key}>
+            <View style={styles.stepItem}>
+              <StepCircle status={status} isActive={isActive} colors={colors} />
+              <Text
+                style={[
+                  styles.label,
+                  {
+                    color: isActive ? colors.primary : status === 'completed' ? colors.text : colors.textTertiary,
+                    fontWeight: isActive ? '600' : '400',
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {step.label}
+              </Text>
+            </View>
+            {!isLast && (
+              <View
+                style={[
+                  styles.connector,
+                  {
+                    backgroundColor:
+                      status === 'completed' || status === 'skipped'
+                        ? colors.primary
+                        : colors.border,
+                  },
+                ]}
+              />
+            )}
+          </React.Fragment>
         )
       })}
     </View>
   )
 }
 
+function StepCircle({
+  status,
+  isActive,
+  colors,
+}: {
+  status: OpenCodeWizardStepStatus
+  isActive: boolean
+  colors: ReturnType<typeof useTheme>['colors']
+}) {
+  const bgColor =
+    status === 'completed'
+      ? colors.primary
+      : status === 'failed'
+        ? colors.error
+        : isActive
+          ? colors.primary
+          : colors.border
+
+  const iconColor = status === 'completed' || isActive ? colors.primaryText : colors.textTertiary
+
+  return (
+    <View style={[styles.circle, { backgroundColor: bgColor }]}>
+      {status === 'completed' && <Check color={iconColor} size={12} strokeWidth={3} />}
+      {status === 'skipped' && <Minus color={iconColor} size={12} strokeWidth={3} />}
+      {status === 'failed' && <X color="#fff" size={12} strokeWidth={3} />}
+      {status === 'active' && <View style={[styles.activeDot, { backgroundColor: iconColor }]} />}
+      {status === 'pending' && null}
+    </View>
+  )
+}
+
+const CIRCLE_SIZE = 24
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    gap: spacing[2],
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[3],
-  },
-  pill: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: borderRadius.full,
-    paddingVertical: spacing[2],
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
   },
-  pillText: {
+  stepItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  circle: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  connector: {
+    height: 2,
+    flex: 1,
+    marginHorizontal: 4,
+    marginBottom: 16,
+  },
+  label: {
     ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    textAlign: 'center',
   },
 })

@@ -57,8 +57,8 @@ export function startTask(
   const cwd = workingDirectory ?? project?.absolutePath ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
   insertTask(taskId, prompt, agentType, mode, cwd, project?.id ?? null, project?.name ?? null, model, sessionId)
 
-  // Record the initial user turn
-  if (sessionId) {
+  // Record the initial user turn (Claude has sessionId at start; Codex captures it later but still needs turn history)
+  if (sessionId || agentType === 'codex') {
     insertTaskTurn(crypto.randomUUID(), taskId, 1, 'user', prompt)
   }
 
@@ -88,15 +88,16 @@ export function startTask(
   return taskId
 }
 
-/** Continue a completed Claude task with a follow-up message */
+/** Continue a completed Claude or Codex task with a follow-up message */
 export function continueTask(taskId: string, prompt: string, model: string | null = null): boolean {
   const task = getTask(taskId)
   if (!task) return false
   if (task.status !== 'completed' && task.status !== 'failed') return false
-  if (task.agentType !== 'claude' || !task.sessionId) return false
+  if ((task.agentType !== 'claude' && task.agentType !== 'codex') || !task.sessionId) return false
 
   const newTurnCount = (task.turnCount ?? 1) + 1
   const turnModel = model ?? task.model
+  const cwd = task.workingDirectory ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
 
   // Record the user turn
   insertTaskTurn(crypto.randomUUID(), taskId, newTurnCount, 'user', prompt)
@@ -104,22 +105,39 @@ export function continueTask(taskId: string, prompt: string, model: string | nul
   // Reset task status for the new turn
   resetTaskForContinuation(taskId, newTurnCount)
 
-  const cwd = task.workingDirectory ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
-  console.log(`[task-manager] Continuing task ${taskId} (turn ${newTurnCount}) via tmux`)
-
-  const proc = new ManagedAgentProcess({
-    taskId,
-    prompt,
-    cwd,
-    mode: 'default',
-    model: turnModel,
-    sessionId: task.sessionId,
-    turnNumber: newTurnCount,
-    onComplete: () => { processes.delete(taskId) },
-    provider: claudeProviderConfig(),
-  })
-  processes.set(taskId, proc)
-  void proc.start()
+  if (task.agentType === 'codex') {
+    console.log(`[task-manager] Continuing codex task ${taskId} (turn ${newTurnCount}) via stdio`)
+    const command = buildCommand('codex', prompt, turnModel, 'default')
+    const proc = new ManagedProcess({
+      taskId,
+      command,
+      cwd,
+      mode: 'default',
+      agentType: 'codex',
+      prompt,
+      model: turnModel,
+      sessionId: task.sessionId,
+      turnNumber: newTurnCount,
+      onComplete: () => { processes.delete(taskId) },
+    })
+    processes.set(taskId, proc)
+    proc.start()
+  } else {
+    console.log(`[task-manager] Continuing task ${taskId} (turn ${newTurnCount}) via tmux`)
+    const proc = new ManagedAgentProcess({
+      taskId,
+      prompt,
+      cwd,
+      mode: 'default',
+      model: turnModel,
+      sessionId: task.sessionId,
+      turnNumber: newTurnCount,
+      onComplete: () => { processes.delete(taskId) },
+      provider: claudeProviderConfig(),
+    })
+    processes.set(taskId, proc)
+    void proc.start()
+  }
 
   return true
 }

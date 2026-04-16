@@ -122,6 +122,21 @@ Hooks file path: `/tmp/pocketdev-events-{taskId}.jsonl`
 - **Ready signals**: "describe a task to get started", "type @ to mention files", etc.
 - **Trust prompt**: auto-accepted (Down arrow + Enter)
 
+### Context-Limit Detection
+
+Claude's built-in context-window warnings are detected by pattern-matching every pane snapshot:
+
+```
+/context window.*(?:full|limit|approaching|at \d{2,3}%)|use \/compact|run \/compact/i
+```
+
+Fires at most once per task (`contextLimitWarned` flag). On match:
+1. Broadcasts `task.output`: `[claude] Context window approaching limit`
+2. Emits a `task.question` (yes/no): "Claude's context window is nearly full. Run /compact to summarise and free space?"
+3. If the user answers `"yes"`, the server sends `/compact\n` to the Claude tmux session
+
+The mobile `TaskInteractionSheet` surfaces this automatically through the standard yes/no question path — no extra client code required.
+
 ### Temp File Lifecycle
 
 Files created per task:

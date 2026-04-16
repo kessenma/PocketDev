@@ -21,6 +21,8 @@
     "@icons-pack/react-simple-icons": "^13.13.0",
     "@pocketdev/db": "workspace:^",
     "@pocketdev/shared": "workspace:^",
+    "@simplewebauthn/browser": "^13.2.2",
+    "@simplewebauthn/server": "^13.2.2",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-router": "^1.166.2",
     "@tanstack/react-start": "^1.166.2",

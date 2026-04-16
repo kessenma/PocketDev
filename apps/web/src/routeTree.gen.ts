@@ -12,7 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ArchitectureRouteImport } from './routes/architecture'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminPushRouteImport } from './routes/admin/push'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminBetaRouteImport } from './routes/admin/beta'
 
 const ArchitectureRoute = ArchitectureRouteImport.update({
   id: '/architecture',
@@ -29,9 +32,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPushRoute = AdminPushRouteImport.update({
   id: '/push',
   path: '/push',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBetaRoute = AdminBetaRouteImport.update({
+  id: '/beta',
+  path: '/beta',
   getParentRoute: () => AdminRoute,
 } as any)
 
@@ -39,27 +57,58 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/architecture': typeof ArchitectureRoute
+  '/admin/beta': typeof AdminBetaRoute
+  '/admin/login': typeof AdminLoginRoute
   '/admin/push': typeof AdminPushRoute
+  '/admin/settings': typeof AdminSettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/architecture': typeof ArchitectureRoute
+  '/admin/beta': typeof AdminBetaRoute
+  '/admin/login': typeof AdminLoginRoute
   '/admin/push': typeof AdminPushRoute
+  '/admin/settings': typeof AdminSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/architecture': typeof ArchitectureRoute
+  '/admin/beta': typeof AdminBetaRoute
+  '/admin/login': typeof AdminLoginRoute
   '/admin/push': typeof AdminPushRoute
+  '/admin/settings': typeof AdminSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/architecture' | '/admin/push'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/architecture'
+    | '/admin/beta'
+    | '/admin/login'
+    | '/admin/push'
+    | '/admin/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/architecture' | '/admin/push'
-  id: '__root__' | '/' | '/admin' | '/architecture' | '/admin/push'
+  to:
+    | '/'
+    | '/admin'
+    | '/architecture'
+    | '/admin/beta'
+    | '/admin/login'
+    | '/admin/push'
+    | '/admin/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/architecture'
+    | '/admin/beta'
+    | '/admin/login'
+    | '/admin/push'
+    | '/admin/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -91,6 +140,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/push': {
       id: '/admin/push'
       path: '/push'
@@ -98,15 +154,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPushRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/beta': {
+      id: '/admin/beta'
+      path: '/beta'
+      fullPath: '/admin/beta'
+      preLoaderRoute: typeof AdminBetaRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminBetaRoute: typeof AdminBetaRoute
+  AdminLoginRoute: typeof AdminLoginRoute
   AdminPushRoute: typeof AdminPushRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminBetaRoute: AdminBetaRoute,
+  AdminLoginRoute: AdminLoginRoute,
   AdminPushRoute: AdminPushRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

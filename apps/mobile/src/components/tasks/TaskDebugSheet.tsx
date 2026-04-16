@@ -16,12 +16,20 @@ import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
 import type { TaskDebugIssueKind, TaskDebugSelection } from './task-debug-utils'
 
+type PendingPermission = {
+  tool_name?: string
+  tool_use_id?: string
+  description?: string
+}
+
 type Props = {
   visible: boolean
   selection: TaskDebugSelection
   onClose: () => void
   onSelect: (selection: TaskDebugSelection) => void
   onContinue: () => void
+  /** Pending permission denials for the current task — used to populate the permissions path */
+  pendingPermissions?: PendingPermission[]
 }
 
 const OPTIONS: Array<{
@@ -50,6 +58,7 @@ export default function TaskDebugSheet({
   onClose,
   onSelect,
   onContinue,
+  pendingPermissions = [],
 }: Props) {
   const { colors } = useTheme()
 
@@ -111,14 +120,31 @@ export default function TaskDebugSheet({
             </View>
           </ScrollView>
 
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            {selection === 'permissions' ? (
-              <Text style={[styles.placeholderText, { color: colors.textTertiary }]}>
-                Permission repair is not wired yet.
+          {selection === 'permissions' && pendingPermissions.length > 0 ? (
+            <View style={[styles.permissionsPanel, { borderTopColor: colors.border, backgroundColor: colors.panelAlt }]}>
+              <Text style={[styles.permissionsTitle, { color: colors.textSecondary }]}>
+                {pendingPermissions.length} pending approval{pendingPermissions.length > 1 ? 's' : ''}
               </Text>
-            ) : null}
-            <BauhausButton onPress={onContinue} disabled={selection == null}>
-              Continue
+              {pendingPermissions.map((p, i) => (
+                <View key={p.tool_use_id ?? i} style={[styles.permissionsItem, { borderColor: colors.border }]}>
+                  <ShieldAlert color='#f59e0b' size={12} strokeWidth={2.25} style={styles.permissionsIcon} />
+                  <Text style={[styles.permissionsItemText, { color: colors.text }]} numberOfLines={1}>
+                    {p.tool_name ?? 'Tool'}{p.description ? ` — ${p.description}` : ''}
+                  </Text>
+                </View>
+              ))}
+              <Text style={[styles.permissionsHint, { color: colors.textTertiary }]}>
+                Close this sheet and answer the permission request in the task stream to let the agent continue.
+              </Text>
+            </View>
+          ) : null}
+
+          <View style={[styles.footer, { borderTopColor: colors.border }]}>
+            <BauhausButton
+              onPress={onContinue}
+              disabled={selection == null}
+            >
+              {selection === 'permissions' ? 'Go to Task Stream' : 'Continue'}
             </BauhausButton>
           </View>
         </SafeAreaView>
@@ -209,5 +235,35 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     ...typeStyles.meta,
+  },
+  permissionsPanel: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderTopWidth: 1,
+    gap: spacing[2],
+  },
+  permissionsTitle: {
+    ...typeStyles.meta,
+    fontWeight: '700',
+  },
+  permissionsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+  },
+  permissionsIcon: {
+    flexShrink: 0,
+  },
+  permissionsItemText: {
+    ...typeStyles.bodySmall,
+    flex: 1,
+  },
+  permissionsHint: {
+    ...typeStyles.bodySmall,
+    marginTop: spacing[1],
   },
 })

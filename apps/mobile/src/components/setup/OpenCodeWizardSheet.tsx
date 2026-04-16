@@ -4,7 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
-import { ChevronLeft, X, Check } from 'lucide-react-native'
+import { ChevronLeft, X, Check, RotateCcw } from 'lucide-react-native'
 import type {
   OpenCodeSetupStatus,
   OpenCodeWizardStep,
@@ -38,6 +38,7 @@ type WizardAction =
   | { type: 'STEP_FAILED'; step: OpenCodeWizardStep; error: string }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
+  | { type: 'FORCE_REINSTALL' }
 
 function getInitialState(): WizardState {
   const stepStatuses = {} as Record<OpenCodeWizardStep, OpenCodeWizardStepStatus>
@@ -135,6 +136,13 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, stepStatuses: nextStatuses, error: null }
     }
 
+    case 'FORCE_REINSTALL': {
+      const nextStatuses = { ...state.stepStatuses }
+      nextStatuses['install'] = 'active'
+      if (nextStatuses['verify'] === 'skipped') nextStatuses['verify'] = 'pending'
+      return { ...state, currentStep: 'install', stepStatuses: nextStatuses, error: null, allConfigured: false }
+    }
+
     default:
       return state
   }
@@ -172,6 +180,14 @@ export default function OpenCodeWizardSheet({ visible, onClose, onComplete }: Pr
           {state.openCodeStatus?.version ? (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>v{state.openCodeStatus.version}</Text>
           ) : null}
+          <TouchableOpacity
+            style={styles.reinstallButton}
+            onPress={() => dispatch({ type: 'FORCE_REINSTALL' })}
+            activeOpacity={0.7}
+          >
+            <RotateCcw color={colors.textTertiary} size={14} strokeWidth={2.25} />
+            <Text style={[styles.reinstallText, { color: colors.textTertiary }]}>Reinstall</Text>
+          </TouchableOpacity>
         </View>
       )
     }
@@ -294,5 +310,17 @@ const styles = StyleSheet.create({
   },
   completedDetail: {
     ...typographyScale.sm,
+  },
+  reinstallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+    marginTop: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  reinstallText: {
+    ...typographyScale.xs,
+    fontWeight: '500',
   },
 })
