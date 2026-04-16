@@ -30,7 +30,10 @@ function sessionCookieOpts(maxAge: number) {
   return {
     httpOnly: true,
     sameSite: 'strict' as const,
-    path: '/admin',
+    // Path must be '/' so the cookie is sent with server-function requests
+    // (which go to /_serverFn/*), not just /admin/* pages.  Security is
+    // preserved by httpOnly + sameSite=strict + secure in prod.
+    path: '/',
     maxAge,
     secure: process.env.NODE_ENV === 'production',
   }
@@ -82,7 +85,7 @@ export const loginWithPassword = createServerFn({ method: 'POST' })
   })
 
 export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
-  deleteCookie(SESSION_COOKIE, { path: '/admin' })
+  deleteCookie(SESSION_COOKIE, { path: '/' })
   return { success: true }
 })
 
@@ -191,7 +194,7 @@ export const verifyPasskeyRegistration = createServerFn({ method: 'POST' })
       transports: (data.response.response?.transports ?? []) as string[],
     })
 
-    deleteCookie(CHALLENGE_COOKIE, { path: '/admin' })
+    deleteCookie(CHALLENGE_COOKIE, { path: '/' })
     return { success: true }
   })
 
@@ -261,6 +264,6 @@ export const verifyPasskeyAuth = createServerFn({ method: 'POST' })
 
     const token = await computeSessionToken()
     setCookie(SESSION_COOKIE, token, sessionCookieOpts(60 * 60 * 24 * 30))
-    deleteCookie(CHALLENGE_COOKIE, { path: '/admin' })
+    deleteCookie(CHALLENGE_COOKIE, { path: '/' })
     return { success: true }
   })
