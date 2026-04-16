@@ -480,6 +480,9 @@ export function claudeProviderConfig(): TmuxProviderConfig {
         }
       }
       if (ctx.model) args.push('--model', shellEscape(ctx.model))
+      // Pass prompt directly via -p so Claude starts processing immediately,
+      // bypassing the v2.x home screen whose input field doesn't accept programmatic Enter.
+      args.push('-p', shellEscape(ctx.prompt))
 
       const script = [
         '#!/bin/bash',
@@ -499,17 +502,10 @@ export function claudeProviderConfig(): TmuxProviderConfig {
     },
 
     async onPaneSnapshot(snapshot, ctx) {
-      // Send prompt once Claude's TUI is ready for input.
-      // Flatten to a single line — literal \n sent via tmux triggers multi-line edit mode
-      // in Claude's Ink TUI, causing Enter to add a newline instead of submitting.
+      // Mark prompt as sent once the TUI is visible. The prompt itself is passed via
+      // -p at startup (see setup()), so the TUI starts processing immediately without
+      // any typing into the home screen input field.
       if (!ctx.promptSent && isClaudeReady(snapshot)) {
-        const singleLinePrompt = ctx.prompt.replace(/\r?\n/g, ' ').trim()
-        ctx.broadcastOutput('[claude] TUI ready — sending prompt...')
-        // Delay before injecting the prompt: Claude Code v2.x shows a home dashboard
-        // on startup, and the chat input isn't ready until that screen fully renders.
-        // node-pty fires processPtySnapshot only ~150ms after the welcome box appears,
-        // which is too early. 800ms matches the previous tmux poll cadence (~750ms).
-        setTimeout(() => ctx.sendLine(singleLinePrompt), 800)
         return { type: 'continue', markPromptSent: true }
       }
 
