@@ -46,6 +46,19 @@ echo "  → Agent version: $AGENT_VERSION"
 
 cp "$AGENT_DIR/dist/index.js" "$STAGING_DIR/pocketdev-agent/index.js"
 
+# Stage native PTY module alongside the bundle.
+# node-pty-prebuilt-multiarch is marked --external in bun build so the
+# bundled index.js references it at runtime. The prebuilt .node binary
+# must be present next to index.js on the target server.
+if [ -d "$AGENT_DIR/node_modules/node-pty-prebuilt-multiarch" ]; then
+  mkdir -p "$STAGING_DIR/pocketdev-agent/node_modules"
+  cp -r "$AGENT_DIR/node_modules/node-pty-prebuilt-multiarch" \
+        "$STAGING_DIR/pocketdev-agent/node_modules/node-pty-prebuilt-multiarch"
+  echo "  → Staged node-pty-prebuilt-multiarch native module"
+else
+  echo "  ⚠ node-pty-prebuilt-multiarch not found in node_modules — run pnpm install first"
+fi
+
 # Copy Drizzle migrations
 cp -r "$AGENT_DIR/drizzle" "$STAGING_DIR/pocketdev-agent/drizzle"
 

@@ -20,6 +20,7 @@
  */
 
 import type { PlanQuestion, PlanStep, TaskActivity, TaskQuestion } from '@pocketdev/shared/types'
+import { ClaudePtyRunner } from './claude-pty-runner.ts'
 import { eq } from 'drizzle-orm'
 import {
   getDb,
@@ -99,7 +100,7 @@ export interface SetupCtx {
 }
 
 export interface SetupResult {
-  /** Full shell command (or script path) to run inside the tmux session */
+  /** Full shell command (or script path) to run */
   command: string
   /** If set, poll this file for output lines (file mode). Omit for pane mode. */
   outputFilePath?: string
@@ -107,20 +108,26 @@ export interface SetupResult {
   hooksFilePath?: string
   /** Temp files to delete 5 s after finish */
   tempFiles?: string[]
+  /** When true, spawn via node-pty instead of tmux. Used for Claude tasks. */
+  usePty?: boolean
 }
 
 export interface PaneCtx {
   taskId: string
   /** The task's prompt text — needed by pane-mode providers to send it to the TUI */
   prompt: string
-  tmuxSession: string
   /** Whether the user's task prompt has been sent to the TUI (pane-mode providers) */
   promptSent: boolean
   /** Milliseconds since the pane content last changed */
   lastChangeMs: number
   registerQuestion(q: TaskQuestion, onAnswer: (a: string) => void): void
   broadcastOutput(line: string): void
-  sendToTmux(data: string): void
+  /** Send literal text followed by Enter. Routes to pty.write() or tmux send-keys -l. */
+  sendLine(text: string): void
+  /** Send raw bytes — ANSI escape sequences, control chars. Routes to pty.write() or tmux key mapping. */
+  sendRaw(bytes: string): void
+  /** Navigate a numbered TUI menu: Down (optionIndex) times then Enter. */
+  sendMenuSelection(optionIndex: number): void
 }
 
 export type PaneAction =
@@ -486,6 +493,7 @@ export function claudeProviderConfig(): TmuxProviderConfig {
       return {
         command: scriptPath,
         hooksFilePath,
+        usePty: true,
         tempFiles: [scriptPath, hooksSettingsPath, hooksFilePath],
       }
     },
@@ -497,16 +505,14 @@ export function claudeProviderConfig(): TmuxProviderConfig {
       if (!ctx.promptSent && isClaudeReady(snapshot)) {
         const singleLinePrompt = ctx.prompt.replace(/\r?\n/g, ' ').trim()
         ctx.broadcastOutput('[claude] TUI ready — sending prompt...')
-        await exec(`tmux send-keys -t ${ctx.tmuxSession} -l ${shellEscape(singleLinePrompt)}`)
-        await Bun.sleep(100)
-        await exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`)
+        ctx.sendLine(singleLinePrompt)
         return { type: 'continue', markPromptSent: true }
       }
 
       // Auto-accept Claude workspace trust dialog — fires per new directory.
       // The cursor defaults to option 1 (Yes, I trust this folder); Enter confirms.
       if (/Quick\s*safety\s*check|Is\s*this\s*a\s*project\s*you\s*created/i.test(snapshot)) {
-        void exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`)
+        ctx.sendRaw('\r')
         return { type: 'continue' }
       }
 
@@ -542,8 +548,7 @@ export function claudeProviderConfig(): TmuxProviderConfig {
           },
           onAnswer: (answer) => {
             if (answer === 'yes') {
-              void exec(`tmux send-keys -t ${ctx.tmuxSession} -l '/compact'`)
-                .then(() => exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`))
+              ctx.sendLine('/compact')
             }
           },
         }
@@ -573,8 +578,7 @@ export function claudeProviderConfig(): TmuxProviderConfig {
           // Claude's ink-select-input menu uses arrow keys to navigate; Enter confirms.
           // The cursor starts at option 1, so navigate Down (answer-1) times then Enter.
           const optionIndex = Math.max(0, parseInt(answer, 10) - 1)
-          const keys = [...Array(optionIndex).fill('Down'), 'Enter'].join(' ')
-          void exec(`tmux send-keys -t ${ctx.tmuxSession} ${keys}`)
+          ctx.sendMenuSelection(optionIndex)
         },
       }
     },
@@ -636,18 +640,16 @@ export function copilotProviderConfig(): TmuxProviderConfig {
       // Auto-answer trust prompt
       if (TRUST_PROMPT_PATTERN.test(snapshot)) {
         ctx.broadcastOutput('[copilot] Trust prompt detected — auto-accepting...')
-        await exec(`tmux send-keys -t ${ctx.tmuxSession} Down`)
+        ctx.sendRaw('\x1b[B')  // Down arrow
         await Bun.sleep(300)
-        await exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`)
+        ctx.sendRaw('\r')      // Enter
         return { type: 'continue' }
       }
 
       // Send prompt when TUI is ready for the first time
       if (!ctx.promptSent && isCopilotReady(snapshot)) {
         ctx.broadcastOutput('[copilot] TUI ready — sending prompt...')
-        await exec(`tmux send-keys -t ${ctx.tmuxSession} -l ${shellEscape(ctx.prompt)}`)
-        await Bun.sleep(100)
-        await exec(`tmux send-keys -t ${ctx.tmuxSession} Enter`)
+        ctx.sendLine(ctx.prompt)
         return { type: 'continue', markPromptSent: true }
       }
 
@@ -707,11 +709,19 @@ export class ManagedAgentProcess {
   private promptSent = false
   private lastPaneChangeMs = 0
 
-  // Pane poll state
+  // Pane poll state (tmux / Copilot path)
   private previousPane = ''
   private pendingTuiQuestionId: string | null = null
   private panePollCountdown = 0
   private seenPaneLineKeys = new Set<string>()
+
+  // PTY state (Claude path — node-pty replaces tmux for Claude tasks)
+  private ptyRunner: ClaudePtyRunner | null = null
+  private ptyBuffer = ''
+  private ptyBufferTimer: ReturnType<typeof setTimeout> | null = null
+  private lastPtyDataMs = 0
+  private readonly PTY_BUFFER_MAX = 50_000  // chars — keep last ~50 KB of output
+  private readonly PTY_DEBOUNCE_MS = 150    // ms — wait for output burst to settle
 
   // Question tracking
   private readonly questionResponders = new Map<string, (answer: string) => void | Promise<void>>()
@@ -747,7 +757,7 @@ export class ManagedAgentProcess {
               this.finish('completed')
             },
           },
-          (data) => this.sendToTmux(data),
+          (data) => this.sendToProcess(data),
         )
       : null
   }
@@ -772,24 +782,57 @@ export class ManagedAgentProcess {
       }
       return
     }
-    // Fallback: send raw input to tmux
-    this.sendToTmux(`${answer}\n`)
+    // Fallback: send raw input to the process
+    this.sendToProcess(`${answer}\n`)
   }
 
   sendInput(data: string) {
-    this.sendToTmux(data)
+    this.sendToProcess(data)
   }
 
+  /** Route process input to PTY (Claude) or tmux (Copilot). */
+  private sendToProcess(data: string) {
+    if (this._status !== 'running') return
+    const stripped = data.replace(/\n$/, '')
+    if (!stripped) return
+    if (this.ptyRunner) {
+      this.ptyRunner.writeLine(stripped)
+    } else {
+      this.sendToTmux(stripped)
+    }
+  }
+
+  /** Send to tmux session (Copilot path only). */
   private sendToTmux(data: string) {
     if (this._status !== 'running') return
     const stripped = data.replace(/\n$/, '')
     if (!stripped) return
-    // Single-char answers (digits/y/n): send as direct keystroke; longer text: use -l literal mode
+    // Single-char answers: send as direct keystroke; longer text: use -l literal mode
     if (stripped.length === 1) {
       void exec(`tmux send-keys -t ${this.tmuxSession} ${shellEscape(stripped)} Enter`)
     } else {
       void exec(`tmux send-keys -t ${this.tmuxSession} -l ${shellEscape(stripped)} && tmux send-keys -t ${this.tmuxSession} Enter`)
     }
+  }
+
+  /** Send literal text + Enter via tmux (used in Copilot pane ctx). */
+  private tmuxSendLine(text: string): void {
+    void exec(`tmux send-keys -t ${this.tmuxSession} -l ${shellEscape(text)} && tmux send-keys -t ${this.tmuxSession} Enter`)
+  }
+
+  /** Map ANSI bytes to tmux key names (used in Copilot pane ctx). */
+  private tmuxSendRaw(bytes: string): void {
+    if (bytes === '\r') { void exec(`tmux send-keys -t ${this.tmuxSession} Enter`); return }
+    if (bytes === '\x1b[B') { void exec(`tmux send-keys -t ${this.tmuxSession} Down`); return }
+    if (bytes === '\x1b[A') { void exec(`tmux send-keys -t ${this.tmuxSession} Up`); return }
+    if (bytes === '\x03') { void exec(`tmux send-keys -t ${this.tmuxSession} C-c`); return }
+    void exec(`tmux send-keys -t ${this.tmuxSession} -l ${shellEscape(bytes)}`)
+  }
+
+  /** Navigate a tmux TUI menu: Down N times then Enter (used in Copilot pane ctx). */
+  private tmuxSendMenuSelection(optionIndex: number): void {
+    const keys = [...Array(optionIndex).fill('Down'), 'Enter'].join(' ')
+    void exec(`tmux send-keys -t ${this.tmuxSession} ${keys}`)
   }
 
   async start() {
@@ -823,20 +866,49 @@ export class ManagedAgentProcess {
     this.hooksFilePath = setupResult.hooksFilePath ?? null
     this.tempFiles = setupResult.tempFiles ?? []
 
-    // Launch in tmux
-    const { exitCode } = await exec(
-      `tmux new-session -d -s ${this.tmuxSession} -x ${this.provider.tmuxWidth} -y ${this.provider.tmuxHeight} ${shellEscape(setupResult.command)}`,
-    )
+    if (setupResult.usePty) {
+      // ── Claude path: spawn inside a real PTY via node-pty ──────────────────
+      this.ptyRunner = new ClaudePtyRunner()
+      try {
+        await this.ptyRunner.spawn(setupResult.command, {
+          cols: this.provider.tmuxWidth,
+          rows: this.provider.tmuxHeight,
+          cwd: this.cwd,
+          env: {
+            ...process.env,
+            HOME: process.env.HOME ?? '/root',
+            TERM: 'xterm-256color',
+          } as Record<string, string>,
+          onData: (chunk) => this.onPtyData(chunk),
+          onExit: (code) => this.onPtyExit(code),
+        })
+      } catch (err) {
+        console.error(`[managed-agent] Failed to spawn PTY for task ${this.taskId}:`, err)
+        this.broadcastOutput('[agent] Failed to start PTY process')
+        this.finish('failed')
+        return
+      }
+      this.lastPtyDataMs = Date.now()
+      const permTag = `permission-mode: ${this.mode}`
+      console.log(`[managed-agent] Started PTY process for task ${this.taskId}`)
+      this.broadcastOutput(`[system] Session started — ${permTag}`)
+    } else {
+      // ── Copilot path: launch in tmux (unchanged) ───────────────────────────
+      const { exitCode } = await exec(
+        `tmux new-session -d -s ${this.tmuxSession} -x ${this.provider.tmuxWidth} -y ${this.provider.tmuxHeight} ${shellEscape(setupResult.command)}`,
+      )
 
-    if (exitCode !== 0) {
-      this.broadcastOutput('[agent] Failed to start tmux session')
-      this.finish('failed')
-      return
+      if (exitCode !== 0) {
+        this.broadcastOutput('[agent] Failed to start tmux session')
+        this.finish('failed')
+        return
+      }
+
+      const permTag = this.outputFilePath ? `permission-mode: ${this.mode}` : `model: ${this.model ?? 'default'}`
+      console.log(`[managed-agent] Started tmux session ${this.tmuxSession} for task ${this.taskId}`)
+      this.broadcastOutput(`[system] Session started — ${permTag}`)
     }
 
-    const permTag = this.outputFilePath ? `permission-mode: ${this.mode}` : `model: ${this.model ?? 'default'}`
-    console.log(`[managed-agent] Started tmux session ${this.tmuxSession} for task ${this.taskId}`)
-    this.broadcastOutput(`[system] Session started — ${permTag}`)
     this.schedulePoll()
   }
 
@@ -853,7 +925,25 @@ export class ManagedAgentProcess {
   private async poll() {
     if (this._status !== 'running' || this.finished) return
 
-    // ── FILE MODE: poll JSONL output + session exit ──────────────────────────
+    // ── PTY PATH (Claude): hooks file polling only — pane capture not used ──
+    if (this.ptyRunner) {
+      // Poll hooks file for structured events (PreToolUse/PostToolUse/Stop)
+      await this.pollHooksFile()
+      if (this.finished) return
+
+      // Startup timeout: no PTY data received within the startup window
+      if (!this.promptSent && Date.now() - this.startedAt > this.provider.startupTimeoutMs) {
+        this.broadcastOutput('[error] Agent startup timed out')
+        this.cleanup()
+        this.finish('failed')
+        return
+      }
+
+      this.schedulePoll()
+      return
+    }
+
+    // ── TMUX PATH (Copilot): FILE MODE — poll JSONL output + session exit ───
     if (this.outputFilePath) {
       let fileText = ''
       try {
@@ -906,7 +996,7 @@ export class ManagedAgentProcess {
       }
     }
 
-    // ── PANE MODE: startup timeout ───────────────────────────────────────────
+    // ── TMUX PATH: PANE MODE startup timeout ─────────────────────────────────
     if (!this.outputFilePath && !this.promptSent && Date.now() - this.startedAt > this.provider.startupTimeoutMs) {
       this.broadcastOutput('[error] Agent startup timed out')
       this.cleanup()
@@ -914,7 +1004,7 @@ export class ManagedAgentProcess {
       return
     }
 
-    // ── BOTH MODES: pane poll ────────────────────────────────────────────────
+    // ── TMUX PATH: pane poll (Copilot) ───────────────────────────────────────
     this.panePollCountdown--
     if (this.panePollCountdown <= 0) {
       this.panePollCountdown = this.provider.panePollEvery
@@ -1005,16 +1095,17 @@ export class ManagedAgentProcess {
     // If pane is stable but prompt has been sent, fall through to onPaneSnapshot
     // so the provider can detect idle completion.
 
-    // Call provider snapshot handler
+    // Call provider snapshot handler (tmux / Copilot path)
     const paneCtx: PaneCtx = {
       taskId: this.taskId,
       prompt: this.prompt,
-      tmuxSession: this.tmuxSession,
       promptSent: this.promptSent,
       lastChangeMs: Date.now() - this.lastPaneChangeMs,
       registerQuestion: (q, onAnswer) => this.registerQuestion(q, onAnswer),
       broadcastOutput: (line) => this.broadcastOutput(line),
-      sendToTmux: (data) => this.sendToTmux(data),
+      sendLine: (text) => this.tmuxSendLine(text),
+      sendRaw: (bytes) => this.tmuxSendRaw(bytes),
+      sendMenuSelection: (idx) => this.tmuxSendMenuSelection(idx),
     }
 
     const action = await Promise.resolve(this.provider.onPaneSnapshot(normalized, paneCtx))
@@ -1033,7 +1124,7 @@ export class ManagedAgentProcess {
 
       case 'send':
         if (action.literal) {
-          void exec(`tmux send-keys -t ${this.tmuxSession} -l ${shellEscape(action.keys)} && tmux send-keys -t ${this.tmuxSession} Enter`)
+          this.tmuxSendLine(action.keys)
         } else {
           this.sendToTmux(action.keys)
         }
@@ -1167,12 +1258,124 @@ export class ManagedAgentProcess {
     this.onComplete?.()
   }
 
+  // ── PTY path methods (Claude) ──────────────────────────────────────────────
+
+  private onPtyData(chunk: string): void {
+    if (this.finished) return
+    this.lastPtyDataMs = Date.now()
+    this.ptyBuffer += chunk
+    // Cap buffer size — keep only the most recent output (older frames are scrolled off)
+    if (this.ptyBuffer.length > this.PTY_BUFFER_MAX) {
+      this.ptyBuffer = this.ptyBuffer.slice(-this.PTY_BUFFER_MAX)
+    }
+    // Debounce: wait for burst to settle before running TUI detection
+    if (this.ptyBufferTimer) clearTimeout(this.ptyBufferTimer)
+    this.ptyBufferTimer = setTimeout(() => void this.processPtySnapshot(), this.PTY_DEBOUNCE_MS)
+  }
+
+  private async processPtySnapshot(): Promise<void> {
+    if (this.finished || this._status !== 'running' || !this.ptyRunner) return
+    this.ptyBufferTimer = null
+
+    const normalized = normalizePane(this.ptyBuffer)
+    if (!normalized) return
+
+    // Also poll hooks file on each snapshot cycle (structured events)
+    await this.pollHooksFile()
+    if (this.finished) return
+
+    const paneCtx: PaneCtx = {
+      taskId: this.taskId,
+      prompt: this.prompt,
+      promptSent: this.promptSent,
+      lastChangeMs: Date.now() - this.lastPtyDataMs,
+      registerQuestion: (q, onAnswer) => this.registerQuestion(q, onAnswer),
+      broadcastOutput: (line) => this.broadcastOutput(line),
+      sendLine: (text) => this.ptyRunner?.writeLine(text),
+      sendRaw: (bytes) => this.ptyRunner?.writeRaw(bytes),
+      sendMenuSelection: (idx) => this.ptyRunner?.sendMenuSelection(idx),
+    }
+
+    const action = await Promise.resolve(this.provider.onPaneSnapshot(normalized, paneCtx))
+
+    switch (action.type) {
+      case 'continue':
+        if (action.markPromptSent) this.promptSent = true
+        if (this.pendingTuiQuestionId) this.pendingTuiQuestionId = null
+        break
+
+      case 'complete':
+        this.cleanup()
+        this.finish(action.status)
+        return
+
+      case 'send':
+        if (this.ptyRunner) {
+          if (action.literal) {
+            this.ptyRunner.writeLine(action.keys)
+          } else {
+            this.ptyRunner.writeRaw(action.keys)
+          }
+        }
+        break
+
+      case 'question':
+        if (!this.pendingTuiQuestionId) {
+          this.pendingTuiQuestionId = action.question.questionId
+          this.broadcastOutput(`[system] Waiting for user approval: ${action.question.prompt}`)
+          this.registerQuestion(action.question, (answer) => {
+            action.onAnswer(answer)
+          })
+        }
+        break
+    }
+  }
+
+  private onPtyExit(exitCode: number): void {
+    if (this.finished) return
+    console.log(`[managed-agent] PTY exited for task ${this.taskId} | exitCode=${exitCode} | pendingQuestions=${this.questionResponders.size}`)
+
+    // Cancel debounced snapshot and flush final PTY data
+    if (this.ptyBufferTimer) {
+      clearTimeout(this.ptyBufferTimer)
+      this.ptyBufferTimer = null
+    }
+
+    // Final hooks file poll to catch Stop event written just before process exit
+    void this.pollHooksFile().then(() => {
+      if (!this.finished) {
+        // Plan mode always completes; otherwise treat non-zero exit as failure
+        const isError = this.mode !== 'plan' && exitCode !== 0
+
+        const pendingQCount = this.questionResponders.size
+        if (pendingQCount > 0) {
+          console.log(`[managed-agent] ⚠ PTY exited WITH ${pendingQCount} unanswered question(s)`)
+          for (const [qid, q] of this.questionDetails) {
+            console.log(`[managed-agent]   question ${qid}: type=${q.type} prompt="${q.prompt?.slice(0, 80)}"`)
+          }
+        }
+
+        this.cleanup()
+        this.finish(isError ? 'failed' : 'completed')
+      }
+    })
+  }
+
   private cleanup() {
     if (this.pollTimer) {
       clearTimeout(this.pollTimer)
       this.pollTimer = null
     }
-    void exec(`tmux kill-session -t ${this.tmuxSession} 2>/dev/null`)
+    if (this.ptyBufferTimer) {
+      clearTimeout(this.ptyBufferTimer)
+      this.ptyBufferTimer = null
+    }
+    if (this.ptyRunner) {
+      this.ptyRunner.kill()
+      this.ptyRunner = null
+    } else if (this.tmuxSession) {
+      void exec(`tmux kill-session -t ${this.tmuxSession} 2>/dev/null`)
+    }
   }
 
   private persistSessionId(sessionId: string) {

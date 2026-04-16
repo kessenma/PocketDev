@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { ChevronDown, ChevronUp, FileCode2, FolderOpen, Pin, Search, Trash2, X } from 'lucide-react-native'
+import { ChevronDown, ChevronUp, FileCode2, Filter, FolderOpen, Pin, Search, Trash2, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TreeEntry } from '@pocketdev/shared/types'
 import type { AgentType, TaskMode } from '@pocketdev/shared/schema'
@@ -22,7 +22,7 @@ import { addRecentPrompt } from '../../services/storage'
 import { listDirectory, searchFiles, fetchFileTree } from '../../services/api'
 import AISuggestions from './AISuggestions'
 import FindFilesButton from './FindFilesButton'
-import SelectionSearchButton from './SelectionSearchButton'
+import PromptFilterSheet from './PromptFilterSheet'
 import { useOnDeviceAIStore } from '../../stores/on-device-ai'
 import { useNewTaskDraftStore } from '../../stores/new-task-draft'
 import { useTaskStore } from '../../stores/tasks'
@@ -147,14 +147,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
   // --- On-device AI: manual trigger ---
   const [aiSearching, setAiSearching] = React.useState(false)
   const [aiNoResults, setAiNoResults] = React.useState(false)
-
-  // --- Prompt selection tracking (for selection-scoped file search) ---
-  const selectionRef = React.useRef<{ start: number; end: number } | null>(null)
-  const [promptSelection, setPromptSelection] = React.useState<{ start: number; end: number } | null>(null)
-
-  const selectedText = promptSelection
-    ? prompt.slice(promptSelection.start, promptSelection.end).trim()
-    : null
+  const [showFilterSheet, setShowFilterSheet] = React.useState(false)
 
   async function handleFindRelatedFiles(textOverride?: string) {
     const searchText = textOverride ?? prompt
@@ -295,13 +288,6 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             style={[styles.promptInput, { backgroundColor: colors.panelAlt, color: colors.text, borderColor: colors.border }]}
             value={prompt}
             onChangeText={(text) => { setPrompt(text); setAiNoResults(false) }}
-            onSelectionChange={(e) => {
-              const sel = e.nativeEvent.selection
-              const hasSelection = sel.end > sel.start
-              selectionRef.current = hasSelection ? sel : null
-              setPromptSelection(hasSelection ? sel : null)
-            }}
-            onBlur={() => setPromptSelection(null)}
             placeholder="What should the agent do?"
             placeholderTextColor={colors.textTertiary}
             multiline
@@ -333,17 +319,13 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             <View style={styles.findFilesMain}>
               <FindFilesButton searching={aiSearching} onPress={handleFindRelatedFiles} />
             </View>
-            {selectedText && selectedText.length >= 5 ? (
-              <SelectionSearchButton
-                searching={aiSearching}
-                selectedText={selectedText}
-                onPress={() => {
-                  const sel = selectionRef.current
-                  if (!sel) return
-                  handleFindRelatedFiles(prompt.slice(sel.start, sel.end).trim())
-                }}
-              />
-            ) : null}
+            <TouchableOpacity
+              style={[styles.filterButton, { borderColor: colors.border, backgroundColor: colors.panelAlt }]}
+              onPress={() => setShowFilterSheet(true)}
+              activeOpacity={0.7}
+            >
+              <Filter color={colors.textSecondary} size={16} strokeWidth={2.2} />
+            </TouchableOpacity>
           </View>
         ) : null}
         <AISuggestions />
@@ -352,6 +334,12 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             No closely related files found for this prompt.
           </Text>
         ) : null}
+        <PromptFilterSheet
+          visible={showFilterSheet}
+          prompt={prompt}
+          onClose={() => setShowFilterSheet(false)}
+          onSearch={(phrase) => handleFindRelatedFiles(phrase)}
+        />
 
         {/* ── File Context Picker ── */}
         <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
@@ -724,6 +712,14 @@ const styles = StyleSheet.create({
   },
   findFilesMain: {
     flex: 1,
+  },
+  filterButton: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing[3],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   aiNoResults: {
     ...typeStyles.bodySmall,
