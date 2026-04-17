@@ -1,0 +1,6 @@
+export { ManagedAgentProcess } from './managed-agent-process.ts'
+export type { ManagedAgentProcessOptions } from './managed-agent-process.ts'
+export { claudeProviderConfig } from './claude-provider.ts'
+export { copilotProviderConfig } from './copilot-provider.ts'
+export { minimaxProviderConfig } from './minimax-provider.ts'
+export type { AgentProviderConfig, SetupCtx, SetupResult, PaneCtx, PaneAction, FinishCtx } from './types.ts'

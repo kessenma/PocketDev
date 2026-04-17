@@ -73,6 +73,11 @@ export default function MainTabs() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.panel },
         headerTintColor: colors.text,
+        headerTitleStyle: {
+          fontFamily: typeStyles.sectionTitle.fontFamily,
+          fontSize: typeStyles.sectionTitle.fontSize,
+          fontWeight: '800',
+        },
         sceneStyle: { backgroundColor: colors.background },
         tabBarStyle: isTabletDevice
           ? { display: 'none' }

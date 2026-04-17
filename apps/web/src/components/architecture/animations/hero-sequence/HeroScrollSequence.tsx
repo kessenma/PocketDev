@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import {
   motion,
+  AnimatePresence,
   useMotionValueEvent,
   useReducedMotion,
   useScroll,
@@ -24,6 +25,7 @@ import { brandAssets } from '../../shared/brand-assets'
 import { BrandAssetIcon } from '../../shared/BrandAssetIcon'
 import { architectureTextStyles } from '../../shared/theme'
 import { HeroScene } from './HeroScene'
+import { BetaInlineView } from './BetaInlineView'
 
 const PAPER = '#f7f1e3'
 const INSTALL_COMMAND = 'curl -fsSL https://pocketdev.run/install.sh | bash'
@@ -43,11 +45,11 @@ export function HeroScrollSequence({
   const [progress, setProgress] = useState(0)
   const [vpSize, setVpSize] = useState({ w: 1280, h: 800 })
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
+  const [betaOpen, setBetaOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const sync = () =>
-      setVpSize({ w: window.innerWidth, h: window.innerHeight })
+    const sync = () => setVpSize({ w: window.innerWidth, h: window.innerHeight })
     sync()
     window.addEventListener('resize', sync)
     return () => window.removeEventListener('resize', sync)
@@ -62,6 +64,12 @@ export function HeroScrollSequence({
     return () => mq.removeEventListener('change', sync)
   }, [])
 
+  // Lock scroll while beta form is open
+  useEffect(() => {
+    document.body.style.overflow = betaOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [betaOpen])
+
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ['start start', 'end end'],
@@ -72,28 +80,18 @@ export function HeroScrollSequence({
     onProgressChange?.(latest)
   })
 
-  // Header slides up off-screen as the pocket fades — gone for good
-  const headerOpacity = useTransform(
-    scrollYProgress,
-    [0, 0.25, 0.40],
-    [1, 1, 0],
-  )
-  const headerY = useTransform(
-    scrollYProgress,
-    [0.25, 0.42],
-    [0, -Math.max(vpSize.h, 420)],
-  )
+  const headerOpacity = useTransform(scrollYProgress, [0, 0.25, 0.40], [1, 1, 0])
+  const headerY = useTransform(scrollYProgress, [0.25, 0.42], [0, -Math.max(vpSize.h, 420)])
   const pillsOpacity = useTransform(scrollYProgress, [0.78, 0.86, 0.88, 0.94], [0, 1, 1, 0])
   const pillsY = useTransform(scrollYProgress, [0.78, 0.86], [20, 0])
 
-  // Hide the hero laptop when zoom is complete so the overlay takes over
   const hideLaptop = progress >= 1.0
 
   if (reduceMotion) {
     return (
       <header className="flex flex-col items-center px-6 pt-24 pb-8 text-center">
         <HeroTitle />
-        <HeroDescription />
+        <HeroDescription onOpen={() => setBetaOpen(true)} />
         <PocketHeroSvg className="mt-12 w-48 sm:w-56" />
         <ArchitectureHeroAnimation className="mt-12 w-full max-w-lg" />
         <Pills />
@@ -101,36 +99,54 @@ export function HeroScrollSequence({
     )
   }
 
+  const spring = { type: 'spring', stiffness: 220, damping: 26 } as const
+
   return (
     <section ref={sectionRef} className="relative" style={{ height: '400vh' }}>
-      <div
-        className="sticky top-0 h-screen overflow-hidden"
-        style={{ backgroundColor: PAPER }}
-      >
-        {/* Header text overlay */}
+      <div className="sticky top-0 h-screen overflow-hidden" style={{ backgroundColor: PAPER }}>
+
+        {/* Header — pushed up when betaOpen */}
         <motion.div
           className="absolute inset-x-0 top-0 z-10 flex flex-col items-center px-6 pt-24 text-center"
           style={{ opacity: headerOpacity, y: headerY }}
+          animate={betaOpen ? { y: -vpSize.h, opacity: 0 } : {}}
+          transition={spring}
         >
           <HeroTitle />
-          <HeroDescription />
+          <HeroDescription onOpen={() => setBetaOpen(true)} />
         </motion.div>
 
-        {/* SVG animation */}
-        <HeroScene
-          progress={progress}
-          vpSize={vpSize}
-          isDesktopLayout={isDesktopLayout}
-          hideLaptop={hideLaptop}
-        />
+        {/* SVG animation — pushed down when betaOpen */}
+        <motion.div
+          className="absolute inset-0"
+          animate={betaOpen ? { y: vpSize.h } : {}}
+          transition={spring}
+        >
+          <HeroScene
+            progress={progress}
+            vpSize={vpSize}
+            isDesktopLayout={isDesktopLayout}
+            hideLaptop={hideLaptop}
+          />
+        </motion.div>
 
-        {/* Pills overlay */}
+        {/* Pills — fades out when betaOpen */}
         <motion.div
           className="absolute inset-x-0 bottom-8 z-10 flex justify-center px-6"
           style={{ opacity: pillsOpacity, y: pillsY }}
+          animate={betaOpen ? { opacity: 0 } : {}}
+          transition={spring}
         >
           <Pills />
         </motion.div>
+
+        {/* Beta form — replaces hero content */}
+        <AnimatePresence>
+          {betaOpen && (
+            <BetaInlineView onClose={() => setBetaOpen(false)} />
+          )}
+        </AnimatePresence>
+
       </div>
     </section>
   )
@@ -138,21 +154,16 @@ export function HeroScrollSequence({
 
 function HeroTitle() {
   return (
-    <div className="flex flex-col items-center">
-      <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-foreground/70 shadow-sm backdrop-blur-sm">
-        Private Mobile Beta
-      </span>
-      <h1
-        className="mt-4 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl"
-        style={architectureTextStyles.heroTitle}
-      >
-        PocketDev
-      </h1>
-    </div>
+    <h1
+      className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl"
+      style={architectureTextStyles.heroTitle}
+    >
+      PocketDev
+    </h1>
   )
 }
 
-function HeroDescription() {
+function HeroDescription({ onOpen }: { onOpen: () => void }) {
   return (
     <>
       <p
@@ -165,9 +176,7 @@ function HeroDescription() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <code className="min-w-0 flex-1 rounded-xl bg-muted/70 px-3 py-2 font-mono text-[0.72rem] leading-relaxed text-foreground/85 sm:text-xs">
             {INSTALL_COMMAND_LINES.map((line) => (
-              <span key={line} className="block break-all">
-                {line}
-              </span>
+              <span key={line} className="block break-all">{line}</span>
             ))}
           </code>
           <CopyButton
@@ -177,6 +186,13 @@ function HeroDescription() {
           />
         </div>
       </div>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="mt-4 rounded-full border border-foreground/80 bg-foreground px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-background shadow-sm transition-opacity hover:opacity-80 cursor-pointer"
+      >
+        Request early access →
+      </button>
     </>
   )
 }
@@ -184,28 +200,11 @@ function HeroDescription() {
 function Pills() {
   return (
     <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-      <IconPill
-        icon={<SiApple size={14} color={`#${SiAppleHex}`} />}
-        label="iOS"
-      />
-      <IconPill
-        icon={<SiAndroid size={14} color={`#${SiAndroidHex}`} />}
-        label="Android"
-      />
-      <IconPill
-        icon={<SiClaude size={14} color={`#${SiClaudeHex}`} />}
-        label="Claude"
-      />
-      <IconPill
-        icon={<BrandAssetIcon src={brandAssets.codexBlack} alt="Codex" />}
-        label="Codex"
-      />
-      <IconPill
-        icon={
-          <SiGithubcopilot size={14} color={`#${SiGithubcopilotHex}`} />
-        }
-        label="Copilot"
-      />
+      <IconPill icon={<SiApple size={14} color={`#${SiAppleHex}`} />} label="iOS" />
+      <IconPill icon={<SiAndroid size={14} color={`#${SiAndroidHex}`} />} label="Android" />
+      <IconPill icon={<SiClaude size={14} color={`#${SiClaudeHex}`} />} label="Claude" />
+      <IconPill icon={<BrandAssetIcon src={brandAssets.codexBlack} alt="Codex" />} label="Codex" />
+      <IconPill icon={<SiGithubcopilot size={14} color={`#${SiGithubcopilotHex}`} />} label="Copilot" />
     </div>
   )
 }

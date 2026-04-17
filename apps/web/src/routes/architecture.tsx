@@ -7,7 +7,6 @@ import {
   HowPocketDevWorksSection,
   RepoHistoryTransitionSection,
 } from '#/components/architecture/sections'
-import { BetaSignupBanner } from '#/components/architecture/BetaSignupBanner'
 import { Footer } from '#/components/landing/Footer'
 import { architectureTokens } from '#/components/architecture/shared/theme'
 
@@ -34,8 +33,6 @@ function ArchitecturePage() {
       <HeroScrollSequence onProgressChange={setHeroProgress} />
 
       <HeroLaptopOverlay heroProgress={heroProgress} howItWorksRef={howItWorksRef} />
-
-      <BetaSignupBanner />
 
       <HowPocketDevWorksSection sectionRef={howItWorksRef} />
 

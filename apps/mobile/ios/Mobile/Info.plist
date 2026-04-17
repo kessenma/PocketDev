@@ -59,6 +59,8 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>MaterialDesignIcons.ttf</string>
+		<string>SairaStencil-ExtraBold.ttf</string>
+		<string>AfacadFlux-Variable.ttf</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>

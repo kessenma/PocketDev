@@ -197,6 +197,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@lodev09/react-native-true-sheet':
+        specifier: ^3.10.0
+        version: 3.10.0(@react-navigation/native@7.2.2)(react-native-reanimated@4.3.0)(react-native-worklets@0.8.1)(react-native@0.85.1)(react@19.2.3)
       '@noble/ed25519':
         specifier: ^2.2.3
         version: 2.3.0
@@ -3697,6 +3700,32 @@ packages:
 
   /@levischuck/tiny-cbor@0.2.11:
     resolution: {integrity: sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow==}
+    dev: false
+
+  /@lodev09/react-native-true-sheet@3.10.0(@react-navigation/native@7.2.2)(react-native-reanimated@4.3.0)(react-native-worklets@0.8.1)(react-native@0.85.1)(react@19.2.3):
+    resolution: {integrity: sha512-8AA3my/hpjvkDcKvnNUZav6JfsTwCZe/zsbY7irrfDdOCnsQW9E15jINHlB2O1sIDOlUtY44ZWlP4x015Yqn3g==}
+    peerDependencies:
+      '@gorhom/bottom-sheet': '>=5'
+      '@react-navigation/native': '>=7'
+      react: '*'
+      react-native: '*'
+      react-native-reanimated: '>=4'
+      react-native-worklets: '*'
+    peerDependenciesMeta:
+      '@gorhom/bottom-sheet':
+        optional: true
+      '@react-navigation/native':
+        optional: true
+      react-native-reanimated:
+        optional: true
+      react-native-worklets:
+        optional: true
+    dependencies:
+      '@react-navigation/native': 7.2.2(react-native@0.85.1)(react@19.2.3)
+      react: 19.2.3
+      react-native: 0.85.1(patch_hash=bjdslkbxkamr3vl4jv6od4kmze)(@babel/core@7.29.0)(@react-native/jest-preset@0.85.1)(@react-native/metro-config@0.84.1)(@types/react@19.2.14)(react@19.2.3)
+      react-native-reanimated: 4.3.0(react-native-worklets@0.8.1)(react-native@0.85.1)(react@19.2.3)
+      react-native-worklets: 0.8.1(@babel/core@7.29.0)(@react-native/metro-config@0.84.1)(react-native@0.85.1)(react@19.2.3)
     dev: false
 
   /@lukeed/ms@2.0.2:

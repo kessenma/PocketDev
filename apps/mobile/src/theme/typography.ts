@@ -3,16 +3,16 @@ import { fontFamilyTokens, semanticTypography, typographyScale } from '@pocketde
 
 function getDisplayFontFamily() {
   return Platform.select({
-    ios: 'AvenirNextCondensed-Heavy',
-    android: 'sans-serif-condensed',
+    ios: 'SairaStencil-ExtraBold',
+    android: 'SairaStencil-Variable',
     default: fontFamilyTokens.displayFallback,
   })
 }
 
 function getBodyFontFamily() {
   return Platform.select({
-    ios: 'System',
-    android: 'sans-serif',
+    ios: 'AfacadFlux-Regular',
+    android: 'AfacadFlux-Variable',
     default: fontFamilyTokens.body,
   })
 }
@@ -48,9 +48,9 @@ export const typeStyles = {
     textTransform: 'uppercase',
   } satisfies TextStyle,
   heading: {
-    ...typographyScale.xl,
+    ...typographyScale['2xl'],
     fontFamily: getDisplayFontFamily(),
-    fontWeight: '700',
+    fontWeight: '800',
   } satisfies TextStyle,
   body: {
     ...createTypeStyle('body'),
@@ -60,6 +60,11 @@ export const typeStyles = {
   bodyBold: {
     ...createTypeStyle('body'),
     fontWeight: '700',
+  } satisfies TextStyle,
+  bodyLarge: {
+    ...typographyScale.lg,
+    fontFamily: getBodyFontFamily(),
+    fontWeight: '400',
   } satisfies TextStyle,
   bodySmall: {
     ...createTypeStyle('bodySmall'),
