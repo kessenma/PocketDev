@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
 import type { PlanMessage } from './model'
@@ -132,8 +133,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   timestamp: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
   },
   inputRow: {
     flexDirection: 'row',
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   input: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     flex: 1,
     minHeight: 44,
     borderWidth: 1,
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   sendText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
   },
 })

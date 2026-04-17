@@ -1,7 +1,8 @@
 import React from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { Check, Minus, X } from 'lucide-react-native'
 import type { CopilotWizardStep, CopilotWizardStepStatus } from '@pocketdev/shared/types'
 
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     textAlign: 'center',
   },
 })

@@ -1,9 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,8 +9,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { MessageCircleQuestion, ShieldAlert, X } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskQuestion } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
@@ -26,6 +25,7 @@ type Props = {
 
 export default function TaskInteractionSheet({ taskId }: Props) {
   const { colors } = useTheme()
+  const sheetRef = useRef<TrueSheet>(null)
   const questionsRaw = useTaskStore((s) => s.pendingQuestions.get(taskId))
   const questions = useMemo(() => questionsRaw ?? [], [questionsRaw])
   const answerQuestion = useTaskStore((s) => s.answerQuestion)
@@ -37,6 +37,10 @@ export default function TaskInteractionSheet({ taskId }: Props) {
   React.useEffect(() => {
     if (questions.length > 0) setDismissed(false)
   }, [questions.length])
+
+  useEffect(() => {
+    sheetRef.current?.present()
+  }, [])
 
   const visible = questions.length > 0 && !dismissed
   if (!visible) return null
@@ -50,49 +54,46 @@ export default function TaskInteractionSheet({ taskId }: Props) {
   }
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={handleDismiss}>
+    <TrueSheet ref={sheetRef} detents={['auto', 1]} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={handleDismiss}>
       <KeyboardAvoidingView
-        style={styles.backdrop}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <SafeAreaView style={[styles.sheet, { backgroundColor: colors.panel }]}>
-          <View style={[styles.header, { borderBottomColor: colors.border }]}>
-            <View style={styles.headerLeft}>
-              {isTerminal
-                ? <ShieldAlert color="#f59e0b" size={18} strokeWidth={2.25} />
-                : <MessageCircleQuestion color={colors.primary} size={18} strokeWidth={2.25} />}
-              <Text style={[styles.title, { color: colors.text }]}>
-                {isTerminal ? 'Permissions Required' : 'Agent Question'}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerLeft}>
+            {isTerminal
+              ? <ShieldAlert color="#f59e0b" size={18} strokeWidth={2.25} />
+              : <MessageCircleQuestion color={colors.primary} size={18} strokeWidth={2.25} />}
+            <Text style={[styles.title, { color: colors.text }]}>
+              {isTerminal ? 'Permissions Required' : 'Agent Question'}
+            </Text>
+            {!isTerminal && questions.length > 1 && (
+              <Text style={[styles.queueBadge, { color: colors.textTertiary }]}>
+                1 of {questions.length}
               </Text>
-              {!isTerminal && questions.length > 1 && (
-                <Text style={[styles.queueBadge, { color: colors.textTertiary }]}>
-                  1 of {questions.length}
-                </Text>
-              )}
-            </View>
-            <TouchableOpacity
-              onPress={handleDismiss}
-              style={styles.closeButton}
-              activeOpacity={0.7}
-            >
-              <X color={colors.text} size={20} strokeWidth={2.25} />
-            </TouchableOpacity>
+            )}
           </View>
-
-          <ScrollView
-            style={styles.body}
-            contentContainerStyle={styles.bodyContent}
-            keyboardShouldPersistTaps="handled"
+          <TouchableOpacity
+            onPress={() => sheetRef.current?.dismiss()}
+            style={styles.closeButton}
+            activeOpacity={0.7}
           >
-            <QuestionCard
-              question={current}
-              isTerminal={isTerminal}
-              onAnswer={(answer) => answerQuestion(taskId, current.questionId, answer)}
-            />
-          </ScrollView>
-        </SafeAreaView>
+            <X color={colors.text} size={20} strokeWidth={2.25} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={styles.body}
+          contentContainerStyle={styles.bodyContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <QuestionCard
+            question={current}
+            isTerminal={isTerminal}
+            onAnswer={(answer) => answerQuestion(taskId, current.questionId, answer)}
+          />
+        </ScrollView>
       </KeyboardAvoidingView>
-    </Modal>
+    </TrueSheet>
   )
 }
 
@@ -357,17 +358,6 @@ function FormCard({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    maxHeight: '80%',
-    minHeight: 400,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-    overflow: 'hidden',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -382,11 +372,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   title: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   queueBadge: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   closeButton: {
     width: 36,
@@ -450,7 +439,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   optionIndexText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
   },
   optionText: {

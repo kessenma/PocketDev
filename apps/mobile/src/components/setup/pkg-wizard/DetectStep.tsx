@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchPkgSetupStatus } from '../../../services/api'
 import { RefreshCw, Package } from 'lucide-react-native'
@@ -76,11 +77,11 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
   },
   detectText: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   retryButton: {
@@ -93,7 +94,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   retryText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

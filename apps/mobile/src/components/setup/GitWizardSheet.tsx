@@ -1,9 +1,11 @@
 import React, { useReducer, useCallback } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Modal, SafeAreaView } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
+import SetupWizardScreen from './SetupWizardScreen'
 import WizardStepper from './git-wizard/WizardStepper'
 import DetectStep from './git-wizard/DetectStep'
 import InstallGitStep from './git-wizard/InstallGitStep'
@@ -16,8 +18,7 @@ import ConfigureIdentityStep from './git-wizard/ConfigureIdentityStep'
 import type { GitSshStatus, GitWizardStep, GitWizardStepStatus } from '@pocketdev/shared/types'
 
 interface Props {
-  visible: boolean
-  onClose: () => void
+  onDismiss: () => void
   onComplete: () => void
 }
 
@@ -192,20 +193,20 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function GitWizardSheet({ visible, onClose, onComplete }: Props) {
+export default function GitWizardSheet({ onDismiss, onComplete }: Props) {
   const { colors } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
-
-  const handleClose = useCallback(() => {
-    fetchPrerequisites()
-    onClose()
-  }, [fetchPrerequisites, onClose])
 
   const handleDone = useCallback(() => {
     fetchPrerequisites()
     onComplete()
   }, [fetchPrerequisites, onComplete])
+
+  const handleClose = useCallback(() => {
+    fetchPrerequisites()
+    onDismiss()
+  }, [fetchPrerequisites, onDismiss])
 
   const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
@@ -269,8 +270,7 @@ export default function GitWizardSheet({ visible, onClose, onComplete }: Props) 
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SetupWizardScreen backgroundColor={colors.background} onClose={handleClose}>
         {/* Header */}
         <View style={styles.header}>
           {canGoBack ? (
@@ -306,15 +306,11 @@ export default function GitWizardSheet({ visible, onClose, onComplete }: Props) 
             </TouchableOpacity>
           </View>
         )}
-      </SafeAreaView>
-    </Modal>
+    </SetupWizardScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -330,8 +326,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   content: {
     flex: 1,
@@ -353,16 +348,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
   },
   completedTitle: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   completedSubtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
   },
   completedDetail: {
-    ...typographyScale.sm,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   footer: {
     paddingHorizontal: spacing[6],
@@ -375,7 +368,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   doneText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

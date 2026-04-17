@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   serverLabel: string
@@ -53,16 +54,13 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   eyebrow: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   title: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   summary: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     maxWidth: 760,
   },
   metrics: {
@@ -78,12 +76,9 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   pillLabel: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   pillValue: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
 })

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Linking, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, AppState, Image } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import {
   fetchGitHubCliAuthStatus,
@@ -396,12 +397,11 @@ const styles = StyleSheet.create({
     height: 42,
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.heading,
     textAlign: 'center',
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   statusCard: {
@@ -416,11 +416,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   statusTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   statusCopy: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   actionCard: {
     borderWidth: 1,
@@ -429,11 +428,10 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   cardTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   cardCopy: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   methodOption: {
     borderWidth: 1,
@@ -454,11 +452,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   methodTitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
   },
   methodDescription: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   primaryButton: {
     flexDirection: 'row',
@@ -469,8 +467,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   tokenSection: {
     gap: spacing[3],
@@ -480,16 +477,14 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
-    ...typographyScale.base,
+    ...typeStyles.body,
   },
   codeBox: {
     borderRadius: borderRadius.md,
     padding: spacing[3],
   },
   codeText: {
-    ...typographyScale.lg,
-    fontWeight: '700',
-    letterSpacing: 1.5,
+    ...typeStyles.heading,
     textAlign: 'center',
   },
   debugCard: {
@@ -504,12 +499,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   debugTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   debugText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   successBanner: {
     borderWidth: 1,
@@ -520,7 +513,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   successText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     flex: 1,
   },
 })

@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react'
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import { postVerifyTypeScript } from '../../../services/api'
@@ -225,12 +226,10 @@ const detailStyles = StyleSheet.create({
     gap: spacing[2],
   },
   label: {
-    ...typographyScale.sm,
-    fontWeight: '500',
+    ...typeStyles.bodyStrong,
   },
   value: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
 })
 
@@ -262,11 +261,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   detailsCard: {
@@ -278,7 +276,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
     marginTop: spacing[1],
   },
@@ -291,15 +289,10 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
   },
   rawLabel: {
-    ...typographyScale.xs,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    ...typeStyles.sectionTitle,
   },
   rawText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
-    lineHeight: 16,
+    ...typeStyles.mono,
   },
   outputToggle: {
     flexDirection: 'row',
@@ -311,8 +304,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   outputToggleText: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.bodyStrong,
   },
   outputBox: {
     maxHeight: 200,
@@ -320,9 +312,7 @@ const styles = StyleSheet.create({
     padding: spacing[3],
   },
   outputText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
-    lineHeight: 16,
+    ...typeStyles.mono,
   },
   actionButton: {
     flexDirection: 'row',
@@ -333,7 +323,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

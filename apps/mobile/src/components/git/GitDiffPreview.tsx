@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
 import { GitCard, GitCardContent, GitCardHeader } from './GitCard'
@@ -214,12 +215,12 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   filePath: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
     flex: 1,
   },
   headerMeta: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     fontWeight: '500',
   },
   modeToggle: {
@@ -237,8 +238,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   modeLabel: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   diffContainer: {
     flex: 1,
@@ -250,9 +250,7 @@ const styles = StyleSheet.create({
     minHeight: '100%',
   },
   diffText: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
+    ...typeStyles.mono,
   },
   loadingState: {
     borderRadius: borderRadius.lg,
@@ -263,7 +261,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '500',
   },
   emptyState: {
@@ -274,11 +272,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })
 

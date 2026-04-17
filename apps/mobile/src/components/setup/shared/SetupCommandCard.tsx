@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { Terminal } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 import CopyButton from '../../shared/CopyButton'
 
@@ -39,8 +40,7 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   infoText: {
-    ...typographyScale.sm,
-    lineHeight: 20,
+    ...typeStyles.bodySmall,
   },
   commandList: {
     gap: spacing[2],
@@ -56,8 +56,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   commandText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
     flex: 1,
   },
   copyButton: {

@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native'
 import { KeyRound, Plus } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { EnvVar } from '@pocketdev/shared/types'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useEnvStore } from '../../../stores/env'
@@ -16,6 +16,7 @@ import { useProjectsStore } from '../../../stores/projects'
 import EnvVarRow from './EnvVarRow'
 import EnvVarEditSheet from './EnvVarEditSheet'
 import type { CodeScreenTabProps } from '../navigation/types'
+import { typeStyles } from '../../../theme/typography'
 
 export default function EnvVarsTab({ onScroll }: CodeScreenTabProps) {
   const { colors } = useTheme()
@@ -126,12 +127,13 @@ export default function EnvVarsTab({ onScroll }: CodeScreenTabProps) {
         )}
       </View>
 
-      <EnvVarEditSheet
-        visible={showEdit}
-        projectPath={projectPath}
-        editTarget={editTarget}
-        onClose={() => setShowEdit(false)}
-      />
+      {showEdit && (
+        <EnvVarEditSheet
+          projectPath={projectPath}
+          editTarget={editTarget}
+          onDismiss={() => setShowEdit(false)}
+        />
+      )}
     </>
   )
 }
@@ -155,8 +157,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   addBtnText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   center: {
     flex: 1,
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing[1],
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   listContent: {
     gap: spacing[3],
@@ -192,12 +193,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
     textAlign: 'center',
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
     maxWidth: 280,
   },

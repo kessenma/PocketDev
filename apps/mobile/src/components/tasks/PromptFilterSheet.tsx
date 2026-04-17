@@ -1,13 +1,13 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import {
   ActivityIndicator,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { X, Cpu } from 'lucide-react-native'
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
@@ -120,14 +120,14 @@ function FileResultChip({ path, onPin, pinned }: { path: string; onPin: () => vo
 // ─── Main sheet ──────────────────────────────────────────────────────────────
 
 type Props = {
-  visible: boolean
   prompt: string
-  onClose: () => void
+  onDismiss: () => void
   onSearch: (phrase: string) => Promise<void>
 }
 
-export default function PromptFilterSheet({ visible, prompt, onClose, onSearch }: Props) {
+export default function PromptFilterSheet({ prompt, onDismiss, onSearch }: Props) {
   const { colors } = useTheme()
+  const sheetRef = useRef<TrueSheet>(null)
   const suggestions = useOnDeviceAIStore((s) => s.suggestions)
   const restSuggestions = useOnDeviceAIStore((s) => s.restSuggestions)
   const clearSuggestions = useOnDeviceAIStore((s) => s.clearSuggestions)
@@ -143,12 +143,9 @@ export default function PromptFilterSheet({ visible, prompt, onClose, onSearch }
     [suggestions, restSuggestions],
   )
 
-  React.useEffect(() => {
-    if (!visible) {
-      setActivePhrase(null)
-      setSearching(false)
-    }
-  }, [visible])
+  useEffect(() => {
+    sheetRef.current?.present()
+  }, [])
 
   async function handlePhrasePress(phrase: string) {
     setActivePhrase(phrase)
@@ -162,20 +159,15 @@ export default function PromptFilterSheet({ visible, prompt, onClose, onSearch }
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
-    >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <TrueSheet ref={sheetRef} detents={['auto']} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={onDismiss}>
+      <View>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.headerLeft}>
             <Cpu color={colors.primary} size={16} strokeWidth={2.2} />
             <Text style={[styles.headerTitle, { color: colors.text }]}>Focus Search</Text>
           </View>
-          <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={styles.closeButton}>
+          <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} activeOpacity={0.7} style={styles.closeButton}>
             <X color={colors.textSecondary} size={22} strokeWidth={2.25} />
           </TouchableOpacity>
         </View>
@@ -257,14 +249,11 @@ export default function PromptFilterSheet({ visible, prompt, onClose, onSearch }
           ) : null}
         </ScrollView>
       </View>
-    </Modal>
+    </TrueSheet>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

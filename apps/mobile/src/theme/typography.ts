@@ -1,5 +1,5 @@
 import { Platform, type TextStyle } from 'react-native'
-import { fontFamilyTokens, semanticTypography } from '@pocketdev/shared/theme'
+import { fontFamilyTokens, semanticTypography, typographyScale } from '@pocketdev/shared/theme'
 
 function getDisplayFontFamily() {
   return Platform.select({
@@ -47,11 +47,20 @@ export const typeStyles = {
     ...createTypeStyle('labelStrong', 'display'),
     textTransform: 'uppercase',
   } satisfies TextStyle,
+  heading: {
+    ...typographyScale.xl,
+    fontFamily: getDisplayFontFamily(),
+    fontWeight: '700',
+  } satisfies TextStyle,
   body: {
     ...createTypeStyle('body'),
     fontWeight: '400',
   } satisfies TextStyle,
   bodyStrong: createTypeStyle('body'),
+  bodyBold: {
+    ...createTypeStyle('body'),
+    fontWeight: '700',
+  } satisfies TextStyle,
   bodySmall: {
     ...createTypeStyle('bodySmall'),
     fontWeight: '400',

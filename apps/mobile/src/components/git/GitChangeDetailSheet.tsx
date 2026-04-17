@@ -1,55 +1,60 @@
-import React from 'react'
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import React, { useRef, useEffect } from 'react'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import type { GitFileChange } from './model'
 import GitDiffPreview from './GitDiffPreview'
 
 type Props = {
-  visible: boolean
   change: GitFileChange | null
-  onClose: () => void
+  onDismiss: () => void
 }
 
-export default function GitChangeDetailSheet({ visible, change, onClose }: Props) {
+export default function GitChangeDetailSheet({ change, onDismiss }: Props) {
   const { colors } = useTheme()
+  const sheetRef = useRef<TrueSheet>(null)
+
+  useEffect(() => {
+    sheetRef.current?.present()
+  }, [])
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerCopy}>
-            <Text style={[styles.title, { color: colors.text }]}>Changed File</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-              {change?.path ?? 'Select a file to inspect the diff and source.'}
-            </Text>
-          </View>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={onClose}
-            style={[styles.doneButton, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
-          >
-            <Text style={[styles.doneButtonText, { color: colors.text }]}>Done</Text>
-          </TouchableOpacity>
+    <TrueSheet
+      ref={sheetRef}
+      detents={[0.6, 1]}
+      backgroundColor={colors.background}
+      cornerRadius={24}
+      onDidDismiss={onDismiss}
+    >
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.headerCopy}>
+          <Text style={[styles.title, { color: colors.text }]}>Changed File</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+            {change?.path ?? 'Select a file to inspect the diff and source.'}
+          </Text>
         </View>
-
-        <View style={styles.content}>
-          <GitDiffPreview change={change} variant="plain" />
-        </View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => sheetRef.current?.dismiss()}
+          style={[styles.doneButton, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
+        >
+          <Text style={[styles.doneButtonText, { color: colors.text }]}>Done</Text>
+        </TouchableOpacity>
       </View>
-    </Modal>
+
+      <View style={styles.content}>
+        <GitDiffPreview change={change} variant="plain" />
+      </View>
+    </TrueSheet>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: spacing[12],
-    paddingHorizontal: spacing[4],
-    paddingBottom: spacing[4],
-    gap: spacing[4],
-  },
   header: {
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[3],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -62,11 +67,10 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   title: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   doneButton: {
     borderWidth: 1,
@@ -75,10 +79,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   doneButtonText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   content: {
     flex: 1,
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[4],
   },
 })

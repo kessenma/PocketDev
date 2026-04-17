@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native'
 import { FileCode2, FolderOpen, Maximize2, Pin, Search, Waypoints, WifiOff } from 'lucide-react-native'
-import { borderRadius, palette, spacing, typographyScale, type SemanticTheme } from '@pocketdev/shared/theme'
+import { borderRadius, palette, spacing, type SemanticTheme } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../../hooks/useAdaptiveLayout'
 import { useFilesStore } from '../../../stores/files'
@@ -26,6 +26,7 @@ import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import EnvVarsTab from '../env-vars/EnvVarsTab'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
 import { subscribeToGitEvents } from '../../../services/gitEventBus'
+import { typeStyles } from '../../../theme/typography'
 
 type BrowseView = 'browser' | 'env' | 'context'
 type EntryItem = { id: string; path: string; name: string; description: string; kind: 'file' | 'directory' }
@@ -176,12 +177,11 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
     </View>
   ) : null
 
-  const previewSheet = previewProxiedUrl ? (
+  const previewSheet = previewProxiedUrl && previewVisible ? (
     <ServerWebBrowserSheet
-      visible={previewVisible}
       title={activeProject?.name ?? 'Preview'}
       initialUrl={previewProxiedUrl}
-      onClose={closePreview}
+      onDismiss={closePreview}
       onLoadSuccess={markPreviewLoaded}
       onLoadFailure={markPreviewFailed}
       errorHint="Start the dev server on the paired machine and make sure it is serving localhost:3000."
@@ -383,7 +383,7 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
         {activeView === 'context' ? contextSection : null}
       </View>
 
-      <FileExplorerSheet visible={explorerExpanded} onClose={() => setExplorerExpanded(false)} />
+      {explorerExpanded && <FileExplorerSheet onDismiss={() => setExplorerExpanded(false)} />}
       {previewSheet}
     </>
   )
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   expandPathText: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     flex: 1,
   },
   headerActions: {
@@ -511,8 +511,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   primaryActionText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   secondaryAction: {
     flexDirection: 'row',
@@ -525,8 +524,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   secondaryActionText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   contextTray: {
     borderRadius: borderRadius.xl,
@@ -544,13 +542,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   contextTrayLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   clearText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   contextChipRow: {
     flexDirection: 'row',
@@ -565,12 +560,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   contextChipText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
     maxWidth: 260,
   },
   emptyInlineText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   explorerControls: {
     gap: spacing[3],
@@ -586,11 +580,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    ...typographyScale.base,
+    ...typeStyles.body,
   },
   searchAction: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   pathRow: {
     flexDirection: 'row',
@@ -604,11 +597,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   pathButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
   pathLabel: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     flex: 1,
   },
   messageBanner: {
@@ -617,7 +609,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   messageText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   browserCard: {
     flex: 1,
@@ -634,7 +626,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing[4],
   },
   loadingText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   entryRow: {
     flexDirection: 'row',
@@ -655,11 +647,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   entryTitle: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   entryDescription: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   pinButton: {
     width: 34,
@@ -676,19 +667,17 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   contextContent: {
     gap: spacing[4],
     paddingBottom: spacing[8],
   },
   statusMessage: {
-    ...typographyScale.sm,
-    fontWeight: '500',
+    ...typeStyles.bodySmall,
   },
   offlineBanner: {
     flexDirection: 'row',
@@ -699,6 +688,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   offlineBannerText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

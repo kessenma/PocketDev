@@ -1,8 +1,9 @@
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ArrowLeft, Info, Pin, PinOff, WrapText } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   wrapLines: boolean
@@ -123,8 +124,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   secondaryButtonText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   wrapButton: {
     flexDirection: 'row',
@@ -136,8 +136,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   wrapButtonText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   iconButton: {
     alignItems: 'center',

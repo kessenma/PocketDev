@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ChevronDown, ChevronRight, FilePlus2, FileMinus2, FileEdit, FileSymlink } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import type { GitDetailedCommitEntry, GitCommitFileEntry, GitCommitOrigin } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
@@ -133,15 +134,14 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   time: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   message: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
   },
   meta: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   details: {
     gap: spacing[2],
@@ -153,8 +153,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   detailText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   fileDivider: {
     height: 1,
@@ -167,24 +166,21 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   filePath: {
-    ...typographyScale.xs,
+    ...typeStyles.mono,
     flex: 1,
-    fontFamily: 'monospace',
   },
   fileDelta: {
     flexDirection: 'row',
     gap: spacing[1],
   },
   additions: {
-    ...typographyScale.xs,
+    ...typeStyles.mono,
     color: '#22c55e',
     fontWeight: '700',
-    fontFamily: 'monospace',
   },
   deletions: {
-    ...typographyScale.xs,
+    ...typeStyles.mono,
     color: '#ef4444',
     fontWeight: '700',
-    fontFamily: 'monospace',
   },
 })

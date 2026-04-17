@@ -1,7 +1,8 @@
 import React from 'react'
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { Assets } from '../../../../assets'
 import { Check, CircleAlert, ShieldCheck, TerminalSquare } from 'lucide-react-native'
 import type { CodexSetupStatus } from '@pocketdev/shared/types'
@@ -140,12 +141,11 @@ const styles = StyleSheet.create({
     height: 42,
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.heading,
     textAlign: 'center',
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   statusCard: {
@@ -168,18 +168,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   statusLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-    letterSpacing: 1,
+    ...typeStyles.sectionTitle,
   },
   statusValue: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   statusDetail: {
-    ...typographyScale.sm,
-    lineHeight: 20,
+    ...typeStyles.bodySmall,
   },
   planCard: {
     borderWidth: 1,
@@ -188,10 +183,7 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   planLabel: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    ...typeStyles.sectionTitle,
   },
   planRow: {
     flexDirection: 'row',
@@ -206,13 +198,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   planNumberText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   planText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     flex: 1,
-    lineHeight: 20,
   },
   continueButton: {
     alignItems: 'center',
@@ -221,7 +211,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   continueText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

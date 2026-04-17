@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Ghost, Terminal, Wrench } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { usePreviewStore } from '../../../stores/preview'
 import { useScriptsStore } from '../../../stores/scripts'
@@ -13,6 +13,7 @@ import type { CategorizedScript, ScriptCategory } from '../../scripts/model'
 import CodeScreenHeader from '../navigation/CodeScreenHeader'
 import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
+import { typeStyles } from '../../../theme/typography'
 
 type ScriptsView = 'scripts' | 'suggested' | 'running'
 
@@ -244,18 +245,17 @@ const styles = StyleSheet.create({
     padding: spacing[5],
   },
   loadingText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptySubtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   emptyCard: {
@@ -269,20 +269,16 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   pkgName: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   pkgMeta: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   section: {
     gap: spacing[2],
   },
   sectionTitle: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    ...typeStyles.sectionTitle,
   },
   scriptList: {
     gap: spacing[2],

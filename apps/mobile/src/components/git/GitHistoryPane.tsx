@@ -2,7 +2,8 @@ import React, { useCallback, useEffect } from 'react'
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
 import { ArrowDownToLine, History } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import type { GitDetailedCommitEntry } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useGitStore } from '../../stores/git'
@@ -103,10 +104,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing[3],
   },
   header: {
-    ...typographyScale.xs,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    ...typeStyles.sectionTitle,
   },
   pullButton: {
     flexDirection: 'row',
@@ -117,8 +115,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   pullButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
   empty: {
     flex: 1,
@@ -128,11 +125,10 @@ const styles = StyleSheet.create({
     padding: spacing[6],
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
 })

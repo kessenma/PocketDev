@@ -1,7 +1,8 @@
 import React from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
-import { spacing, typographyScale, borderRadius } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 import { useAdaptiveLayout } from '../../hooks/useAdaptiveLayout'
 import { useServerActionsStore } from '../../stores/server-actions'
 import SplitViewLayout from '../layout/SplitViewLayout'
@@ -131,8 +132,7 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   refreshLink: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
     alignSelf: 'flex-start',
   },
   messageBanner: {
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   messageText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   stack: {
     gap: spacing[4],

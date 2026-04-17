@@ -1,8 +1,9 @@
 import React from 'react'
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import type { ScriptPackageInfo } from '@pocketdev/shared/types'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   packages: ScriptPackageInfo[]
@@ -78,10 +79,9 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   chipText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
   },
   chipPath: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
 })

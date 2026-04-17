@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import type { PlanView } from './model'
 
@@ -67,7 +68,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   segmentLabel: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
 import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
@@ -197,8 +198,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   countText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   expandButton: {
     borderWidth: 1,
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   path: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
     flex: 1,
   },
@@ -240,20 +240,17 @@ const styles = StyleSheet.create({
     paddingTop: spacing[2],
   },
   fullPath: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   summary: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   metaRow: {
     flexDirection: 'row',
     gap: spacing[2],
   },
   meta: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   emptyState: {
     borderRadius: borderRadius.lg,
@@ -261,10 +258,9 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

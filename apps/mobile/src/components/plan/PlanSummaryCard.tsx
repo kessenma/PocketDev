@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import PlanBadge from './PlanBadge'
 import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
@@ -79,12 +80,9 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   metricLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   metricValue: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

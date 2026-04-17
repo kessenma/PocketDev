@@ -184,7 +184,7 @@ function CardEntryRow({ entry, accentColor }: { entry: CardEntry; accentColor: s
         <FileViewerSheet
           filePath={entry.toolUse.filePath}
           activity={entry.toolUse}
-          onClose={() => setSheetOpen(false)}
+          onDismiss={() => setSheetOpen(false)}
         />
       )}
     </>

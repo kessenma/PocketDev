@@ -1,7 +1,8 @@
 import React from 'react'
 import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { Assets } from '../../../../assets'
 import { Check, X, Info } from 'lucide-react-native'
 import type { PkgInstallTool, PkgManagerStatus } from '@pocketdev/shared/types'
@@ -153,11 +154,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing[4],
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   toolList: {
     gap: spacing[2],
@@ -183,12 +183,10 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   toolName: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   toolVersion: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   commandSection: {
     gap: spacing[2],
@@ -198,11 +196,10 @@ const styles = StyleSheet.create({
     padding: spacing[3],
   },
   commandText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   commandDesc: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     paddingLeft: spacing[1],
   },
   selectionButton: {
@@ -213,8 +210,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   selectionButtonText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   infoBox: {
     flexDirection: 'row',
@@ -225,7 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   infoText: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     flex: 1,
   },
   installButton: {
@@ -235,7 +231,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   installButtonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

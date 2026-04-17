@@ -2,8 +2,9 @@ import React, { useRef } from 'react'
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 import { FileCard, FileCardContent, FileCardDescription, FileCardHeader, FileCardTitle } from './FileCard'
 import FileBreadcrumbs from './FileBreadcrumbs'
 import FileViewerToolbar from './FileViewerToolbar'
@@ -440,11 +441,10 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   infoCalloutTitle: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   infoCalloutBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   content: {
     flex: 1,
@@ -477,17 +477,13 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   lineNumber: {
+    ...typeStyles.mono,
     width: 28,
     textAlign: 'right',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
     paddingTop: 1,
   },
   codeLine: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
+    ...typeStyles.mono,
     flexShrink: 1,
   },
   codeLineWrapped: {
@@ -504,10 +500,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

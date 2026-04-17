@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { postTestGitConnection } from '../../../services/api'
 import { Assets } from '../../../../assets'
@@ -179,11 +180,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   resultIcon: {
@@ -208,9 +208,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[1],
   },
   outputText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
-    lineHeight: 16,
+    ...typeStyles.mono,
   },
   failActions: {
     flexDirection: 'row',
@@ -227,8 +225,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryButtonText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   retryButton: {
     flexDirection: 'row',
@@ -248,7 +245,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing[4],
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

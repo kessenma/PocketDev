@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   path: string
@@ -41,11 +42,10 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   separator: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   segment: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
     flexShrink: 1,
   },
 })

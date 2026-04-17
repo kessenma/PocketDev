@@ -175,12 +175,13 @@ export default function SettingsScreen({ navigation }: Props) {
         </BauhausPanel>
       </ScrollView>
 
-      <ServerWebBrowserSheet
-        visible={consoleOpen}
-        title="Server Console"
-        initialUrl={consoleUrl}
-        onClose={() => setConsoleOpen(false)}
-      />
+      {consoleOpen && (
+        <ServerWebBrowserSheet
+          title="Server Console"
+          initialUrl={consoleUrl}
+          onDismiss={() => setConsoleOpen(false)}
+        />
+      )}
     </AdaptiveShell>
   )
 }

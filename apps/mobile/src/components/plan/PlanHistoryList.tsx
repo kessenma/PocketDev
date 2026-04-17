@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import PlanBadge from './PlanBadge'
 import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
@@ -87,15 +88,13 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   historyTitle: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   historyMeta: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
   },
   historyNotes: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   emptyState: {
     borderRadius: borderRadius.lg,
@@ -105,10 +104,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

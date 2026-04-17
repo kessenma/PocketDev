@@ -246,7 +246,7 @@ function ToolUseRow({ activity, colors }: { activity: Extract<TaskActivity, { ty
         <FileViewerSheet
           filePath={activity.filePath}
           activity={activity}
-          onClose={() => setSheetOpen(false)}
+          onDismiss={() => setSheetOpen(false)}
         />
       )}
     </>

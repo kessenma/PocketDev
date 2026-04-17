@@ -7,8 +7,9 @@ import {
   useCodeScanner,
 } from 'react-native-vision-camera'
 import { useTheme } from '../contexts/ThemeContext'
-import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
 import { X } from 'lucide-react-native'
+import { typeStyles } from '../theme/typography'
 
 export interface QRScanResult {
   host: string
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     padding: spacing[6],
   },
   message: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
     marginBottom: spacing[4],
   },
@@ -142,8 +143,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   permissionButtonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   overlay: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
@@ -160,10 +160,9 @@ const styles = StyleSheet.create({
   hint: {
     marginTop: 24,
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+    ...typeStyles.bodyStrong,
   },
 })

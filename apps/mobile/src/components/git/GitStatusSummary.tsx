@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import type { GitStashEntry } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import BauhausTooltip from '../shared/BauhausTooltip'
@@ -112,11 +113,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   metricValue: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   metricLabel: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
 })

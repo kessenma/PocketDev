@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskTurn } from '@pocketdev/shared/types'
 import { MessageSquare, User } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -98,11 +98,11 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   roleLabel: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     fontWeight: '700',
   },
   turnLabel: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     marginLeft: 'auto',
   },
   content: {

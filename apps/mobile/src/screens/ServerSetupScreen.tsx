@@ -535,93 +535,107 @@ export default function ServerSetupScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        <InstallSheet
-          visible={showInstall}
-          tool={installTool}
-          command={installCommand}
-          onClose={() => setShowInstall(false)}
-          onAiInspect={handleAiInspect}
-        />
+        {showInstall && (
+          <InstallSheet
+            tool={installTool}
+            command={installCommand}
+            onDismiss={() => setShowInstall(false)}
+            onAiInspect={handleAiInspect}
+          />
+        )}
 
-        <AiInspectSheet
-          visible={showInspect}
-          failedCommand={inspectCommand}
-          failedOutput={inspectOutput}
-          onClose={() => setShowInspect(false)}
-          onFixCommand={handleFixCommand}
-        />
+        {showInspect && (
+          <AiInspectSheet
+            failedCommand={inspectCommand}
+            failedOutput={inspectOutput}
+            onDismiss={() => setShowInspect(false)}
+            onFixCommand={handleFixCommand}
+          />
+        )}
 
-        <GitWizardSheet
-          visible={showGitWizard}
-          onClose={() => setShowGitWizard(false)}
-          onComplete={handleGitWizardComplete}
-        />
+        {showGitWizard && (
+          <GitWizardSheet
+            onDismiss={() => setShowGitWizard(false)}
+            onComplete={handleGitWizardComplete}
+          />
+        )}
 
-        <ClaudeWizardSheet
-          visible={showClaudeWizard}
-          onClose={() => setShowClaudeWizard(false)}
-          onComplete={handleClaudeWizardComplete}
-        />
+        {showClaudeWizard && (
+          <ClaudeWizardSheet
+            onDismiss={() => setShowClaudeWizard(false)}
+            onComplete={handleClaudeWizardComplete}
+          />
+        )}
 
-        <CodexWizardSheet
-          visible={showCodexWizard}
-          onClose={() => setShowCodexWizard(false)}
-          onComplete={handleCodexWizardComplete}
-        />
+        {showCodexWizard && (
+          <CodexWizardSheet
+            onDismiss={() => setShowCodexWizard(false)}
+            onComplete={handleCodexWizardComplete}
+          />
+        )}
 
-        <CopilotWizardSheet
-          visible={showCopilotWizard}
-          onClose={() => setShowCopilotWizard(false)}
-          onComplete={handleCopilotWizardComplete}
-        />
+        {showCopilotWizard && (
+          <CopilotWizardSheet
+            onDismiss={() => setShowCopilotWizard(false)}
+            onComplete={handleCopilotWizardComplete}
+          />
+        )}
 
-        <OpenCodeWizardSheet
-          visible={showOpenCodeWizard}
-          onClose={() => setShowOpenCodeWizard(false)}
-          onComplete={handleOpenCodeWizardComplete}
-        />
+        {showOpenCodeWizard && (
+          <OpenCodeWizardSheet
+            onDismiss={() => setShowOpenCodeWizard(false)}
+            onComplete={handleOpenCodeWizardComplete}
+          />
+        )}
 
-        <PackageManagerWizardSheet
-          visible={showPkgWizard}
-          onClose={() => setShowPkgWizard(false)}
-          onComplete={handlePkgWizardComplete}
-        />
+        {showPkgWizard && (
+          <PackageManagerWizardSheet
+            onDismiss={() => setShowPkgWizard(false)}
+            onComplete={handlePkgWizardComplete}
+          />
+        )}
 
-        <PythonWizardSheet
-          visible={showPythonWizard}
-          onClose={() => setShowPythonWizard(false)}
-          onComplete={handlePythonWizardComplete}
-        />
+        {showPythonWizard && (
+          <PythonWizardSheet
+            onDismiss={() => setShowPythonWizard(false)}
+            onComplete={handlePythonWizardComplete}
+          />
+        )}
 
-        <RustWizardSheet
-          visible={showRustWizard}
-          onClose={() => setShowRustWizard(false)}
-          onComplete={handleRustWizardComplete}
-        />
+        {showRustWizard && (
+          <RustWizardSheet
+            onDismiss={() => setShowRustWizard(false)}
+            onComplete={handleRustWizardComplete}
+          />
+        )}
 
-        <GoWizardSheet
-          visible={showGoWizard}
-          onClose={() => setShowGoWizard(false)}
-          onComplete={handleGoWizardComplete}
-        />
+        {showGoWizard && (
+          <GoWizardSheet
+            onDismiss={() => setShowGoWizard(false)}
+            onComplete={handleGoWizardComplete}
+          />
+        )}
 
-        <TypeScriptWizardSheet
-          visible={showTypeScriptWizard}
-          onClose={() => setShowTypeScriptWizard(false)}
-          onComplete={handleTypeScriptWizardComplete}
-        />
+        {showTypeScriptWizard && (
+          <TypeScriptWizardSheet
+            onDismiss={() => setShowTypeScriptWizard(false)}
+            onComplete={handleTypeScriptWizardComplete}
+          />
+        )}
 
-        <DockerWizardSheet
-          visible={showDockerWizard}
-          onClose={() => setShowDockerWizard(false)}
-          onComplete={handleDockerWizardComplete}
-        />
+        {showDockerWizard && (
+          <DockerWizardSheet
+            onDismiss={() => setShowDockerWizard(false)}
+            onComplete={handleDockerWizardComplete}
+          />
+        )}
 
-        <MinimaxWizardSheet
-          visible={showMinimaxWizard}
-          onClose={() => setShowMinimaxWizard(false)}
-          onComplete={handleMinimaxWizardComplete}
-        />
+        {showMinimaxWizard && (
+          <MinimaxWizardSheet
+            onDismiss={() => setShowMinimaxWizard(false)}
+            onComplete={handleMinimaxWizardComplete}
+          />
+        )}
 
         <Dialogue
           visible={showMissingDialogue}

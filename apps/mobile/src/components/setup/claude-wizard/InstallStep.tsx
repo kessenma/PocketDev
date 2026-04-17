@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchClaudeSetupStatus } from '../../../services/api'
@@ -334,11 +335,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   cardList: {
     gap: spacing[2],
@@ -362,12 +362,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   toolName: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   toolDescription: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.bodySmall,
   },
   toolStatusIcon: {
     width: 24,
@@ -392,8 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   outputToggleText: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.bodySmall,
   },
   outputBox: {
     flex: 1,
@@ -401,9 +398,7 @@ const styles = StyleSheet.create({
     padding: spacing[3],
   },
   outputText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
-    lineHeight: 16,
+    ...typeStyles.mono,
   },
   actionButton: {
     flexDirection: 'row',
@@ -414,7 +409,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

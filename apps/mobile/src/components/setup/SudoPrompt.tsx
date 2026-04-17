@@ -11,7 +11,8 @@ import {
   Platform,
 } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 
 interface Props {
   visible: boolean
@@ -109,15 +110,13 @@ const styles = StyleSheet.create({
     gap: spacing[4],
   },
   title: {
-    ...typographyScale.lg,
-    fontWeight: '700',
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   input: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[4],
@@ -129,7 +128,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rememberLabel: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   buttons: {
     flexDirection: 'row',
@@ -142,7 +141,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

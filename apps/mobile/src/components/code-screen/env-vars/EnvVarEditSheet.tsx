@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -11,18 +10,18 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { ArrowLeft, ClipboardList } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { BulkEnvVarItem, EnvVar } from '@pocketdev/shared/types'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useEnvStore } from '../../../stores/env'
+import { typeStyles } from '../../../theme/typography'
 
 type Props = {
-  visible: boolean
   projectPath: string
   editTarget: EnvVar | null  // null = create mode
-  onClose: () => void
+  onDismiss: () => void
 }
 
 type Mode = 'single' | 'bulk'
@@ -45,18 +44,19 @@ function parseDotEnv(text: string): BulkEnvVarItem[] {
   return items
 }
 
-export default function EnvVarEditSheet({ visible, projectPath, editTarget, onClose }: Props) {
+export default function EnvVarEditSheet({ projectPath, editTarget, onDismiss }: Props) {
   const { colors } = useTheme()
+  const sheetRef = useRef<TrueSheet>(null)
   const create = useEnvStore((s) => s.create)
   const update = useEnvStore((s) => s.update)
   const bulkUpsert = useEnvStore((s) => s.bulkUpsert)
 
   // Single mode state
-  const [key, setKey] = useState('')
-  const [value, setValue] = useState('')
-  const [comment, setComment] = useState('')
-  const [isSecret, setIsSecret] = useState(false)
-  const [isMultiline, setIsMultiline] = useState(false)
+  const [key, setKey] = useState(editTarget?.key ?? '')
+  const [value, setValue] = useState(editTarget?.value ?? '')
+  const [comment, setComment] = useState(editTarget?.comment ?? '')
+  const [isSecret, setIsSecret] = useState(editTarget?.isSecret ?? false)
+  const [isMultiline, setIsMultiline] = useState(editTarget?.isMultiline ?? false)
 
   // Bulk mode state
   const [bulkText, setBulkText] = useState('')
@@ -71,25 +71,8 @@ export default function EnvVarEditSheet({ visible, projectPath, editTarget, onCl
   const activeMode = editTarget ? 'single' : mode
 
   useEffect(() => {
-    if (visible) {
-      if (editTarget) {
-        setKey(editTarget.key)
-        setValue(editTarget.value ?? '')
-        setComment(editTarget.comment ?? '')
-        setIsSecret(editTarget.isSecret)
-        setIsMultiline(editTarget.isMultiline)
-        setMode('single')
-      } else {
-        setKey('')
-        setValue('')
-        setComment('')
-        setIsSecret(false)
-        setIsMultiline(false)
-        setBulkText('')
-      }
-      setError(null)
-    }
-  }, [visible, editTarget])
+    sheetRef.current?.present()
+  }, [])
 
   async function handleSaveSingle() {
     if (!key.trim()) { setError('Key is required'); return }
@@ -114,7 +97,7 @@ export default function EnvVarEditSheet({ visible, projectPath, editTarget, onCl
           isMultiline,
         })
       }
-      onClose()
+      sheetRef.current?.dismiss()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save')
     } finally {
@@ -128,7 +111,7 @@ export default function EnvVarEditSheet({ visible, projectPath, editTarget, onCl
     setError(null)
     try {
       await bulkUpsert(projectPath, parsedBulk)
-      onClose()
+      sheetRef.current?.dismiss()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed')
     } finally {
@@ -142,11 +125,11 @@ export default function EnvVarEditSheet({ visible, projectPath, editTarget, onCl
     : (editTarget ? 'Save' : 'Add')
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]}>
+    <TrueSheet ref={sheetRef} detents={[1]} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={onDismiss}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
         {/* Nav bar */}
         <View style={[styles.navBar, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} activeOpacity={0.7} style={styles.backBtn}>
             <ArrowLeft color={colors.text} size={20} strokeWidth={2.2} />
           </TouchableOpacity>
           <Text style={[styles.navTitle, { color: colors.text }]}>{title}</Text>
@@ -295,7 +278,7 @@ export default function EnvVarEditSheet({ visible, projectPath, editTarget, onCl
 
           <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.background }]}>
             <TouchableOpacity
-              onPress={onClose}
+              onPress={() => sheetRef.current?.dismiss()}
               activeOpacity={0.7}
               style={[styles.cancelBtn, { borderColor: colors.border }]}
             >
@@ -317,14 +300,15 @@ export default function EnvVarEditSheet({ visible, projectPath, editTarget, onCl
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
-    </Modal>
+      </View>
+    </TrueSheet>
   )
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    overflow: 'hidden',
   },
   flex: {
     flex: 1,
@@ -344,8 +328,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   tabs: {
     flexDirection: 'row',
@@ -362,8 +345,7 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   tabText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   body: {
     flex: 1,
@@ -378,19 +360,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing[4],
   },
   label: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   labelHint: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   input: {
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
-    ...typographyScale.base,
-    fontFamily: 'Courier New',
+    ...typeStyles.mono,
   },
   multilineInput: {
     minHeight: 96,
@@ -415,15 +395,14 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   bulkHint: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   bulkTextarea: {
     flex: 1,
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     padding: spacing[3],
-    ...typographyScale.sm,
-    fontFamily: 'Courier New',
+    ...typeStyles.mono,
     minHeight: 200,
   },
   previewBanner: {
@@ -432,8 +411,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   previewText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   errorBanner: {
     borderRadius: borderRadius.lg,
@@ -441,8 +419,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing[4],
   },
   errorText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   footer: {
     flexDirection: 'row',
@@ -459,8 +436,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelText: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   saveBtn: {
     flex: 1,
@@ -469,7 +445,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveText: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
 })

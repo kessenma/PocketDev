@@ -1,0 +1,21 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/AfacadFlux-Variable.ttf",
+      "sha1": "10b5af333e7416a1158b66333e62e9275b6f7183"
+    },
+    {
+      "path": "assets/fonts/README.md",
+      "sha1": "e62922a0ecf9b9ea2c603ece2a5a8ae4daca81e4"
+    },
+    {
+      "path": "assets/fonts/SairaStencil-Italic-Variable.ttf",
+      "sha1": "06d66c9293b3b699cb2a5ac47f85a25f3d08d496"
+    },
+    {
+      "path": "assets/fonts/SairaStencil-Variable.ttf",
+      "sha1": "0fbfde4e1bc3a4b5f53194a1bf800831a7f75e3a"
+    }
+  ]
+}

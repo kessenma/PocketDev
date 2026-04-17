@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
 import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
@@ -76,13 +77,10 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   metricLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   metricValue: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   syncBanner: {
     borderRadius: 12,
@@ -90,7 +88,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   syncText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '500',
   },
 })

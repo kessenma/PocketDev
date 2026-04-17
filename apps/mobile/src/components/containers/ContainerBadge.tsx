@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 
 type Variant = 'neutral' | 'primary' | 'success' | 'warning' | 'error' | 'outline'
 
@@ -70,9 +71,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   text: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    ...typeStyles.sectionTitle,
   },
 })

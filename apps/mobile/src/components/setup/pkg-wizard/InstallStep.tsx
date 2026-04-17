@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { postInstallPkgTool } from '../../../services/api'
 import { Assets } from '../../../../assets'
@@ -295,11 +296,10 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   cardList: {
     flex: 1,
@@ -335,11 +335,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   toolName: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   toolStatus: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   toolStatusIcon: {
     minWidth: 20,
@@ -359,8 +358,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   detailsToggleText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   expandedSection: {
     gap: spacing[2],
@@ -370,7 +368,7 @@ const styles = StyleSheet.create({
     padding: spacing[3],
   },
   commandText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   outputBox: {
     maxHeight: 180,
@@ -378,9 +376,7 @@ const styles = StyleSheet.create({
     padding: spacing[3],
   },
   outputText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
-    lineHeight: 16,
+    ...typeStyles.mono,
   },
   actionButton: {
     flexDirection: 'row',
@@ -391,7 +387,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   actionButtonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

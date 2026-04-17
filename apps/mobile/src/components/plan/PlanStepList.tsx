@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import PlanBadge from './PlanBadge'
 import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   stepNumber: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
     minWidth: 20,
   },
@@ -80,11 +81,9 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   stepTitle: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   filePath: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
   },
 })

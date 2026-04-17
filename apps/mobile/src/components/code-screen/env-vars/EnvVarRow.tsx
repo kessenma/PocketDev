@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Eye, EyeOff, Pencil, Trash2 } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { EnvVar } from '@pocketdev/shared/types'
 import { useTheme } from '../../../contexts/ThemeContext'
+import { typeStyles } from '../../../theme/typography'
 
 type Props = {
   item: EnvVar
@@ -98,19 +99,14 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   key: {
-    ...typographyScale.sm,
-    fontWeight: '700',
-    fontFamily: 'Courier New',
+    ...typeStyles.mono,
   },
   secretBadge: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
     borderWidth: 1,
     borderRadius: borderRadius.full,
     paddingHorizontal: spacing[2],
     paddingVertical: 1,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   valueRow: {
     flexDirection: 'row',
@@ -118,12 +114,11 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   value: {
-    ...typographyScale.sm,
+    ...typeStyles.mono,
     flex: 1,
-    fontFamily: 'Courier New',
   },
   comment: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     fontStyle: 'italic',
   },
   actions: {

@@ -1,7 +1,8 @@
 import React from 'react'
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { Check, CircleAlert, ShieldCheck, TerminalSquare } from 'lucide-react-native'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { Assets } from '../../../../assets'
 import type { MinimaxSetupStatus } from '@pocketdev/shared/types'
@@ -135,15 +136,15 @@ const styles = StyleSheet.create({
   scrollContent: { gap: spacing[3], paddingBottom: spacing[4] },
   hero: { alignItems: 'center', gap: spacing[2], paddingTop: spacing[4] },
   logo: { width: 42, height: 42 },
-  title: { ...typographyScale.xl, fontWeight: '700', textAlign: 'center' },
-  subtitle: { ...typographyScale.sm, textAlign: 'center' },
+  title: { ...typeStyles.screenTitle, textAlign: 'center' },
+  subtitle: { ...typeStyles.bodySmall, textAlign: 'center' },
   statusCard: { borderWidth: 1, borderRadius: borderRadius.lg, padding: spacing[4], gap: spacing[4] },
   statusRow: { flexDirection: 'row', gap: spacing[3] },
   statusIcon: { width: 20, alignItems: 'center', marginTop: 2 },
   statusText: { flex: 1, gap: 2 },
-  statusLabel: { ...typographyScale.xs, textTransform: 'uppercase', fontWeight: '700', letterSpacing: 1 },
-  statusValue: { ...typographyScale.base, fontWeight: '700' },
-  statusDetail: { ...typographyScale.sm, lineHeight: 20 },
+  statusLabel: { ...typeStyles.sectionTitle },
+  statusValue: { ...typeStyles.bodyStrong },
+  statusDetail: { ...typeStyles.bodySmall },
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -152,12 +153,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: spacing[3],
   },
-  warningText: { ...typographyScale.sm, flex: 1, lineHeight: 20 },
+  warningText: { ...typeStyles.bodySmall, flex: 1 },
   continueButton: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing[4],
     borderRadius: borderRadius.lg,
   },
-  continueText: { ...typographyScale.base, fontWeight: '600' },
+  continueText: { ...typeStyles.button },
 })

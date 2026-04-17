@@ -409,14 +409,15 @@ export default function TaskDetailPane({
           <Text style={[styles.emptyTitle, { color: colors.text }]}>{emptyTitle}</Text>
           <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>{emptyBody}</Text>
         </View>
-        <TaskDebugSheet
-          visible={showDebugSheet}
-          selection={debugSelection}
-          onClose={() => setShowDebugSheet(false)}
-          onSelect={setDebugSelection}
-          onContinue={handleDebugContinue}
-          pendingPermissions={pendingPermissions}
-        />
+        {showDebugSheet && (
+          <TaskDebugSheet
+            selection={debugSelection}
+            onDismiss={() => setShowDebugSheet(false)}
+            onSelect={setDebugSelection}
+            onContinue={handleDebugContinue}
+            pendingPermissions={pendingPermissions}
+          />
+        )}
       </>
     )
   }
@@ -574,32 +575,31 @@ export default function TaskDetailPane({
       ) : null}
 
       {taskId ? <TaskInteractionSheet taskId={taskId} /> : null}
-      <TaskDebugSheet
-        visible={showDebugSheet}
-        selection={debugSelection}
-        onClose={() => setShowDebugSheet(false)}
-        onSelect={setDebugSelection}
-        onContinue={handleDebugContinue}
-        pendingPermissions={pendingPermissions}
-      />
-      {showCodexWizard ? (
+      {showDebugSheet && (
+        <TaskDebugSheet
+          selection={debugSelection}
+          onDismiss={() => setShowDebugSheet(false)}
+          onSelect={setDebugSelection}
+          onContinue={handleDebugContinue}
+          pendingPermissions={pendingPermissions}
+        />
+      )}
+      {showCodexWizard && (
         <CodexWizardSheet
           key={`codex-auth-repair-${codexWizardKey}`}
-          visible={showCodexWizard}
           entryMode="auth_repair"
-          onClose={() => setShowCodexWizard(false)}
+          onDismiss={() => setShowCodexWizard(false)}
           onComplete={() => setShowCodexWizard(false)}
         />
-      ) : null}
-      {showClaudeWizard ? (
+      )}
+      {showClaudeWizard && (
         <ClaudeWizardSheet
           key={`claude-auth-repair-${claudeWizardKey}`}
-          visible={showClaudeWizard}
           entryMode="auth_repair"
-          onClose={() => setShowClaudeWizard(false)}
+          onDismiss={() => setShowClaudeWizard(false)}
           onComplete={() => setShowClaudeWizard(false)}
         />
-      ) : null}
+      )}
 
       {/* Copy option menu */}
       <Modal visible={showCopyMenu} transparent animationType="fade" onRequestClose={() => setShowCopyMenu(false)}>

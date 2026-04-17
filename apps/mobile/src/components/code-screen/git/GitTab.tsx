@@ -3,7 +3,7 @@ import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { FolderGit2, Ghost, GitBranch, RefreshCw, Shapes, Split } from 'lucide-react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
-import { borderRadius, palette, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, palette, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../../hooks/useAdaptiveLayout'
 import { useGitStore } from '../../../stores/git'
@@ -26,6 +26,7 @@ import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
 import type { GitView } from '../../git/model'
 import type { MainTabParamList } from '../../../navigation/types'
+import { typeStyles } from '../../../theme/typography'
 
 const VIEW_OPTIONS: readonly CodeSubTabOption<GitView>[] = [
   { value: 'changes', label: 'Changes', icon: Split },
@@ -341,11 +342,10 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
         {activeView === 'branches' ? branchesView : null}
       </Animated.ScrollView>
 
-      {!isSplitLayout ? (
+      {!isSplitLayout && isChangeSheetVisible ? (
         <GitChangeDetailSheet
-          visible={isChangeSheetVisible}
           change={selectedFile}
-          onClose={() => setIsChangeSheetVisible(false)}
+          onDismiss={() => setIsChangeSheetVisible(false)}
         />
       ) : null}
     </View>
@@ -369,13 +369,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   repoName: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
     letterSpacing: -0.3,
   },
   repoPath: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
   },
   repoBadges: {
     flexDirection: 'row',
@@ -393,8 +391,7 @@ const styles = StyleSheet.create({
     maxWidth: 140,
   },
   branchBadgeText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   syncDot: {
     width: 12,
@@ -415,8 +412,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statusMessage: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
     paddingHorizontal: spacing[1],
   },
   scrollArea: {
@@ -433,7 +429,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   emptyText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   stack: {
     gap: spacing[4],

@@ -2,7 +2,8 @@ import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import type { RootStackParamList } from '../../navigation/types'
 import GitBadge from './GitBadge'
@@ -61,22 +62,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   time: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   message: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   meta: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   viewAll: {
     alignItems: 'center',
     paddingVertical: spacing[3],
   },
   viewAllText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
 })

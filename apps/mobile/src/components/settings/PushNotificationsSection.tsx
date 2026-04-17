@@ -91,11 +91,12 @@ export default function PushNotificationsSection() {
         )}
       </BauhausPanel>
 
-      <PushConsentSheet
-        visible={consentVisible}
-        onAgree={handleAgree}
-        onCancel={() => setConsentVisible(false)}
-      />
+      {consentVisible && (
+        <PushConsentSheet
+          onAgree={handleAgree}
+          onDismiss={() => setConsentVisible(false)}
+        />
+      )}
     </>
   )
 }

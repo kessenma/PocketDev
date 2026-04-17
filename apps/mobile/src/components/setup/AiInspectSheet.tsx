@@ -5,27 +5,26 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Modal,
 } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useConnectionStore } from '../../stores/connection'
 import { useSetupStore } from '../../stores/setup'
 import type { WsMessage } from '@pocketdev/shared/types'
+import SetupWizardScreen from './SetupWizardScreen'
 
 interface Props {
-  visible: boolean
   failedCommand: string
   failedOutput: string
-  onClose: () => void
+  onDismiss: () => void
   onFixCommand: (command: string) => void
 }
 
 export default function AiInspectSheet({
-  visible,
   failedCommand,
   failedOutput,
-  onClose,
+  onDismiss,
   onFixCommand,
 }: Props) {
   const { colors } = useTheme()
@@ -53,13 +52,12 @@ export default function AiInspectSheet({
     : 'codex'
 
   useEffect(() => {
-    if (!visible || !ws || !hasAuthenticatedCli) return
+    if (!ws || !hasAuthenticatedCli) return
 
     setDiagnosticOutput('')
     setTaskId(null)
     setSuggestedFix(null)
 
-    // Limit output context to last 50 lines
     const outputLines = failedOutput.split('\n').slice(-50).join('\n')
 
     const prompt = `The following install command failed on this server. Diagnose the issue and suggest a fix. If you can suggest a single command to fix it, put it on its own line prefixed with "FIX_COMMAND: ".
@@ -70,118 +68,101 @@ Output:
 ${outputLines}`
 
     ws.send('task.start', { prompt, agentType })
-  }, [visible, ws, hasAuthenticatedCli])
+  }, [ws, hasAuthenticatedCli])
 
-  // Listen for task output via the connection store message handler
-  // We intercept task output in a useEffect that watches the task store
   useEffect(() => {
-    if (!visible) return
-
-    // Subscribe to raw WS messages for this diagnostic task
     const origOnMessage = (ws as any)?._onMessage
-    // For now, we rely on the task store to aggregate output
-    // and we poll it. This is a simplified approach.
-  }, [visible, taskId])
+    // Simplified: rely on task store to aggregate output
+  }, [taskId])
 
   function handleStop() {
     if (taskId && ws) {
       ws.send('task.kill', { taskId })
     }
-    onClose()
+    onDismiss()
   }
 
   function handleFixIt() {
     if (suggestedFix) {
       onFixCommand(suggestedFix)
-      onClose()
+      onDismiss()
     }
   }
 
-  if (!hasAuthenticatedCli) {
-    return (
-      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>AI Inspect</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={[styles.doneButton, { color: colors.primary }]}>Close</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.center}>
-            <Text style={[styles.disabledText, { color: colors.textSecondary }]}>
-              AI Inspect requires an authenticated Claude or Codex CLI.
-              Complete the CLI setup first.
-            </Text>
-          </View>
-        </View>
-      </Modal>
-    )
-  }
-
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleStop}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>AI Inspect</Text>
+    <SetupWizardScreen backgroundColor={colors.background} onClose={onDismiss}>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text }]}>AI Inspect</Text>
+        {hasAuthenticatedCli ? (
           <TouchableOpacity onPress={handleStop}>
             <Text style={[styles.doneButton, { color: colors.error }]}>Stop</Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={[styles.contextBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.contextLabel, { color: colors.textTertiary }]}>Failed command</Text>
-          <Text style={[styles.contextCmd, { color: colors.textSecondary }]} numberOfLines={1}>
-            $ {failedCommand}
-          </Text>
-        </View>
-
-        <ScrollView
-          ref={scrollRef}
-          style={[styles.output, { backgroundColor: '#1a1a2e' }]}
-          contentContainerStyle={styles.outputContent}
-        >
-          <Text style={styles.outputText} selectable>
-            {diagnosticOutput || 'Analyzing failure...'}
-          </Text>
-        </ScrollView>
-
-        {suggestedFix && (
-          <View style={styles.fixBar}>
-            <TouchableOpacity
-              style={[styles.fixButton, { backgroundColor: colors.primary }]}
-              onPress={handleFixIt}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.fixButtonText, { color: colors.primaryText }]}>
-                Fix It: {suggestedFix}
-              </Text>
-            </TouchableOpacity>
-          </View>
+        ) : (
+          <TouchableOpacity onPress={onDismiss}>
+            <Text style={[styles.doneButton, { color: colors.primary }]}>Close</Text>
+          </TouchableOpacity>
         )}
       </View>
-    </Modal>
+
+      {!hasAuthenticatedCli ? (
+        <View style={styles.center}>
+          <Text style={[styles.disabledText, { color: colors.textSecondary }]}>
+            AI Inspect requires an authenticated Claude or Codex CLI.
+            Complete the CLI setup first.
+          </Text>
+        </View>
+      ) : (
+        <>
+          <View style={[styles.contextBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[styles.contextLabel, { color: colors.textTertiary }]}>Failed command</Text>
+            <Text style={[styles.contextCmd, { color: colors.textSecondary }]} numberOfLines={1}>
+              $ {failedCommand}
+            </Text>
+          </View>
+
+          <ScrollView
+            ref={scrollRef}
+            style={[styles.output, { backgroundColor: '#1a1a2e' }]}
+            contentContainerStyle={styles.outputContent}
+          >
+            <Text style={styles.outputText} selectable>
+              {diagnosticOutput || 'Analyzing failure...'}
+            </Text>
+          </ScrollView>
+
+          {suggestedFix && (
+            <View style={styles.fixBar}>
+              <TouchableOpacity
+                style={[styles.fixButton, { backgroundColor: colors.primary }]}
+                onPress={handleFixIt}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.fixButtonText, { color: colors.primaryText }]}>
+                  Fix It: {suggestedFix}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
+      )}
+    </SetupWizardScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing[4],
-    paddingTop: spacing[12],
+    paddingTop: spacing[4],
     paddingBottom: spacing[3],
   },
   title: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   doneButton: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   center: {
     flex: 1,
@@ -190,9 +171,8 @@ const styles = StyleSheet.create({
     padding: spacing[8],
   },
   disabledText: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
-    lineHeight: 24,
   },
   contextBar: {
     marginHorizontal: spacing[4],
@@ -203,13 +183,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   contextLabel: {
-    ...typographyScale.xs,
-    fontWeight: '500',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   contextCmd: {
-    ...typographyScale.sm,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   output: {
     flex: 1,
@@ -236,8 +213,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fixButtonText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
 })

@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import type { ContainerSummary } from './model'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import {
   ContainerCard,
@@ -10,6 +10,7 @@ import {
   ContainerCardHeader,
   ContainerCardTitle,
 } from './ContainerCard'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   containers: ContainerSummary[]
@@ -85,11 +86,9 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   metricValue: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   metricLabel: {
-    ...typographyScale.sm,
-    fontWeight: '500',
+    ...typeStyles.bodySmall,
   },
 })

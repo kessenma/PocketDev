@@ -1,10 +1,12 @@
 import React, { useReducer, useCallback } from 'react'
-import { View, Text, Image, TouchableOpacity, StyleSheet, Modal, SafeAreaView } from 'react-native'
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check, RotateCcw } from 'lucide-react-native'
+import SetupWizardScreen from './SetupWizardScreen'
 import WizardStepper from './claude-wizard/WizardStepper'
 import DetectStep from './claude-wizard/DetectStep'
 import InstallStep from './claude-wizard/InstallStep'
@@ -13,8 +15,7 @@ import VerifyStep from './claude-wizard/VerifyStep'
 import type { ClaudeSetupStatus, ClaudeWizardStep, ClaudeWizardStepStatus } from '@pocketdev/shared/types'
 
 interface Props {
-  visible: boolean
-  onClose: () => void
+  onDismiss: () => void
   onComplete: () => void
   entryMode?: 'full' | 'auth_repair'
 }
@@ -186,20 +187,20 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function ClaudeWizardSheet({ visible, onClose, onComplete, entryMode = 'full' }: Props) {
+export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
-
-  const handleClose = useCallback(() => {
-    fetchPrerequisites()
-    onClose()
-  }, [fetchPrerequisites, onClose])
 
   const handleDone = useCallback(() => {
     fetchPrerequisites()
     onComplete()
   }, [fetchPrerequisites, onComplete])
+
+  const handleClose = useCallback(() => {
+    fetchPrerequisites()
+    onDismiss()
+  }, [fetchPrerequisites, onDismiss])
 
   const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
@@ -251,8 +252,7 @@ export default function ClaudeWizardSheet({ visible, onClose, onComplete, entryM
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SetupWizardScreen backgroundColor={colors.background} onClose={handleClose}>
         {/* Header */}
         <View style={styles.header}>
           {canGoBack ? (
@@ -288,15 +288,11 @@ export default function ClaudeWizardSheet({ visible, onClose, onComplete, entryM
             </TouchableOpacity>
           </View>
         )}
-      </SafeAreaView>
-    </Modal>
+    </SetupWizardScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -312,8 +308,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   content: {
     flex: 1,
@@ -340,16 +335,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing[1],
   },
   completedTitle: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   completedSubtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
   },
   completedDetail: {
-    ...typographyScale.sm,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   reinstallButton: {
     flexDirection: 'row',
@@ -360,8 +353,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   reinstallText: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
   },
   footer: {
     paddingHorizontal: spacing[6],
@@ -374,7 +366,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   doneText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

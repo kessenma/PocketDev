@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Linking, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, AppState } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import {
   fetchGitHubCliAuthStatus,
@@ -445,11 +446,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   statusTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyStrong,
   },
   statusCopy: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   actionCard: {
     borderWidth: 1,
@@ -458,19 +458,16 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   cardTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyStrong,
   },
   cardCopy: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   outputText: {
-    ...typographyScale.xs,
-    lineHeight: 18,
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+    ...typeStyles.mono,
   },
   fallbackNote: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   optionCard: {
     borderWidth: 1,
@@ -484,12 +481,11 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   optionTitle: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodyStrong,
     flex: 1,
   },
   optionDescription: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   primaryButton: {
     borderRadius: borderRadius.lg,
@@ -507,12 +503,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyStrong,
   },
   secondaryButtonText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodyStrong,
   },
   tokenSection: {
     gap: spacing[3],
@@ -529,8 +523,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[4],
   },
   codeText: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
     letterSpacing: 1.5,
   },
   debugHeader: {
@@ -553,13 +546,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   fallbackLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    ...typeStyles.sectionTitle,
   },
   fallbackCodeText: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
     letterSpacing: 1.25,
   },
   successCard: {
@@ -569,7 +559,6 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   successTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyStrong,
   },
 })

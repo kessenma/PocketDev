@@ -1,10 +1,12 @@
 import React, { useCallback, useReducer } from 'react'
-import { View, Text, Image, TouchableOpacity, StyleSheet, Modal, SafeAreaView } from 'react-native'
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check, RotateCcw } from 'lucide-react-native'
+import SetupWizardScreen from './SetupWizardScreen'
 import type {
   OpenCodeSetupStatus,
   OpenCodeWizardStep,
@@ -17,8 +19,7 @@ import InstallStep from './opencode-wizard/InstallStep'
 import VerifyStep from './opencode-wizard/VerifyStep'
 
 interface Props {
-  visible: boolean
-  onClose: () => void
+  onDismiss: () => void
   onComplete: () => void
 }
 
@@ -148,20 +149,20 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-export default function OpenCodeWizardSheet({ visible, onClose, onComplete }: Props) {
+export default function OpenCodeWizardSheet({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState)
-
-  const handleClose = useCallback(() => {
-    fetchPrerequisites()
-    onClose()
-  }, [fetchPrerequisites, onClose])
 
   const handleDone = useCallback(() => {
     fetchPrerequisites()
     onComplete()
   }, [fetchPrerequisites, onComplete])
+
+  const handleClose = useCallback(() => {
+    fetchPrerequisites()
+    onDismiss()
+  }, [fetchPrerequisites, onDismiss])
 
   const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
@@ -207,8 +208,7 @@ export default function OpenCodeWizardSheet({ visible, onClose, onComplete }: Pr
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SetupWizardScreen backgroundColor={colors.background} onClose={handleClose}>
         <View style={styles.header}>
           {canGoBack ? (
             <TouchableOpacity onPress={() => dispatch({ type: 'GO_BACK' })} style={styles.headerButton}>
@@ -240,13 +240,11 @@ export default function OpenCodeWizardSheet({ visible, onClose, onComplete }: Pr
             </TouchableOpacity>
           </View>
         ) : null}
-      </SafeAreaView>
-    </Modal>
+    </SetupWizardScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -260,8 +258,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   content: {
     flex: 1,
@@ -278,8 +275,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   doneText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   completedContainer: {
     flex: 1,
@@ -300,16 +296,15 @@ const styles = StyleSheet.create({
     height: 44,
   },
   completedTitle: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
     textAlign: 'center',
   },
   completedSubtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
   },
   completedDetail: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   reinstallButton: {
     flexDirection: 'row',
@@ -320,7 +315,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   reinstallText: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
   },
 })

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { CompositeNavigationProp } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import type { MainTabParamList, RootStackParamList } from '../../navigation/types'
 import { useFilesStore } from '../../stores/files'
@@ -18,6 +18,7 @@ import SwipeablePager from '../shared/SwipeablePager'
 import CodeBrowseTab from './code-browse/CodeBrowseTab'
 import GitTab from './git/GitTab'
 import ScriptsTab from './scripts/ScriptsTab'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -100,7 +101,7 @@ export default function CodeScreenShell({ navigation }: Props) {
         </TouchableOpacity>
       ) : null}
 
-      <RunningScriptsSheet visible={showRunningScripts} onClose={() => setShowRunningScripts(false)} />
+      {showRunningScripts && <RunningScriptsSheet onDismiss={() => setShowRunningScripts(false)} />}
     </>
   )
 }
@@ -131,9 +132,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   runningBadgeText: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 11,
   },
 })

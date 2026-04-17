@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
 import { ArrowRight, CheckCircle, RefreshCw, TerminalSquare } from 'lucide-react-native'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchOpenCodeInstallCommand, fetchOpenCodeSetupStatus, postInstallOpenCode } from '../../../services/api'
@@ -149,22 +150,22 @@ const styles = StyleSheet.create({
   scrollContent: { gap: spacing[3], paddingBottom: spacing[4] },
   hero: { alignItems: 'center', gap: spacing[2], paddingTop: spacing[4] },
   logo: { width: 42, height: 42 },
-  title: { ...typographyScale.xl, fontWeight: '700', textAlign: 'center' },
-  subtitle: { ...typographyScale.sm, textAlign: 'center' },
+  title: { ...typeStyles.screenTitle, textAlign: 'center' },
+  subtitle: { ...typeStyles.bodySmall, textAlign: 'center' },
   planCard: { borderWidth: 1, borderRadius: borderRadius.lg, padding: spacing[4], gap: spacing[3] },
   commandHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  commandLabel: { ...typographyScale.base, fontWeight: '700' },
+  commandLabel: { ...typeStyles.bodyStrong },
   commandBlock: { borderRadius: borderRadius.md, padding: spacing[3] },
-  commandText: { ...typographyScale.sm, fontFamily: 'monospace' },
-  commandHint: { ...typographyScale.xs },
+  commandText: { ...typeStyles.mono },
+  commandHint: { ...typeStyles.meta },
   statusCard: { borderWidth: 1, borderRadius: borderRadius.lg, padding: spacing[4], gap: spacing[3] },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  statusTitle: { ...typographyScale.base, fontWeight: '700' },
-  metaText: { ...typographyScale.sm },
-  errorText: { ...typographyScale.sm },
+  statusTitle: { ...typeStyles.bodyStrong },
+  metaText: { ...typeStyles.bodySmall },
+  errorText: { ...typeStyles.bodySmall },
   outputSection: { gap: spacing[2] },
   outputBox: { borderRadius: borderRadius.md, padding: spacing[3] },
-  outputText: { ...typographyScale.xs, fontFamily: 'monospace' },
+  outputText: { ...typeStyles.mono },
   primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], borderRadius: borderRadius.lg },
-  buttonText: { ...typographyScale.base, fontWeight: '600' },
+  buttonText: { ...typeStyles.button },
 })

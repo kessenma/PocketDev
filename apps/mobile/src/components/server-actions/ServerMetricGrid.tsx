@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 import {
   ServerCard,
   ServerCardContent,
@@ -83,8 +84,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   metricLabel: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
   },
   toneDot: {
     width: 10,
@@ -92,10 +92,9 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   metricValue: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   metricDetail: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

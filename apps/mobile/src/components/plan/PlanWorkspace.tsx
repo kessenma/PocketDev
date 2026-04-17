@@ -1,6 +1,7 @@
 import React from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../hooks/useAdaptiveLayout'
 import { usePlanStore } from '../../stores/plan'
@@ -177,23 +178,20 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   eyebrow: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   title: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   subtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     maxWidth: 760,
   },
   controlRow: {
     gap: spacing[3],
   },
   refreshLink: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
     alignSelf: 'flex-start',
   },
@@ -203,7 +201,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   messageText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   stack: {
     gap: spacing[4],
@@ -217,10 +215,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

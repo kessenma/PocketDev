@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react'
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { postInstallCopilot, fetchCopilotSetupStatus } from '../../../services/api'
 import { Assets } from '../../../../assets'
@@ -182,12 +183,11 @@ const styles = StyleSheet.create({
     height: 42,
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.heading,
     textAlign: 'center',
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   planCard: {
@@ -202,19 +202,17 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   commandLabel: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   commandBlock: {
     borderRadius: borderRadius.md,
     padding: spacing[3],
   },
   commandText: {
-    ...typographyScale.sm,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   commandHint: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   statusCard: {
     borderWidth: 1,
@@ -228,22 +226,20 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   statusTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   metaText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   outputBox: {
     borderRadius: borderRadius.md,
     padding: spacing[3],
   },
   outputText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   primaryButton: {
     flexDirection: 'row',
@@ -254,7 +250,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

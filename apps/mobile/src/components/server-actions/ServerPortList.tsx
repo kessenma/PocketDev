@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 import {
   ServerCard,
   ServerCardContent,
@@ -100,8 +101,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   portText: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   statusPill: {
     borderRadius: borderRadius.full,
@@ -109,20 +109,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[1],
   },
   statusText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   service: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
   },
   process: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   exposure: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
 })

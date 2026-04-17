@@ -1,9 +1,10 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { ChevronRight, FolderGit2 } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useProjectsStore } from '../../stores/projects'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   onOpenProjects: () => void
@@ -55,11 +56,9 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   name: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   path: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
   },
 })

@@ -1,7 +1,8 @@
 import React from 'react'
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native'
 import { ChevronDown, ChevronUp, Terminal } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 import CopyButton from '../../shared/CopyButton'
 
@@ -69,8 +70,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
   },
   toggleText: {
-    ...typographyScale.sm,
-    fontWeight: '500',
+    ...typeStyles.bodySmall,
     flex: 1,
   },
   outputBox: {
@@ -80,7 +80,6 @@ const styles = StyleSheet.create({
     maxHeight: 260,
   },
   outputText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
 })

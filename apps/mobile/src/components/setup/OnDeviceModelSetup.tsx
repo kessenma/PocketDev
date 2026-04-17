@@ -2,7 +2,8 @@ import React, { useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { Cpu, Check, Download, X } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale, palette } from '@pocketdev/shared/theme'
+import { spacing, borderRadius, palette } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useOnDeviceAIStore } from '../../stores/on-device-ai'
 import { MODEL_NAME, MODEL_SIZE_MB } from '../../services/embedding'
 
@@ -90,14 +91,11 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   sectionTitle: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    ...typeStyles.sectionTitle,
     marginTop: spacing[2],
   },
   sectionHint: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     marginTop: -spacing[1],
     marginBottom: spacing[1],
   },
@@ -123,11 +121,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   modelName: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
   },
   modelMeta: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   statusArea: {
     alignItems: 'flex-end',
@@ -141,8 +139,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
   },
   statusText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
   progressRow: {
     flexDirection: 'row',
@@ -150,8 +147,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   progressText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   actionButton: {
     flexDirection: 'row',
@@ -162,7 +158,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   actionText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
 })

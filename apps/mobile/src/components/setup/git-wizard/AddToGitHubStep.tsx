@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Image, ScrollView, Dimensions } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { Assets } from '../../../../assets'
 import { Copy, Check, ExternalLink, ArrowRight } from 'lucide-react-native'
 
@@ -175,12 +176,11 @@ const styles = StyleSheet.create({
     height: 40,
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
     textAlign: 'center',
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
     paddingHorizontal: spacing[2],
   },
@@ -191,9 +191,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   keyText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
-    lineHeight: 18,
+    ...typeStyles.mono,
   },
   copyButton: {
     flexDirection: 'row',
@@ -204,8 +202,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   copyText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   instructionsCard: {
     borderWidth: 1,
@@ -226,8 +223,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   numberText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodyStrong,
   },
   instructionContent: {
     flex: 1,
@@ -235,8 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   instructionText: {
-    ...typographyScale.sm,
-    lineHeight: 20,
+    ...typeStyles.bodySmall,
   },
   linkButton: {
     flexDirection: 'row',
@@ -248,8 +243,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   linkButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   screenshotCard: {
     borderWidth: 1,
@@ -258,9 +252,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing[3],
   },
   screenshotLabel: {
-    ...typographyScale.xs,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
     paddingHorizontal: spacing[3],
     marginBottom: spacing[2],
   },
@@ -279,7 +271,6 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
   },
   confirmText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

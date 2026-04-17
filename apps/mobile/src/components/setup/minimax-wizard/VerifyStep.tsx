@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
 import { Check, RefreshCw, ChevronLeft } from 'lucide-react-native'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useConnectionStore } from '../../../stores/connection'
 import { postVerifyMinimax } from '../../../services/api'
@@ -126,13 +127,13 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[6] },
   iconCircle: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: spacing[2] },
   logo: { width: 36, height: 36 },
-  title: { ...typographyScale['2xl'], fontWeight: '700' },
-  subtitle: { ...typographyScale.base, textAlign: 'center' },
-  maskedKey: { ...typographyScale.sm, fontFamily: 'monospace', textAlign: 'center' },
-  errorText: { ...typographyScale.sm, textAlign: 'center', marginTop: spacing[1] },
+  title: { ...typeStyles.screenTitle },
+  subtitle: { ...typeStyles.body, textAlign: 'center' },
+  maskedKey: { ...typeStyles.mono, textAlign: 'center' },
+  errorText: { ...typeStyles.bodySmall, textAlign: 'center', marginTop: spacing[1] },
   actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], borderRadius: borderRadius.lg },
-  buttonText: { ...typographyScale.base, fontWeight: '600' },
+  buttonText: { ...typeStyles.button },
   failedActions: { flexDirection: 'row', gap: spacing[3] },
   secondaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], paddingHorizontal: spacing[5], borderRadius: borderRadius.lg, borderWidth: 1 },
-  secondaryText: { ...typographyScale.base, fontWeight: '600' },
+  secondaryText: { ...typeStyles.button },
 })

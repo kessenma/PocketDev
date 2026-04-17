@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { postVerifyCodexAuth } from '../../../services/api'
 import { Assets } from '../../../../assets'
@@ -159,15 +160,14 @@ const styles = StyleSheet.create({
     height: 36,
   },
   title: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   subtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
     marginTop: spacing[1],
   },
@@ -180,8 +180,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   failedActions: {
     flexDirection: 'row',
@@ -198,7 +197,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

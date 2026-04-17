@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, typographyScale } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchCopilotSetupStatus } from '../../../services/api'
 import CopilotSetupAnimation from '../../animations/CopilotSetupAnimation'
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[6],
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   retryButton: {
@@ -94,7 +95,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   retryText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

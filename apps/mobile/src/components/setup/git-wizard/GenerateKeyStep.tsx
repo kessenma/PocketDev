@@ -4,7 +4,8 @@ import {
 } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { postGenerateSshKey, fetchGitPublicKey } from '../../../services/api'
 import { Key, Copy, Check, AlertTriangle, ArrowRight } from 'lucide-react-native'
@@ -236,12 +237,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
     textAlign: 'center',
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
     paddingHorizontal: spacing[4],
   },
@@ -257,11 +257,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   warningTitle: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   warningText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   warningActions: {
     flexDirection: 'row',
@@ -274,8 +273,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   warningButtonText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   infoCard: {
     borderWidth: 1,
@@ -284,12 +282,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   infoText: {
-    ...typographyScale.sm,
-    lineHeight: 20,
+    ...typeStyles.bodySmall,
   },
   infoDetail: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   generateButton: {
     flexDirection: 'row',
@@ -305,14 +301,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[6],
   },
   loadingText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   errorCard: {
     padding: spacing[3],
     borderRadius: borderRadius.md,
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   keyCard: {
     borderWidth: 1,
@@ -321,14 +317,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   keyLabel: {
-    ...typographyScale.xs,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   keyText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
-    lineHeight: 18,
+    ...typeStyles.mono,
   },
   copyButton: {
     flexDirection: 'row',
@@ -339,8 +331,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   copyText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   continueButton: {
     flexDirection: 'row',
@@ -351,7 +342,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

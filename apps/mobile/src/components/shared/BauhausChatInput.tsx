@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { ActivityIndicator, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   placeholder?: string
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   input: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     flex: 1,
     minHeight: 40,
     borderWidth: 1,
@@ -102,7 +103,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   sendText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
 })

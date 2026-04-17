@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 import { TouchableOpacity, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { Copy, Check } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useToast } from '../../hooks/useToast'
+import { typeStyles } from '../../theme/typography'
 
 interface Props {
   value: string
@@ -69,7 +70,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
   },
   label: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
   },
 })

@@ -1,7 +1,8 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image, type ImageSourcePropType } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
+import { spacing, palette } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import { Assets } from '../../../assets'
 
@@ -560,18 +561,14 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   name: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
     letterSpacing: -0.3,
   },
   required: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   status: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
   },
   loadingRow: {
@@ -581,12 +578,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   loadingText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   path: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   actions: {
     flexDirection: 'row',
@@ -600,16 +595,15 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   actionText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '600',
   },
   actionButtonDisabled: {
     opacity: 0.55,
   },
   inlineHint: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     width: '100%',
-    lineHeight: 18,
   },
   secondaryActionButton: {
     paddingHorizontal: spacing[4],
@@ -618,7 +612,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryActionText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '600',
   },
 })

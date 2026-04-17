@@ -1,8 +1,9 @@
 import React from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ChevronRight, FileCode2, Folder } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 import { FileCard, FileCardContent, FileCardDescription, FileCardHeader, FileCardTitle } from './FileCard'
 import type { FileNode } from './model'
 
@@ -152,8 +153,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '90deg' }],
   },
   nodeLabel: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
     flex: 1,
   },
 })

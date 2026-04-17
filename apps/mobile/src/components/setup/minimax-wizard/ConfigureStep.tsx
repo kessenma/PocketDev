@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { View, Text, Image, TouchableOpacity, TextInput, ActivityIndicator, Linking, StyleSheet } from 'react-native'
 import { Eye, EyeOff, ExternalLink, Check } from 'lucide-react-native'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useConnectionStore } from '../../../stores/connection'
 import { postConfigureMinimax } from '../../../services/api'
@@ -130,8 +131,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, gap: spacing[4], paddingTop: spacing[4] },
   hero: { alignItems: 'center', gap: spacing[2] },
   logo: { width: 42, height: 42 },
-  title: { ...typographyScale.xl, fontWeight: '700', textAlign: 'center' },
-  subtitle: { ...typographyScale.sm, textAlign: 'center' },
+  title: { ...typeStyles.screenTitle, textAlign: 'center' },
+  subtitle: { ...typeStyles.bodySmall, textAlign: 'center' },
   inputCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -142,14 +143,13 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    ...typographyScale.base,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   eyeButton: {
     padding: spacing[1],
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     marginTop: -spacing[2],
   },
   linkRow: {
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   linkText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   successCard: {
     flexDirection: 'row',
@@ -170,8 +170,7 @@ const styles = StyleSheet.create({
     padding: spacing[3],
   },
   successText: {
-    ...typographyScale.sm,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   saveButton: {
     flexDirection: 'row',
@@ -182,5 +181,5 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     marginTop: 'auto',
   },
-  saveText: { ...typographyScale.base, fontWeight: '600' },
+  saveText: { ...typeStyles.button },
 })

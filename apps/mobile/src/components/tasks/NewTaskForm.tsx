@@ -334,12 +334,13 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             No closely related files found for this prompt.
           </Text>
         ) : null}
-        <PromptFilterSheet
-          visible={showFilterSheet}
-          prompt={prompt}
-          onClose={() => setShowFilterSheet(false)}
-          onSearch={(phrase) => handleFindRelatedFiles(phrase)}
-        />
+        {showFilterSheet && (
+          <PromptFilterSheet
+            prompt={prompt}
+            onDismiss={() => setShowFilterSheet(false)}
+            onSearch={(phrase) => handleFindRelatedFiles(phrase)}
+          />
+        )}
 
         {/* ── File Context Picker ── */}
         <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>

@@ -1,7 +1,8 @@
 import React from 'react'
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Archive, ChevronDown, ChevronUp } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import type { GitStashEntry } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
@@ -156,8 +157,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   stashButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   stashRow: {
     borderRadius: borderRadius.lg,
@@ -170,15 +170,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   stashTime: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   stashMessage: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '600',
   },
   stashBranch: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   stashActions: {
     flexDirection: 'row',
@@ -193,7 +192,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
 })

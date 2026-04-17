@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react'
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { postConfigureGitIdentity } from '../../../services/api'
 import { User, Mail, CheckCircle } from 'lucide-react-native'
@@ -152,12 +153,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
     textAlign: 'center',
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
     paddingHorizontal: spacing[4],
     marginBottom: spacing[2],
@@ -166,8 +166,7 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   label: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
     marginLeft: spacing[1],
   },
   inputRow: {
@@ -181,11 +180,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    ...typographyScale.base,
+    ...typeStyles.body,
     padding: 0,
   },
   hint: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     marginLeft: spacing[1],
   },
   errorCard: {
@@ -193,7 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   saveButton: {
     flexDirection: 'row',
@@ -205,7 +204,6 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
   },
   saveText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

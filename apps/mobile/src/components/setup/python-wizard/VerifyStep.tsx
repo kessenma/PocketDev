@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react'
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import { postVerifyPython } from '../../../services/api'
@@ -216,12 +217,10 @@ const detailStyles = StyleSheet.create({
     gap: spacing[2],
   },
   label: {
-    ...typographyScale.sm,
-    fontWeight: '500',
+    ...typeStyles.bodyStrong,
   },
   value: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
 })
 
@@ -243,11 +242,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.screenTitle,
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   detailsCard: {
@@ -259,7 +257,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   rawCard: {
@@ -270,14 +268,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   rawLabel: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    ...typeStyles.sectionTitle,
   },
   rawText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   actionButton: {
     width: '100%',
@@ -289,7 +283,6 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

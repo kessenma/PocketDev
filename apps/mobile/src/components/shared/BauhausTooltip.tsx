@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react'
 import { Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 
 type Direction = 'top' | 'bottom'
 
@@ -111,12 +112,10 @@ const styles = StyleSheet.create({
     width: TOOLTIP_MAX_WIDTH,
   },
   tooltipText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
     color: '#ffffff',
   },
   tooltipHeader: {
-    fontWeight: '700',
     marginBottom: spacing[1],
   },
   itemRow: {
@@ -126,17 +125,16 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   bullet: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     color: 'rgba(255,255,255,0.5)',
-    lineHeight: 16,
   },
   itemText: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     color: 'rgba(255,255,255,0.85)',
     flex: 1,
   },
   overflow: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     color: 'rgba(255,255,255,0.45)',
     marginTop: 2,
   },

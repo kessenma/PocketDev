@@ -1,6 +1,6 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import ContainerBadge from './ContainerBadge'
 import {
@@ -11,6 +11,7 @@ import {
   ContainerCardTitle,
 } from './ContainerCard'
 import type { ContainerSummary } from './model'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   containers: ContainerSummary[]
@@ -114,18 +115,16 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   name: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   image: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   meta: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   statusText: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     textTransform: 'none',
   },
   emptyState: {
@@ -134,10 +133,9 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

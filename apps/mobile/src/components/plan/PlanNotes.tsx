@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, TextInput } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
 
@@ -43,7 +44,7 @@ export default function PlanNotes({ value, onChangeText }: Props) {
 
 const styles = StyleSheet.create({
   input: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     minHeight: 116,
     borderWidth: 1,
     borderRadius: borderRadius.lg,

@@ -1,36 +1,44 @@
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import {
-  Modal,
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
 } from 'react-native'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
 
 interface Props {
-  visible: boolean
   onAgree: () => void
-  onCancel: () => void
+  onDismiss: () => void
 }
 
-export default function PushConsentSheet({ visible, onAgree, onCancel }: Props) {
+export default function PushConsentSheet({ onAgree, onDismiss }: Props) {
   const { colors } = useTheme()
+  const sheetRef = useRef<TrueSheet>(null)
+
+  useEffect(() => {
+    sheetRef.current?.present()
+  }, [])
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Enable Push Notifications</Text>
-          <TouchableOpacity onPress={onCancel} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={[styles.cancelLink, { color: colors.textSecondary }]}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
+    <TrueSheet
+      ref={sheetRef}
+      detents={[1]}
+      backgroundColor={colors.background}
+      cornerRadius={24}
+      onDidDismiss={onDismiss}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text }]}>Enable Push Notifications</Text>
+        <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Text style={[styles.cancelLink, { color: colors.textSecondary }]}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
 
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
           <Text style={[styles.body, { color: colors.text }]}>
@@ -60,15 +68,11 @@ export default function PushConsentSheet({ visible, onAgree, onCancel }: Props) 
             Enable Notifications
           </BauhausButton>
         </View>
-      </SafeAreaView>
-    </Modal>
+    </TrueSheet>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

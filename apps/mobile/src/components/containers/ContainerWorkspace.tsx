@@ -1,6 +1,6 @@
 import React from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
-import { spacing, typographyScale, borderRadius } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useAdaptiveLayout } from '../../hooks/useAdaptiveLayout'
 import { useContainerStore } from '../../stores/containers'
@@ -10,6 +10,7 @@ import ContainerLogsPanel from './ContainerLogsPanel'
 import ContainerSegmentedControl from './ContainerSegmentedControl'
 import ContainerStatusSummary from './ContainerStatusSummary'
 import type { ContainerView } from './model'
+import { typeStyles } from '../../theme/typography'
 
 const VIEW_OPTIONS = [
   { value: 'containers', label: 'Containers' },
@@ -85,7 +86,7 @@ export default function ContainerWorkspace() {
         </Text>
       </View>
 
-      <View style={[styles.messageBanner, { backgroundColor: colors.backgroundSecondary }]}> 
+      <View style={[styles.messageBanner, { backgroundColor: colors.backgroundSecondary }]}>
         <Text style={[styles.messageText, { color: colors.textSecondary }]}>{lastActionMessage}</Text>
       </View>
     </View>
@@ -153,24 +154,20 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   eyebrow: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
+    ...typeStyles.sectionTitle,
   },
   title: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   subtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     maxWidth: 760,
   },
   controlRow: {
     gap: spacing[3],
   },
   refreshLink: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
     alignSelf: 'flex-start',
   },
   messageBanner: {
@@ -179,7 +176,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   messageText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   stack: {
     gap: spacing[4],

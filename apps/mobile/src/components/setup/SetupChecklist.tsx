@@ -1,7 +1,8 @@
 import React, { useEffect, useCallback } from 'react'
 import { View, Text, RefreshControl, StyleSheet, Animated, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
+import { spacing, palette } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { useToast } from '../../hooks/useToast'
 import SetupCheckItem from './SetupCheckItem'
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
     padding: spacing[6],
   },
   error: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   serverInfoRow: {
@@ -314,20 +315,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   serverInfoLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-    letterSpacing: 1,
+    ...typeStyles.sectionTitle,
     marginBottom: 4,
   },
   serverInfoValue: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   serverInfoMeta: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
     marginTop: spacing[1],
-    lineHeight: 18,
   },
   banner: {
     borderWidth: 1,
@@ -338,18 +334,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
   },
   bannerTitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
   },
   bannerBody: {
-    ...typographyScale.xs,
-    lineHeight: 18,
+    ...typeStyles.meta,
   },
   sectionTitle: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    ...typeStyles.sectionTitle,
     marginTop: spacing[2],
   },
   section: {
@@ -359,7 +351,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   sectionHint: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     marginTop: -spacing[1],
     marginBottom: spacing[1],
   },

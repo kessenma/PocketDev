@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { View, Text, Image, TouchableOpacity, TextInput, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Linking } from 'react-native'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
 import {
   fetchClaudeAuthStatus,
@@ -300,12 +301,11 @@ const styles = StyleSheet.create({
     height: 42,
   },
   title: {
-    ...typographyScale.xl,
-    fontWeight: '700',
+    ...typeStyles.heading,
     textAlign: 'center',
   },
   subtitle: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   statusCard: {
@@ -320,12 +320,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   statusTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   statusCopy: {
-    ...typographyScale.sm,
-    lineHeight: 20,
+    ...typeStyles.bodySmall,
   },
   successBanner: {
     flexDirection: 'row',
@@ -337,8 +335,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   successBannerText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
     flex: 1,
   },
   actionCard: {
@@ -348,12 +345,10 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   cardTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   cardCopy: {
-    ...typographyScale.sm,
-    lineHeight: 20,
+    ...typeStyles.bodySmall,
   },
   inputRow: {
     flexDirection: 'row',
@@ -365,8 +360,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
-    ...typographyScale.sm,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   sendButton: {
     width: 48,
@@ -385,17 +379,14 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   outputToggleText: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.bodySmall,
   },
   outputBox: {
     borderRadius: borderRadius.md,
     padding: spacing[3],
   },
   outputText: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
-    lineHeight: 16,
+    ...typeStyles.mono,
   },
   primaryButton: {
     flexDirection: 'row',
@@ -406,7 +397,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

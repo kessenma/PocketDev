@@ -1,7 +1,8 @@
 import React from 'react'
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { CircleAlert, type LucideIcon, CheckCircle2, XCircle } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 
 export type SetupProgressTone = 'running' | 'success' | 'error' | 'warning'
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
     padding: spacing[4],
   },
   text: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '600',
   },
 })

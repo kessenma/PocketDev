@@ -1,7 +1,6 @@
 import React from 'react'
 import {
   ActivityIndicator,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,7 +9,7 @@ import {
   View,
 } from 'react-native'
 import type { ContainerLogsDirection, ContainerLogsFilter, ContainerLogLine, ContainerSummary } from './model'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import ContainerBadge from './ContainerBadge'
 import {
@@ -21,6 +20,7 @@ import {
   ContainerCardTitle,
 } from './ContainerCard'
 import ContainerSegmentedControl from './ContainerSegmentedControl'
+import { typeStyles } from '../../theme/typography'
 
 const DIRECTION_OPTIONS = [
   { value: 'tail', label: 'From End' },
@@ -166,12 +166,12 @@ export default function ContainerLogsPanel({
         </Text>
 
         {error ? (
-          <View style={[styles.errorBanner, { backgroundColor: colors.errorBackground }]}> 
+          <View style={[styles.errorBanner, { backgroundColor: colors.errorBackground }]}>
             <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           </View>
         ) : null}
 
-        <View style={[styles.logSurface, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}> 
+        <View style={[styles.logSurface, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
           <ScrollView ref={scrollRef} contentContainerStyle={styles.logContent}>
             {logs.length > 0 ? (
               logs.map((line, index) => (
@@ -222,12 +222,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   controlLabel: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   input: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     borderWidth: 1,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[4],
@@ -246,8 +244,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   secondaryButtonText: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   primaryButton: {
     flex: 1,
@@ -258,11 +255,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   primaryButtonText: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   helper: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   errorBanner: {
     borderRadius: borderRadius.lg,
@@ -270,8 +266,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[3],
   },
   errorText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   logSurface: {
     borderWidth: 1,
@@ -284,11 +279,9 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   logLine: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
+    ...typeStyles.mono,
   },
   emptyLogs: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

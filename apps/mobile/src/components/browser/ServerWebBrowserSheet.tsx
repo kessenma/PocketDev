@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Linking, Modal, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import WebView, { type WebViewNavigation, type WebViewProps } from 'react-native-webview'
 import { X, ChevronLeft, ChevronRight, RotateCw, ExternalLink, AlertCircle } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 
 interface Props {
-  visible: boolean
   title: string
   initialUrl: string
-  onClose: () => void
+  onDismiss: () => void
   errorHint?: string | null
   matchUrl?: (url: string) => boolean
   onMatchedUrl?: (url: string) => Promise<void> | void
@@ -18,10 +19,9 @@ interface Props {
 }
 
 export default function ServerWebBrowserSheet({
-  visible,
   title,
   initialUrl,
-  onClose,
+  onDismiss,
   errorHint,
   matchUrl,
   onMatchedUrl,
@@ -29,6 +29,7 @@ export default function ServerWebBrowserSheet({
   onLoadFailure,
 }: Props) {
   const { colors } = useTheme()
+  const sheetRef = useRef<TrueSheet>(null)
   const webViewRef = useRef<WebView>(null)
   const [currentUrl, setCurrentUrl] = useState(initialUrl)
   const [canGoBack, setCanGoBack] = useState(false)
@@ -39,10 +40,14 @@ export default function ServerWebBrowserSheet({
   const source = useMemo<WebViewProps['source']>(() => ({ uri: initialUrl }), [initialUrl])
 
   useEffect(() => {
+    sheetRef.current?.present()
+  }, [])
+
+  useEffect(() => {
     setCurrentUrl(initialUrl)
     setLoading(true)
     setLoadError(null)
-  }, [initialUrl, visible])
+  }, [initialUrl])
 
   function handleNavigationStateChange(navState: WebViewNavigation) {
     setCurrentUrl(navState.url)
@@ -59,109 +64,110 @@ export default function ServerWebBrowserSheet({
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose} style={styles.iconButton} activeOpacity={0.7}>
-            <X color={colors.text} size={20} strokeWidth={2.25} />
+    <TrueSheet
+      ref={sheetRef}
+      detents={[1]}
+      backgroundColor={colors.background}
+      cornerRadius={24}
+      onDidDismiss={onDismiss}
+    >
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} style={styles.iconButton} activeOpacity={0.7}>
+          <X color={colors.text} size={20} strokeWidth={2.25} />
+        </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
+          <Text style={[styles.url, { color: colors.textTertiary }]} numberOfLines={1}>{currentUrl}</Text>
+        </View>
+        <View style={styles.toolbar}>
+          <TouchableOpacity
+            onPress={() => webViewRef.current?.goBack()}
+            style={[styles.iconButton, !canGoBack && styles.disabledButton]}
+            disabled={!canGoBack}
+            activeOpacity={0.7}
+          >
+            <ChevronLeft color={colors.text} size={18} strokeWidth={2.25} />
           </TouchableOpacity>
-          <View style={styles.headerText}>
-            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
-            <Text style={[styles.url, { color: colors.textTertiary }]} numberOfLines={1}>{currentUrl}</Text>
-          </View>
-          <View style={styles.toolbar}>
-            <TouchableOpacity
-              onPress={() => webViewRef.current?.goBack()}
-              style={[styles.iconButton, !canGoBack && styles.disabledButton]}
-              disabled={!canGoBack}
-              activeOpacity={0.7}
-            >
-              <ChevronLeft color={colors.text} size={18} strokeWidth={2.25} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => webViewRef.current?.goForward()}
-              style={[styles.iconButton, !canGoForward && styles.disabledButton]}
-              disabled={!canGoForward}
-              activeOpacity={0.7}
-            >
-              <ChevronRight color={colors.text} size={18} strokeWidth={2.25} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => webViewRef.current?.reload()} style={styles.iconButton} activeOpacity={0.7}>
-              <RotateCw color={colors.text} size={18} strokeWidth={2.25} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => Linking.openURL(currentUrl)} style={styles.iconButton} activeOpacity={0.7}>
-              <ExternalLink color={colors.text} size={18} strokeWidth={2.25} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => webViewRef.current?.goForward()}
+            style={[styles.iconButton, !canGoForward && styles.disabledButton]}
+            disabled={!canGoForward}
+            activeOpacity={0.7}
+          >
+            <ChevronRight color={colors.text} size={18} strokeWidth={2.25} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => webViewRef.current?.reload()} style={styles.iconButton} activeOpacity={0.7}>
+            <RotateCw color={colors.text} size={18} strokeWidth={2.25} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => Linking.openURL(currentUrl)} style={styles.iconButton} activeOpacity={0.7}>
+            <ExternalLink color={colors.text} size={18} strokeWidth={2.25} />
+          </TouchableOpacity>
         </View>
+      </View>
 
-        <View style={styles.body}>
-          <WebView
-            ref={webViewRef}
-            source={source}
-            onNavigationStateChange={handleNavigationStateChange}
-            onShouldStartLoadWithRequest={handleShouldStart}
-            onLoadStart={() => {
-              setLoading(true)
-              setLoadError(null)
-            }}
-            onLoad={() => {
-              setLoading(false)
-              onLoadSuccess?.()
-            }}
-            onLoadEnd={() => setLoading(false)}
-            onError={(event) => {
-              setLoading(false)
-              const message = event.nativeEvent.description || 'Failed to load page.'
-              setLoadError(message)
-              onLoadFailure?.(message)
-            }}
-            startInLoadingState
-            allowsBackForwardNavigationGestures
-            style={styles.webview}
-          />
+      <View style={styles.body}>
+        <WebView
+          ref={webViewRef}
+          source={source}
+          onNavigationStateChange={handleNavigationStateChange}
+          onShouldStartLoadWithRequest={handleShouldStart}
+          onLoadStart={() => {
+            setLoading(true)
+            setLoadError(null)
+          }}
+          onLoad={() => {
+            setLoading(false)
+            onLoadSuccess?.()
+          }}
+          onLoadEnd={() => setLoading(false)}
+          onError={(event) => {
+            setLoading(false)
+            const message = event.nativeEvent.description || 'Failed to load page.'
+            setLoadError(message)
+            onLoadFailure?.(message)
+          }}
+          startInLoadingState
+          allowsBackForwardNavigationGestures
+          style={styles.webview}
+        />
 
-          {loading && (
-            <View pointerEvents="none" style={styles.loadingOverlay}>
-              <View style={[styles.loadingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <ActivityIndicator color={colors.primary} size="small" />
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading page…</Text>
-              </View>
+        {loading && (
+          <View pointerEvents="none" style={styles.loadingOverlay}>
+            <View style={[styles.loadingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <ActivityIndicator color={colors.primary} size="small" />
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading page…</Text>
             </View>
-          )}
+          </View>
+        )}
 
-          {loadError && (
-            <View style={styles.errorOverlay}>
-              <View style={[styles.errorCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <AlertCircle color={colors.error} size={20} strokeWidth={2.25} />
-                <Text style={[styles.errorTitle, { color: colors.text }]}>Page failed to load</Text>
-                <Text style={[styles.errorText, { color: colors.textSecondary }]}>{loadError}</Text>
-                {errorHint ? (
-                  <Text style={[styles.errorText, { color: colors.textSecondary }]}>{errorHint}</Text>
-                ) : null}
-                <TouchableOpacity
-                  style={[styles.retryButton, { backgroundColor: colors.primary }]}
-                  onPress={() => {
-                    setLoadError(null)
-                    webViewRef.current?.reload()
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.retryText, { color: colors.primaryText }]}>Retry</Text>
-                </TouchableOpacity>
-              </View>
+        {loadError && (
+          <View style={styles.errorOverlay}>
+            <View style={[styles.errorCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <AlertCircle color={colors.error} size={20} strokeWidth={2.25} />
+              <Text style={[styles.errorTitle, { color: colors.text }]}>Page failed to load</Text>
+              <Text style={[styles.errorText, { color: colors.textSecondary }]}>{loadError}</Text>
+              {errorHint ? (
+                <Text style={[styles.errorText, { color: colors.textSecondary }]}>{errorHint}</Text>
+              ) : null}
+              <TouchableOpacity
+                style={[styles.retryButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setLoadError(null)
+                  webViewRef.current?.reload()
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.retryText, { color: colors.primaryText }]}>Retry</Text>
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </SafeAreaView>
-    </Modal>
+          </View>
+        )}
+      </View>
+    </TrueSheet>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -175,11 +181,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   title: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   url: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   toolbar: {
     flexDirection: 'row',
@@ -215,7 +220,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   loadingText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   errorOverlay: {
     position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
@@ -232,11 +237,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   errorTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   errorText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     textAlign: 'center',
   },
   retryButton: {
@@ -246,7 +250,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   retryText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
   },
 })

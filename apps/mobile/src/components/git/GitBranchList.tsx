@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
 import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
@@ -79,13 +80,10 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   currentBranchLabel: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   currentBranchName: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   row: {
     borderWidth: 1,
@@ -100,8 +98,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   name: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
     flex: 1,
   },
   badges: {
@@ -109,7 +106,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   description: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   rowFooter: {
     flexDirection: 'row',
@@ -118,11 +115,9 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   meta: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   switchLabel: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
 })

@@ -1,7 +1,8 @@
 import React from 'react'
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { AlertTriangle, Bot, XCircle } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import type { GitMergeState } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import { GitCard, GitCardContent, GitCardHeader, GitCardTitle } from './GitCard'
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   description: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   fileList: {
     borderRadius: borderRadius.lg,
@@ -113,8 +114,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   filePath: {
-    ...typographyScale.sm,
-    fontWeight: '500',
+    ...typeStyles.bodySmall,
     flex: 1,
   },
   button: {
@@ -126,7 +126,6 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
 })

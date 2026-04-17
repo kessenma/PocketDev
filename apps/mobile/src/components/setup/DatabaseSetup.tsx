@@ -10,7 +10,8 @@ import {
   Alert,
 } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useConnectionStore } from '../../stores/connection'
 import type { DatabaseTemplate, DatabaseInfo, DatabaseCreateRequest } from '@pocketdev/shared/types'
 
@@ -240,13 +241,11 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   sectionTitle: {
-    ...typographyScale.xs,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
     marginTop: spacing[2],
   },
   hint: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   dbList: {
     gap: spacing[2],
@@ -275,11 +274,11 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   dbName: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '600',
   },
   dbMeta: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   dbActions: {
     flexDirection: 'row',
@@ -291,8 +290,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   smallButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
   templateGrid: {
     flexDirection: 'row',
@@ -307,15 +305,14 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   templateName: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '700',
   },
   templateDesc: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   templateImage: {
-    ...typographyScale.xs,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
     marginTop: spacing[1],
   },
   createForm: {
@@ -325,15 +322,14 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   createTitle: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   label: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '500',
   },
   input: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     borderWidth: 1,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing[3],
@@ -351,7 +347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '600',
   },
   createButton: {
@@ -361,7 +357,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   createButtonText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     fontWeight: '600',
   },
 })

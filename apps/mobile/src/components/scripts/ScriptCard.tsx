@@ -8,10 +8,11 @@ import {
   View,
 } from 'react-native'
 import { Play, Square, Eye, ChevronDown, ChevronUp, X, CircleCheck, CircleX } from 'lucide-react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import CopyButton from '../shared/CopyButton'
 import type { ScriptRunStatus } from '../../stores/scripts'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
   name: string
@@ -183,11 +184,10 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   name: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   command: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   actions: {
     flexDirection: 'row',
@@ -210,8 +210,7 @@ const styles = StyleSheet.create({
     height: 36,
   },
   buttonText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
   outputContainer: {
     gap: spacing[2],
@@ -222,9 +221,7 @@ const styles = StyleSheet.create({
     padding: spacing[2],
   },
   outputLine: {
-    fontFamily: 'monospace',
-    fontSize: 11,
-    lineHeight: 16,
+    ...typeStyles.mono,
   },
   copyButton: {
     alignSelf: 'flex-start',

@@ -1,7 +1,8 @@
-import React, { useReducer, useCallback, useEffect, useState } from 'react'
-import { View, Text, Image, TouchableOpacity, StyleSheet, Modal, SafeAreaView } from 'react-native'
+import React, { useReducer, useCallback, useState } from 'react'
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
@@ -14,10 +15,10 @@ import InstallPipStep from './python-wizard/InstallPipStep'
 import VerifyStep from './python-wizard/VerifyStep'
 import type { PythonSetupStatus, PythonWizardStep, PythonWizardStepStatus } from '@pocketdev/shared/types'
 import PythonSetupAnimation from '../animations/PythonSetupAnimation'
+import SetupWizardScreen from './SetupWizardScreen'
 
 interface Props {
-  visible: boolean
-  onClose: () => void
+  onDismiss: () => void
   onComplete: () => void
 }
 
@@ -163,27 +164,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function PythonWizardSheet({ visible, onClose, onComplete }: Props) {
+export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
   const [completionAnimationDone, setCompletionAnimationDone] = useState(false)
 
-  useEffect(() => {
-    if (!visible) {
-      setCompletionAnimationDone(false)
-    }
-  }, [visible])
-
-  const handleClose = useCallback(() => {
-    fetchPrerequisites()
-    onClose()
-  }, [fetchPrerequisites, onClose])
-
   const handleDone = useCallback(() => {
     fetchPrerequisites()
     onComplete()
   }, [fetchPrerequisites, onComplete])
+
+  const handleClose = useCallback(() => {
+    fetchPrerequisites()
+    onDismiss()
+  }, [fetchPrerequisites, onDismiss])
 
   const currentIndex = ALL_STEPS.indexOf(state.currentStep)
   const hasPrevStep = currentIndex > 1 && ALL_STEPS.slice(1, currentIndex).some(
@@ -243,8 +238,7 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SetupWizardScreen backgroundColor={colors.background} onClose={handleClose}>
         {/* Header */}
         <View style={styles.header}>
           {canGoBack ? (
@@ -280,15 +274,11 @@ export default function PythonWizardSheet({ visible, onClose, onComplete }: Prop
             </TouchableOpacity>
           </View>
         )}
-      </SafeAreaView>
-    </Modal>
+    </SetupWizardScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -304,8 +294,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   content: {
     flex: 1,
@@ -332,16 +321,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing[1],
   },
   completedTitle: {
-    ...typographyScale['2xl'],
-    fontWeight: '700',
+    ...typeStyles.heading,
   },
   completedSubtitle: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     textAlign: 'center',
   },
   completedDetail: {
-    ...typographyScale.sm,
-    fontFamily: 'monospace',
+    ...typeStyles.mono,
   },
   footer: {
     paddingHorizontal: spacing[6],
@@ -354,7 +341,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   doneText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
 })

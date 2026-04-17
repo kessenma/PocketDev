@@ -11,8 +11,9 @@ import {
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import RNClipboard from '@react-native-clipboard/clipboard'
 import { useTheme } from '../../contexts/ThemeContext'
-import { spacing, borderRadius, typographyScale } from '@pocketdev/shared/theme'
+import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { Copy, Sparkles, Sun, Moon, X, Send, ChevronDown } from 'lucide-react-native'
+import { typeStyles } from '../../theme/typography'
 
 // ─── Terminal color schemes ──────────────────────────────────────────────────
 
@@ -391,8 +392,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   toolButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '600',
+    ...typeStyles.meta,
   },
 
   // Terminal
@@ -406,18 +406,14 @@ const styles = StyleSheet.create({
     minHeight: '100%',
   },
   terminalText: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
+    ...typeStyles.mono,
   },
   lineRow: {
     flexDirection: 'row',
     gap: spacing[2],
   },
   lineNumber: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
+    ...typeStyles.mono,
     width: 28,
     textAlign: 'right',
   },
@@ -439,8 +435,7 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   menuTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
     marginBottom: spacing[1],
   },
   menuItem: {
@@ -449,11 +444,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   menuItemText: {
-    ...typographyScale.sm,
-    fontWeight: '600',
+    ...typeStyles.bodySmall,
   },
   menuItemHint: {
-    ...typographyScale.xs,
+    ...typeStyles.meta,
   },
   menuCancel: {
     alignItems: 'center',
@@ -461,8 +455,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[1],
   },
   menuCancelText: {
-    ...typographyScale.sm,
-    fontWeight: '500',
+    ...typeStyles.bodySmall,
   },
 
   // AI assist
@@ -493,12 +486,11 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   aiTitle: {
-    ...typographyScale.lg,
-    fontWeight: '700',
+    ...typeStyles.heading,
     flex: 1,
   },
   aiDescription: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   aiInputRow: {
     flexDirection: 'row',
@@ -512,7 +504,7 @@ const styles = StyleSheet.create({
   },
   aiInput: {
     flex: 1,
-    ...typographyScale.base,
+    ...typeStyles.body,
     maxHeight: 100,
     paddingVertical: spacing[2],
   },
@@ -536,7 +528,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   aiQuickText: {
-    ...typographyScale.xs,
-    fontWeight: '500',
+    ...typeStyles.meta,
   },
 })

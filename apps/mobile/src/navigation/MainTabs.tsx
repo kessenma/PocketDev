@@ -67,10 +67,7 @@ export default function MainTabs() {
 
   return (
     <>
-    <RunningScriptsSheet
-      visible={scriptsSheetVisible}
-      onClose={() => setScriptsSheetVisible(false)}
-    />
+    {scriptsSheetVisible && <RunningScriptsSheet onDismiss={() => setScriptsSheetVisible(false)} />}
     <Tab.Navigator
       tabBar={isTabletDevice ? renderWorkspaceTabBar : undefined}
       screenOptions={{

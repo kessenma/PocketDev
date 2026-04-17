@@ -1,6 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, TextInput, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
 import type { PlanQuestion } from './model'
@@ -82,17 +83,14 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   questionText: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
     flex: 1,
   },
   requiredMark: {
-    ...typographyScale.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    ...typeStyles.sectionTitle,
   },
   input: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     minHeight: 64,
     borderWidth: 1,
     borderRadius: borderRadius.lg,

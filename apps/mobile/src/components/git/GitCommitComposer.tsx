@@ -1,6 +1,7 @@
 import React from 'react'
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
 
@@ -65,7 +66,7 @@ export default function GitCommitComposer({ value, canCommit, isCommitting, onCh
 
 const styles = StyleSheet.create({
   input: {
-    ...typographyScale.base,
+    ...typeStyles.body,
     minHeight: 116,
     borderWidth: 1,
     borderRadius: borderRadius.lg,
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   helper: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   button: {
     minHeight: 48,
@@ -86,7 +87,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
   },
   buttonText: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
 })

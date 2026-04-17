@@ -1,24 +1,23 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useRef, useEffect } from 'react'
 import {
   ActivityIndicator,
-  Modal,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { FlashList } from '@shopify/flash-list'
 import { FileCode2, FolderOpen, Pin, Search, X } from 'lucide-react-native'
-import { borderRadius, palette, spacing, typographyScale, type SemanticTheme } from '@pocketdev/shared/theme'
+import { borderRadius, palette, spacing, type SemanticTheme } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useFilesStore } from '../../stores/files'
+import { typeStyles } from '../../theme/typography'
 
 type Props = {
-  visible: boolean
-  onClose: () => void
+  onDismiss: () => void
 }
 
 type EntryItem = {
@@ -29,8 +28,9 @@ type EntryItem = {
   kind: 'file' | 'directory'
 }
 
-export default function FileExplorerSheet({ visible, onClose }: Props) {
+export default function FileExplorerSheet({ onDismiss }: Props) {
   const { colors } = useTheme()
+  const sheetRef = useRef<TrueSheet>(null)
   const currentPath = useFilesStore((state) => state.currentPath)
   const currentEntries = useFilesStore((state) => state.currentEntries)
   const rootLabel = useFilesStore((state) => state.rootLabel)
@@ -47,6 +47,10 @@ export default function FileExplorerSheet({ visible, onClose }: Props) {
   const runSearch = useFilesStore((state) => state.runSearch)
   const clearSearch = useFilesStore((state) => state.clearSearch)
   const toggleContextPath = useFilesStore((state) => state.toggleContextPath)
+
+  useEffect(() => {
+    sheetRef.current?.present()
+  }, [])
 
   const hasSearchResults = searchQuery.trim().length > 0
   const pathLabel = currentPath === '.' ? rootLabel ?? 'Project root' : currentPath
@@ -87,7 +91,7 @@ export default function FileExplorerSheet({ visible, onClose }: Props) {
                 return
               }
               void selectFile(item.path)
-              onClose()
+              sheetRef.current?.dismiss()
             }}
           >
             {item.kind === 'directory' ? (
@@ -130,7 +134,7 @@ export default function FileExplorerSheet({ visible, onClose }: Props) {
         </View>
       )
     },
-    [selectedContextPaths, selectedFile?.path, colors, openDirectory, selectFile, toggleContextPath, onClose],
+    [selectedContextPaths, selectedFile?.path, colors, openDirectory, selectFile, toggleContextPath],
   )
 
   const emptyState =
@@ -148,8 +152,14 @@ export default function FileExplorerSheet({ visible, onClose }: Props) {
     ) : null
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <TrueSheet
+      ref={sheetRef}
+      detents={[0.6, 1]}
+      backgroundColor={colors.background}
+      cornerRadius={24}
+      onDidDismiss={onDismiss}
+    >
+      <View style={styles.inner}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.breadcrumbRow}>
             <TouchableOpacity
@@ -186,7 +196,7 @@ export default function FileExplorerSheet({ visible, onClose }: Props) {
           </View>
 
           <TouchableOpacity
-            onPress={onClose}
+            onPress={() => sheetRef.current?.dismiss()}
             activeOpacity={0.7}
             style={[styles.closeButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
           >
@@ -234,8 +244,8 @@ export default function FileExplorerSheet({ visible, onClose }: Props) {
             ListEmptyComponent={emptyState}
           />
         </View>
-      </SafeAreaView>
-    </Modal>
+      </View>
+    </TrueSheet>
   )
 }
 
@@ -305,11 +315,12 @@ function colorForExtension(extension: string, colors: SemanticTheme, defaultColo
 }
 
 const styles = StyleSheet.create({
-  container: {
+  inner: {
     flex: 1,
     gap: spacing[3],
     paddingHorizontal: spacing[4],
     paddingTop: spacing[3],
+    paddingBottom: spacing[4],
   },
   header: {
     flexDirection: 'row',
@@ -331,11 +342,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   navButtonText: {
-    ...typographyScale.xs,
-    fontWeight: '700',
+    ...typeStyles.meta,
   },
   breadcrumbText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
     flex: 1,
   },
   closeButton: {
@@ -357,11 +367,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    ...typographyScale.base,
+    ...typeStyles.body,
   },
   searchAction: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -370,7 +379,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   loadingText: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   listContainer: {
     flex: 1,
@@ -397,11 +406,10 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   entryTitle: {
-    ...typographyScale.base,
-    fontWeight: '600',
+    ...typeStyles.button,
   },
   entryDescription: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   pinButton: {
     width: 34,
@@ -418,10 +426,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
   },
   emptyTitle: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   emptyBody: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
 })

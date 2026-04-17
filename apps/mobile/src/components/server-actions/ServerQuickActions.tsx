@@ -1,7 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { borderRadius, spacing, typographyScale } from '@pocketdev/shared/theme'
+import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
+import { typeStyles } from '../../theme/typography'
 import {
   ServerCard,
   ServerCardContent,
@@ -67,15 +68,13 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   label: {
-    ...typographyScale.base,
-    fontWeight: '700',
+    ...typeStyles.bodyBold,
   },
   command: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
   description: {
-    ...typographyScale.sm,
+    ...typeStyles.bodySmall,
   },
   button: {
     alignSelf: 'flex-start',
@@ -84,7 +83,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   buttonText: {
-    ...typographyScale.sm,
-    fontWeight: '700',
+    ...typeStyles.bodySmall,
   },
 })

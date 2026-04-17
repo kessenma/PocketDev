@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Modal, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
@@ -16,7 +17,7 @@ type LineHighlightRange = { start: number; end: number }
 type Props = {
   filePath: string
   activity: Extract<TaskActivity, { type: 'tool_use' }>
-  onClose: () => void
+  onDismiss: () => void
 }
 
 function computeHighlights(content: string, metadata: Record<string, unknown> | undefined): LineHighlightRange[] {
@@ -30,14 +31,19 @@ function computeHighlights(content: string, metadata: Record<string, unknown> | 
   return [{ start, end }]
 }
 
-export default function FileViewerSheet({ filePath, activity, onClose }: Props) {
+export default function FileViewerSheet({ filePath, activity, onDismiss }: Props) {
   const { colors } = useTheme()
+  const sheetRef = useRef<TrueSheet>(null)
   const server = useConnectionStore((s) => s.server)
   const [content, setContent] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [wrapLines, setWrapLines] = useState(false)
   const [currentHighlightIndex, setCurrentHighlightIndex] = useState(0)
+
+  useEffect(() => {
+    sheetRef.current?.present()
+  }, [])
 
   useEffect(() => {
     if (!server) {
@@ -86,55 +92,50 @@ export default function FileViewerSheet({ filePath, activity, onClose }: Props) 
   }
 
   return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {error ? (
-          <View style={styles.errorState}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <X color={colors.text} size={20} strokeWidth={2.25} />
-            </TouchableOpacity>
-            <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
+    <TrueSheet ref={sheetRef} detents={[1]} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={onDismiss}>
+      {error ? (
+        <View style={styles.errorState}>
+          <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} style={styles.closeButton}>
+            <X color={colors.text} size={20} strokeWidth={2.25} />
+          </TouchableOpacity>
+          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
+        </View>
+      ) : (
+        <>
+          <View style={styles.body}>
+            <CodeViewer
+              file={fileNode}
+              content={content}
+              isLoading={isLoading}
+              wrapLines={wrapLines}
+              onToggleWrap={() => setWrapLines((w) => !w)}
+              variant="plain"
+              lineHighlights={lineHighlights}
+              highlightLabel={highlightLabel}
+              onBack={() => sheetRef.current?.dismiss()}
+              scrollToLine={scrollToLine}
+            />
           </View>
-        ) : (
-          <>
-            <View style={styles.body}>
-              <CodeViewer
-                file={fileNode}
-                content={content}
-                isLoading={isLoading}
-                wrapLines={wrapLines}
-                onToggleWrap={() => setWrapLines((w) => !w)}
-                variant="plain"
-                lineHighlights={lineHighlights}
-                highlightLabel={highlightLabel}
-                onBack={onClose}
-                scrollToLine={scrollToLine}
-              />
+          {lineHighlights.length > 1 && (
+            <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.panel }]}>
+              <BauhausButton compact variant="secondary" onPress={handlePrev}>
+                ↑ Prev
+              </BauhausButton>
+              <Text style={[styles.counter, { color: colors.textSecondary }]}>
+                {currentHighlightIndex + 1} of {lineHighlights.length}
+              </Text>
+              <BauhausButton compact variant="secondary" onPress={handleNext}>
+                ↓ Next
+              </BauhausButton>
             </View>
-            {lineHighlights.length > 1 && (
-              <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.panel }]}>
-                <BauhausButton compact variant="secondary" onPress={handlePrev}>
-                  ↑ Prev
-                </BauhausButton>
-                <Text style={[styles.counter, { color: colors.textSecondary }]}>
-                  {currentHighlightIndex + 1} of {lineHighlights.length}
-                </Text>
-                <BauhausButton compact variant="secondary" onPress={handleNext}>
-                  ↓ Next
-                </BauhausButton>
-              </View>
-            )}
-          </>
-        )}
-      </SafeAreaView>
-    </Modal>
+          )}
+        </>
+      )}
+    </TrueSheet>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   body: {
     flex: 1,
     paddingHorizontal: spacing[3],
