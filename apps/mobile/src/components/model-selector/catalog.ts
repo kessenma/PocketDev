@@ -12,19 +12,11 @@ export const MODEL_PROVIDERS: ModelProvider[] = [
     summary: 'Anthropic models tuned for coding, planning, and long-context review.',
     models: [
       {
-        id: 'claude-opus',
-        cliModelId: 'opus',
-        name: 'Claude Opus 4.6',
+        id: 'claude-opus-4-7',
+        cliModelId: 'claude-opus-4-7',
+        name: 'Claude Opus 4.7',
         headline: 'Deep reasoning for harder refactors',
         description: 'Use when the task needs stronger planning or higher-confidence architectural work.',
-        contextWindow: '200K context',
-      },
-      {
-        id: 'claude-opus-1m',
-        cliModelId: 'claude-opus-4-6[1m]',
-        name: 'Claude Opus 4.6 (1M)',
-        headline: 'Extended context for large codebases',
-        description: 'Full 1M context window for tasks that span many files or large repositories.',
         contextWindow: '1M context',
       },
       {
@@ -203,7 +195,7 @@ function mergeProviderModels(
   provider: ModelProvider,
   serverProvider: ServerProvider | undefined,
 ): SelectableModel[] {
-  if (provider.id !== 'copilot') return provider.models
+  if (provider.id !== 'copilot' && provider.id !== 'claude') return provider.models
   if (!serverProvider?.models?.length) return provider.models
   return serverProvider.models.map(serverModelToSelectableModel)
 }

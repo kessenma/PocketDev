@@ -3,6 +3,7 @@ import type { ServerCapabilities, ServerProvider, ProviderAvailability, ServerPr
 import { authenticateRequest } from '../services/auth/auth.ts'
 import { getToolRecord, type ToolPathRow } from '../db/index.ts'
 import { discoverCopilotModels } from '../services/cli-setup/copilot-models.ts'
+import { discoverClaudeModels } from '../services/cli-setup/claude-models.ts'
 import { checkMinimaxStatus } from '../services/cli-setup/minimax-setup.ts'
 
 function toAvailability(row: ToolPathRow | undefined): ProviderAvailability {
@@ -15,7 +16,8 @@ async function buildProviders(): Promise<ServerProvider[]> {
   const claude = getToolRecord('claude_cli')
   const codex = getToolRecord('codex_cli')
   const copilot = getToolRecord('copilot_cli')
-  const [copilotModels, minimaxStatus] = await Promise.all([
+  const [claudeModels, copilotModels, minimaxStatus] = await Promise.all([
+    discoverClaudeModels(),
     discoverCopilotModels(),
     checkMinimaxStatus(),
   ])
@@ -30,6 +32,8 @@ async function buildProviders(): Promise<ServerProvider[]> {
       label: 'Claude',
       availability: toAvailability(claude),
       version: claude?.version ?? null,
+      models: claudeModels.models,
+      modelDiscovery: claudeModels.modelDiscovery,
     },
     {
       id: 'codex',
