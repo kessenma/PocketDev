@@ -39,7 +39,7 @@ COPY packages/shared/ ./packages/shared/
 COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
 COPY packages/db/ ./packages/db/
 COPY package.json ./
-RUN cd apps/web && npx vite build
+RUN cd apps/web && NODE_OPTIONS=--max-old-space-size=4096 npx vite build
 
 # Build the console SPA (served as static files by the agent)
 FROM base AS console-build
