@@ -57,12 +57,8 @@ export interface PrerequisitesReport {
 
 // ─── Git wizard types ────────────────────────────────────────────────
 
-export interface GitSshStatus {
+export interface GitSetupStatus {
   git_installed: boolean
-  ssh_key_exists: boolean
-  ssh_key_type: string | null
-  ssh_key_path: string | null
-  github_ssh_works: boolean
   github_username: string | null
   gh_cli_installed: boolean
   gh_cli_version: string | null
@@ -73,24 +69,10 @@ export interface GitSshStatus {
   git_user_email: string | null
 }
 
-export interface GitSshKeyResult {
-  success: boolean
-  public_key: string | null
-  already_existed: boolean
-  error: string | null
-}
-
 export interface GitConfigureResult {
   success: boolean
   user_name: string
   user_email: string
-  error: string | null
-}
-
-export interface GitTestConnectionResult {
-  success: boolean
-  output: string
-  github_username: string | null
   error: string | null
 }
 
@@ -124,7 +106,7 @@ export interface GitHubCliAuthSessionStatus {
 
 export interface GitHubCliAuthStartResult extends GitHubCliAuthSessionStatus {}
 
-export type GitWizardStep = 'detect' | 'install' | 'generate-key' | 'add-to-github' | 'test-connection' | 'install-gh' | 'github-cli-auth' | 'configure-identity'
+export type GitWizardStep = 'detect' | 'install' | 'install-gh' | 'github-cli-auth' | 'configure-identity'
 export type GitWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
 
 // ─── Claude CLI wizard types ────────────────────────────────────────

@@ -1,42 +1,19 @@
 import { Elysia, t } from 'elysia'
 import { authenticateRequest } from '../services/auth/auth.ts'
 import {
-  checkSshStatus,
-  generateSshKey,
-  readPublicKey,
+  checkSetupStatus,
   configureIdentity,
-  testGithubConnection,
   configureGitHubCliToken,
   startGitHubCliAuth,
   getGitHubCliAuthStatus,
 } from '../services/git/git-setup.ts'
 
 export const gitSetupRoutes = new Elysia({ prefix: '/git-setup' })
-  .get('/ssh-status', async ({ request, set }) => {
+  .get('/setup-status', async ({ request, set }) => {
     const deviceId = await authenticateRequest(request.headers.get('authorization'))
     if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
 
-    return checkSshStatus()
-  })
-
-  .post('/generate-key', async ({ request, set, body }) => {
-    const deviceId = await authenticateRequest(request.headers.get('authorization'))
-    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
-
-    return generateSshKey(body.overwrite ?? false)
-  }, {
-    body: t.Object({
-      overwrite: t.Optional(t.Boolean()),
-    }),
-  })
-
-  .get('/public-key', async ({ request, set }) => {
-    const deviceId = await authenticateRequest(request.headers.get('authorization'))
-    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
-
-    const key = await readPublicKey()
-    if (!key) { set.status = 404; return { error: 'No SSH public key found' } }
-    return { public_key: key }
+    return checkSetupStatus()
   })
 
   .post('/configure-identity', async ({ request, set, body }) => {
@@ -54,13 +31,6 @@ export const gitSetupRoutes = new Elysia({ prefix: '/git-setup' })
       name: t.String(),
       email: t.String(),
     }),
-  })
-
-  .post('/test-connection', async ({ request, set }) => {
-    const deviceId = await authenticateRequest(request.headers.get('authorization'))
-    if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
-
-    return testGithubConnection()
   })
 
   .post('/github-cli/auth-token', async ({ request, set, body }) => {

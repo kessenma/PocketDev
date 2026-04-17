@@ -14,6 +14,8 @@
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		CE4A0578CB21FFB8AAA9EECD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		D56BCF8989881C0910DF6E6A /* APNsDiagnostics.m in Sources */ = {isa = PBXBuildFile; fileRef = 5E6A328BC4176242AC156ADB /* APNsDiagnostics.m */; };
+		B0DCF8B6F7AA4C028A9F43B1 /* SairaStencil-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9D2430B2BA824ACE80107293 /* SairaStencil-ExtraBold.ttf */; };
+		24CCF720DEFB4EC686FC1EDD /* AfacadFlux-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CAF0C6827AA94FA0A4FD4E43 /* AfacadFlux-Variable.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +32,8 @@
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Mobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8A0682A22F8E059C00ACCB38 /* Mobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = Mobile.entitlements; path = Mobile/Mobile.entitlements; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		9D2430B2BA824ACE80107293 /* SairaStencil-ExtraBold.ttf */ = {isa = PBXFileReference; name = "SairaStencil-ExtraBold.ttf"; path = "../assets/fonts/SairaStencil-ExtraBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		CAF0C6827AA94FA0A4FD4E43 /* AfacadFlux-Variable.ttf */ = {isa = PBXFileReference; name = "AfacadFlux-Variable.ttf"; path = "../assets/fonts/AfacadFlux-Variable.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +87,7 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				957C0910D0B342D0BFA89C3A /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -105,6 +110,16 @@
 			);
 			path = Pods;
 			sourceTree = "<group>";
+		};
+		957C0910D0B342D0BFA89C3A /* Resources */ = {
+			isa = "PBXGroup";
+			children = (
+				9D2430B2BA824ACE80107293 /* SairaStencil-ExtraBold.ttf */,
+				CAF0C6827AA94FA0A4FD4E43 /* AfacadFlux-Variable.ttf */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+			path = "";
 		};
 /* End PBXGroup section */
 
@@ -169,6 +184,8 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				CE4A0578CB21FFB8AAA9EECD /* PrivacyInfo.xcprivacy in Resources */,
+				B0DCF8B6F7AA4C028A9F43B1 /* SairaStencil-ExtraBold.ttf in Resources */,
+				24CCF720DEFB4EC686FC1EDD /* AfacadFlux-Variable.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

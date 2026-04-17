@@ -10,7 +10,7 @@ import {
   setConfig,
   upsertProject,
 } from '../../db/index.ts'
-import { checkSshStatus } from '../git/git-setup.ts'
+import { checkSetupStatus } from '../git/git-setup.ts'
 import { GitServiceError } from '../git/git.ts'
 
 const INITIAL_PROJECT_DIR = resolve(process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/')
@@ -263,8 +263,8 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
 
   const activeProjectId = getActiveProjectId()
   const localProjects = getProjects().map((project) => projectToSummary(project, activeProjectId))
-  const sshStatus = await checkSshStatus()
-  let githubUsername = sshStatus.github_username
+  const setupStatus = await checkSetupStatus()
+  let githubUsername = setupStatus.github_username
   const merged = new Map(localProjects.map((project) => [project.id, project]))
 
   try {
@@ -294,7 +294,7 @@ export async function listProjects(): Promise<{ projects: ProjectSummary[]; gith
         id,
         name: repo.name,
         owner: repo.owner.login,
-        remoteUrl: repo.ssh_url || repo.clone_url,
+        remoteUrl: repo.clone_url || repo.ssh_url,
         localPath: null,
         isLocal: false,
         isActive: false,
@@ -324,9 +324,9 @@ export async function getProjectsDebug() {
 
   const activeProjectId = getActiveProjectId()
   const localProjects = getProjects().map((project) => projectToSummary(project, activeProjectId))
-  const sshStatus = await checkSshStatus()
+  const setupStatus = await checkSetupStatus()
   // Use cached fetchGithubRepos — avoids double-fetching from GitHub API
-  const githubData = await fetchGithubRepos(sshStatus.github_username)
+  const githubData = await fetchGithubRepos(setupStatus.github_username)
 
   // Merge GitHub repos into the local projects (same logic as listProjects but without a second fetch)
   const merged = new Map(localProjects.map((p) => [p.id, p]))
@@ -347,7 +347,7 @@ export async function getProjectsDebug() {
         id,
         name: repo.name,
         owner: repo.owner.login,
-        remoteUrl: repo.ssh_url || repo.clone_url,
+        remoteUrl: repo.clone_url || repo.ssh_url,
         localPath: null,
         isLocal: false,
         isActive: false,
@@ -368,10 +368,10 @@ export async function getProjectsDebug() {
 
   return {
     activeProjectId,
-    sshGithubUsername: sshStatus.github_username,
-    ghCliUsername: sshStatus.gh_cli_username,
-    ghCliAuthenticated: sshStatus.gh_cli_authenticated,
-    privateRepoAccess: sshStatus.private_repo_access,
+    githubUsername: setupStatus.github_username,
+    ghCliUsername: setupStatus.gh_cli_username,
+    ghCliAuthenticated: setupStatus.gh_cli_authenticated,
+    privateRepoAccess: setupStatus.private_repo_access,
     fetchSource: githubData.source,
     fetchError: githubData.error,
     fetchedGithubUsername: githubData.githubUsername,

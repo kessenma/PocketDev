@@ -9,13 +9,10 @@ import SetupWizardScreen from './SetupWizardScreen'
 import WizardStepper from './git-wizard/WizardStepper'
 import DetectStep from './git-wizard/DetectStep'
 import InstallGitStep from './git-wizard/InstallGitStep'
-import GenerateKeyStep from './git-wizard/GenerateKeyStep'
-import AddToGitHubStep from './git-wizard/AddToGitHubStep'
-import TestConnectionStep from './git-wizard/TestConnectionStep'
 import InstallGitHubCliStep from './git-wizard/InstallGitHubCliStep'
 import GitHubCliAuthStep from './git-wizard/GitHubCliAuthStep'
 import ConfigureIdentityStep from './git-wizard/ConfigureIdentityStep'
-import type { GitSshStatus, GitWizardStep, GitWizardStepStatus } from '@pocketdev/shared/types'
+import type { GitSetupStatus, GitWizardStep, GitWizardStepStatus } from '@pocketdev/shared/types'
 
 interface Props {
   onDismiss: () => void
@@ -25,14 +22,13 @@ interface Props {
 // ─── State machine ──────────────────────────────────────
 
 const ALL_STEPS: GitWizardStep[] = [
-  'detect', 'install', 'generate-key', 'add-to-github', 'test-connection', 'install-gh', 'github-cli-auth', 'configure-identity',
+  'detect', 'install', 'install-gh', 'github-cli-auth', 'configure-identity',
 ]
 
 interface WizardState {
   currentStep: GitWizardStep
   stepStatuses: Record<GitWizardStep, GitWizardStepStatus>
-  sshStatus: GitSshStatus | null
-  publicKey: string | null
+  setupStatus: GitSetupStatus | null
   userName: string
   userEmail: string
   githubUsername: string | null
@@ -41,12 +37,11 @@ interface WizardState {
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; sshStatus: GitSshStatus }
-  | { type: 'STEP_COMPLETE'; step: GitWizardStep; publicKey?: string }
+  | { type: 'DETECTION_COMPLETE'; setupStatus: GitSetupStatus }
+  | { type: 'STEP_COMPLETE'; step: GitWizardStep }
   | { type: 'STEP_FAILED'; step: GitWizardStep; error: string }
   | { type: 'GO_BACK' }
   | { type: 'SET_IDENTITY'; name: string; email: string }
-  | { type: 'SET_PUBLIC_KEY'; key: string }
   | { type: 'SET_GITHUB_USERNAME'; username: string }
   | { type: 'RETRY' }
 
@@ -58,8 +53,7 @@ function getInitialState(): WizardState {
   return {
     currentStep: 'detect',
     stepStatuses,
-    sshStatus: null,
-    publicKey: null,
+    setupStatus: null,
     userName: '',
     userEmail: '',
     githubUsername: null,
@@ -86,29 +80,22 @@ function findPrevActiveStep(statuses: Record<GitWizardStep, GitWizardStepStatus>
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const ss = action.sshStatus
+      const ss = action.setupStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
 
-      // Skip logic
       if (ss.git_installed) newStatuses['install'] = 'skipped'
-      if (ss.ssh_key_exists) newStatuses['generate-key'] = 'skipped'
-      if (ss.github_ssh_works) {
-        newStatuses['add-to-github'] = 'skipped'
-        newStatuses['test-connection'] = 'skipped'
-      }
       if (ss.gh_cli_installed) newStatuses['install-gh'] = 'skipped'
       if (ss.gh_cli_authenticated && ss.private_repo_access) newStatuses['github-cli-auth'] = 'skipped'
       if (ss.git_user_name && ss.git_user_email) newStatuses['configure-identity'] = 'skipped'
 
-      // Check if everything is already configured
       const allSkipped = ALL_STEPS.slice(1).every((s) => newStatuses[s] === 'skipped')
       if (allSkipped) {
         return {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          sshStatus: ss,
+          setupStatus: ss,
           userName: ss.git_user_name ?? '',
           userEmail: ss.git_user_email ?? '',
           githubUsername: ss.github_username,
@@ -116,7 +103,6 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         }
       }
 
-      // Find first pending step
       const firstPending = ALL_STEPS.find((s) => newStatuses[s] === 'pending')
       if (firstPending) newStatuses[firstPending] = 'active'
 
@@ -124,11 +110,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: firstPending ?? 'detect',
         stepStatuses: newStatuses,
-        sshStatus: ss,
+        setupStatus: ss,
         userName: ss.git_user_name ?? '',
         userEmail: ss.git_user_email ?? '',
         githubUsername: ss.github_username,
-        publicKey: null,
       }
     }
 
@@ -147,7 +132,6 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: next ?? action.step,
         stepStatuses: newStatuses,
-        publicKey: action.publicKey ?? state.publicKey,
         error: null,
         allConfigured: !next,
       }
@@ -173,9 +157,6 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
     case 'SET_IDENTITY':
       return { ...state, userName: action.name, userEmail: action.email }
-
-    case 'SET_PUBLIC_KEY':
-      return { ...state, publicKey: action.key }
 
     case 'SET_GITHUB_USERNAME':
       return { ...state, githubUsername: action.username }
@@ -240,18 +221,6 @@ export default function GitWizardSheet({ onDismiss, onComplete }: Props) {
         return <DetectStep dispatch={dispatch} />
       case 'install':
         return <InstallGitStep dispatch={dispatch} />
-      case 'generate-key':
-        return (
-          <GenerateKeyStep
-            dispatch={dispatch}
-            sshStatus={state.sshStatus}
-            publicKey={state.publicKey}
-          />
-        )
-      case 'add-to-github':
-        return <AddToGitHubStep dispatch={dispatch} publicKey={state.publicKey} />
-      case 'test-connection':
-        return <TestConnectionStep dispatch={dispatch} />
       case 'install-gh':
         return <InstallGitHubCliStep dispatch={dispatch} />
       case 'github-cli-auth':

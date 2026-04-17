@@ -4,12 +4,12 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
-import { fetchGitSshStatus } from '../../../services/api'
+import { fetchGitSetupStatus } from '../../../services/api'
 import { RefreshCw } from 'lucide-react-native'
-import type { GitSshStatus } from '@pocketdev/shared/types'
+import type { GitSetupStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; sshStatus: GitSshStatus }
+  | { type: 'DETECTION_COMPLETE'; setupStatus: GitSetupStatus }
   | { type: 'STEP_FAILED'; step: 'detect'; error: string }
 
 interface Props {
@@ -27,8 +27,8 @@ export default function DetectStep({ dispatch }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const status = await fetchGitSshStatus(server.ip, server.port)
-      dispatch({ type: 'DETECTION_COMPLETE', sshStatus: status })
+      const status = await fetchGitSetupStatus(server.ip, server.port)
+      dispatch({ type: 'DETECTION_COMPLETE', setupStatus: status })
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Detection failed'
       setError(msg)

@@ -4,7 +4,7 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
-import { buildTerminalWsUrl, fetchGitSshStatus } from '../../../services/api'
+import { buildTerminalWsUrl, fetchGitSetupStatus } from '../../../services/api'
 import { buildPocketDevAuthorizationHeader } from '../../../services/auth'
 import { createReactNativeWebSocket } from '../../../services/websocket'
 import { getSudoPassword, saveSudoPassword } from '../../../services/secure-storage'
@@ -124,7 +124,7 @@ export default function InstallGitHubCliStep({ dispatch }: Props) {
     }
 
     try {
-      const status = await fetchGitSshStatus(server.ip, server.port)
+      const status = await fetchGitSetupStatus(server.ip, server.port)
       if (status.gh_cli_installed) {
         setDone(true)
         setHasError(false)
