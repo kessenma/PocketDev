@@ -1,7 +1,7 @@
 import type { PlanQuestion, PlanStep } from '@pocketdev/shared/types'
 import { getToolPath, insertTaskTurn } from '../../../db/index.ts'
 import { proposePlan } from '../plan-manager.ts'
-import type { CollectedToolUse, TaskStreamAdapter } from '../task-stream-adapters.ts'
+import type { CollectedToolUse, TaskStreamAdapter } from '../task-stream-adapters/index.ts'
 import { shellEscape, exec, newUUID } from './utils.ts'
 import { parseTuiPrompt } from './tui-prompt.ts'
 import type { AgentProviderConfig, SetupCtx, PaneCtx, FinishCtx } from './types.ts'

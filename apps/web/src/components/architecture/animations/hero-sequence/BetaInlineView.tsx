@@ -9,7 +9,7 @@ import { db } from '@pocketdev/db'
 import { betaSignups } from '@pocketdev/db/schema'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
-import { architectureTokens, architectureFonts } from '#/components/architecture/shared/theme'
+import { architectureTokens, architectureFonts, architectureTheme } from '#/components/architecture/shared/theme'
 import { palette } from '@pocketdev/shared/theme'
 
 const submitBetaInterest = createServerFn({ method: 'POST' })
@@ -48,7 +48,7 @@ function PhoneSvg({ fill, showText }: { fill: string; showText: boolean }) {
         </g>
       </g>
       <g
-        fill={palette.bauhaus.cream}
+        fill={architectureTheme.background}
         style={{
           opacity: showText ? 1 : 0,
           transition: 'opacity 0.35s ease',
@@ -88,7 +88,7 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
   const isTyping = email.length > 0
   const isSuccess = status === 'success' || status === 'already'
   const svgFill = isSuccess
-    ? palette.bauhaus.cream
+    ? architectureTheme.background
     : isTyping
       ? palette.bauhaus.blue
       : palette.bauhaus.black
@@ -132,7 +132,7 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
       <motion.div
         className="relative w-full max-w-md rounded-2xl px-8 py-8"
         style={{
-          backgroundColor: palette.bauhaus.cream,
+          backgroundColor: architectureTheme.background,
           boxShadow: '0 4px 32px rgba(0,0,0,0.12)',
           zIndex: 10,
         }}

@@ -8,7 +8,7 @@ import {
   updateTaskStatus,
 } from '../../../db/index.ts'
 import { detectDevServerPort, setDevServerPort } from '../../preview/proxy.ts'
-import type { CollectedToolUse, PermissionDenial, TaskStreamAdapter } from '../task-stream-adapters.ts'
+import type { CollectedToolUse, PermissionDenial, TaskStreamAdapter } from '../task-stream-adapters/index.ts'
 import { PtyRunner } from '../pty-runner.ts'
 import { broadcast, makeMessage, isNoClientConnected } from '../../terminal/ws.ts'
 import { getDevices } from '../../../db/index.ts'

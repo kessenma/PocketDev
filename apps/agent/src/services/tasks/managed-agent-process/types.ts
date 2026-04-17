@@ -1,5 +1,5 @@
 import type { TaskQuestion } from '@pocketdev/shared/types'
-import type { TaskStreamAdapter, TaskStreamAdapterSink } from '../task-stream-adapters.ts'
+import type { TaskStreamAdapter, TaskStreamAdapterSink } from '../task-stream-adapters/index.ts'
 
 export interface SetupCtx {
   taskId: string

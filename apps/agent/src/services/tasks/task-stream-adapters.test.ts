@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { TaskActivity, TaskQuestion } from '@pocketdev/shared/types'
-import { createTaskStreamAdapter, type CollectedToolUse, type PermissionDenial } from './task-stream-adapters.ts'
+import { createTaskStreamAdapter, type CollectedToolUse, type PermissionDenial } from './task-stream-adapters/index.ts'
 
 function createHarness(agentType: string) {
   const outputs: string[] = []
