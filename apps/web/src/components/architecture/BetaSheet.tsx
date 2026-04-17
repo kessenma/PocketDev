@@ -52,8 +52,8 @@ function PhoneSvg({ fill, showText }: { fill: string; showText: boolean }) {
 
       {/* "YOU'RE IN" text — cream, fades in on success */}
       <g
-        fill={palette.bauhaus.cream}
         style={{
+          fill: architectureTokens.colors.paper,
           opacity: showText ? 1 : 0,
           transition: 'opacity 0.35s ease',
           transitionDelay: showText ? '0.42s' : '0s',
@@ -168,7 +168,7 @@ export function BetaSheet({ isOpen, onClose }: BetaSheetProps) {
             <motion.div
               className="pointer-events-auto relative w-full max-w-md rounded-2xl px-8 py-8"
               style={{
-                backgroundColor: palette.bauhaus.cream,
+                backgroundColor: architectureTokens.colors.paper,
                 boxShadow: '0 4px 32px rgba(0,0,0,0.12)',
                 zIndex: 10,
               }}

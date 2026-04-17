@@ -1,6 +1,6 @@
 import { insertTask, getRecentTasks, getToolPath, getProject, getTask, insertTaskTurn, resetTaskForContinuation } from '../../db/index.ts'
 import { ManagedProcess } from './managed-process.ts'
-import { ManagedAgentProcess, claudeProviderConfig, copilotProviderConfig } from './managed-agent-process.ts'
+import { ManagedAgentProcess, claudeProviderConfig, copilotProviderConfig } from './managed-agent-process/index.ts'
 import { getActiveProjectId } from '../system/projects.ts'
 
 /** Active processes keyed by task ID — only holds running processes, cleaned up on completion */

@@ -238,6 +238,11 @@ export class ManagedAgentProcess {
     if (this.finished) return
     this.lastPtyDataMs = Date.now()
     this.receivedFirstData = true
+    // Prompt is passed via -p at spawn so Claude starts processing immediately.
+    // Mark promptSent on first PTY output so idle-completion and context-limit
+    // detection (both gated on ctx.promptSent) activate without waiting for the
+    // welcome banner, which -p may suppress.
+    if (!this.promptSent) this.promptSent = true
 
     // Forward raw lines in real-time for non-Claude providers (Copilot, Minimax)
     if (this.provider.forwardRawOutput) {
