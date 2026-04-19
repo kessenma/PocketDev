@@ -56,21 +56,32 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
   const handleUpgrade = useCallback(async () => {
     setUpgrading(true)
     try {
+      // Capture baseline uptime *before* triggering the upgrade so we can
+      // detect the restart reliably — comparing versions doesn't work when
+      // the bundle is always "latest" (version doesn't change).
+      const pre = await checkHealth({ signal: AbortSignal.timeout(5_000) })
+      const baselineUptime = pre.uptime
+
       await triggerUpdate()
       toast.info('Upgrade in progress — the agent will restart shortly...')
+
       let attempts = 0
       upgradePollRef.current = setInterval(async () => {
         attempts++
         try {
-          const health = await checkHealth()
-          if (health.version !== agentVersion || attempts > 5) {
+          // Per-poll timeout so we cycle on schedule even while the agent is
+          // mid-restart and the socket is unresponsive.
+          const health = await checkHealth({ signal: AbortSignal.timeout(5_000) })
+          if (health.uptime < baselineUptime) {
+            // Uptime went backwards — restart detected, upgrade done.
             clearInterval(upgradePollRef.current!)
             upgradePollRef.current = null
             toast.success(`Updated to v${health.version}`)
             setTimeout(() => window.location.reload(), 1000)
+            return
           }
         } catch {
-          // still restarting
+          // Agent is still restarting — swallow and retry on the next tick.
         }
         if (attempts >= 20) {
           clearInterval(upgradePollRef.current!)
@@ -83,7 +94,7 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
       setUpgrading(false)
       toast.error(err instanceof Error ? err.message : 'Upgrade failed')
     }
-  }, [agentVersion])
+  }, [])
 
   const handleLogout = useCallback(async () => {
     await logout()

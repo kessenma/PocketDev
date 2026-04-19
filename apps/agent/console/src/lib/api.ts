@@ -10,9 +10,10 @@ async function post(path: string, body?: unknown) {
   return response
 }
 
-async function get(path: string) {
+async function get(path: string, opts?: { signal?: AbortSignal }) {
   const response = await fetch(`${BASE}${path}`, {
     credentials: 'same-origin',
+    signal: opts?.signal,
   })
   return response
 }
@@ -48,7 +49,7 @@ export interface UpdateInfo {
   versions: string[]
 }
 
-export async function checkHealth(): Promise<{
+export async function checkHealth(opts?: { signal?: AbortSignal }): Promise<{
   hasAdmin: boolean
   signupEnabled: boolean
   paired: boolean
@@ -57,7 +58,7 @@ export async function checkHealth(): Promise<{
   version: string
   update: UpdateInfo | null
 }> {
-  const res = await get('/health')
+  const res = await get('/health', opts)
   return res.json()
 }
 

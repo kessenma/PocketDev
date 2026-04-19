@@ -1129,69 +1129,85 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   })
 
   // ─── Agent update (requires session) ──────────────────
+  //
+  // Two paths:
+  //   * no body.version → delegate to install.sh. install.sh is authoritative
+  //     for what a fresh install looks like, so the upgrade button stays in
+  //     lock-step with it without a separate bundle/extract/restart dance.
+  //   * body.version set → versioned rollback. Downloads a pinned bundle and
+  //     extracts it over the install dir. Kept for the UpdateBanner rollback
+  //     dropdown when previous versions exist.
+  //
+  // Both paths run in a detached systemd transient unit so the script survives
+  // the agent being killed when the service restarts.
   .post('/update', async ({ request, body, set }) => {
     if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
     }
 
     const targetVersion = body?.version
-    const bundleUrl = targetVersion
-      ? `https://pocketdev.run/agent/bundle/${targetVersion}`
-      : 'https://pocketdev.run/agent/bundle'
 
-    try {
-      // Download bundle to temp file
-      const res = await fetch(bundleUrl)
-      if (!res.ok) {
-        set.status = 502
-        return { error: `Failed to download bundle: ${res.status} ${res.statusText}` }
-      }
+    // Record the attempt up-front — the agent is about to be killed, so we
+    // can't write this timestamp afterwards. If the upgrade fails the
+    // timestamp is slightly optimistic, which we accept.
+    setLastUpgradeAt(new Date().toISOString())
+    clearVersionCache()
 
-      const tmpFile = `/tmp/pocketdev-update-${Date.now()}.tar.gz`
-      await Bun.write(tmpFile, res)
-
-      // Validate it's a real tarball
-      const validateProc = Bun.spawn(['tar', '-tzf', tmpFile], { stdout: 'pipe', stderr: 'pipe' })
-      if ((await validateProc.exited) !== 0) {
-        set.status = 502
-        return { error: 'Downloaded file is not a valid tarball' }
-      }
-
-      // Schedule the actual update to happen after we respond
-      // This gives the client time to receive the response before we restart
-      setTimeout(async () => {
-        const installDir = process.cwd()
-        const serviceName = 'pocketdev-agent'
-
-        // Extract new files over the current install
-        const extractProc = Bun.spawn(
-          ['tar', '-xzf', tmpFile, '-C', installDir, '--strip-components=1'],
-          { stdout: 'pipe', stderr: 'pipe' },
-        )
-        const extractExitCode = await extractProc.exited
-
-        // Clean up temp file
-        Bun.spawn(['rm', '-f', tmpFile])
-
-        if (extractExitCode !== 0) {
-          console.error('[console:update] Failed to extract update bundle')
-          return
+    if (targetVersion) {
+      // Versioned rollback path: download a pinned bundle with a timeout so
+      // we never hang the HTTP response on a slow network.
+      const bundleUrl = `https://pocketdev.run/agent/bundle/${targetVersion}`
+      try {
+        const res = await fetch(bundleUrl, { signal: AbortSignal.timeout(15_000) })
+        if (!res.ok) {
+          set.status = 502
+          return { error: `Failed to download bundle: ${res.status} ${res.statusText}` }
         }
 
-        setLastUpgradeAt(new Date().toISOString())
+        const tmpFile = `/tmp/pocketdev-update-${Date.now()}.tar.gz`
+        await Bun.write(tmpFile, res)
 
-        // Clear cached version so the new version.json is read
-        clearVersionCache()
+        const validateProc = Bun.spawn(['tar', '-tzf', tmpFile], { stdout: 'pipe', stderr: 'pipe' })
+        if ((await validateProc.exited) !== 0) {
+          Bun.spawn(['rm', '-f', tmpFile])
+          set.status = 502
+          return { error: 'Downloaded file is not a valid tarball' }
+        }
 
-        // Restart the service (this will kill us in production)
-        Bun.spawn(['systemctl', 'restart', serviceName], { stdout: 'pipe', stderr: 'pipe' })
-      }, 500)
+        const installDir = process.cwd()
+        const rollbackScript = `#!/bin/sh
+sleep 1
+tar -xzf ${tmpFile} -C ${installDir} --strip-components=1
+rm -f ${tmpFile}
+systemctl restart pocketdev-agent
+`
+        const scriptPath = `/tmp/pocketdev-rollback-${Date.now()}.sh`
+        await Bun.write(scriptPath, rollbackScript)
+        Bun.spawn(
+          ['systemd-run', '--quiet', '--no-block', '--unit', `pocketdev-rollback-${Date.now()}`, '/bin/sh', scriptPath],
+          { stdio: ['ignore', 'ignore', 'ignore'] },
+        )
 
-      return { ok: true, message: 'Update started. The agent will restart shortly.' }
-    } catch (err) {
-      set.status = 500
-      return { error: err instanceof Error ? err.message : 'Update failed' }
+        return { ok: true, message: `Rolling back to v${targetVersion}. The agent will restart shortly.` }
+      } catch (err) {
+        set.status = 500
+        return { error: err instanceof Error ? err.message : 'Rollback failed' }
+      }
     }
+
+    // Latest-version path: delegate to install.sh. systemd-run puts it in its
+    // own transient unit, outside our cgroup, so install.sh's `systemctl stop
+    // pocketdev-agent` doesn't kill the installer mid-run.
+    Bun.spawn(
+      [
+        'systemd-run', '--quiet', '--no-block',
+        '--unit', `pocketdev-upgrade-${Date.now()}`,
+        '/bin/sh', '-c', 'curl -fsSL https://pocketdev.run/install.sh | bash',
+      ],
+      { stdio: ['ignore', 'ignore', 'ignore'] },
+    )
+
+    return { ok: true, message: 'Upgrade started. The agent will restart shortly.' }
   }, {
     body: t.Optional(t.Object({
       version: t.Optional(t.String()),
