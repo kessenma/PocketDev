@@ -18,7 +18,7 @@ mock.module('./managed-process.ts', () => ({
   ManagedProcess: class ManagedProcess {},
 }))
 
-mock.module('./managed-agent-process/index.ts', () => ({
+mock.module('./managed-agent-process.ts', () => ({
   ManagedAgentProcess: class ManagedAgentProcess {},
   claudeProviderConfig: () => ({}),
   copilotProviderConfig: () => ({}),
