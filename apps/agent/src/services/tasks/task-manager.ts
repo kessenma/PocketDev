@@ -155,6 +155,13 @@ export function killTask(taskId: string): boolean {
   return true
 }
 
+/** Kill every currently-running task. Used by the uninstall flow before tearing the service down. */
+export function killAllTasks(): void {
+  for (const taskId of [...processes.keys()]) {
+    killTask(taskId)
+  }
+}
+
 /** Get list of recent tasks with their status */
 export function getTaskList() {
   return getRecentTasks(50)
