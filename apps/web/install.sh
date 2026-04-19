@@ -273,6 +273,37 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME" >/dev/null 2>&1
 ok "Systemd service created"
 
+# Bun leaks transpiled native modules as `.{hash}-00000000.so` files in /tmp
+# when it exits ungracefully. Install a daily systemd timer to reap any that
+# have gone stale (>24h since last use), so the disk doesn't fill up over
+# weeks of restarts. Targets the pattern globally — applies to any Bun on
+# the box, not just this agent.
+cat > "/etc/systemd/system/pocketdev-tmp-cleanup.service" <<'TMPUNIT'
+[Unit]
+Description=PocketDev Bun /tmp cache cleanup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/find /tmp -maxdepth 1 -name ".*-00000000.so" -type f -mtime +1 -delete
+TMPUNIT
+
+cat > "/etc/systemd/system/pocketdev-tmp-cleanup.timer" <<'TMPTIMER'
+[Unit]
+Description=Daily cleanup of leaked Bun /tmp cache files
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
+TMPTIMER
+
+systemctl daemon-reload
+systemctl enable --now pocketdev-tmp-cleanup.timer >/dev/null 2>&1
+ok "Tmp cleanup timer enabled (daily reap of leaked Bun /tmp cache)"
+
 # ─── Step 4: Install Caddy for HTTPS ─────────────────────────────
 step "Step 4/5: Preparing HTTPS (Caddy)"
 

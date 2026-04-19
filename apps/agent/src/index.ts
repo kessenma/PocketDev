@@ -35,6 +35,7 @@ import { screenshotRoutes } from './services/preview/preview-screenshot.ts'
 import { consoleRoutes, consoleStaticRoutes } from './routes/console.ts'
 import { passkeyRoutes } from './routes/passkey.ts'
 import { lockRoutes } from './routes/lock.ts'
+import { uninstallRoutes } from './routes/uninstall.ts'
 import { initSetup, getServerKeypair } from './services/auth/setup.ts'
 import { getDb } from './db/index.ts'
 import { initFirewall } from './services/system/firewall.ts'
@@ -78,6 +79,7 @@ new Elysia()
     .group('/api', (api) => api
       .use(lockRoutes)
       .use(setupRoutes)
+      .use(uninstallRoutes)
       .use(prerequisitesRoutes)
       .use(databaseRoutes)
       .use(containerRoutes)

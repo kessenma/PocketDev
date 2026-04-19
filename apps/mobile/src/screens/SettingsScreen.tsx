@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import { useConnectionStore } from '../stores/connection'
 import { useServerActionsStore } from '../stores/server-actions'
-import { browserSessionUrl, lockServer } from '../services/api'
+import { browserSessionUrl, lockServer, postUninstall } from '../services/api'
 import type { CompositeNavigationProp } from '@react-navigation/native'
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -75,6 +75,31 @@ export default function SettingsScreen({ navigation }: Props) {
       index: 0,
       routes: [{ name: 'Connect' }],
     })
+  }
+
+  function handleUninstall() {
+    if (!server) return
+    Alert.alert(
+      'Uninstall PocketDev?',
+      'This removes the PocketDev agent, data, and systemd units from your server. The server will be unreachable from this device afterwards. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Uninstall',
+          style: 'destructive',
+          onPress: async () => {
+            // Fire-and-forget: the server kills itself during the request, so
+            // a network error here is expected and doesn't mean the teardown failed.
+            try { await postUninstall(server.ip, server.port) } catch { /* ignore */ }
+            unpair()
+            navigation.getParent()?.reset({
+              index: 0,
+              routes: [{ name: 'Connect' }],
+            })
+          },
+        },
+      ],
+    )
   }
 
   return (
@@ -173,6 +198,18 @@ export default function SettingsScreen({ navigation }: Props) {
             Remove Pairing
           </BauhausButton>
         </BauhausPanel>
+
+        {server && (
+          <BauhausPanel style={styles.section} accentColor={colors.accentRed}>
+            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Danger Zone</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              Fully remove PocketDev from the paired server. Deletes the agent, data, and systemd units.
+            </Text>
+            <BauhausButton variant="danger" onPress={handleUninstall}>
+              Uninstall PocketDev
+            </BauhausButton>
+          </BauhausPanel>
+        )}
       </ScrollView>
 
       {consoleOpen && (

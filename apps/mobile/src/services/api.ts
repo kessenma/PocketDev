@@ -1373,3 +1373,16 @@ export async function unlockServer(ip: string, port: number): Promise<void> {
   if (!response.ok) throw new Error(`Failed to unlock server (${response.status})`)
 }
 
+/**
+ * Tell the agent to uninstall itself. The server returns {ok:true} and then
+ * tears itself down in a detached systemd transient unit — subsequent
+ * requests will fail as the service goes away.
+ */
+export async function postUninstall(ip: string, port: number): Promise<void> {
+  const response = await fetch(apiUrl(ip, port, '/uninstall'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to uninstall (${response.status})`)
+}
+
