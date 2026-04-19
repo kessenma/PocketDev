@@ -29,26 +29,25 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
     }
   }
 
-  async function pollForRestart(expectedVersion?: string) {
+  async function pollForRestart(baselineUptime: number, expectedVersion?: string) {
     let attempts = 0
     const maxAttempts = 20 // ~60 seconds at 3s intervals
 
     pollRef.current = setInterval(async () => {
       attempts++
       try {
-        const health = await checkHealth()
-        // Agent is back — check if version changed
-        if (expectedVersion ? health.version === expectedVersion : health.version !== version) {
+        const health = await checkHealth({ signal: AbortSignal.timeout(5_000) })
+        // For a versioned rollback we know the target — match on version.
+        // Otherwise, detect restart via uptime dropping (install.sh may ship
+        // the same "latest" version we're already on).
+        const restarted = expectedVersion
+          ? health.version === expectedVersion
+          : health.uptime < baselineUptime
+        if (restarted) {
           cleanup()
           toast.success(`Updated to v${health.version}`)
           setTimeout(() => window.location.reload(), 1000)
           return
-        }
-        // Agent is back but same version (might still be restarting)
-        if (attempts > 5 && health.version === version) {
-          cleanup()
-          toast.success('Agent restarted')
-          setTimeout(() => window.location.reload(), 1000)
         }
       } catch {
         // Agent still restarting — keep polling
@@ -67,10 +66,14 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
     setError(null)
 
     try {
+      // Capture uptime before the upgrade so the restart is detectable even
+      // when version doesn't change (install.sh always pulls "latest").
+      const pre = await checkHealth({ signal: AbortSignal.timeout(5_000) })
+      const baselineUptime = pre.uptime
+
       await triggerUpdate(targetVersion)
       toast.info('Update started — the agent will restart shortly...')
-      // Start polling for the agent to come back
-      await pollForRestart(targetVersion)
+      await pollForRestart(baselineUptime, targetVersion)
     } catch (err) {
       setUpdating(false)
       setError(err instanceof Error ? err.message : 'Update failed')
