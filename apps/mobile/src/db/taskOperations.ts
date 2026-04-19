@@ -131,13 +131,19 @@ export async function saveTaskLogs(
   }
 }
 
-/** Get cached log lines for a task (chronological order) */
-export async function getCachedTaskLogs(db: DB, taskId: string): Promise<string[]> {
+/** Get cached log rows for a task (chronological order) */
+export async function getCachedTaskLogs(
+  db: DB,
+  taskId: string,
+): Promise<Array<{ stream: string; line: string }>> {
   const result = await db.execute(
-    'SELECT line FROM task_logs WHERE task_id = ? ORDER BY id ASC',
+    'SELECT stream, line FROM task_logs WHERE task_id = ? ORDER BY id ASC',
     [taskId],
   )
-  return (result.rows ?? []).map((row: any) => row.line as string)
+  return (result.rows ?? []).map((row: any) => ({
+    stream: String(row.stream ?? 'stdout'),
+    line: String(row.line ?? ''),
+  }))
 }
 
 /** Check if we have any cached logs for a task */

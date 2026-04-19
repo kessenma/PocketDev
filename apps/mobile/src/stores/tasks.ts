@@ -133,6 +133,32 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   loadLogsForTask: async (taskId: string) => {
+    // Partition log rows into raw output lines and rehydrated activities.
+    // Agent persists hook-sourced activities as rows with stream === 'activity'
+    // (JSON-encoded TaskActivity) so TaskStreamer can rehydrate after reload.
+    const applyRows = (rows: Array<{ stream: string; line: string }>) => {
+      const lines: string[] = []
+      const activities: TaskActivity[] = []
+      for (const row of rows) {
+        if (row.stream === 'activity') {
+          try { activities.push(JSON.parse(row.line) as TaskActivity) } catch { /* skip malformed */ }
+        } else {
+          lines.push(row.line)
+        }
+      }
+      set((state) => {
+        const logs = new Map(state.taskLogs)
+        logs.set(taskId, lines)
+        if (activities.length === 0) return { taskLogs: logs }
+        // Only overwrite if we don't already have a richer live-streamed set
+        const existing = state.taskActivities.get(taskId) ?? []
+        if (activities.length <= existing.length) return { taskLogs: logs }
+        const nextActivities = new Map(state.taskActivities)
+        nextActivities.set(taskId, activities)
+        return { taskLogs: logs, taskActivities: nextActivities }
+      })
+    }
+
     // Already have logs in memory — skip
     const existingLogs = get().taskLogs.get(taskId)
     if (existingLogs && existingLogs.length > 0) return
@@ -142,13 +168,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       try {
         const hasCached = await hasTaskLogs(_db, taskId)
         if (hasCached) {
-          const cachedLogs = await getCachedTaskLogs(_db, taskId)
-          if (cachedLogs.length > 0) {
-            set((state) => {
-              const logs = new Map(state.taskLogs)
-              logs.set(taskId, cachedLogs)
-              return { taskLogs: logs }
-            })
+          const cachedRows = await getCachedTaskLogs(_db, taskId)
+          if (cachedRows.length > 0) {
+            applyRows(cachedRows)
             return
           }
         }
@@ -161,15 +183,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
     try {
       const result = await fetchTaskLogs(server.ip, server.port, taskId)
-      const lines = result.logs.map((l) => l.line)
+      applyRows(result.logs)
 
-      set((state) => {
-        const logs = new Map(state.taskLogs)
-        logs.set(taskId, lines)
-        return { taskLogs: logs }
-      })
-
-      // Cache to local DB
+      // Cache to local DB (preserves stream so activities rehydrate on next open)
       if (_db) {
         void saveTaskLogs(_db, taskId, result.logs).catch(() => {})
       }

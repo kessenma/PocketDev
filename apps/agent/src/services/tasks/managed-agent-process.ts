@@ -1034,6 +1034,9 @@ export class ManagedAgentProcess {
       const trimmed = line.trim()
       if (!trimmed) continue
       const { activity, isStop } = parseHookEvent(trimmed)
+      // Treat any parsed hook event as liveness — keeps the startup-timeout watchdog
+      // in poll() from killing Claude tasks that only emit via hooks (e.g. under -p).
+      if (isStop || activity) this.lastPtyDataMs = Date.now()
       if (isStop) {
         if (!this.finished) {
           this.broadcastOutput('[claude] Task complete')
@@ -1189,6 +1192,8 @@ export class ManagedAgentProcess {
 
   private broadcastActivity(activity: TaskActivity) {
     broadcast(makeMessage('task.activity', { taskId: this.taskId, activity, timestamp: Date.now() }))
+    // Persist so TaskStreamer can rehydrate after reload or task completion.
+    try { insertTaskLog(this.taskId, 'activity', JSON.stringify(activity)) } catch { /* best-effort */ }
   }
 
   private broadcastPermissionRequest(denials: PermissionDenial[]) {
