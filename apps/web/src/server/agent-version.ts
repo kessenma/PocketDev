@@ -65,17 +65,17 @@ async function fetchFromGitHub(): Promise<CacheData> {
   const headers = githubHeaders()
   const signal = AbortSignal.timeout(8_000)
 
-  const [latestRes, allRes] = await Promise.all([
-    fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/releases/latest`, { headers, signal }),
-    fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/releases?per_page=30`, { headers, signal }),
-  ])
-
-  if (!latestRes.ok) {
-    throw new Error(`GitHub /releases/latest returned ${latestRes.status}`)
+  // Fetch all releases first — if /releases/latest 404s (no stable release yet) we still
+  // have the full list to work from.
+  const allRes = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/releases?per_page=30`, {
+    headers,
+    signal,
+  })
+  if (!allRes.ok) {
+    throw new Error(`GitHub /releases returned ${allRes.status}`)
   }
 
-  const latestData = (await latestRes.json()) as GithubRelease
-  const allData: GithubRelease[] = allRes.ok ? ((await allRes.json()) as GithubRelease[]) : []
+  const allData: GithubRelease[] = await allRes.json()
 
   const stableVersions: StableEntry[] = allData
     .filter((r) => !r.prerelease)
@@ -87,15 +87,20 @@ async function fetchFromGitHub(): Promise<CacheData> {
     }))
     .filter((r) => r.bundleUrl)
 
-  const latestBundleUrl = extractBundleUrl(latestData)
-  if (!latestBundleUrl) {
-    throw new Error(`No agent-bundle.tar.gz asset in release ${latestData.tag_name}`)
+  // Derive latest from the list (avoids a second request + handles no-stable-release case)
+  const latestData = allData.find((r) => !r.prerelease)
+
+  // If no stable release exists yet, fall back to the nightly pre-release as a placeholder
+  const effectiveLatest = latestData ?? allData.find((r) => r.prerelease)
+  const latestBundleUrl = effectiveLatest ? extractBundleUrl(effectiveLatest) : null
+  if (!latestBundleUrl || !effectiveLatest) {
+    throw new Error('No releases found — publish at least one GitHub Release first')
   }
 
   const latest: StableEntry = {
-    version: latestData.tag_name.replace(/^v/, ''),
+    version: effectiveLatest.tag_name.replace(/^v/, ''),
     bundleUrl: latestBundleUrl,
-    pinnedUrl: extractPinnedUrl(latestData) ?? latestBundleUrl,
+    pinnedUrl: extractPinnedUrl(effectiveLatest) ?? latestBundleUrl,
   }
 
   const nightlyRelease = allData.find((r) => r.prerelease && r.tag_name === 'nightly-latest')
