@@ -4,6 +4,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000
 
 interface ReleaseAsset {
   name: string
+  url: string                  // GitHub API URL — used for authenticated downloads
   browser_download_url: string
 }
 
@@ -17,15 +18,15 @@ interface GithubRelease {
 
 interface StableEntry {
   version: string
-  bundleUrl: string
-  pinnedUrl: string
+  assetApiUrl: string   // https://api.github.com/repos/.../releases/assets/{id}
+  pinnedApiUrl: string
 }
 
 interface BetaInfo {
   version: string
   publishedAt: string
-  bundleUrl: string
-  pinnedUrl: string
+  assetApiUrl: string
+  pinnedApiUrl: string
 }
 
 interface CacheData {
@@ -37,7 +38,7 @@ interface CacheData {
 
 let cache: CacheData | null = null
 
-function githubHeaders(): HeadersInit {
+function githubHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
@@ -47,16 +48,15 @@ function githubHeaders(): HeadersInit {
   return headers
 }
 
-function extractBundleUrl(release: GithubRelease): string | null {
-  return release.assets.find((a) => a.name === 'agent-bundle.tar.gz')?.browser_download_url ?? null
+function extractBundleApiUrl(release: GithubRelease): string | null {
+  return release.assets.find((a) => a.name === 'agent-bundle.tar.gz')?.url ?? null
 }
 
-function extractPinnedUrl(release: GithubRelease): string | null {
+function extractPinnedApiUrl(release: GithubRelease): string | null {
   const version = release.tag_name.replace(/^v/, '')
   return (
-    release.assets.find((a) => a.name === `${version}.tar.gz`)?.browser_download_url ??
-    release.assets.find((a) => a.name.endsWith('.tar.gz') && a.name !== 'agent-bundle.tar.gz')
-      ?.browser_download_url ??
+    release.assets.find((a) => a.name === `${version}.tar.gz`)?.url ??
+    release.assets.find((a) => a.name.endsWith('.tar.gz') && a.name !== 'agent-bundle.tar.gz')?.url ??
     null
   )
 }
@@ -65,8 +65,6 @@ async function fetchFromGitHub(): Promise<CacheData> {
   const headers = githubHeaders()
   const signal = AbortSignal.timeout(8_000)
 
-  // Fetch all releases first — if /releases/latest 404s (no stable release yet) we still
-  // have the full list to work from.
   const allRes = await fetch(`${GITHUB_API}/repos/${GITHUB_REPO}/releases?per_page=30`, {
     headers,
     signal,
@@ -82,42 +80,37 @@ async function fetchFromGitHub(): Promise<CacheData> {
     .slice(0, 10)
     .map((r) => ({
       version: r.tag_name.replace(/^v/, ''),
-      bundleUrl: extractBundleUrl(r) ?? '',
-      pinnedUrl: extractPinnedUrl(r) ?? '',
+      assetApiUrl: extractBundleApiUrl(r) ?? '',
+      pinnedApiUrl: extractPinnedApiUrl(r) ?? '',
     }))
-    .filter((r) => r.bundleUrl)
+    .filter((r) => r.assetApiUrl)
 
-  // Derive latest from the list (avoids a second request + handles no-stable-release case)
-  const latestData = allData.find((r) => !r.prerelease)
-
-  // If no stable release exists yet, fall back to the nightly pre-release as a placeholder
-  const effectiveLatest = latestData ?? allData.find((r) => r.prerelease)
-  const latestBundleUrl = effectiveLatest ? extractBundleUrl(effectiveLatest) : null
-  if (!latestBundleUrl || !effectiveLatest) {
+  const effectiveLatest = allData.find((r) => !r.prerelease) ?? allData.find((r) => r.prerelease)
+  const latestApiUrl = effectiveLatest ? extractBundleApiUrl(effectiveLatest) : null
+  if (!latestApiUrl || !effectiveLatest) {
     throw new Error('No releases found — publish at least one GitHub Release first')
   }
 
   const latest: StableEntry = {
     version: effectiveLatest.tag_name.replace(/^v/, ''),
-    bundleUrl: latestBundleUrl,
-    pinnedUrl: extractPinnedUrl(effectiveLatest) ?? latestBundleUrl,
+    assetApiUrl: latestApiUrl,
+    pinnedApiUrl: extractPinnedApiUrl(effectiveLatest) ?? latestApiUrl,
   }
 
   const nightlyRelease = allData.find((r) => r.prerelease && r.tag_name === 'nightly-latest')
   let beta: BetaInfo | null = null
   if (nightlyRelease) {
-    const betaBundleUrl = extractBundleUrl(nightlyRelease)
-    // Extract version from the versioned asset filename (e.g. "0.2.1-beta.abc1234.tar.gz")
+    const betaApiUrl = extractBundleApiUrl(nightlyRelease)
     const betaAsset = nightlyRelease.assets.find(
       (a) => a.name.endsWith('.tar.gz') && a.name !== 'agent-bundle.tar.gz',
     )
     const betaVersion = betaAsset?.name.replace(/\.tar\.gz$/, '') ?? nightlyRelease.tag_name
-    if (betaBundleUrl) {
+    if (betaApiUrl) {
       beta = {
         version: betaVersion,
         publishedAt: nightlyRelease.published_at,
-        bundleUrl: betaBundleUrl,
-        pinnedUrl: extractPinnedUrl(nightlyRelease) ?? betaBundleUrl,
+        assetApiUrl: betaApiUrl,
+        pinnedApiUrl: extractPinnedApiUrl(nightlyRelease) ?? betaApiUrl,
       }
     }
   }
@@ -138,6 +131,32 @@ async function getCache(): Promise<CacheData | null> {
     }
     return null
   }
+}
+
+/** Proxy a GitHub Release asset download through our server.
+ *  The asset API URL with Accept: application/octet-stream redirects to a
+ *  pre-signed S3 URL. We follow that redirect and stream the bytes back,
+ *  so the caller needs no GitHub credentials.
+ */
+async function proxyAsset(assetApiUrl: string, filename: string): Promise<Response> {
+  const res = await fetch(assetApiUrl, {
+    headers: {
+      ...githubHeaders(),
+      Accept: 'application/octet-stream',
+    },
+  })
+
+  if (!res.ok) {
+    return new Response(`Failed to fetch asset: ${res.status}`, { status: 502 })
+  }
+
+  return new Response(res.body, {
+    headers: {
+      'Content-Type': 'application/gzip',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'public, max-age=300',
+    },
+  })
 }
 
 export async function handleVersionCheck(): Promise<Response> {
@@ -172,7 +191,7 @@ export async function handleBundleDownload(pathname: string): Promise<Response> 
     if (!result.beta) {
       return new Response('No beta release available.', { status: 404 })
     }
-    return new Response(null, { status: 302, headers: { Location: result.beta.bundleUrl } })
+    return proxyAsset(result.beta.assetApiUrl, 'agent-bundle.tar.gz')
   }
 
   // /agent/bundle/{version} → pinned stable release
@@ -180,15 +199,12 @@ export async function handleBundleDownload(pathname: string): Promise<Response> 
   if (versionMatch) {
     const requestedVersion = versionMatch[1]
     const release = result.stableVersions.find((r) => r.version === requestedVersion)
-    if (!release || !release.bundleUrl) {
+    if (!release) {
       return new Response(`Version ${requestedVersion} not found.`, { status: 404 })
     }
-    return new Response(null, { status: 302, headers: { Location: release.bundleUrl } })
+    return proxyAsset(release.pinnedApiUrl, `${requestedVersion}.tar.gz`)
   }
 
   // /agent/bundle → latest stable
-  return new Response(null, {
-    status: 302,
-    headers: { Location: result.latest.bundleUrl, 'Cache-Control': 'public, max-age=300' },
-  })
+  return proxyAsset(result.latest.assetApiUrl, 'agent-bundle.tar.gz')
 }
