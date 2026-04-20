@@ -12,6 +12,7 @@ import {
   ListChecks,
   ListTodo,
   Loader,
+  MessageSquare,
   Sparkles,
   Terminal,
 } from 'lucide-react-native'
@@ -33,16 +34,16 @@ import FileViewerSheet from './FileViewerSheet'
 
 // ── Dispatcher ───────────────────────────────────────────────────────────────
 
-export function GroupedItemRow({ item }: { item: GroupedStreamItem }) {
+export function GroupedItemRow({ item, isLast, isRunning }: { item: GroupedStreamItem; isLast?: boolean; isRunning?: boolean }) {
   const { colors } = useTheme()
 
   switch (item.kind) {
     case 'card':
-      return <ActivityCard category={item.category} entries={item.entries} />
+      return <ActivityCard category={item.category} entries={item.entries} initialExpanded={isLast} />
     case 'checklist':
-      return <ChecklistCard todos={item.todos} />
+      return <ChecklistCard todos={item.todos} initialExpanded={isLast} />
     case 'result':
-      return <ResultCard activity={item.activity} />
+      return <ResultCard activity={item.activity} isRunning={isRunning} />
     case 'status':
       return (
         <View style={styles.statusRow}>
@@ -83,13 +84,18 @@ const CATEGORY_META: Record<CardCategory, CategoryMeta> = {
     Icon: Terminal,
     getColor: (colors) => colors.accentGreen ?? palette.success[500],
   },
+  thinking: {
+    label: 'Thinking',
+    Icon: Brain,
+    getColor: (colors) => colors.textTertiary,
+  },
 }
 
 // ── ActivityCard ──────────────────────────────────────────────────────────────
 
-function ActivityCard({ category, entries }: { category: CardCategory; entries: CardEntry[] }) {
+function ActivityCard({ category, entries, initialExpanded = true }: { category: CardCategory; entries: CardEntry[]; initialExpanded?: boolean }) {
   const { colors } = useTheme()
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(initialExpanded)
 
   const meta = CATEGORY_META[category]
   const accentColor = meta.getColor(colors)
@@ -153,7 +159,10 @@ function CardEntryRow({ entry, accentColor }: { entry: CardEntry; accentColor: s
         <Text style={[styles.entryDetail, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">
           {presentation.detail}
         </Text>
-        {isFileTappable && (
+        {entry.toolResult && (
+          <View style={[styles.resultDot, { backgroundColor: isResultError ? (colors.accentRed ?? palette.error[500]) : (colors.accentGreen ?? palette.success[500]) }]} />
+        )}
+        {isFileTappable && !entry.toolResult && (
           <ChevronRight size={12} color={colors.textTertiary} strokeWidth={2.25} />
         )}
       </View>
@@ -193,9 +202,9 @@ function CardEntryRow({ entry, accentColor }: { entry: CardEntry; accentColor: s
 
 // ── ChecklistCard ─────────────────────────────────────────────────────────────
 
-function ChecklistCard({ todos }: { todos: TodoItem[] }) {
+function ChecklistCard({ todos, initialExpanded = true }: { todos: TodoItem[]; initialExpanded?: boolean }) {
   const { colors } = useTheme()
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(initialExpanded)
 
   const done = todos.filter((t) => t.status === 'completed').length
   const accentColor = colors.primary
@@ -249,15 +258,17 @@ function ChecklistCard({ todos }: { todos: TodoItem[] }) {
 
 // ── ResultCard ────────────────────────────────────────────────────────────────
 
-function ResultCard({ activity }: { activity: Extract<TaskActivity, { type: 'text' }> }) {
+function ResultCard({ activity, isRunning }: { activity: Extract<TaskActivity, { type: 'text' }>; isRunning?: boolean }) {
   const { colors } = useTheme()
-  const amber = palette.warning[500]
+  const accentColor = isRunning ? colors.primary : palette.warning[500]
+  const label = isRunning ? 'Response' : 'Result'
+  const Icon = isRunning ? MessageSquare : Sparkles
 
   return (
-    <BauhausPanel accentColor={amber}>
+    <BauhausPanel accentColor={accentColor}>
       <BauhausPanelHeader style={styles.cardHeader}>
-        <Sparkles color={amber} size={14} strokeWidth={2.25} />
-        <Text style={[styles.cardTitle, { color: amber }]}>Result</Text>
+        <Icon color={accentColor} size={14} strokeWidth={2.25} />
+        <Text style={[styles.cardTitle, { color: accentColor }]}>{label}</Text>
       </BauhausPanelHeader>
       <BauhausPanelContent>
         <EnrichedMarkdownText
@@ -351,5 +362,11 @@ const styles = StyleSheet.create({
   },
   checklistTextDone: {
     textDecorationLine: 'line-through',
+  },
+  resultDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    flexShrink: 0,
   },
 })

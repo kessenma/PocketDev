@@ -40,6 +40,7 @@ export default function TaskStreamer({ taskId }: Props) {
   const { colors } = useTheme()
   const activitiesRaw = useTaskStore((s) => s.taskActivities.get(taskId))
   const logsRaw = useTaskStore((s) => s.taskLogs.get(taskId))
+  const isRunning = useTaskStore((s) => s.tasks.get(taskId)?.status === 'running')
 
   // Merge activities + fallback logs into a single stream.
   // When activities exist, show them. When they don't (non-stream-json agents), show raw logs.
@@ -55,6 +56,12 @@ export default function TaskStreamer({ taskId }: Props) {
   }, [activitiesRaw, logsRaw])
 
   const items: GroupedStreamItem[] = useMemo(() => groupActivitiesIntoCards(rawItems), [rawItems])
+
+  const lastCardIndex = useMemo(() => {
+    let last = -1
+    items.forEach((item, i) => { if (item.kind === 'card' || item.kind === 'checklist') last = i })
+    return last
+  }, [items])
 
   const flatListRef = useRef<FlashListRef<GroupedStreamItem>>(null)
   const [autoScroll, setAutoScroll] = useState(true)
@@ -83,7 +90,7 @@ export default function TaskStreamer({ taskId }: Props) {
         data={items}
         keyExtractor={(_, i) => String(i)}
         getItemType={(item) => item.kind}
-        renderItem={({ item }) => <GroupedItemRow item={item} />}
+        renderItem={({ item, index }) => <GroupedItemRow item={item} isLast={index === lastCardIndex} isRunning={isRunning} />}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
         onScroll={handleScroll}
@@ -114,6 +121,7 @@ export function TaskStreamerInline({ taskId }: Props) {
   const { colors } = useTheme()
   const activitiesRaw = useTaskStore((s) => s.taskActivities.get(taskId))
   const logsRaw = useTaskStore((s) => s.taskLogs.get(taskId))
+  const isRunning = useTaskStore((s) => s.tasks.get(taskId)?.status === 'running')
 
   const rawItems: StreamItem[] = useMemo(() => {
     const activities = activitiesRaw ?? []
@@ -126,6 +134,12 @@ export function TaskStreamerInline({ taskId }: Props) {
 
   const items: GroupedStreamItem[] = useMemo(() => groupActivitiesIntoCards(rawItems), [rawItems])
 
+  const lastCardIndex = useMemo(() => {
+    let last = -1
+    items.forEach((item, i) => { if (item.kind === 'card' || item.kind === 'checklist') last = i })
+    return last
+  }, [items])
+
   if (items.length === 0) {
     return (
       <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -136,7 +150,7 @@ export function TaskStreamerInline({ taskId }: Props) {
 
   return (
     <View style={styles.inlineContent}>
-      {items.map((item, i) => <GroupedItemRow key={i} item={item} />)}
+      {items.map((item, i) => <GroupedItemRow key={i} item={item} isLast={i === lastCardIndex} isRunning={isRunning} />)}
     </View>
   )
 }

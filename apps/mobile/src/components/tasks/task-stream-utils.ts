@@ -164,7 +164,7 @@ export function extractLatestTodos(activities: TaskActivity[]): TodoItem[] | nul
 
 // ── Card grouping ────────────────────────────────────────────────────────────
 
-export type CardCategory = 'researching' | 'writing' | 'planning' | 'running'
+export type CardCategory = 'researching' | 'writing' | 'planning' | 'running' | 'thinking'
 
 const KIND_TO_CATEGORY: Record<TaskToolPresentation['kind'], CardCategory> = {
   read:    'researching',
@@ -252,7 +252,7 @@ export function groupActivitiesIntoCards(items: StreamItem[]): GroupedStreamItem
     }
 
     if (activity.type === 'thinking') {
-      const category: CardCategory = 'researching'
+      const category: CardCategory = 'thinking'
       if (currentCard && currentCard.category === category) {
         currentCard.entries.push({ kind: 'thinking', preview: activity.preview })
       } else {
@@ -264,7 +264,13 @@ export function groupActivitiesIntoCards(items: StreamItem[]): GroupedStreamItem
 
     if (activity.type === 'text') {
       flushCard()
-      result.push({ kind: 'result', activity })
+      const last = result[result.length - 1]
+      if (last?.kind === 'result') {
+        // Merge consecutive text activities into one result card
+        last.activity = { ...last.activity, content: last.activity.content + '\n\n' + activity.content }
+      } else {
+        result.push({ kind: 'result', activity })
+      }
       continue
     }
 

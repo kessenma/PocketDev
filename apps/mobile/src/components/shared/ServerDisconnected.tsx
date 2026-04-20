@@ -7,6 +7,8 @@ import BauhausButton from './BauhausButton'
 import CopyButton from './CopyButton'
 import { typeStyles } from '../../theme/typography'
 import ConnectingAnimation from '../animations/ConnectingAnimation'
+import ServerWebBrowserSheet from '../browser/ServerWebBrowserSheet'
+import { browserSessionUrl } from '../../services/api'
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -40,6 +42,7 @@ export default function ServerDisconnected() {
   const server = useConnectionStore((s) => s.server)
   const connectionLog = useConnectionStore((s) => s.connectionLog)
   const getConnectionLogText = useConnectionStore((s) => s.getConnectionLogText)
+  const [consoleOpen, setConsoleOpen] = useState(false)
 
   // Track whether we've ever reached a connected state this session.
   // Used to decide which animation to show:
@@ -110,6 +113,20 @@ export default function ServerDisconnected() {
       <BauhausButton compact onPress={connect}>
         Retry Connection
       </BauhausButton>
+
+      {server && (
+        <BauhausButton compact variant="secondary" onPress={() => setConsoleOpen(true)}>
+          Server Console
+        </BauhausButton>
+      )}
+
+      {consoleOpen && server && (
+        <ServerWebBrowserSheet
+          title="Server Console"
+          initialUrl={browserSessionUrl(server.ip, server.port, '/PocketDev/')}
+          onDismiss={() => setConsoleOpen(false)}
+        />
+      )}
 
       {recentLog.length > 0 && (
         <View style={[styles.logSection, { borderColor: colors.border }]}>

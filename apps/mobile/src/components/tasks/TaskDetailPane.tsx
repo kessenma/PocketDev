@@ -319,6 +319,12 @@ export default function TaskDetailPane({
     [rawStreamItems],
   )
 
+  const lastCardIndex = useMemo(() => {
+    let last = -1
+    streamItems.forEach((item, i) => { if (item.kind === 'card' || item.kind === 'checklist') last = i })
+    return last
+  }, [streamItems])
+
   const itemCount = streamItems.length
   useEffect(() => {
     if (autoScroll && itemCount > 0) {
@@ -520,7 +526,7 @@ export default function TaskDetailPane({
         data={streamItems}
         keyExtractor={(_, i) => String(i)}
         getItemType={(item) => item.kind}
-        renderItem={({ item }) => <GroupedItemRow item={item} />}
+        renderItem={({ item, index }) => <GroupedItemRow item={item} isLast={index === lastCardIndex} isRunning={isRunning} />}
         contentContainerStyle={styles.scrollAreaContent}
         ItemSeparatorComponent={() => <View style={styles.streamSeparator} />}
         onScroll={handleScroll}
