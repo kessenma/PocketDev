@@ -39,8 +39,14 @@ bun run build
 echo "  → Staging bundle..."
 mkdir -p "$STAGING_DIR/pocketdev-agent"
 
-# Extract version from install.sh and embed in bundle
-AGENT_VERSION=$(sed -n 's/^POCKETDEV_VERSION="\([^"]*\)".*/\1/p' "$REPO_ROOT/apps/web/install.sh")
+# Determine version: prefer AGENT_VERSION env var (set by CI), fall back to install.sh
+if [ -z "${AGENT_VERSION:-}" ]; then
+  AGENT_VERSION=$(sed -n 's/^POCKETDEV_VERSION="\([^"]*\)".*/\1/p' "$REPO_ROOT/apps/web/install.sh")
+fi
+AGENT_VERSION="${AGENT_VERSION#v}"  # strip leading 'v' from git tags (e.g. v0.3.0 → 0.3.0)
+if [ -z "$AGENT_VERSION" ]; then
+  echo "ERROR: Could not determine AGENT_VERSION" >&2; exit 1
+fi
 echo "{\"version\":\"$AGENT_VERSION\"}" > "$STAGING_DIR/pocketdev-agent/version.json"
 echo "  → Agent version: $AGENT_VERSION"
 

@@ -47,6 +47,10 @@ export interface UpdateInfo {
   updateAvailable: boolean
   changelogUrl: string
   versions: string[]
+  beta?: {
+    version: string
+    publishedAt: string
+  }
 }
 
 export async function checkHealth(opts?: { signal?: AbortSignal }): Promise<{

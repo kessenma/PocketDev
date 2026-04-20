@@ -1,0 +1,9 @@
+{
+  "pairs": [
+    {
+      "mobile": "1.0.0",
+      "agent_stable": "0.2.0",
+      "notes": "Initial App Store release"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+import DeviceInfo from 'react-native-device-info'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
 import { useConnectionStore } from '../stores/connection'
@@ -37,6 +38,22 @@ export default function SettingsScreen({ navigation }: Props) {
   const refreshServer = useServerActionsStore((s) => s.refresh)
   const [consoleOpen, setConsoleOpen] = useState(false)
   const [lockLoading, setLockLoading] = useState(false)
+  const [agentVersion, setAgentVersion] = useState<string | null>(null)
+  const mobileVersion = DeviceInfo.getVersion()
+
+  useEffect(() => {
+    if (!server) return
+    const protocol = server.secure ? 'https' : 'http'
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 5_000)
+    fetch(`${protocol}://${server.ip}:${server.port}/PocketDev/api/console/health`, {
+      signal: controller.signal,
+    })
+      .then((r) => r.json())
+      .then((d: { version?: string }) => { if (d.version) setAgentVersion(d.version) })
+      .catch(() => { /* agent unreachable — leave null */ })
+      .finally(() => clearTimeout(timer))
+  }, [server])
 
   async function handleLock() {
     if (!server) return
@@ -191,9 +208,15 @@ export default function SettingsScreen({ navigation }: Props) {
         <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>App</Text>
           <View style={styles.row}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Version</Text>
-            <Text style={[styles.value, { color: colors.text }]}>1.0.0</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Mobile Version</Text>
+            <Text style={[styles.value, { color: colors.text }]}>{mobileVersion}</Text>
           </View>
+          {agentVersion && (
+            <View style={styles.row}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Agent Version</Text>
+              <Text style={[styles.value, { color: colors.text }]}>v{agentVersion}</Text>
+            </View>
+          )}
           <BauhausButton variant="danger" onPress={handleUnpair}>
             Remove Pairing
           </BauhausButton>

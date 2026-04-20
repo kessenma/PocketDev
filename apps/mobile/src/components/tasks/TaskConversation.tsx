@@ -6,6 +6,7 @@ import type { TaskTurn } from '@pocketdev/shared/types'
 import { MessageSquare, User } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
+import { buildMarkdownStyle } from '../../theme/markdown'
 
 type Props = {
   turns: TaskTurn[]
@@ -58,12 +59,7 @@ export default function TaskConversation({ turns }: Props) {
             ) : (
               <EnrichedMarkdownText
                 markdown={turn.content}
-                markdownStyle={{
-                  paragraph: { color: colors.text, fontSize: 14, lineHeight: 20 },
-                  strong: { color: colors.text },
-                  link: { color: colors.primary },
-                  code: { color: colors.primary, backgroundColor: colors.panelAlt },
-                }}
+                markdownStyle={buildMarkdownStyle(colors)}
               />
             )}
           </View>

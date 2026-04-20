@@ -4,6 +4,7 @@ import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
+import { buildMarkdownStyle } from '../../theme/markdown'
 import PlanBadge from './PlanBadge'
 import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
 import type { PlanStep, PlanStepKind } from './model'
@@ -48,10 +49,7 @@ export default function PlanStepList({ steps }: Props) {
             </View>
             <EnrichedMarkdownText
               markdown={step.description}
-              markdownStyle={{
-                paragraph: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
-                link: { color: colors.primary },
-              }}
+              markdownStyle={buildMarkdownStyle(colors)}
             />
           </View>
         ))}

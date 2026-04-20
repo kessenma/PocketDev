@@ -17,11 +17,12 @@ import {
   Terminal,
 } from 'lucide-react-native'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
-import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
 import { palette } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
+import { buildMarkdownStyle } from '../../theme/markdown'
 import {
   BauhausPanel,
   BauhausPanelContent,
@@ -274,12 +275,7 @@ function ResultCard({ activity, isRunning }: { activity: Extract<TaskActivity, {
         <EnrichedMarkdownText
           markdown={activity.content}
           streamingAnimation
-          markdownStyle={{
-            paragraph: { color: colors.text, fontSize: 14, lineHeight: 20 },
-            strong: { color: colors.text },
-            link: { color: colors.primary },
-            code: { color: colors.primary, backgroundColor: colors.panelAlt },
-          }}
+          markdownStyle={buildMarkdownStyle(colors)}
         />
       </BauhausPanelContent>
     </BauhausPanel>

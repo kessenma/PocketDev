@@ -7,12 +7,18 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1000 // 6 hours
 
 let cachedVersion: string | null = null
 
-interface VersionCheckResult {
+interface BetaInfo {
+  version: string
+  publishedAt: string
+}
+
+export interface VersionCheckResult {
   current: string
   latest: string
   updateAvailable: boolean
   changelogUrl: string
   versions: string[]
+  beta?: BetaInfo
 }
 
 let cachedCheck: { result: VersionCheckResult; checkedAt: number } | null = null
@@ -34,23 +40,36 @@ export function getAgentVersion(): string {
   return cachedVersion!
 }
 
-/** Compare two semver strings. Returns true if b is newer than a. */
+/**
+ * Compare two semver-ish strings. Returns true if b is strictly newer than a.
+ * Pre-release suffixes (e.g. "-beta.abc1234") are treated as older than the
+ * same base version without a suffix (semver precedence).
+ */
 function isNewer(a: string, b: string): boolean {
-  const pa = a.split('.').map(Number)
-  const pb = b.split('.').map(Number)
+  const [aBase, aSuffix = ''] = a.split('-', 2)
+  const [bBase, bSuffix = ''] = b.split('-', 2)
+
+  const pa = aBase.split('.').map(Number)
+  const pb = bBase.split('.').map(Number)
+
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
     const na = pa[i] ?? 0
     const nb = pb[i] ?? 0
     if (nb > na) return true
     if (nb < na) return false
   }
+
+  // Numeric parts equal — apply semver pre-release rules:
+  // stable (no suffix) > any pre-release suffix
+  if (aSuffix && !bSuffix) return false // a is pre-release, b is stable → b IS newer but from a's perspective b is ahead
+  if (!aSuffix && bSuffix) return false // a is stable, b is pre-release → b is older
+  if (aSuffix && bSuffix) return bSuffix > aSuffix // lexicographic comparison of pre-release parts
   return false
 }
 
 export async function checkForUpdate(): Promise<VersionCheckResult | null> {
   const now = Date.now()
 
-  // Return cached result if still fresh
   if (cachedCheck && now - cachedCheck.checkedAt < CACHE_TTL_MS) {
     return cachedCheck.result
   }
@@ -63,6 +82,7 @@ export async function checkForUpdate(): Promise<VersionCheckResult | null> {
       version: string
       versions: string[]
       changelog_url: string
+      beta?: BetaInfo
     }
 
     const current = getAgentVersion()
@@ -72,12 +92,12 @@ export async function checkForUpdate(): Promise<VersionCheckResult | null> {
       updateAvailable: current === 'dev' || current === 'unknown' || isNewer(current, data.version),
       changelogUrl: data.changelog_url,
       versions: data.versions,
+      beta: data.beta,
     }
 
     cachedCheck = { result, checkedAt: now }
     return result
   } catch {
-    // Network failure — return stale cache or null
     return cachedCheck?.result ?? null
   }
 }

@@ -6,8 +6,6 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
-COPY apps/agent/package.json ./apps/agent/package.json
-COPY apps/agent/console/package.json ./apps/agent/console/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/db/package.json ./packages/db/package.json
 COPY patches/ ./patches/
@@ -41,39 +39,6 @@ COPY packages/db/ ./packages/db/
 COPY package.json ./
 RUN cd apps/web && NODE_OPTIONS=--max-old-space-size=4096 npx vite build
 
-# Build the console SPA (served as static files by the agent)
-FROM base AS console-build
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/agent/console/node_modules ./apps/agent/console/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY apps/agent/console/ ./apps/agent/console/
-COPY packages/shared/package.json ./packages/shared/package.json
-COPY packages/shared/assets ./packages/shared/assets
-COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
-COPY package.json ./
-RUN cd apps/agent/console && npx vite build
-
-# Build the agent bundle (pre-built tarball served to install script)
-FROM oven/bun:1 AS agent-build
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/agent/node_modules ./apps/agent/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY apps/agent/ ./apps/agent/
-COPY packages/shared/ ./packages/shared/
-COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
-COPY package.json ./
-RUN cd apps/agent && bun build src/index.ts --outdir dist --target bun --external node-pty-prebuilt-multiarch
-# Stage the tarball contents
-COPY apps/web/install.sh /tmp/install.sh
-RUN mkdir -p /tmp/bundle/pocketdev-agent \
-    && cp apps/agent/dist/index.js /tmp/bundle/pocketdev-agent/ \
-    && cp -r apps/agent/drizzle /tmp/bundle/pocketdev-agent/drizzle \
-    && AGENT_VERSION=$(grep -oP 'POCKETDEV_VERSION="\K[^"]+' /tmp/install.sh) \
-    && echo "{\"version\":\"$AGENT_VERSION\"}" > /tmp/bundle/pocketdev-agent/version.json
-COPY --from=console-build /app/apps/agent/console/dist /tmp/bundle/pocketdev-agent/console
-RUN tar -czf /tmp/agent-bundle.tar.gz -C /tmp/bundle pocketdev-agent
-
 # Production — use bun for fast runtime
 FROM oven/bun:1 AS production
 WORKDIR /app/apps/web
@@ -94,9 +59,9 @@ COPY --from=build /app/apps/web/tsconfig.json ./tsconfig.json
 COPY --from=build /app/packages/shared /app/packages/shared
 COPY --from=build /app/packages/db /app/packages/db
 
-# Install script and agent bundle
+# Install script and canonical version file
 COPY apps/web/install.sh ./install.sh
-COPY --from=agent-build /tmp/agent-bundle.tar.gz ./public/agent-bundle.tar.gz
+COPY VERSION ./VERSION
 
 ENV NODE_ENV=production
 ENV PORT=3000

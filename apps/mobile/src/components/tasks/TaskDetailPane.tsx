@@ -21,6 +21,7 @@ import TaskDebugSheet from './TaskDebugSheet'
 import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
 import { extractLatestTodos, getToolUseDetail, groupActivitiesIntoCards, parseCodexRawLogToActivity } from './task-stream-utils'
+import { buildMarkdownStyle } from '../../theme/markdown'
 import type { GroupedStreamItem } from './task-stream-utils'
 import { inferTaskDebugSelection, type TaskDebugSelection } from './task-debug-utils'
 import { typeStyles } from '../../theme/typography'
@@ -99,12 +100,7 @@ function DetailHeader({
           </View>
           <EnrichedMarkdownText
             markdown={resultText}
-            markdownStyle={{
-              paragraph: { color: colors.text, fontSize: 14, lineHeight: 20 },
-              strong: { color: colors.text },
-              link: { color: colors.primary },
-              code: { color: colors.primary, backgroundColor: colors.panelAlt },
-            }}
+            markdownStyle={buildMarkdownStyle(colors)}
           />
         </View>
       ) : null}

@@ -20,6 +20,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
+import { buildMarkdownStyle } from '../../theme/markdown'
 import BauhausBadge from '../shared/BauhausBadge'
 import BauhausButton from '../shared/BauhausButton'
 import { typeStyles } from '../../theme/typography'
@@ -315,12 +316,7 @@ function TextRow({ activity, colors }: { activity: Extract<TaskActivity, { type:
         <EnrichedMarkdownText
           markdown={activity.content}
           streamingAnimation
-          markdownStyle={{
-            paragraph: { color: colors.text, fontSize: 14, lineHeight: 20 },
-            strong: { color: colors.text },
-            link: { color: colors.primary },
-            code: { color: colors.primary, backgroundColor: colors.panelAlt },
-          }}
+          markdownStyle={buildMarkdownStyle(colors)}
         />
       </View>
     </View>

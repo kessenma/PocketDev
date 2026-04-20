@@ -5,9 +5,17 @@ import { installs } from '@pocketdev/db/schema'
 
 // server.ts runs from /app/apps/web (Docker WORKDIR), install.sh is in same dir
 const SCRIPT_PATH = join(process.cwd(), 'install.sh')
+const VERSION_PATH = join(process.cwd(), 'VERSION')
 
 function getScript(): string {
-  return readFileSync(SCRIPT_PATH, 'utf-8')
+  const raw = readFileSync(SCRIPT_PATH, 'utf-8')
+  try {
+    const version = readFileSync(VERSION_PATH, 'utf-8').trim()
+    // Substitute the version in the install banner — actual bundle download still hits /agent/bundle
+    return raw.replace(/POCKETDEV_VERSION="[^"]*"/, `POCKETDEV_VERSION="${version}"`)
+  } catch {
+    return raw
+  }
 }
 
 function getScriptVersion(script: string): string {

@@ -57,12 +57,12 @@ async function start() {
 
       // Agent version check
       if (url.pathname === '/agent/version') {
-        return handleVersionCheck()
+        return await handleVersionCheck()
       }
 
-      // Serve agent bundle (latest or pinned version)
+      // Serve agent bundle (latest, pinned version, or nightly)
       if (url.pathname.startsWith('/agent/bundle')) {
-        return handleBundleDownload(url.pathname)
+        return await handleBundleDownload(url.pathname)
       }
 
       // Try serving static files from client dist

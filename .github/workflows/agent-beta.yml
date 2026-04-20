@@ -1,0 +1,60 @@
+name: Beta Agent Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/agent/**'
+      - 'packages/shared/**'
+      - 'scripts/build-agent-bundle.sh'
+
+permissions:
+  contents: write
+
+jobs:
+  beta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compute beta version
+        id: ver
+        run: |
+          BASE=$([ -f VERSION ] && cat VERSION | tr -d '[:space:]' || sed -n 's/^POCKETDEV_VERSION="\([^"]*\)".*/\1/p' apps/web/install.sh)
+          SHA="${GITHUB_SHA::7}"
+          echo "version=${BASE}-beta.${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build agent bundle
+        env:
+          AGENT_VERSION: ${{ steps.ver.outputs.version }}
+        run: bash scripts/build-agent-bundle.sh
+
+      - name: Replace nightly-latest pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BETA_VERSION="${{ steps.ver.outputs.version }}"
+          gh release delete nightly-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create nightly-latest \
+            --title "Beta (nightly-latest): $BETA_VERSION" \
+            --notes "Automated beta build from main. For TestFlight users and developers. Version: $BETA_VERSION" \
+            --prerelease \
+            "apps/web/public/agent-bundle.tar.gz#agent-bundle.tar.gz" \
+            "apps/web/public/agent-versions/${BETA_VERSION}.tar.gz#${BETA_VERSION}.tar.gz"
