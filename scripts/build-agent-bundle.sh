@@ -20,10 +20,14 @@ STAGING_DIR="$(mktemp -d)"
 
 echo "Building PocketDev agent bundle..."
 
-# 1. Install dependencies
-echo "  → Installing dependencies..."
-cd "$REPO_ROOT"
-pnpm install
+# 1. Install dependencies (skipped in CI — workflow already ran pnpm install)
+if [ -z "${CI:-}" ]; then
+  echo "  → Installing dependencies..."
+  cd "$REPO_ROOT"
+  pnpm install
+else
+  echo "  → Skipping install (CI environment detected)"
+fi
 
 # 2. Build console SPA
 echo "  → Building console SPA..."
