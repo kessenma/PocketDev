@@ -107,7 +107,11 @@ async function fetchFromGitHub(): Promise<CacheData> {
   let beta: BetaInfo | null = null
   if (nightlyRelease) {
     const betaBundleUrl = extractBundleUrl(nightlyRelease)
-    const betaVersion = nightlyRelease.name.match(/Version: (.+)$/)?.[1] ?? nightlyRelease.tag_name
+    // Extract version from the versioned asset filename (e.g. "0.2.1-beta.abc1234.tar.gz")
+    const betaAsset = nightlyRelease.assets.find(
+      (a) => a.name.endsWith('.tar.gz') && a.name !== 'agent-bundle.tar.gz',
+    )
+    const betaVersion = betaAsset?.name.replace(/\.tar\.gz$/, '') ?? nightlyRelease.tag_name
     if (betaBundleUrl) {
       beta = {
         version: betaVersion,
