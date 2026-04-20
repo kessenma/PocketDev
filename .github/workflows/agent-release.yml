@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared package
+        run: cd packages/shared && npx tsc -p tsconfig.build.json
+
       - name: Build agent bundle
         env:
           AGENT_VERSION: ${{ github.ref_name }}

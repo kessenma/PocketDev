@@ -41,6 +41,9 @@ jobs:
           SHA="${GITHUB_SHA::7}"
           echo "version=${BASE}-beta.${SHA}" >> "$GITHUB_OUTPUT"
 
+      - name: Build shared package
+        run: cd packages/shared && npx tsc -p tsconfig.build.json
+
       - name: Build agent bundle
         env:
           AGENT_VERSION: ${{ steps.ver.outputs.version }}
