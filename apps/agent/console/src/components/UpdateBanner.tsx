@@ -21,6 +21,7 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
 
   const otherVersions = update.versions.filter((v) => v !== version)
   const hasVersionHistory = otherVersions.length > 0
+  const showManage = hasVersionHistory || update.beta || update.updateAvailable
   if (!update.updateAvailable && !hasVersionHistory && !update.beta) return null
 
   function cleanup() {
@@ -116,7 +117,7 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            {(hasVersionHistory || update.beta) && (
+            {showManage && (
               <Button
                 variant="outline"
                 size="sm"
@@ -133,7 +134,7 @@ export function UpdateBanner({ version, update }: UpdateBannerProps) {
               <Button
                 size="sm"
                 className="bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90 text-xs font-semibold"
-                onClick={() => handleUpdate()}
+                onClick={() => setVersionsOpen(true)}
                 disabled={updating}
               >
                 {updating ? (
