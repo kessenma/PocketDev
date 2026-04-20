@@ -8,6 +8,7 @@ on:
       - 'apps/agent/**'
       - 'packages/shared/**'
       - 'scripts/build-agent-bundle.sh'
+      - '.github/workflows/agent-beta.yml'
 
 permissions:
   contents: write
