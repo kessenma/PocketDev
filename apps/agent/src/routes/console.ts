@@ -71,6 +71,9 @@ import {
 import type { FileSearchResult, TreeEntry } from '@pocketdev/shared/types'
 
 const PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
+const CADDY_STATUS_CACHE_TTL_MS = 60_000
+
+let cachedCaddyStatus: { active: boolean; checkedAt: number } | null = null
 
 // Resolve console SPA dist directory
 // In dev: apps/agent/console/dist
@@ -96,6 +99,24 @@ function extractHostIp(request: Request): string {
   // Strip port
   const ip = host.replace(/:\d+$/, '')
   return ip || '0.0.0.0'
+}
+
+async function isCaddyActive(): Promise<boolean> {
+  const now = Date.now()
+  if (cachedCaddyStatus && now - cachedCaddyStatus.checkedAt < CADDY_STATUS_CACHE_TTL_MS) {
+    return cachedCaddyStatus.active
+  }
+
+  try {
+    const proc = Bun.spawn(['systemctl', 'is-active', 'caddy'], { stdout: 'pipe', stderr: 'pipe' })
+    const output = await new Response(proc.stdout).text()
+    const active = output.trim() === 'active'
+    cachedCaddyStatus = { active, checkedAt: now }
+    return active
+  } catch {
+    cachedCaddyStatus = { active: false, checkedAt: now }
+    return false
+  }
 }
 
 function requireConsoleSession(request: Request, set: { status?: unknown }) {
@@ -268,15 +289,9 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     // Detect if Caddy is running (HTTPS reverse proxy in front of agent)
     let secure = false
     let externalPort = PORT
-    try {
-      const proc = Bun.spawn(['systemctl', 'is-active', 'caddy'], { stdout: 'pipe', stderr: 'pipe' })
-      const output = await new Response(proc.stdout).text()
-      if (output.trim() === 'active') {
-        secure = true
-        externalPort = 443
-      }
-    } catch {
-      // systemctl not available — assume no Caddy
+    if (await isCaddyActive()) {
+      secure = true
+      externalPort = 443
     }
 
     // Use domain from domain.txt if available
