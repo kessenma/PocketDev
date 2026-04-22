@@ -1,12 +1,12 @@
 @import "tailwindcss";
-@import "@fontsource-variable/geist";
+@import '@pocketdev/shared/fonts.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Geist Variable", system-ui, -apple-system, sans-serif;
-  --font-display: "Avenir Next Condensed", "Arial Narrow", sans-serif;
-  --font-mono: ui-monospace, monospace;
+  --font-sans: 'pd-sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'pd-display', "Avenir Next Condensed", "Arial Narrow", sans-serif;
+  --font-mono: 'pd-mono', ui-monospace, monospace;
 }
 
 * {

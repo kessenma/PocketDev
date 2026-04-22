@@ -42,10 +42,12 @@ export const typographyScale = {
 } as const
 
 export const fontFamilyTokens = {
-  body: 'Geist',
-  display: 'Wagon',
-  displayFallback: 'sans-serif',
-  mono: 'Geist Mono',
+  display: 'pd-display',
+  body: 'pd-sans',
+  mono: 'pd-mono',
+  // React Native uses PostScript names, not CSS aliases
+  displayNative: 'Stardom-Regular',
+  bodyNative: 'Geist',
 } as const
 
 export const semanticTypography = {

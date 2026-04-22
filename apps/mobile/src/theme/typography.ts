@@ -3,16 +3,16 @@ import { fontFamilyTokens, semanticTypography, typographyScale } from '@pocketde
 
 function getDisplayFontFamily() {
   return Platform.select({
-    ios: 'Wagon-Bold',
-    android: 'Wagon-Bold',
-    default: fontFamilyTokens.displayFallback,
+    ios: fontFamilyTokens.displayNative,
+    android: fontFamilyTokens.displayNative,
+    default: 'sans-serif',
   })
 }
 
 function getBodyFontFamily() {
   return Platform.select({
-    ios: 'Durer',
-    android: 'Durer',
+    ios: fontFamilyTokens.bodyNative,
+    android: fontFamilyTokens.bodyNative,
     default: fontFamilyTokens.body,
   })
 }

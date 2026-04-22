@@ -1,10 +1,15 @@
 import type { CSSProperties } from 'react'
 import { HeadContent, Scripts, Outlet, createRootRoute } from '@tanstack/react-router'
 import { NavBar } from '#/components/landing/NavBar'
-import { webFontStacks } from '@pocketdev/shared/theme'
+import { webFontStacks, generateFontFaceCSS } from '@pocketdev/shared/theme'
 import appCss from '../styles.css?url'
 
+function NotFound() {
+  return null
+}
+
 export const Route = createRootRoute({
+  notFoundComponent: NotFound,
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -30,13 +35,7 @@ function RootComponent() {
   )
 }
 
-const fontFaceCSS = `
-@font-face { font-family: 'Wagon'; src: url('/fonts/Wagon-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; }
-@font-face { font-family: 'Wagon'; src: url('/fonts/Wagon-ExtraLight.ttf') format('truetype'); font-weight: 200; font-style: normal; }
-@font-face { font-family: 'Wagon'; src: url('/fonts/Wagon-ExtraLightItalic.ttf') format('truetype'); font-weight: 200; font-style: italic; }
-@font-face { font-family: 'Geist'; src: url('/fonts/Geist-VariableFont_wght.ttf') format('truetype'); font-weight: 100 900; font-style: normal; }
-@font-face { font-family: 'Geist Mono'; src: url('/fonts/GeistMono-VariableFont_wght.ttf') format('truetype'); font-weight: 100 900; font-style: normal; }
-`
+const fontFaceCSS = generateFontFaceCSS('/fonts')
 
 function RootShell({ children }: { children: React.ReactNode }) {
   const fontVars = {
