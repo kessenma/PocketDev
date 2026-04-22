@@ -72,6 +72,7 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
       const knownVersion = targetVersion && targetVersion !== 'nightly' ? targetVersion : undefined
 
       let attempts = 0
+      const MAX_ATTEMPTS = 30
       upgradePollRef.current = setInterval(async () => {
         attempts++
         try {
@@ -87,11 +88,26 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
         } catch {
           // Agent is still restarting — swallow and retry on the next tick.
         }
-        if (attempts >= 20) {
+        if (attempts >= MAX_ATTEMPTS) {
           clearInterval(upgradePollRef.current!)
           upgradePollRef.current = null
-          setUpgrading(false)
-          setUpgradeError('Update timed out. The agent may still be restarting — try refreshing the page.')
+          // One last best-effort check with a longer timeout before giving up.
+          // The restart often completes just past the poll window, and the UX
+          // of forcing a manual refresh is worse than a slightly optimistic
+          // reload — if the install actually failed, the reloaded page will
+          // show the unchanged version and the banner updates accordingly.
+          try {
+            const health = await checkHealth({ signal: AbortSignal.timeout(10_000) })
+            const restarted = knownVersion ? health.version === knownVersion : health.uptime < baselineUptime
+            if (restarted) {
+              toast.success(`Updated to v${health.version}`)
+            } else {
+              toast.info('Restart not detected yet — refreshing to sync state...')
+            }
+          } catch {
+            toast.info('Agent still coming back online — refreshing...')
+          }
+          setTimeout(() => window.location.reload(), 800)
         }
       }, 3000)
     } catch (err) {

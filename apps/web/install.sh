@@ -26,16 +26,31 @@ step()  { echo -e "\n${BOLD}$1${NC}"; }
 
 # ─── Parse flags ─────────────────────────────────────────────────
 ADMIN_RESET=false
+INSTALL_BETA=false
 for arg in "$@"; do
   case "$arg" in
     --admin-reset) ADMIN_RESET=true ;;
+    --beta|--nightly) INSTALL_BETA=true ;;
   esac
 done
 
+# Beta track: pull the nightly-latest pre-release instead of the stable bundle.
+# The web proxy serves /agent/bundle/nightly from the `nightly-latest` GitHub
+# release produced by .github/workflows/agent-beta.yml.
+if [ "$INSTALL_BETA" = true ]; then
+  BUNDLE_URL="https://pocketdev.run/agent/bundle/nightly"
+  INSTALLER_LABEL="v${POCKETDEV_VERSION} (beta track)"
+else
+  INSTALLER_LABEL="v${POCKETDEV_VERSION}"
+fi
+
 echo ""
 echo -e "${BOLD}============================================${NC}"
-echo -e "${BOLD}  PocketDev Installer v${POCKETDEV_VERSION}${NC}"
+echo -e "${BOLD}  PocketDev Installer ${INSTALLER_LABEL}${NC}"
 echo -e "${BOLD}============================================${NC}"
+if [ "$INSTALL_BETA" = true ]; then
+  echo -e "  ${YELLOW}!${NC} Installing beta (nightly-latest). Not recommended for production."
+fi
 
 # ─── Pre-flight checks ───────────────────────────────────────────
 step "Step 0/5: Pre-flight checks"

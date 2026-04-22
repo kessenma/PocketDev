@@ -13,6 +13,12 @@ export function UpdateBanner() {
   const hasVersionHistory = otherVersions.length > 0
   const showManage = hasVersionHistory || !!update?.beta || !!update?.updateAvailable
 
+  const runningBeta = version.includes('-beta.')
+  const onLatestBeta = !!update?.beta && update.beta.version === version
+  // When a beta is running, semver makes any stable version look like an
+  // "update" — relabel so users know it's a sideways switch, not a plain upgrade.
+  const stableSwitchAvailable = runningBeta && !!update?.updateAvailable
+
   if (!upgrading && (!update || (!update.updateAvailable && !hasVersionHistory && !update.beta))) {
     return null
   }
@@ -22,6 +28,9 @@ export function UpdateBanner() {
     const parsed = update.versions.indexOf(v)
     const currentParsed = update.versions.indexOf(version)
     if (v === version) return 'Current'
+    // If the current install isn't in the stable list (e.g. running a beta),
+    // treat every stable entry as a forward switch rather than a rollback.
+    if (currentParsed === -1) return 'Switch'
     if (parsed < currentParsed) return 'Rollback'
     return 'Upgrade'
   }
@@ -46,8 +55,15 @@ export function UpdateBanner() {
                 </div>
               ) : update?.updateAvailable ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground">Update available</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {stableSwitchAvailable ? 'Stable release available' : 'Update available'}
+                  </span>
                   <Badge className="bg-secondary text-secondary-foreground/70 text-xs">v{version}</Badge>
+                  {runningBeta && (
+                    <Badge className="bg-[var(--bauhaus-yellow)]/20 text-[var(--bauhaus-yellow)] border border-[var(--bauhaus-yellow)]/40 text-xs">
+                      Beta
+                    </Badge>
+                  )}
                   <span className="text-foreground/40">→</span>
                   <Badge className="bg-[var(--bauhaus-yellow)] text-black text-xs">v{update.latest}</Badge>
                 </div>
@@ -55,6 +71,11 @@ export function UpdateBanner() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground">Agent up to date</span>
                   <Badge className="bg-[var(--bauhaus-yellow)] text-black text-xs">v{version}</Badge>
+                  {runningBeta && (
+                    <Badge className="bg-[var(--bauhaus-yellow)]/20 text-[var(--bauhaus-yellow)] border border-[var(--bauhaus-yellow)]/40 text-xs">
+                      Beta
+                    </Badge>
+                  )}
                 </div>
               )}
               {upgradeError && <p className="mt-1 text-xs text-red-400">{upgradeError}</p>}
@@ -82,7 +103,7 @@ export function UpdateBanner() {
                   onClick={() => handleUpgrade(update.latest)}
                 >
                   <ArrowUpCircle className="mr-1.5 h-3.5 w-3.5" />
-                  Update Now
+                  {stableSwitchAvailable ? 'Switch to Stable' : 'Update Now'}
                 </Button>
               )}
             </div>
@@ -154,20 +175,25 @@ export function UpdateBanner() {
                       </p>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-mono text-sm font-medium">{update.beta.version}</span>
-                        <p className="text-xs text-black/50">
-                          Published {new Date(update.beta.publishedAt).toLocaleDateString()}
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <span className="font-mono text-sm font-medium">{update.beta.version}</span>
+                          <p className="text-xs text-black/50">
+                            Published {new Date(update.beta.publishedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {onLatestBeta && (
+                          <Badge className="bg-[var(--bauhaus-yellow)] text-black text-xs">Current</Badge>
+                        )}
                       </div>
                       <Button
                         size="sm"
                         variant="outline"
                         className="border-black/20 text-xs"
                         onClick={() => { setVersionsOpen(false); void handleUpgrade('nightly') }}
-                        disabled={upgrading}
+                        disabled={upgrading || onLatestBeta}
                       >
-                        Install Beta
+                        {onLatestBeta ? 'Installed' : runningBeta ? 'Reinstall Beta' : 'Install Beta'}
                       </Button>
                     </div>
                   </div>
