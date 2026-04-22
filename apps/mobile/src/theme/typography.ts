@@ -3,16 +3,16 @@ import { fontFamilyTokens, semanticTypography, typographyScale } from '@pocketde
 
 function getDisplayFontFamily() {
   return Platform.select({
-    ios: 'SairaStencil-ExtraBold',
-    android: 'SairaStencil-Variable',
+    ios: 'Wagon-Bold',
+    android: 'Wagon-Bold',
     default: fontFamilyTokens.displayFallback,
   })
 }
 
 function getBodyFontFamily() {
   return Platform.select({
-    ios: 'AfacadFlux-Regular',
-    android: 'AfacadFlux-Variable',
+    ios: 'Durer',
+    android: 'Durer',
     default: fontFamilyTokens.body,
   })
 }

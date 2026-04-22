@@ -8,7 +8,7 @@ import { envInjectionScene } from './6-env-injection'
 import { remoteAiScene } from './7-remote-ai-takeover'
 import { taskFlowScene } from './8-task-flow-takeover'
 import { mobileAiTaskCallScene } from './9-mobile-ai-task-call'
-import { pushNotificationsScene } from './9-push-notifications'
+import { pushNotificationsScene } from './10-push-notifications'
 
 export const howItWorksScenes: SceneConfig[] = [
   consoleSetupScene,     // 0

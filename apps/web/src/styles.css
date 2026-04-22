@@ -1,14 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: "Geist Variable", system-ui, -apple-system, sans-serif;
-  --font-display: "Avenir Next Condensed", "Arial Narrow", sans-serif;
-  --font-mono: ui-monospace, monospace;
+  --font-sans: 'Geist', Inter, system-ui, -apple-system, sans-serif;
+  --font-display: 'Wagon', "Avenir Next Condensed", "Arial Narrow", sans-serif;
+  --font-mono: 'Geist Mono', "JetBrains Mono", Menlo, monospace;
+  --font-terminal: 'Geist Mono', "JetBrains Mono", Menlo, monospace;
 }
 
 * {

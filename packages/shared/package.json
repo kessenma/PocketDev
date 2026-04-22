@@ -36,7 +36,8 @@
     "./assets": {
       "types": "./dist/assets/index.d.ts",
       "import": "./dist/assets/index.js"
-    }
+    },
+    "./fonts.css": "./assets/fonts/fonts.css"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

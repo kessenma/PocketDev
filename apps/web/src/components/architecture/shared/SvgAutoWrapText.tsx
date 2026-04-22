@@ -1,4 +1,4 @@
-import type { SVGAttributes } from 'react'
+import { useEffect, useState, type SVGAttributes } from 'react'
 import { wrapTextToLines } from './pretext-measure'
 
 type Props = Omit<SVGAttributes<SVGTextElement>, 'children'> & {
@@ -21,7 +21,12 @@ type Props = Omit<SVGAttributes<SVGTextElement>, 'children'> & {
  * presentation attributes (fontFamily, fontSize, fontWeight, fill, etc.).
  */
 export function SvgAutoWrapText({ x, y, font, maxWidth, lineHeight, children, ...rest }: Props) {
-  const lines = wrapTextToLines(children, font, maxWidth, lineHeight)
+  const [lines, setLines] = useState<string[]>([children])
+
+  useEffect(() => {
+    setLines(wrapTextToLines(children, font, maxWidth, lineHeight))
+  }, [children, font, maxWidth, lineHeight])
+
   return (
     <text x={x} y={y} {...rest}>
       {lines.map((line, i) => (

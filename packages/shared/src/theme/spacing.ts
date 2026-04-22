@@ -42,10 +42,10 @@ export const typographyScale = {
 } as const
 
 export const fontFamilyTokens = {
-  body: 'System',
-  display: 'PocketDevBauhausDisplay',
-  displayFallback: 'System',
-  mono: 'monospace',
+  body: 'Geist',
+  display: 'Wagon',
+  displayFallback: 'sans-serif',
+  mono: 'Geist Mono',
 } as const
 
 export const semanticTypography = {

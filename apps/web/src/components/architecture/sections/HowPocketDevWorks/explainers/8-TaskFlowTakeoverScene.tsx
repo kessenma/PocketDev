@@ -1,6 +1,6 @@
 import { useId, useEffect, useState } from 'react'
 import { palette } from '@pocketdev/shared/theme'
-import { architectureTokens } from '../../../shared/theme'
+import { architectureTokens, architectureFonts } from '../../../shared/theme'
 
 const PROMPT_TEXT = 'why login is getting a 500 error?'
 const SUGGESTED_FILES = [
@@ -343,7 +343,7 @@ function TaskFlowCopy({
         x={titleX}
         y={titleY}
         fill="#ffffff"
-        fontFamily="var(--font-sans), sans-serif"
+        fontFamily={architectureFonts.display}
         fontSize={titleSize}
         fontWeight="700"
         letterSpacing="-0.04em"

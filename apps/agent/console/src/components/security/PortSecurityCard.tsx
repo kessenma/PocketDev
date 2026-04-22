@@ -1,4 +1,4 @@
-import { Badge } from '#/components/ui/badge'
+import { StatusBadge } from '#/components/ui/status-badge'
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
 import { useLockStatus } from '#/context/LockStatusContext'
@@ -16,14 +16,9 @@ export function PortSecurityCard() {
         <div className="flex items-center gap-3">
           <span className="font-heading text-sm font-semibold uppercase tracking-[0.32em]">Port Security</span>
           {lockStatus && (
-            <Badge
-              variant="outline"
-              className={lockStatus.locked
-                ? 'border-red-500/40 text-red-400'
-                : 'border-green-500/40 text-green-400'}
-            >
+            <StatusBadge color={lockStatus.locked ? 'red' : 'green'}>
               {lockStatus.locked ? 'Locked' : 'Open'}
-            </Badge>
+            </StatusBadge>
           )}
         </div>
       </div>
@@ -31,7 +26,7 @@ export function PortSecurityCard() {
       {lockStatus ? (
         <div className="mt-4 space-y-3">
           {!lockStatus.firewallAvailable && (
-            <p className="rounded-[1rem] border border-yellow-500/20 bg-yellow-500/8 px-3 py-2 text-xs text-yellow-300/80">
+            <p className="rounded-[1rem] border border-yellow-600/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:border-yellow-500/20 dark:bg-yellow-500/8 dark:text-yellow-300/80">
               iptables unavailable — network-level locking requires root and iptables on the server.
             </p>
           )}

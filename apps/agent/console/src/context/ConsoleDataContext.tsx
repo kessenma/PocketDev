@@ -9,8 +9,9 @@ interface ConsoleDataContextValue {
   agentVersion: string
   updateInfo: UpdateInfo | null
   upgrading: boolean
+  upgradeError: string | null
   refreshStatus: () => Promise<void>
-  handleUpgrade: () => Promise<void>
+  handleUpgrade: (targetVersion?: string) => Promise<void>
   handleLogout: () => Promise<void>
   removeDevice: (id: string) => void
   renameDevice: (id: string, name: string) => void
@@ -26,6 +27,7 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
   const [agentVersion, setAgentVersion] = useState<string>('unknown')
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const [upgrading, setUpgrading] = useState(false)
+  const [upgradeError, setUpgradeError] = useState<string | null>(null)
   const hasFetchedRef = useRef(false)
   const upgradePollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -53,27 +55,29 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
     void refreshStatus()
   }, [refreshStatus])
 
-  const handleUpgrade = useCallback(async () => {
+  const handleUpgrade = useCallback(async (targetVersion?: string) => {
     setUpgrading(true)
+    setUpgradeError(null)
     try {
       // Capture baseline uptime *before* triggering the upgrade so we can
-      // detect the restart reliably — comparing versions doesn't work when
-      // the bundle is always "latest" (version doesn't change).
+      // detect the restart reliably.
       const pre = await checkHealth({ signal: AbortSignal.timeout(5_000) })
       const baselineUptime = pre.uptime
 
-      await triggerUpdate()
-      toast.info('Upgrade in progress — the agent will restart shortly...')
+      await triggerUpdate(targetVersion)
+      toast.info('Update started — the agent will restart shortly...')
+
+      // For 'nightly', the installed version won't match the string 'nightly' —
+      // fall back to uptime-based restart detection for unknown final versions.
+      const knownVersion = targetVersion && targetVersion !== 'nightly' ? targetVersion : undefined
 
       let attempts = 0
       upgradePollRef.current = setInterval(async () => {
         attempts++
         try {
-          // Per-poll timeout so we cycle on schedule even while the agent is
-          // mid-restart and the socket is unresponsive.
           const health = await checkHealth({ signal: AbortSignal.timeout(5_000) })
-          if (health.uptime < baselineUptime) {
-            // Uptime went backwards — restart detected, upgrade done.
+          const restarted = knownVersion ? health.version === knownVersion : health.uptime < baselineUptime
+          if (restarted) {
             clearInterval(upgradePollRef.current!)
             upgradePollRef.current = null
             toast.success(`Updated to v${health.version}`)
@@ -87,12 +91,12 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
           clearInterval(upgradePollRef.current!)
           upgradePollRef.current = null
           setUpgrading(false)
-          toast.error('Upgrade timed out — try refreshing the page.')
+          setUpgradeError('Update timed out. The agent may still be restarting — try refreshing the page.')
         }
       }, 3000)
     } catch (err) {
       setUpgrading(false)
-      toast.error(err instanceof Error ? err.message : 'Upgrade failed')
+      setUpgradeError(err instanceof Error ? err.message : 'Upgrade failed')
     }
   }, [])
 
@@ -119,13 +123,14 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
     agentVersion,
     updateInfo,
     upgrading,
+    upgradeError,
     refreshStatus,
     handleUpgrade,
     handleLogout,
     removeDevice,
     renameDevice,
     updatePasscode,
-  }), [status, loading, agentVersion, updateInfo, upgrading, refreshStatus, handleUpgrade, handleLogout, removeDevice, renameDevice, updatePasscode])
+  }), [status, loading, agentVersion, updateInfo, upgrading, upgradeError, refreshStatus, handleUpgrade, handleLogout, removeDevice, renameDevice, updatePasscode])
 
   return <ConsoleDataContext.Provider value={value}>{children}</ConsoleDataContext.Provider>
 }

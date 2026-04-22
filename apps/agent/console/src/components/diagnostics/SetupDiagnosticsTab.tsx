@@ -7,9 +7,14 @@ import {
   disableManagedSwap,
   enableManagedSwap,
   fetchSwapMetrics,
+  type ClaudeAuthDebugInfo,
+  type CodexAuthDebugInfo,
+  type CopilotAuthDebugInfo,
   type SetupDebugInfo,
+  type SetupProviderInfo,
   type SwapDebugInfo,
   type SwapMetricsInfo,
+  type TasksDebugInfo,
   type ToolCheck,
 } from '#/lib/api'
 import { cn } from '#/lib/utils'
@@ -27,9 +32,18 @@ import {
 import { AlertTriangle, Check, HardDrive, RefreshCw, ShieldCheck, X } from 'lucide-react'
 import { BrandIcon, type BrandKey } from '#/components/ui/brand-icon'
 import { toast } from 'sonner'
+import { ClaudeDiagnosticsTab } from '#/components/diagnostics/ClaudeDiagnosticsTab'
+import { CodexDiagnosticsTab } from '#/components/diagnostics/CodexDiagnosticsTab'
+import { CopilotDiagnosticsTab } from '#/components/diagnostics/CopilotDiagnosticsTab'
+
+type SetupSubTab = 'overview' | 'claude' | 'codex' | 'copilot'
 
 interface Props {
   setupInfo: SetupDebugInfo | null
+  claudeInfo: ClaudeAuthDebugInfo | null
+  codexInfo: CodexAuthDebugInfo | null
+  copilotInfo: CopilotAuthDebugInfo | null
+  tasksInfo: TasksDebugInfo | null
   onRefresh: () => Promise<void> | void
 }
 
@@ -569,7 +583,44 @@ function SwapCard({
   )
 }
 
-export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
+function providerDotClass(installed: boolean | undefined, ready: boolean | undefined) {
+  if (!installed) return 'bg-foreground/25'
+  if (ready) return 'bg-green-400'
+  return 'bg-yellow-400'
+}
+
+function ProviderCard({
+  brand,
+  title,
+  isReady,
+  rows,
+}: {
+  brand: BrandKey
+  title: string
+  isReady: boolean
+  rows: Array<{ label: string; value: string }>
+}) {
+  return (
+    <div className={cn(
+      'flex-none rounded-[1.2rem] border border-border/40 p-4',
+      isReady ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-foreground/6',
+    )}>
+      <div className={cn('flex items-center gap-2', isReady ? 'text-black/55' : 'text-foreground/45')}>
+        <BrandIcon brand={brand} size={14} scale={1} />
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">{title}</p>
+      </div>
+      <div className={cn('mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm', isReady ? 'text-black/80' : 'text-foreground/80')}>
+        {rows.map(({ label, value }) => (
+          <p key={label}><span className="opacity-60">{label}:</span> {value}</p>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function SetupDiagnosticsTab({ setupInfo, claudeInfo, codexInfo, copilotInfo, tasksInfo, onRefresh }: Props) {
+  const [subTab, setSubTab] = useState<SetupSubTab>('overview')
+
   const claude = setupInfo?.providers.claude
   const codex = setupInfo?.providers.codex
   const opencode = setupInfo?.providers.opencode
@@ -580,115 +631,198 @@ export function SetupDiagnosticsTab({ setupInfo, onRefresh }: Props) {
   const aiTools = getAiAssistantTools(prerequisites)
   const languageTools = getLanguageTools(prerequisites)
   const supportingTools = getSupportingTools(prerequisites)
+  const copilotReady = copilotInfo?.liveStatus.trustConfigured ?? copilotInfo?.persistedState?.authenticated ?? false
+
+  const SUB_TABS: { id: SetupSubTab; label: string; brand?: BrandKey; dotClass?: string }[] = [
+    { id: 'overview', label: 'Overview' },
+    {
+      id: 'claude',
+      label: 'Claude',
+      brand: 'claude',
+      dotClass: providerDotClass(claude?.installed, claude?.authenticated),
+    },
+    {
+      id: 'codex',
+      label: 'Codex',
+      brand: 'codex',
+      dotClass: providerDotClass(codex?.installed, codex?.authenticated),
+    },
+    {
+      id: 'copilot',
+      label: 'Copilot',
+      brand: 'copilot',
+      dotClass: providerDotClass(
+        copilotInfo?.persistedState != null || (copilotInfo?.trustMarkers.length ?? 0) > 0,
+        copilotReady,
+      ),
+    },
+  ]
 
   return (
-    <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
-      <div className="space-y-3">
-        <div className="rounded-[1.5rem] border border-border/40 bg-background/50 p-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
-            <p className="text-sm font-medium">Provider Readiness</p>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <div className={cn(
-              'rounded-[1.2rem] border border-border/40 p-4',
-              claude?.authenticated ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-foreground/6',
-            )}>
-              <div className={cn('flex items-center gap-2', claude?.authenticated ? 'text-black/55' : 'text-foreground/45')}>
-                <BrandIcon brand="claude" size={14} scale={1} />
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">Claude CLI</p>
-              </div>
-              <div className={cn('mt-2 space-y-1 text-sm', claude?.authenticated ? 'text-black/80' : 'text-foreground/80')}>
-                <p>Installed: {claude?.installed ? 'Yes' : 'No'}</p>
-                <p>Authenticated: {claude?.authenticated ? 'Yes' : 'No'}</p>
-                <p>Version: {claude?.version ?? 'Unknown'}</p>
-                <p>Path: {claude?.path ?? 'Not found'}</p>
-              </div>
-            </div>
-            <div className={cn(
-              'rounded-[1.2rem] border border-border/40 p-4',
-              codex?.authenticated ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-foreground/6',
-            )}>
-              <div className={cn('flex items-center gap-2', codex?.authenticated ? 'text-black/55' : 'text-foreground/45')}>
-                <BrandIcon brand="codex" size={14} scale={1} />
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">Codex CLI</p>
-              </div>
-              <div className={cn('mt-2 space-y-1 text-sm', codex?.authenticated ? 'text-black/80' : 'text-foreground/80')}>
-                <p>Installed: {codex?.installed ? 'Yes' : 'No'}</p>
-                <p>Authenticated: {codex?.authenticated ? 'Yes' : 'No'}</p>
-                <p>Version: {codex?.version ?? 'Unknown'}</p>
-                <p>Path: {codex?.path ?? 'Not found'}</p>
-              </div>
-            </div>
-            <div className={cn(
-              'rounded-[1.2rem] border border-border/40 p-4',
-              opencode?.verified ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-foreground/6',
-            )}>
-              <div className={cn('flex items-center gap-2', opencode?.verified ? 'text-black/55' : 'text-foreground/45')}>
-                <BrandIcon brand="opencode" size={14} scale={1} />
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em]">OpenCode CLI</p>
-              </div>
-              <div className={cn('mt-2 space-y-1 text-sm', opencode?.verified ? 'text-black/80' : 'text-foreground/80')}>
-                <p>Installed: {opencode?.installed ? 'Yes' : 'No'}</p>
-                <p>Verified: {opencode?.verified ? 'Yes' : 'No'}</p>
-                <p>Version: {opencode?.version ?? 'Unknown'}</p>
-                <p>Path: {opencode?.path ?? 'Not found'}</p>
-                <p>Verify output: {opencode?.verifyOutput ?? 'None'}</p>
-              </div>
-            </div>
-          </div>
+    <div className="flex h-full flex-col gap-2">
+      <div className="flex-none">
+        <div className="inline-flex rounded-[0.85rem] border border-border/40 bg-background/30 p-0.5">
+          {SUB_TABS.map((t) => (
+            <Button
+              key={t.id}
+              size="sm"
+              variant={subTab === t.id ? 'secondary' : 'ghost'}
+              className={cn(
+                'rounded-[0.65rem] px-3 text-foreground',
+                subTab === t.id
+                  ? 'bg-[var(--bauhaus-yellow)] text-black hover:bg-[var(--bauhaus-yellow)]/90'
+                  : 'hover:bg-secondary',
+              )}
+              onClick={() => setSubTab(t.id)}
+            >
+              {t.brand ? (
+                <span className="mr-1.5 inline-flex shrink-0">
+                  <BrandIcon brand={t.brand} size={12} scale={1} scheme={subTab === t.id ? 'light' : 'auto'} />
+                </span>
+              ) : null}
+              {t.label}
+              {t.dotClass ? (
+                <span className={cn('ml-1.5 h-1.5 w-1.5 shrink-0 rounded-full', t.dotClass)} />
+              ) : null}
+            </Button>
+          ))}
         </div>
-
-        <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
-          <p className="text-sm font-medium">System Info</p>
-          <div className="mt-3 rounded-[1.2rem] border border-border/40 bg-background/40 p-3 text-sm text-foreground/78">
-            <p>OS: {prerequisites?.os ?? 'Unknown'}</p>
-            <p>Arch: {prerequisites?.arch ?? 'Unknown'}</p>
-            <p>Overall ready: {setupStatus.ready ? 'Yes' : 'No'}</p>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <StatusPill ok={setupStatus.requiredReady} label="Required setup" />
-            <StatusPill ok={setupStatus.aiReady} label="AI provider" />
-            <StatusPill ok={setupStatus.languageReady} label="Languages" />
-          </div>
-        </div>
-
-        <SwapCard swap={swap} onRefresh={onRefresh} />
       </div>
 
-      <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-border/40 bg-background p-3">
-        <p className="text-sm font-medium">Prerequisites</p>
-        <div className="mt-3 space-y-5">
-          {prerequisites?.tools.length ? (
-            <>
-              <ToolSection
-                title="Required Setup"
-                hint="Complete Git and package managers first."
-                tools={requiredTools}
-              />
-              <ToolSection
-                title="AI Assistant"
-                hint="Choose at least one CLI with working auth."
-                tools={aiTools}
-              />
-              <ToolSection
-                title="Language"
-                hint="Language runtimes and compilers available to workspace tasks."
-                tools={languageTools}
-              />
-              <ToolSection
-                title="Supporting Tools"
-                hint="Additional detected tools outside the core setup path."
-                tools={supportingTools}
-              />
-            </>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/52">
-              No prerequisites data. Refresh to load.
+      <div className="min-h-0 flex-1">
+        {subTab === 'overview' ? (
+          <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
+            <div className="space-y-3">
+              <div className="rounded-[1.5rem] border border-border/40 bg-background/50 p-4">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
+                  <p className="text-sm font-medium">Provider Status</p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {([
+                    { brand: 'claude' as BrandKey, label: 'Claude', installed: claude?.installed, ready: claude?.authenticated },
+                    { brand: 'codex' as BrandKey, label: 'Codex', installed: codex?.installed, ready: codex?.authenticated },
+                    { brand: 'opencode' as BrandKey, label: 'OpenCode', installed: opencode?.installed, ready: opencode?.verified },
+                  ] as const).map(({ brand, label, installed, ready }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className={cn(
+                        'flex cursor-default items-center gap-1.5 rounded-[0.9rem] border border-border/40 bg-background/40 px-2.5 py-1.5',
+                        (installed && ready) ? 'border-green-500/30 bg-green-500/8' : '',
+                      )}
+                    >
+                      <BrandIcon brand={brand} size={11} scale={1} />
+                      <span className="text-xs text-foreground/70">{label}</span>
+                      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', providerDotClass(installed, ready))} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
+                <p className="text-sm font-medium">System Info</p>
+                <div className="mt-3 rounded-[1.2rem] border border-border/40 bg-background/40 p-3 text-sm text-foreground/78">
+                  <p>OS: {prerequisites?.os ?? 'Unknown'}</p>
+                  <p>Arch: {prerequisites?.arch ?? 'Unknown'}</p>
+                  <p>Overall ready: {setupStatus.ready ? 'Yes' : 'No'}</p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <StatusPill ok={setupStatus.requiredReady} label="Required setup" />
+                  <StatusPill ok={setupStatus.aiReady} label="AI provider" />
+                  <StatusPill ok={setupStatus.languageReady} label="Languages" />
+                </div>
+              </div>
+
+              <SwapCard swap={swap} onRefresh={onRefresh} />
             </div>
-          )}
-        </div>
+
+            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-border/40 bg-background p-3">
+              <p className="text-sm font-medium">Prerequisites</p>
+              <div className="mt-3 space-y-5">
+                {prerequisites?.tools.length ? (
+                  <>
+                    <ToolSection
+                      title="Required Setup"
+                      hint="Complete Git and package managers first."
+                      tools={requiredTools}
+                    />
+                    <ToolSection
+                      title="AI Assistant"
+                      hint="Choose at least one CLI with working auth."
+                      tools={aiTools}
+                    />
+                    <ToolSection
+                      title="Language"
+                      hint="Language runtimes and compilers available to workspace tasks."
+                      tools={languageTools}
+                    />
+                    <ToolSection
+                      title="Supporting Tools"
+                      hint="Additional detected tools outside the core setup path."
+                      tools={supportingTools}
+                    />
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/52">
+                    No prerequisites data. Refresh to load.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : subTab === 'claude' ? (
+          <div className="flex h-full flex-col gap-3">
+            <ProviderCard
+              brand="claude"
+              title="Claude CLI"
+              isReady={claude?.authenticated ?? false}
+              rows={[
+                { label: 'Installed', value: claude?.installed ? 'Yes' : 'No' },
+                { label: 'Authenticated', value: claude?.authenticated ? 'Yes' : 'No' },
+                { label: 'Version', value: claude?.version ?? 'Unknown' },
+                { label: 'Path', value: claude?.path ?? 'Not found' },
+              ]}
+            />
+            <div className="min-h-0 flex-1">
+              <ClaudeDiagnosticsTab claudeInfo={claudeInfo} tasksInfo={tasksInfo} />
+            </div>
+          </div>
+        ) : subTab === 'codex' ? (
+          <div className="flex h-full flex-col gap-3">
+            <ProviderCard
+              brand="codex"
+              title="Codex CLI"
+              isReady={codex?.authenticated ?? false}
+              rows={[
+                { label: 'Installed', value: codex?.installed ? 'Yes' : 'No' },
+                { label: 'Authenticated', value: codex?.authenticated ? 'Yes' : 'No' },
+                { label: 'Version', value: codex?.version ?? 'Unknown' },
+                { label: 'Path', value: codex?.path ?? 'Not found' },
+              ]}
+            />
+            <div className="min-h-0 flex-1">
+              <CodexDiagnosticsTab codexInfo={codexInfo} />
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col gap-3">
+            <ProviderCard
+              brand="copilot"
+              title="GitHub Copilot"
+              isReady={copilotReady}
+              rows={[
+                { label: 'Trust configured', value: copilotInfo?.liveStatus.trustConfigured ? 'Yes' : 'No' },
+                { label: 'Trust markers', value: String(copilotInfo?.trustMarkers.length ?? 0) },
+                { label: 'Active sessions', value: String(copilotInfo?.activeSessionCount ?? 0) },
+                { label: 'Authenticated', value: copilotInfo?.persistedState?.authenticated ? 'Yes' : 'No' },
+              ]}
+            />
+            <div className="min-h-0 flex-1">
+              <CopilotDiagnosticsTab copilotInfo={copilotInfo} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

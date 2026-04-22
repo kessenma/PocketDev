@@ -160,7 +160,7 @@ export function PortSecurityStage({
       <text
         x={titleX} y={titleY}
         fill={architectureTokens.colors.text}
-        fontFamily={architectureFonts.body}
+        fontFamily={architectureFonts.display}
         fontSize={titleSz}
         fontWeight="700"
         letterSpacing="-0.03em"

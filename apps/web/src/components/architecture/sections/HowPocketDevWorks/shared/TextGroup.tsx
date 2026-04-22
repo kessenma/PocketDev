@@ -1,3 +1,5 @@
+import { architectureFonts } from '../../../shared/theme'
+
 /**
  * SVG text rendered in this component:
  *
@@ -56,7 +58,7 @@ export function TextGroup({
       <text
         x={baseX}
         y={topY + (isDesktop ? 220 : 160)}
-        fontFamily="var(--font-sans), sans-serif"
+        fontFamily={architectureFonts.display}
         fontSize={headingSize}
         fontWeight="700"
         letterSpacing="-0.03em"

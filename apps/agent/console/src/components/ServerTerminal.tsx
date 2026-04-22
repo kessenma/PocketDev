@@ -8,18 +8,23 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 
-type ConnectionState = 'disconnected' | 'connecting' | 'connected'
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected'
 
 interface ServerTerminalProps {
   className?: string
   heightClassName?: string
   defaultOpen?: boolean
   hideHeader?: boolean
+  onConnectionStateChange?: (state: ConnectionState) => void
 }
 
-export function ServerTerminal({ className, heightClassName, defaultOpen = false, hideHeader = false }: ServerTerminalProps) {
+export function ServerTerminal({ className, heightClassName, defaultOpen = false, hideHeader = false, onConnectionStateChange }: ServerTerminalProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const [connState, setConnState] = useState<ConnectionState>('disconnected')
+
+  useEffect(() => {
+    onConnectionStateChange?.(connState)
+  }, [connState, onConnectionStateChange])
 
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)

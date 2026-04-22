@@ -1,0 +1,25 @@
+@font-face {
+  font-family: 'Wagon';
+  src: url('../../../packages/shared/assets/fonts/Wagon-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Wagon';
+  src: url('../../../packages/shared/assets/fonts/Wagon-ExtraLight.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Wagon';
+  src: url('../../../packages/shared/assets/fonts/Wagon-ExtraLightItalic.ttf') format('truetype');
+  font-weight: 200;
+  font-style: italic;
+}
+@font-face {
+  font-family: 'Durer';
+  src: url('../../../packages/shared/assets/fonts/durer-webfont.woff2') format('woff2'),
+       url('../../../packages/shared/assets/fonts/durer-webfont.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+}

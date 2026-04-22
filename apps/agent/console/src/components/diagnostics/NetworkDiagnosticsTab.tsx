@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { Badge } from '#/components/ui/badge'
+import { StatusBadge } from '#/components/ui/status-badge'
+import type { StatusBadgeColor } from '#/components/ui/status-badge'
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
 import type { NetworkDebugInfo } from '#/lib/api'
@@ -35,6 +36,16 @@ function eventColor(type: string): string {
     case 'auth_rejected': return 'border-orange-500/50 text-orange-400'
     case 'stale_closed': return 'border-yellow-500/50 text-yellow-400'
     default: return 'border-border/50 text-foreground/75'
+  }
+}
+
+function eventBadgeColor(type: string): StatusBadgeColor {
+  switch (type) {
+    case 'connect': return 'green'
+    case 'disconnect': return 'red'
+    case 'auth_rejected': return 'orange'
+    case 'stale_closed': return 'yellow'
+    default: return 'neutral'
   }
 }
 
@@ -119,7 +130,7 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
                   <div key={client.deviceId} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate font-mono text-xs text-text-terminal">{client.deviceId}</p>
-                      <Badge variant="outline" className="border-green-500/30 text-green-400">connected</Badge>
+                      <StatusBadge color="green">connected</StatusBadge>
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-foreground/60">
                       <p>Duration: {formatDuration(client.connectedDuration)}</p>
@@ -141,9 +152,9 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
           <div className="border-b border-border/40 px-4 py-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">Connection Event Log</p>
-              <Badge variant="outline" className="border-border/50 text-foreground/60">
+              <StatusBadge color="neutral">
                 {eventCount} event{eventCount === 1 ? '' : 's'}
-              </Badge>
+              </StatusBadge>
             </div>
             <p className="mt-1 text-xs text-foreground/40">
               Last 50 WebSocket events — newest first. Use timestamps to correlate with mobile logs.
@@ -161,13 +172,15 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      {eventIcon(event.type)}
-                      <span className="text-[10px] uppercase tracking-[0.22em] text-foreground/35">
-                        {formatTime(event.timestamp)}
-                      </span>
-                      <Badge variant="outline" className={cn('text-[10px]', eventColor(event.type))}>
+                      <div className="flex items-center gap-1.5 rounded-md bg-black/70 px-2 py-0.5">
+                        {eventIcon(event.type)}
+                        <span className="text-[10px] uppercase tracking-[0.22em] text-white/70">
+                          {formatTime(event.timestamp)}
+                        </span>
+                      </div>
+                      <StatusBadge color={eventBadgeColor(event.type)}>
                         {event.type}
-                      </Badge>
+                      </StatusBadge>
                     </div>
                     <p className="mt-1 truncate font-mono text-xs text-foreground/70">
                       device: {event.deviceId}
@@ -195,21 +208,16 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
           <Shield className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
           <p className="text-sm font-medium">Port Security</p>
           {lockStatus && (
-            <Badge
-              variant="outline"
-              className={lockStatus.locked
-                ? 'border-red-500/40 text-red-400'
-                : 'border-green-500/40 text-green-400'}
-            >
+            <StatusBadge color={lockStatus.locked ? 'red' : 'green'}>
               {lockStatus.locked ? 'Locked' : 'Open'}
-            </Badge>
+            </StatusBadge>
           )}
         </div>
 
         {lockStatus ? (
           <div className="mt-4 space-y-3">
             {!lockStatus.firewallAvailable && (
-              <p className="rounded-[1rem] border border-yellow-500/20 bg-yellow-500/8 px-3 py-2 text-xs text-yellow-300/80">
+              <p className="rounded-[1rem] border border-yellow-600/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:border-yellow-500/20 dark:bg-yellow-500/8 dark:text-yellow-300/80">
                 iptables unavailable — network-level locking requires root and iptables on the server.
               </p>
             )}

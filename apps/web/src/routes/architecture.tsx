@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { buttonVariants } from '#/components/ui/button'
 import { HeroScrollSequence } from '#/components/architecture/animations/hero-sequence'
@@ -9,6 +9,12 @@ import {
 } from '#/components/architecture/sections'
 import { Footer } from '#/components/landing/Footer'
 import { architectureTokens } from '#/components/architecture/shared/theme'
+
+function ClientOnly({ children, fallback = null }: { children: ReactNode; fallback?: ReactNode }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted ? <>{children}</> : <>{fallback}</>
+}
 
 export const Route = createFileRoute('/architecture')({
   component: ArchitecturePage,
@@ -30,13 +36,12 @@ function ArchitecturePage() {
         `,
       }}
     >
-      <HeroScrollSequence onProgressChange={setHeroProgress} />
-
-      <HeroLaptopOverlay heroProgress={heroProgress} howItWorksRef={howItWorksRef} />
-
-      <HowPocketDevWorksSection sectionRef={howItWorksRef} />
-
-      <RepoHistoryTransitionSection />
+      <ClientOnly>
+        <HeroScrollSequence onProgressChange={setHeroProgress} />
+        <HeroLaptopOverlay heroProgress={heroProgress} howItWorksRef={howItWorksRef} />
+        <HowPocketDevWorksSection sectionRef={howItWorksRef} />
+        <RepoHistoryTransitionSection />
+      </ClientOnly>
 
       <div className="flex flex-col items-center gap-6 px-6 py-20 text-center">
         <p className="text-sm uppercase tracking-widest text-neutral-500" style={{ fontFamily: 'var(--font-mono), monospace' }}>

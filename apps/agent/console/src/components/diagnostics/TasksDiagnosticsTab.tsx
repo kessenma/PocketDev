@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Badge } from '#/components/ui/badge'
+import { StatusBadge } from '#/components/ui/status-badge'
+import type { StatusBadgeColor } from '#/components/ui/status-badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { killTaskFromConsole, fetchTasksDebug, type TasksDebugInfo } from '#/lib/api'
@@ -45,14 +46,24 @@ const MODE_FILTERS: Array<{ id: TaskModeFilter, label: string }> = [
   { id: 'plan', label: 'Plan' },
 ]
 
-function statusColor(status: string): string {
+function taskStatusColor(status: string): StatusBadgeColor {
   switch (status) {
-    case 'running': return 'border-green-500/50 text-green-400'
-    case 'completed': return 'border-blue-500/50 text-blue-400'
-    case 'failed': return 'border-red-500/50 text-red-400'
-    case 'killed': return 'border-orange-500/50 text-orange-400'
-    case 'pending': return 'border-yellow-500/50 text-yellow-400'
-    default: return 'border-border/50 text-foreground/75'
+    case 'running': return 'green'
+    case 'completed': return 'blue'
+    case 'failed': return 'red'
+    case 'killed': return 'orange'
+    case 'pending': return 'yellow'
+    default: return 'neutral'
+  }
+}
+
+function fileActionColor(action: string): StatusBadgeColor {
+  switch (action) {
+    case 'edit': return 'yellow'
+    case 'create': return 'green'
+    case 'read': return 'blue'
+    case 'search': return 'purple'
+    default: return 'neutral'
   }
 }
 
@@ -440,14 +451,14 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                         </p>
                         <p className="mt-2 truncate font-mono text-[11px] text-foreground/38">{task.id}</p>
                       </div>
-                      <Badge variant="outline" className={cn(statusColor(task.status), 'shrink-0')}>
+                      <StatusBadge color={taskStatusColor(task.status)}>
                         {task.status}
-                      </Badge>
+                      </StatusBadge>
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-foreground/50">
-                      <Badge variant="outline" className="border-border/50 text-foreground/70">
+                      <StatusBadge color="neutral">
                         {task.mode === 'plan' ? 'Plan' : 'Execute'}
-                      </Badge>
+                      </StatusBadge>
                       <span>{formatShortTime(task.createdAt)}</span>
                       <span>•</span>
                       <span>{task.projectName ?? 'No project'}</span>
@@ -524,9 +535,9 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                       title="Copy task debug info"
                       className="h-7 border-border/40 bg-foreground/5 px-2 text-xs text-foreground/70 hover:bg-foreground/10"
                     />
-                    <Badge variant="outline" className={cn(statusColor(selectedTask.status))}>
+                    <StatusBadge color={taskStatusColor(selectedTask.status)}>
                       {selectedTask.status}
-                    </Badge>
+                    </StatusBadge>
                   </div>
                 </div>
 
@@ -579,15 +590,9 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                     <div className="mt-2 max-h-60 space-y-1 overflow-y-auto rounded-xl border border-border/40 bg-background/40 p-3">
                       {tasksInfo.taskFiles[selectedTask.id].map((touch, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs">
-                          <span className={cn(
-                            'inline-block w-12 shrink-0 rounded-full border px-1.5 py-0.5 text-center text-[10px] font-semibold uppercase',
-                            touch.action === 'edit' && 'border-yellow-500/40 text-yellow-400',
-                            touch.action === 'create' && 'border-green-500/40 text-green-400',
-                            touch.action === 'read' && 'border-blue-500/40 text-blue-400',
-                            touch.action === 'search' && 'border-purple-500/40 text-purple-400',
-                          )}>
+                          <StatusBadge color={fileActionColor(touch.action)} className="w-12 justify-center">
                             {touch.action}
-                          </span>
+                          </StatusBadge>
                           <span className="min-w-0 truncate font-mono text-[11px] text-foreground/70">{touch.filePath}</span>
                         </div>
                       ))}

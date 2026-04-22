@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import { ServerTerminal } from '#/components/ServerTerminal'
+import type { ConnectionState } from '#/components/ServerTerminal'
 import {
   fetchAuthDebug,
   fetchCodexAuthDebug,
@@ -40,19 +40,19 @@ import {
   type PushDebugInfo,
   type MinimaxSetupDebugInfo,
 } from '#/lib/api'
+import { Bug, RefreshCw } from 'lucide-react'
 import { cn } from '#/lib/utils'
-import { Bug, Maximize2, RefreshCw, Smartphone, Waves } from 'lucide-react'
 import { BrandIcon, type BrandKey } from '#/components/ui/brand-icon'
-import { ClaudeDiagnosticsTab } from '#/components/diagnostics/ClaudeDiagnosticsTab'
-import { CodexDiagnosticsTab } from '#/components/diagnostics/CodexDiagnosticsTab'
+import { RegistryDiagnosticsTab } from '#/components/diagnostics/RegistryDiagnosticsTab'
 import { SetupDiagnosticsTab } from '#/components/diagnostics/SetupDiagnosticsTab'
 import { LanguagesDiagnosticsTab } from '#/components/diagnostics/LanguagesDiagnosticsTab'
 import { NetworkDiagnosticsTab } from '#/components/diagnostics/NetworkDiagnosticsTab'
 import { GitHubDiagnosticsTab } from '#/components/diagnostics/GitHubDiagnosticsTab'
 import { PushDiagnosticsTab } from '#/components/diagnostics/PushDiagnosticsTab'
 import { MinimaxDiagnosticsTab } from '#/components/diagnostics/MinimaxDiagnosticsTab'
+import { TerminalDiagnosticsTab } from '#/components/diagnostics/TerminalDiagnosticsTab'
 
-type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'codex' | 'claude' | 'github' | 'copilot' | 'languages' | 'network' | 'push' | 'minimax'
+type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'github' | 'languages' | 'network' | 'push' | 'minimax'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -86,6 +86,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
   const [pushInfo, setPushInfo] = useState<PushDebugInfo | null>(null)
   const [minimaxInfo, setMinimaxInfo] = useState<MinimaxSetupDebugInfo | null>(null)
   const [termLog, setTermLog] = useState<TerminalDebugEntry[]>([])
+  const [termConnState, setTermConnState] = useState<ConnectionState>('disconnected')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [live, setLive] = useState(true)
@@ -199,24 +200,6 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return `${termLog.length} entries captured`
   }, [termLog])
 
-  const codexSummary = useMemo(() => {
-    if (!codexInfo) return 'No Codex auth diagnostics yet.'
-    if (codexInfo.lastReplayDebug?.recordedAt) {
-      return `Last replay ${formatShortTime(codexInfo.lastReplayDebug.recordedAt)}`
-    }
-    if (codexInfo.activeSessionCount > 0) {
-      return `${codexInfo.activeSessionCount} active session${codexInfo.activeSessionCount === 1 ? '' : 's'}`
-    }
-    return 'No Codex auth activity yet.'
-  }, [codexInfo])
-
-  const claudeSummary = useMemo(() => {
-    if (!claudeInfo) return 'No Claude auth diagnostics yet.'
-    if (claudeInfo.activeSessionCount > 0) {
-      return `${claudeInfo.activeSessionCount} active session${claudeInfo.activeSessionCount === 1 ? '' : 's'}`
-    }
-    return 'No Claude auth activity yet.'
-  }, [claudeInfo])
 
   const githubSummary = useMemo(() => {
     if (!githubInfo) return 'No GitHub auth diagnostics yet.'
@@ -267,23 +250,6 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return 'API key not configured'
   }, [minimaxInfo])
 
-  const copilotSummary = useMemo(() => {
-    if (!copilotInfo) return 'No Copilot trust diagnostics yet.'
-    if (copilotInfo.activeSessionCount > 0) {
-      return `${copilotInfo.activeSessionCount} active trust session${copilotInfo.activeSessionCount === 1 ? '' : 's'}`
-    }
-    if (copilotInfo.liveStatus.trustConfigured) {
-      return 'Workspace trust recorded'
-    }
-    return 'No Copilot trust activity yet.'
-  }, [copilotInfo])
-
-  const panelShell = 'rounded-[0.95rem] border-2 border-border bg-card'
-  const panelInset = 'rounded-[0.85rem] border-2 border-border bg-background'
-  const panelAccent = 'rounded-[0.85rem] border-2 border-border bg-[var(--bauhaus-yellow)] text-black'
-  const sectionEyebrow = 'font-heading text-[0.68rem] font-semibold uppercase tracking-[0.26em]'
-  const sectionTitle = 'font-heading text-sm font-semibold uppercase tracking-[0.12em]'
-
   return (
     <section className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-[1.1rem] border-2 border-border bg-card text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.18)]">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-border px-5 py-4 sm:px-6">
@@ -303,12 +269,9 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-[0.85rem] border-2 border-border bg-background p-1">
-            {(['terminal', 'setup', 'network', 'languages', 'claude', 'codex', 'copilot', 'github', 'minimax', 'push', 'registry'] as const).map((tab) => {
-              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'claude' ? 'Claude' : tab === 'codex' ? 'Codex' : tab === 'copilot' ? 'Copilot' : tab === 'github' ? 'GitHub' : tab === 'minimax' ? 'Minimax' : tab === 'push' ? 'Push' : 'Registry'
+            {(['terminal', 'setup', 'network', 'languages', 'github', 'minimax', 'push', 'registry'] as const).map((tab) => {
+              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'github' ? 'GitHub' : tab === 'minimax' ? 'Minimax' : tab === 'push' ? 'Push' : 'Registry'
               const TAB_BRAND: Partial<Record<DiagnosticsTab, BrandKey>> = {
-                claude: 'claude',
-                codex: 'codex',
-                copilot: 'copilot',
                 github: 'github',
                 minimax: 'minimax',
               }
@@ -361,13 +324,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                   ? networkSummary
                   : activeTab === 'languages'
                     ? languagesSummary
-                    : activeTab === 'claude'
-                    ? claudeSummary
-                    : activeTab === 'codex'
-                      ? codexSummary
-                      : activeTab === 'copilot'
-                        ? copilotSummary
-                        : activeTab === 'github'
+                    : activeTab === 'github'
                           ? githubSummary
                           : activeTab === 'minimax'
                             ? minimaxSummary
@@ -385,189 +342,25 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
       <div className="min-h-0 flex-1 px-3 pb-3 sm:px-4 sm:pb-4">
         {activeTab === 'terminal' ? (
-          <div className="grid h-full gap-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
-            <div className={cn('flex min-h-0 flex-col overflow-hidden', panelShell)}>
-              <div className="flex items-center justify-between gap-3 border-b-2 border-border px-4 py-3">
-                <div>
-                  <p className={sectionTitle}>Live Shell</p>
-                  <p className="text-xs text-foreground/50">Use the full-screen terminal for longer sessions.</p>
-                </div>
-                <Button variant="outline" size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={onOpenTerminal}>
-                  <Maximize2 className="mr-2 h-4 w-4" />
-                  Full Screen
-                </Button>
-              </div>
-              <div className="min-h-0 flex-1 p-3">
-                <ServerTerminal
-                  defaultOpen
-                  hideHeader
-                  className="h-full rounded-[0.8rem] border-2 border-[var(--border)] bg-black text-[#f5eedf] shadow-none"
-                  heightClassName="h-full"
-                />
-              </div>
-            </div>
-
-            <div className={cn('flex min-h-0 flex-col overflow-hidden', panelInset)}>
-              <div className="border-b-2 border-[var(--border)] px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Waves className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
-                  <p className={sectionTitle}>Terminal WS Log</p>
-                </div>
-                <p className="mt-1 text-xs text-foreground/50">
-                  Scrollable trace panel, fixed to this card so it never forces the layout outward.
-                </p>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto p-3 font-mono text-xs">
-                {termLog.length === 0 ? (
-                  <p className="rounded-[0.8rem] border-2 border-border bg-muted/50 p-3 text-foreground/50">
-                    No websocket activity yet. Open a mobile workflow or use the shell to generate traffic.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {termLog.map((entry, index) => (
-                      <div key={`${entry.ts}-${index}`} className="rounded-[0.8rem] border-2 border-border bg-background/40 p-3 text-text-terminal">
-                        <div className="mb-1 font-heading text-[10px] uppercase tracking-[0.22em] text-foreground/35">
-                          {formatShortTime(entry.ts)}
-                        </div>
-                        <div className="break-all text-text-terminal">{entry.msg}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <TerminalDiagnosticsTab
+            termLog={termLog}
+            termConnState={termConnState}
+            onConnectionStateChange={setTermConnState}
+            onOpenTerminal={onOpenTerminal}
+          />
         ) : activeTab === 'setup' ? (
-          <SetupDiagnosticsTab setupInfo={setupInfo} onRefresh={refresh} />
+          <SetupDiagnosticsTab
+            setupInfo={setupInfo}
+            claudeInfo={claudeInfo}
+            codexInfo={codexInfo}
+            copilotInfo={copilotInfo}
+            tasksInfo={tasksInfo}
+            onRefresh={refresh}
+          />
         ) : activeTab === 'network' ? (
           <NetworkDiagnosticsTab networkInfo={networkInfo} />
         ) : activeTab === 'languages' ? (
           <LanguagesDiagnosticsTab pythonInfo={pythonInfo} rustInfo={rustInfo} goInfo={goInfo} tsInfo={tsInfo} />
-        ) : activeTab === 'claude' ? (
-          <ClaudeDiagnosticsTab claudeInfo={claudeInfo} tasksInfo={tasksInfo} />
-        ) : activeTab === 'codex' ? (
-          <CodexDiagnosticsTab codexInfo={codexInfo} />
-        ) : activeTab === 'copilot' ? (
-          <div className="grid h-full gap-3 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]">
-            <div className="space-y-3">
-              <div className="rounded-[1.5rem] border border-border/40 bg-background/50 p-4">
-                <div className="flex items-center gap-2">
-                  <BrandIcon brand="copilot" size={18} />
-                  <p className="text-sm font-medium">Copilot Trust State</p>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-[1.2rem] border border-border/40 bg-[var(--bauhaus-yellow)] p-4 text-black">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Active Sessions</p>
-                    <p className="mt-2 text-3xl font-semibold">{copilotInfo?.activeSessionCount ?? 0}</p>
-                  </div>
-                  <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-4">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-foreground/45">Persisted CLI State</p>
-                    <div className="mt-2 space-y-1 text-sm text-foreground/80">
-                      <p>Path: {copilotInfo?.persistedState?.path ?? 'Not stored'}</p>
-                      <p>Version: {copilotInfo?.persistedState?.version ?? 'Unknown'}</p>
-                      <p>Authenticated: {copilotInfo?.persistedState ? (copilotInfo.persistedState.authenticated ? 'Yes' : 'No') : 'Unknown'}</p>
-                      <p>Updated: {copilotInfo?.persistedState?.updatedAt ? new Date(copilotInfo.persistedState.updatedAt).toLocaleString() : 'Unknown'}</p>
-                    </div>
-                  </div>
-                  <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-4">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-foreground/45">Live Trust Check</p>
-                    <div className="mt-2 space-y-1 text-sm text-foreground/80">
-                      <p>Target: {copilotInfo?.liveStatusTarget ?? 'Unknown'}</p>
-                      <p>Trust configured: {copilotInfo?.liveStatus.trustConfigured ? 'Yes' : 'No'}</p>
-                      <p>Markers: {copilotInfo?.trustMarkers.length ?? 0}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
-                <p className="text-sm font-medium">Trust Marker Paths</p>
-                <div className="mt-3 space-y-2">
-                  {copilotInfo?.trustMarkers.length ? (
-                    copilotInfo.trustMarkers.map((marker) => (
-                      <div key={marker} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-3 font-mono text-xs text-text-terminal">
-                        {marker}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-[1.2rem] border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/50">
-                      No remembered Copilot trust markers yet.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-border/40 bg-background p-4">
-                <p className="text-sm font-medium">Recent Copilot Events</p>
-                <div className="mt-3 space-y-2">
-                  {copilotInfo?.events.length ? (
-                    copilotInfo.events.map((event, index) => (
-                      <div key={`${event.ts}-${index}`} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-3">
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-foreground/38">
-                          {formatShortTime(event.ts)} {event.sessionId ? `· ${event.sessionId.slice(0, 8)}` : ''}
-                        </p>
-                        <p className="mt-2 break-words font-mono text-xs text-text-terminal">{event.message}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-[1.2rem] border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/50">
-                      No Copilot trust events captured yet.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-border/40 bg-background p-3">
-              <p className="text-sm font-medium">Active Copilot Sessions</p>
-              <div className="mt-3 space-y-3">
-                {copilotInfo?.sessions.length ? (
-                  copilotInfo.sessions.map((session) => (
-                    <div key={session.sessionId} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{session.state}</p>
-                          <p className="mt-1 break-all font-mono text-xs text-foreground/50">{session.sessionId}</p>
-                        </div>
-                        <Badge variant="outline" className="border-border/50 text-foreground/75">
-                          {session.trusted ? 'Trusted' : session.completed ? 'Completed' : 'Active'}
-                        </Badge>
-                      </div>
-                        <div className="mt-3 space-y-2 text-xs text-foreground/72">
-                          <p>Trust handled: {session.trustHandled ? 'Yes' : 'No'}</p>
-                          <p>Fallback attempted: {session.fallbackTrustAttempted ? 'Yes' : 'No'}</p>
-                          <p>UI ready: {session.uiReady ? 'Yes' : 'No'}</p>
-                          <p>Trust target: {session.trustTarget ?? 'Unknown'}</p>
-                          <p>Prompt: {session.prompt ?? 'None'}</p>
-                          <p>Error: {session.error ?? 'None'}</p>
-                          <p>Updated: {new Date(session.updatedAt).toLocaleString()}</p>
-                        </div>
-                      {session.outputExcerpt ? (
-                        <div className="mt-3">
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Output Excerpt</p>
-                          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-text-terminal">
-                            {session.outputExcerpt}
-                          </pre>
-                          {session.rawOutputExcerpt ? (
-                            <>
-                              <p className="mt-3 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Raw Output Excerpt</p>
-                              <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground">
-                                {session.rawOutputExcerpt}
-                              </pre>
-                            </>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-border/50 bg-background/30 p-4 text-sm text-foreground/50">
-                    No active Copilot trust sessions. Open the Copilot wizard on the mobile app to start one.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
         ) : activeTab === 'github' ? (
           <GitHubDiagnosticsTab githubInfo={githubInfo} projectsInfo={projectsInfo} gitHistoryInfo={gitHistoryInfo} offlineSnapshots={offlineSnapshots} />
         ) : activeTab === 'minimax' ? (
@@ -575,58 +368,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
         ) : activeTab === 'push' ? (
           <PushDiagnosticsTab data={pushInfo} />
         ) : (
-          <div className="grid h-full gap-3 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <div className="rounded-[1.5rem] border border-border/40 bg-background/50 p-4">
-              <p className="text-sm font-medium">Registry Snapshot</p>
-              <div className="mt-4 space-y-3">
-                <div className="rounded-[1.2rem] border border-border/40 bg-[var(--bauhaus-yellow)] p-4 text-black">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-black/55">Devices</p>
-                  <p className="mt-2 text-3xl font-semibold">{info?.deviceCount ?? 0}</p>
-                </div>
-                <div className="rounded-[1.2rem] border border-border/40 bg-foreground/6 p-4">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-foreground/45">Health</p>
-                  <p className="mt-2 text-sm text-foreground/80">
-                    {info?.deviceCount ? 'Registry populated and ready for auth checks.' : 'No devices in DB. Reconnect attempts will fail until a device is paired again.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-0 overflow-y-auto rounded-[1.5rem] border border-border/40 bg-background p-3">
-              {info?.devices.length ? (
-                <div className="space-y-3">
-                  {info.devices.map((device) => (
-                    <div key={device.id} className="rounded-[1.2rem] border border-border/40 bg-background/40 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Smartphone className="h-4 w-4 text-[var(--bauhaus-yellow)]" />
-                            <p className="truncate text-sm font-medium">{device.name ?? 'Unnamed device'}</p>
-                          </div>
-                          <p className="mt-1 text-xs text-foreground/50">{device.id}</p>
-                        </div>
-                        <Badge variant="outline" className="border-border/50 text-foreground/75">{device.platform ?? 'unknown'}</Badge>
-                      </div>
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Public Key</p>
-                          <p className="mt-1 font-mono text-xs text-foreground/72">{device.publicKeyPrefix}</p>
-                        </div>
-                        <div>
-                          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">Last Seen</p>
-                          <p className="mt-1 text-xs text-foreground/72">{device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : 'Never'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center rounded-[1.2rem] border border-dashed border-border/50 bg-background/30 p-6 text-center text-sm text-foreground/50">
-                  Pair a device first, then this panel becomes the registry view for auth-oriented debugging.
-                </div>
-              )}
-            </div>
-          </div>
+          <RegistryDiagnosticsTab info={info} />
         )}
       </div>
     </section>

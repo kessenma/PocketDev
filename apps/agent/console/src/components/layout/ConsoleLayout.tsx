@@ -12,10 +12,10 @@ import { SecuritySection } from '#/pages/sections/SecuritySection'
 import { RepositoriesSection } from '#/pages/sections/RepositoriesSection'
 import { TasksSection } from '#/pages/sections/TasksSection'
 import { DebugSection } from '#/pages/sections/DebugSection'
-import { Server, LogOut, Maximize2, Shield, ArrowUpCircle, Loader2, Menu, Sun, Moon } from 'lucide-react'
+import { Server, LogOut, Maximize2, Shield, Menu, Sun, Moon } from 'lucide-react'
 
 export function ConsoleLayout() {
-  const { status, loading, agentVersion, updateInfo, upgrading, handleUpgrade, handleLogout } = useConsoleData()
+  const { status, loading, agentVersion, handleLogout } = useConsoleData()
   const { theme, toggle } = useTheme()
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -28,19 +28,6 @@ export function ConsoleLayout() {
       : location.pathname.includes('/debug')
         ? 'debug'
         : 'security'
-
-  const upgradeTooltip = status?.lastUpgradeAt
-    ? `Last upgraded ${new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(status.lastUpgradeAt))}`
-    : 'No completed upgrades recorded yet'
-  const upgradeMetaLabel = status?.lastUpgradeAt
-    ? `Updated ${new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(status.lastUpgradeAt))}`
-    : 'No upgrades recorded yet'
 
   if (loading || !status) {
     return (
@@ -87,55 +74,34 @@ export function ConsoleLayout() {
               </Badge>
             </div>
 
-            <div className="shrink-0">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-foreground/70 hover:text-foreground"
-                  onClick={toggle}
-                  aria-label="Toggle theme"
-                >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  onClick={() => setTerminalOpen(true)}
-                >
-                  <Maximize2 className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Terminal</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  onClick={handleUpgrade}
-                  disabled={upgrading}
-                  title={upgradeTooltip}
-                  aria-label={`${upgrading ? 'Upgrading' : 'Upgrade'}. ${upgradeTooltip}`}
-                >
-                  {upgrading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowUpCircle className="mr-2 h-4 w-4" />
-                  )}
-                  <span className="hidden sm:inline">{upgrading ? 'Upgrading...' : 'Upgrade'}</span>
-                </Button>
-                <Button variant="outline" size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Sign Out</span>
-                </Button>
-              </div>
-              <p className="mt-1 text-right text-[0.62rem] font-medium uppercase tracking-[0.14em] text-foreground/55">
-                {upgradeMetaLabel}
-              </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-foreground/70 hover:text-foreground"
+                onClick={toggle}
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                onClick={() => setTerminalOpen(true)}
+              >
+                <Maximize2 className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Terminal</span>
+              </Button>
+              <Button variant="outline" size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/80" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
             </div>
           </div>
         </header>
 
-        <UpdateBanner version={agentVersion} update={updateInfo} />
+        <UpdateBanner />
 
         {/* Body: sidebar + content */}
         <div className="flex min-h-0 flex-1">

@@ -3,7 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
 import { measureTextWidth } from '../../../shared/pretext-measure'
 import { SvgAutoWrapText } from '../../../shared/SvgAutoWrapText'
-import { architectureTokens } from '../../../shared/theme'
+import { architectureTokens, architectureFonts } from '../../../shared/theme'
 import { EXPLAINER_TIMINGS } from './constants'
 
 function clamp(value: number, min: number, max: number) {
@@ -267,7 +267,7 @@ export function RepoCloneTakeoverScene({
         x={titleX}
         y={titleY}
         fill={architectureTokens.colors.text}
-        fontFamily="var(--font-sans), sans-serif"
+        fontFamily={architectureFonts.display}
         fontSize={titleSize}
         fontWeight="700"
         letterSpacing="-0.03em"

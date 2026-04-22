@@ -47,6 +47,9 @@ const config = defineConfig({
     watch: {
       ignored: ['**/routeTree.gen.ts'],
     },
+    fs: {
+      allow: ['../..'],
+    },
   },
   ssr: {
     resolve: {

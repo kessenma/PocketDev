@@ -30,9 +30,10 @@ import { BrandIcon } from '#/components/ui/brand-icon'
 
 type Props = {
   className?: string
+  refreshKey?: number
 }
 
-export function RepoInspectorPanel({ className }: Props) {
+export function RepoInspectorPanel({ className, refreshKey }: Props) {
   const [summary, setSummary] = useState<RepoSummary | null>(null)
   const [entries, setEntries] = useState<RepoEntry[]>([])
   const [currentPath, setCurrentPath] = useState('.')
@@ -74,7 +75,7 @@ export function RepoInspectorPanel({ className }: Props) {
 
   useEffect(() => {
     void refresh()
-  }, [refresh])
+  }, [refresh, refreshKey])
 
   async function openPath(path: string) {
     setError(null)

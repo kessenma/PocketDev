@@ -153,7 +153,7 @@ export function ConnectTakeoverScene({
         x={titleCenterX}
         y={titleY}
         fill={architectureTokens.colors.text}
-        fontFamily="var(--font-sans), sans-serif"
+        fontFamily={architectureFonts.display}
         fontSize={titleSize}
         fontWeight="700"
         letterSpacing="-0.03em"

@@ -1,4 +1,4 @@
-import { PushNotificationsScene } from '../explainers/9-PushNotificationsScene'
+import { PushNotificationsScene } from '../explainers/10-PushNotificationsScene'
 import type { SceneConfig } from '../timeline-types'
 
 export const pushNotificationsScene: SceneConfig = {

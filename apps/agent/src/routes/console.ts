@@ -46,7 +46,7 @@ import { getCodexAuthDebug } from '../services/cli-setup/codex-setup.ts'
 import { getClaudeAuthDebug } from '../services/cli-setup/claude-setup.ts'
 import { getCopilotAuthDebug } from '../services/cli-setup/copilot-setup.ts'
 import { getGitHubAuthDebug } from '../services/git/git-setup.ts'
-import { getActiveProjectId, getActiveProjectPath, getProjectsDebug } from '../services/system/projects.ts'
+import { getActiveProjectId, getActiveProjectPath, getProjectsDebug, selectProject } from '../services/system/projects.ts'
 import { checkPythonStatus } from '../services/cli-setup/python-setup.ts'
 import { checkRustStatus } from '../services/cli-setup/rust-setup.ts'
 import { checkGoStatus } from '../services/cli-setup/go-setup.ts'
@@ -1231,14 +1231,27 @@ systemctl restart pocketdev-agent
   // ─── Projects ──────────────────────────────────────────
   .get('/projects', ({ request, set }) => {
     if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    const activeId = getActiveProjectId()
     return {
       projects: getProjects().map((p) => ({
         id: p.id,
         name: p.name,
         absolutePath: p.absolutePath,
         remoteUrl: p.remoteUrl,
+        isActive: p.id === activeId,
       })),
     }
+  })
+  .post('/projects/select', async ({ request, body, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    const result = await selectProject(body.id)
+    if (!result.success) {
+      set.status = 400
+      return { error: result.error ?? 'Failed to select project' }
+    }
+    return { ok: true }
+  }, {
+    body: t.Object({ id: t.String() }),
   })
   // ─── Env vars ──────────────────────────────────────────
   .get('/envs', ({ request, query, set }) => {

@@ -1030,6 +1030,7 @@ export interface ConsoleProject {
   name: string
   absolutePath: string
   remoteUrl: string | null
+  isActive: boolean
 }
 
 export async function fetchConsoleProjects(): Promise<ConsoleProject[]> {
@@ -1037,6 +1038,11 @@ export async function fetchConsoleProjects(): Promise<ConsoleProject[]> {
   if (!res.ok) throw new Error('Failed to fetch projects')
   const data = await res.json() as { projects: ConsoleProject[] }
   return data.projects
+}
+
+export async function selectConsoleProject(id: string): Promise<void> {
+  const res = await post('/projects/select', { id })
+  if (!res.ok) throw new Error(await readError(res, 'Failed to select project'))
 }
 
 // ─── Env Vars ──────────────────────────────────────────────────────────────────

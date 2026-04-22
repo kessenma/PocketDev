@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { measureTextWidth } from '../../../shared/pretext-measure'
-import { architectureTokens } from '../../../shared/theme'
+import { architectureTokens, architectureFonts } from '../../../shared/theme'
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
@@ -129,7 +129,7 @@ export function EnvInjectionTakeoverStage({
         x={titleX}
         y={titleY}
         fill={architectureTokens.colors.text}
-        fontFamily="var(--font-sans), sans-serif"
+        fontFamily={architectureFonts.display}
         fontSize={titleSize}
         fontWeight="700"
         letterSpacing="-0.03em"

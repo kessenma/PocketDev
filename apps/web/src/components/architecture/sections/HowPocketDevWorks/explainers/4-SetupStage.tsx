@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
 import { SvgAutoWrapText } from '../../../shared/SvgAutoWrapText'
-import { architectureTokens } from '../../../shared/theme'
+import { architectureTokens, architectureFonts } from '../../../shared/theme'
 import { brandAssets } from '../../../shared/brand-assets'
 
 function clamp(value: number, min: number, max: number) {
@@ -133,7 +133,7 @@ export function SetupTakeoverScene({
         x={titleCenterX}
         y={titleY}
         fill={architectureTokens.colors.text}
-        fontFamily="var(--font-sans), sans-serif"
+        fontFamily={architectureFonts.display}
         fontSize={titleSize}
         fontWeight="700"
         letterSpacing="-0.03em"
