@@ -14,8 +14,19 @@
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		CE4A0578CB21FFB8AAA9EECD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		D56BCF8989881C0910DF6E6A /* APNsDiagnostics.m in Sources */ = {isa = PBXBuildFile; fileRef = 5E6A328BC4176242AC156ADB /* APNsDiagnostics.m */; };
-		B0DCF8B6F7AA4C028A9F43B1 /* SairaStencil-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9D2430B2BA824ACE80107293 /* SairaStencil-ExtraBold.ttf */; };
-		24CCF720DEFB4EC686FC1EDD /* AfacadFlux-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CAF0C6827AA94FA0A4FD4E43 /* AfacadFlux-Variable.ttf */; };
+		43843C6C0A3D4EEB84FAA56E /* Geist-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 144A5103BF9F43CFB122C9C2 /* Geist-VariableFont_wght.ttf */; };
+		4475FD285BDB45CB8B2757BC /* Wagon-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D640F6C7D5084852A22B0C94 /* Wagon-ExtraLight.ttf */; };
+		4843F800C5BF4F8CBA5727B7 /* GeistMono-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5890320FA4FE471A9D8FEEE3 /* GeistMono-VariableFont_wght.ttf */; };
+		2B2EE212DD694D70A4A0BA28 /* Britney-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 328E2C9BA3A9415FAC535C83 /* Britney-Variable.ttf */; };
+		AA9A98A402804DB8BC70B196 /* Stardom-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F0993BD833A3416CA6746F85 /* Stardom-Regular.ttf */; };
+		7535B1DDBC63444AAEAD7B40 /* Wagon-ExtraLightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AF183DAFF16D4D08A8234817 /* Wagon-ExtraLightItalic.ttf */; };
+		255B803B3B06420082347D0D /* Wagon-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D1EC55D71A2E4A9383B73624 /* Wagon-Bold.ttf */; };
+		FC8F128F2F28426B89D1B569 /* Durer.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8F6F8C3242B14396BAB16591 /* Durer.ttf */; };
+		249DBA7F80174DE289FB1FA2 /* Stardom-Regular.woff in Resources */ = {isa = PBXBuildFile; fileRef = 4187FDB1A5B5420CB6A41868 /* Stardom-Regular.woff */; };
+		34473C10288149F9931DCF6A /* Stardom-Regular.woff2 in Resources */ = {isa = PBXBuildFile; fileRef = D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */; };
+		644F167631F54A1485951C6C /* durer-webfont.woff in Resources */ = {isa = PBXBuildFile; fileRef = 80B707CD3CB04025A48DEDAC /* durer-webfont.woff */; };
+		8BFA167299424B5C88BDC487 /* fonts.css in Resources */ = {isa = PBXBuildFile; fileRef = CFF5172DCB9B42CAA7167185 /* fonts.css */; };
+		29FCBE4AA77948C389EF4381 /* durer-webfont.woff2 in Resources */ = {isa = PBXBuildFile; fileRef = F95B3F9B8D4C4E2FBB857D60 /* durer-webfont.woff2 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,8 +43,19 @@
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Mobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8A0682A22F8E059C00ACCB38 /* Mobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = Mobile.entitlements; path = Mobile/Mobile.entitlements; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		9D2430B2BA824ACE80107293 /* SairaStencil-ExtraBold.ttf */ = {isa = PBXFileReference; name = "SairaStencil-ExtraBold.ttf"; path = "../assets/fonts/SairaStencil-ExtraBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		CAF0C6827AA94FA0A4FD4E43 /* AfacadFlux-Variable.ttf */ = {isa = PBXFileReference; name = "AfacadFlux-Variable.ttf"; path = "../assets/fonts/AfacadFlux-Variable.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		144A5103BF9F43CFB122C9C2 /* Geist-VariableFont_wght.ttf */ = {isa = PBXFileReference; name = "Geist-VariableFont_wght.ttf"; path = "../../../packages/shared/assets/fonts/Geist-VariableFont_wght.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		D640F6C7D5084852A22B0C94 /* Wagon-ExtraLight.ttf */ = {isa = PBXFileReference; name = "Wagon-ExtraLight.ttf"; path = "../../../packages/shared/assets/fonts/Wagon-ExtraLight.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		5890320FA4FE471A9D8FEEE3 /* GeistMono-VariableFont_wght.ttf */ = {isa = PBXFileReference; name = "GeistMono-VariableFont_wght.ttf"; path = "../../../packages/shared/assets/fonts/GeistMono-VariableFont_wght.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		328E2C9BA3A9415FAC535C83 /* Britney-Variable.ttf */ = {isa = PBXFileReference; name = "Britney-Variable.ttf"; path = "../../../packages/shared/assets/fonts/Britney-Variable.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		F0993BD833A3416CA6746F85 /* Stardom-Regular.ttf */ = {isa = PBXFileReference; name = "Stardom-Regular.ttf"; path = "../../../packages/shared/assets/fonts/Stardom-Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		AF183DAFF16D4D08A8234817 /* Wagon-ExtraLightItalic.ttf */ = {isa = PBXFileReference; name = "Wagon-ExtraLightItalic.ttf"; path = "../../../packages/shared/assets/fonts/Wagon-ExtraLightItalic.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		D1EC55D71A2E4A9383B73624 /* Wagon-Bold.ttf */ = {isa = PBXFileReference; name = "Wagon-Bold.ttf"; path = "../../../packages/shared/assets/fonts/Wagon-Bold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		8F6F8C3242B14396BAB16591 /* Durer.ttf */ = {isa = PBXFileReference; name = "Durer.ttf"; path = "../../../packages/shared/assets/fonts/Durer.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		4187FDB1A5B5420CB6A41868 /* Stardom-Regular.woff */ = {isa = PBXFileReference; name = "Stardom-Regular.woff"; path = "../../../packages/shared/assets/fonts/Stardom-Regular.woff"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */ = {isa = PBXFileReference; name = "Stardom-Regular.woff2"; path = "../../../packages/shared/assets/fonts/Stardom-Regular.woff2"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		80B707CD3CB04025A48DEDAC /* durer-webfont.woff */ = {isa = PBXFileReference; name = "durer-webfont.woff"; path = "../../../packages/shared/assets/fonts/durer-webfont.woff"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		CFF5172DCB9B42CAA7167185 /* fonts.css */ = {isa = PBXFileReference; name = "fonts.css"; path = "../../../packages/shared/assets/fonts/fonts.css"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		F95B3F9B8D4C4E2FBB857D60 /* durer-webfont.woff2 */ = {isa = PBXFileReference; name = "durer-webfont.woff2"; path = "../../../packages/shared/assets/fonts/durer-webfont.woff2"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -114,8 +136,19 @@
 		957C0910D0B342D0BFA89C3A /* Resources */ = {
 			isa = "PBXGroup";
 			children = (
-				9D2430B2BA824ACE80107293 /* SairaStencil-ExtraBold.ttf */,
-				CAF0C6827AA94FA0A4FD4E43 /* AfacadFlux-Variable.ttf */,
+				144A5103BF9F43CFB122C9C2 /* Geist-VariableFont_wght.ttf */,
+				D640F6C7D5084852A22B0C94 /* Wagon-ExtraLight.ttf */,
+				5890320FA4FE471A9D8FEEE3 /* GeistMono-VariableFont_wght.ttf */,
+				328E2C9BA3A9415FAC535C83 /* Britney-Variable.ttf */,
+				F0993BD833A3416CA6746F85 /* Stardom-Regular.ttf */,
+				AF183DAFF16D4D08A8234817 /* Wagon-ExtraLightItalic.ttf */,
+				D1EC55D71A2E4A9383B73624 /* Wagon-Bold.ttf */,
+				8F6F8C3242B14396BAB16591 /* Durer.ttf */,
+				4187FDB1A5B5420CB6A41868 /* Stardom-Regular.woff */,
+				D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */,
+				80B707CD3CB04025A48DEDAC /* durer-webfont.woff */,
+				CFF5172DCB9B42CAA7167185 /* fonts.css */,
+				F95B3F9B8D4C4E2FBB857D60 /* durer-webfont.woff2 */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -184,8 +217,19 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				CE4A0578CB21FFB8AAA9EECD /* PrivacyInfo.xcprivacy in Resources */,
-				B0DCF8B6F7AA4C028A9F43B1 /* SairaStencil-ExtraBold.ttf in Resources */,
-				24CCF720DEFB4EC686FC1EDD /* AfacadFlux-Variable.ttf in Resources */,
+				43843C6C0A3D4EEB84FAA56E /* Geist-VariableFont_wght.ttf in Resources */,
+				4475FD285BDB45CB8B2757BC /* Wagon-ExtraLight.ttf in Resources */,
+				4843F800C5BF4F8CBA5727B7 /* GeistMono-VariableFont_wght.ttf in Resources */,
+				2B2EE212DD694D70A4A0BA28 /* Britney-Variable.ttf in Resources */,
+				AA9A98A402804DB8BC70B196 /* Stardom-Regular.ttf in Resources */,
+				7535B1DDBC63444AAEAD7B40 /* Wagon-ExtraLightItalic.ttf in Resources */,
+				255B803B3B06420082347D0D /* Wagon-Bold.ttf in Resources */,
+				FC8F128F2F28426B89D1B569 /* Durer.ttf in Resources */,
+				249DBA7F80174DE289FB1FA2 /* Stardom-Regular.woff in Resources */,
+				34473C10288149F9931DCF6A /* Stardom-Regular.woff2 in Resources */,
+				644F167631F54A1485951C6C /* durer-webfont.woff in Resources */,
+				8BFA167299424B5C88BDC487 /* fonts.css in Resources */,
+				29FCBE4AA77948C389EF4381 /* durer-webfont.woff2 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

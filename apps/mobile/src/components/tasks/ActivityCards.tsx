@@ -148,7 +148,7 @@ function CardEntryRow({ entry, accentColor }: { entry: CardEntry; accentColor: s
   const presentation = getToolPresentation(entry.toolUse)
   const isFileTappable =
     entry.toolUse.filePath != null &&
-    (presentation.kind === 'read' || presentation.kind === 'write' || presentation.kind === 'create')
+    (presentation.kind === 'read' || presentation.kind === 'write' || presentation.kind === 'create' || presentation.kind === 'search')
 
   const resultPreview = entry.toolResult?.preview
   const isResultError = entry.toolResult?.isError

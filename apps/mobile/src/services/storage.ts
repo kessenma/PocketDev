@@ -102,15 +102,24 @@ export function clearServer() {
 
 const MAX_RECENT_PROMPTS = 10
 
-export function getRecentPrompts(): string[] {
-  const raw = getStorage().getString(KEYS.RECENT_PROMPTS)
-  if (!raw) return []
-  return JSON.parse(raw) as string[]
+export interface RecentPrompt {
+  prompt: string
+  agentType: string
 }
 
-export function addRecentPrompt(prompt: string) {
-  const existing = getRecentPrompts().filter((p) => p !== prompt)
-  const updated = [prompt, ...existing].slice(0, MAX_RECENT_PROMPTS)
+export function getRecentPrompts(): RecentPrompt[] {
+  const raw = getStorage().getString(KEYS.RECENT_PROMPTS)
+  if (!raw) return []
+  const parsed = JSON.parse(raw) as Array<string | RecentPrompt>
+  // migrate legacy string entries
+  return parsed.map((entry) =>
+    typeof entry === 'string' ? { prompt: entry, agentType: 'claude' } : entry,
+  )
+}
+
+export function addRecentPrompt(prompt: string, agentType: string) {
+  const existing = getRecentPrompts().filter((p) => p.prompt !== prompt)
+  const updated = [{ prompt, agentType }, ...existing].slice(0, MAX_RECENT_PROMPTS)
   getStorage().set(KEYS.RECENT_PROMPTS, JSON.stringify(updated))
 }
 

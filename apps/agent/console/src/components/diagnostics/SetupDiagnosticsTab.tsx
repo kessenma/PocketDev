@@ -10,6 +10,7 @@ import {
   type ClaudeAuthDebugInfo,
   type CodexAuthDebugInfo,
   type CopilotAuthDebugInfo,
+  type MinimaxSetupDebugInfo,
   type SetupDebugInfo,
   type SetupProviderInfo,
   type SwapDebugInfo,
@@ -35,14 +36,16 @@ import { toast } from 'sonner'
 import { ClaudeDiagnosticsTab } from '#/components/diagnostics/ClaudeDiagnosticsTab'
 import { CodexDiagnosticsTab } from '#/components/diagnostics/CodexDiagnosticsTab'
 import { CopilotDiagnosticsTab } from '#/components/diagnostics/CopilotDiagnosticsTab'
+import { MinimaxDiagnosticsTab } from '#/components/diagnostics/MinimaxDiagnosticsTab'
 
-type SetupSubTab = 'overview' | 'claude' | 'codex' | 'copilot'
+type SetupSubTab = 'overview' | 'claude' | 'codex' | 'copilot' | 'minimax'
 
 interface Props {
   setupInfo: SetupDebugInfo | null
   claudeInfo: ClaudeAuthDebugInfo | null
   codexInfo: CodexAuthDebugInfo | null
   copilotInfo: CopilotAuthDebugInfo | null
+  minimaxInfo: MinimaxSetupDebugInfo | null
   tasksInfo: TasksDebugInfo | null
   onRefresh: () => Promise<void> | void
 }
@@ -618,7 +621,7 @@ function ProviderCard({
   )
 }
 
-export function SetupDiagnosticsTab({ setupInfo, claudeInfo, codexInfo, copilotInfo, tasksInfo, onRefresh }: Props) {
+export function SetupDiagnosticsTab({ setupInfo, claudeInfo, codexInfo, copilotInfo, minimaxInfo, tasksInfo, onRefresh }: Props) {
   const [subTab, setSubTab] = useState<SetupSubTab>('overview')
 
   const claude = setupInfo?.providers.claude
@@ -654,6 +657,15 @@ export function SetupDiagnosticsTab({ setupInfo, claudeInfo, codexInfo, copilotI
       dotClass: providerDotClass(
         copilotInfo?.persistedState != null || (copilotInfo?.trustMarkers.length ?? 0) > 0,
         copilotReady,
+      ),
+    },
+    {
+      id: 'minimax',
+      label: 'Minimax',
+      brand: 'minimax',
+      dotClass: providerDotClass(
+        minimaxInfo?.status.opencode_installed,
+        minimaxInfo?.status.api_key_configured && minimaxInfo?.status.verified,
       ),
     },
   ]
@@ -803,6 +815,23 @@ export function SetupDiagnosticsTab({ setupInfo, claudeInfo, codexInfo, copilotI
             />
             <div className="min-h-0 flex-1">
               <CodexDiagnosticsTab codexInfo={codexInfo} />
+            </div>
+          </div>
+        ) : subTab === 'minimax' ? (
+          <div className="flex h-full flex-col gap-3">
+            <ProviderCard
+              brand="minimax"
+              title="Minimax (via OpenCode)"
+              isReady={(minimaxInfo?.status.api_key_configured && minimaxInfo?.status.verified) ?? false}
+              rows={[
+                { label: 'OpenCode installed', value: minimaxInfo?.status.opencode_installed ? 'Yes' : 'No' },
+                { label: 'API key', value: minimaxInfo?.status.api_key_configured ? (minimaxInfo.status.api_key_masked ?? 'Configured') : 'Not configured' },
+                { label: 'Verified', value: minimaxInfo?.status.verified ? 'Yes' : 'No' },
+                { label: 'OpenCode version', value: minimaxInfo?.status.opencode_version ?? 'Unknown' },
+              ]}
+            />
+            <div className="min-h-0 flex-1">
+              <MinimaxDiagnosticsTab minimaxInfo={minimaxInfo} />
             </div>
           </div>
         ) : (

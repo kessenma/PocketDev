@@ -15,6 +15,8 @@ import BauhausButton from '../shared/BauhausButton'
 import BauhausChatInput from '../shared/BauhausChatInput'
 import ClaudeWizardSheet from '../setup/ClaudeWizardSheet'
 import CodexWizardSheet from '../setup/CodexWizardSheet'
+import CopilotWizardSheet from '../setup/CopilotWizardSheet'
+import OpenCodeWizardSheet from '../setup/OpenCodeWizardSheet'
 import { type StreamItem } from './TaskStreamer'
 import { GroupedItemRow } from './ActivityCards'
 import TaskDebugSheet from './TaskDebugSheet'
@@ -219,9 +221,13 @@ export default function TaskDetailPane({
   const [showDebugSheet, setShowDebugSheet] = useState(false)
   const [showCodexWizard, setShowCodexWizard] = useState(false)
   const [showClaudeWizard, setShowClaudeWizard] = useState(false)
+  const [showCopilotWizard, setShowCopilotWizard] = useState(false)
+  const [showOpenCodeWizard, setShowOpenCodeWizard] = useState(false)
   const [debugSelection, setDebugSelection] = useState<TaskDebugSelection>(null)
   const [codexWizardKey, setCodexWizardKey] = useState(0)
   const [claudeWizardKey, setClaudeWizardKey] = useState(0)
+  const [copilotWizardKey, setCopilotWizardKey] = useState(0)
+  const [openCodeWizardKey, setOpenCodeWizardKey] = useState(0)
 
   // Parent can open the copy menu by incrementing copyTrigger
   useEffect(() => {
@@ -366,7 +372,7 @@ export default function TaskDetailPane({
   // Debounced 1.5s to avoid flashing on the very first output lines.
   useEffect(() => {
     if (!task || task.status !== 'running') return
-    if (showDebugSheet || showCodexWizard || showClaudeWizard) return
+    if (showDebugSheet || showCodexWizard || showClaudeWizard || showCopilotWizard || showOpenCodeWizard) return
     if (inferredDebugSelection !== 'auth') return
     const t = setTimeout(() => {
       setDebugSelection('auth')
@@ -380,19 +386,29 @@ export default function TaskDetailPane({
     setShowDebugSheet(true)
   }
 
-  function handleDebugContinue() {
-    if (debugSelection === 'auth') {
-      setShowDebugSheet(false)
-      if (task?.agent_type === 'claude') {
-        setClaudeWizardKey((v) => v + 1)
-        setShowClaudeWizard(true)
-      } else {
-        setCodexWizardKey((v) => v + 1)
-        setShowCodexWizard(true)
-      }
-      return
-    }
+  function handleDebugContinue(issue: NonNullable<TaskDebugSelection>, cli: string) {
     setShowDebugSheet(false)
+    if (issue === 'auth') {
+      switch (cli) {
+        case 'claude':
+          setClaudeWizardKey((v) => v + 1)
+          setShowClaudeWizard(true)
+          break
+        case 'codex':
+          setCodexWizardKey((v) => v + 1)
+          setShowCodexWizard(true)
+          break
+        case 'copilot':
+          setCopilotWizardKey((v) => v + 1)
+          setShowCopilotWizard(true)
+          break
+        case 'opencode':
+          setOpenCodeWizardKey((v) => v + 1)
+          setShowOpenCodeWizard(true)
+          break
+      }
+    }
+    // permissions: sheet closes, task stream is now visible for the user to answer
   }
 
   if (!task) {
@@ -418,6 +434,7 @@ export default function TaskDetailPane({
             onSelect={setDebugSelection}
             onContinue={handleDebugContinue}
             pendingPermissions={pendingPermissions}
+            setupReport={setupReport}
           />
         )}
       </>
@@ -600,6 +617,22 @@ export default function TaskDetailPane({
           entryMode="auth_repair"
           onDismiss={() => setShowClaudeWizard(false)}
           onComplete={() => setShowClaudeWizard(false)}
+        />
+      )}
+      {showCopilotWizard && (
+        <CopilotWizardSheet
+          key={`copilot-auth-repair-${copilotWizardKey}`}
+          entryMode="auth_repair"
+          onDismiss={() => setShowCopilotWizard(false)}
+          onComplete={() => setShowCopilotWizard(false)}
+        />
+      )}
+      {showOpenCodeWizard && (
+        <OpenCodeWizardSheet
+          key={`opencode-auth-repair-${openCodeWizardKey}`}
+          entryMode="auth_repair"
+          onDismiss={() => setShowOpenCodeWizard(false)}
+          onComplete={() => setShowOpenCodeWizard(false)}
         />
       )}
 

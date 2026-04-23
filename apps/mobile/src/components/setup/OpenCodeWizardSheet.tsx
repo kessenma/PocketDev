@@ -21,6 +21,7 @@ import VerifyStep from './opencode-wizard/VerifyStep'
 interface Props {
   onDismiss: () => void
   onComplete: () => void
+  entryMode?: 'full' | 'auth_repair'
 }
 
 const ALL_STEPS: OpenCodeWizardStep[] = ['detect', 'review', 'install', 'verify']
@@ -41,12 +42,27 @@ type WizardAction =
   | { type: 'RETRY' }
   | { type: 'FORCE_REINSTALL' }
 
-function getInitialState(): WizardState {
+function getInitialStateForMode(entryMode: 'full' | 'auth_repair' = 'full'): WizardState {
   const stepStatuses = {} as Record<OpenCodeWizardStep, OpenCodeWizardStepStatus>
   for (const step of ALL_STEPS) {
-    stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
+    stepStatuses[step] = 'pending'
   }
 
+  if (entryMode === 'auth_repair') {
+    stepStatuses.detect = 'skipped'
+    stepStatuses.review = 'skipped'
+    stepStatuses.install = 'skipped'
+    stepStatuses.verify = 'active'
+    return {
+      currentStep: 'verify',
+      stepStatuses,
+      openCodeStatus: null,
+      error: null,
+      allConfigured: false,
+    }
+  }
+
+  stepStatuses.detect = 'active'
   return {
     currentStep: 'detect',
     stepStatuses,
@@ -149,10 +165,10 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-export default function OpenCodeWizardSheet({ onDismiss, onComplete }: Props) {
+export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
-  const [state, dispatch] = useReducer(reducer, undefined, getInitialState)
+  const [state, dispatch] = useReducer(reducer, entryMode, getInitialStateForMode)
 
   const handleDone = useCallback(() => {
     fetchPrerequisites()

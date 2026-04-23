@@ -49,10 +49,9 @@ import { LanguagesDiagnosticsTab } from '#/components/diagnostics/LanguagesDiagn
 import { NetworkDiagnosticsTab } from '#/components/diagnostics/NetworkDiagnosticsTab'
 import { GitHubDiagnosticsTab } from '#/components/diagnostics/GitHubDiagnosticsTab'
 import { PushDiagnosticsTab } from '#/components/diagnostics/PushDiagnosticsTab'
-import { MinimaxDiagnosticsTab } from '#/components/diagnostics/MinimaxDiagnosticsTab'
 import { TerminalDiagnosticsTab } from '#/components/diagnostics/TerminalDiagnosticsTab'
 
-type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'github' | 'languages' | 'network' | 'push' | 'minimax'
+type DiagnosticsTab = 'terminal' | 'setup' | 'registry' | 'github' | 'languages' | 'network' | 'push'
 
 interface DiagnosticsPanelProps {
   onOpenTerminal: () => void
@@ -241,15 +240,6 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
     return `${events} event${events === 1 ? '' : 's'} captured`
   }, [networkInfo])
 
-  const minimaxSummary = useMemo(() => {
-    if (!minimaxInfo) return 'No Minimax data yet.'
-    const { status } = minimaxInfo
-    if (status.api_key_configured && status.verified) return `API key configured · ${status.api_key_masked ?? ''}`
-    if (status.api_key_configured) return 'Key present, not verified'
-    if (!status.opencode_installed) return 'OpenCode not installed'
-    return 'API key not configured'
-  }, [minimaxInfo])
-
   return (
     <section className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-[1.1rem] border-2 border-border bg-card text-foreground shadow-[0_14px_40px_rgba(0,0,0,0.18)]">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-border px-5 py-4 sm:px-6">
@@ -269,11 +259,10 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-[0.85rem] border-2 border-border bg-background p-1">
-            {(['terminal', 'setup', 'network', 'languages', 'github', 'minimax', 'push', 'registry'] as const).map((tab) => {
-              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'github' ? 'GitHub' : tab === 'minimax' ? 'Minimax' : tab === 'push' ? 'Push' : 'Registry'
+            {(['terminal', 'setup', 'network', 'languages', 'github', 'push', 'registry'] as const).map((tab) => {
+              const label = tab === 'terminal' ? 'Terminal' : tab === 'setup' ? 'Setup' : tab === 'network' ? 'Network' : tab === 'languages' ? 'Languages' : tab === 'github' ? 'GitHub' : tab === 'push' ? 'Push' : 'Registry'
               const TAB_BRAND: Partial<Record<DiagnosticsTab, BrandKey>> = {
                 github: 'github',
-                minimax: 'minimax',
               }
               const brandKey = TAB_BRAND[tab]
               return (
@@ -326,9 +315,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
                     ? languagesSummary
                     : activeTab === 'github'
                           ? githubSummary
-                          : activeTab === 'minimax'
-                            ? minimaxSummary
-                            : activeTab === 'push'
+                          : activeTab === 'push'
                               ? (pushInfo ? `${pushInfo.registeredDevices} device${pushInfo.registeredDevices === 1 ? '' : 's'} · ${pushInfo.log.length} log entries` : 'No push data yet.')
                               : `${info?.deviceCount ?? 0} registered device${info?.deviceCount === 1 ? '' : 's'}`}
         </Badge>
@@ -354,6 +341,7 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
             claudeInfo={claudeInfo}
             codexInfo={codexInfo}
             copilotInfo={copilotInfo}
+            minimaxInfo={minimaxInfo}
             tasksInfo={tasksInfo}
             onRefresh={refresh}
           />
@@ -363,8 +351,6 @@ export function DiagnosticsPanel({ onOpenTerminal }: DiagnosticsPanelProps) {
           <LanguagesDiagnosticsTab pythonInfo={pythonInfo} rustInfo={rustInfo} goInfo={goInfo} tsInfo={tsInfo} />
         ) : activeTab === 'github' ? (
           <GitHubDiagnosticsTab githubInfo={githubInfo} projectsInfo={projectsInfo} gitHistoryInfo={gitHistoryInfo} offlineSnapshots={offlineSnapshots} />
-        ) : activeTab === 'minimax' ? (
-          <MinimaxDiagnosticsTab minimaxInfo={minimaxInfo} />
         ) : activeTab === 'push' ? (
           <PushDiagnosticsTab data={pushInfo} />
         ) : (

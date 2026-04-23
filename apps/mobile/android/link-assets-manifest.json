@@ -2,24 +2,56 @@
   "migIndex": 1,
   "data": [
     {
-      "path": "assets/fonts/AfacadFlux-Variable.ttf",
-      "sha1": "10b5af333e7416a1158b66333e62e9275b6f7183"
+      "path": "../../packages/shared/assets/fonts/Britney-Variable.ttf",
+      "sha1": "9647ae5d06714dd81f4456838dfc5024d5ec9d48"
     },
     {
-      "path": "assets/fonts/README.md",
-      "sha1": "e62922a0ecf9b9ea2c603ece2a5a8ae4daca81e4"
+      "path": "../../packages/shared/assets/fonts/durer-webfont.woff",
+      "sha1": "182d0c624b1cde04bbed497008664550d9026e71"
     },
     {
-      "path": "assets/fonts/SairaStencil-ExtraBold.ttf",
-      "sha1": "75d07c375ed6998b5a6f73a87ea246734070d2e9"
+      "path": "../../packages/shared/assets/fonts/durer-webfont.woff2",
+      "sha1": "60a1670cc387372fb31d0837d4acf0c00a832e41"
     },
     {
-      "path": "assets/fonts/SairaStencil-Italic-Variable.ttf",
-      "sha1": "06d66c9293b3b699cb2a5ac47f85a25f3d08d496"
+      "path": "../../packages/shared/assets/fonts/Durer.ttf",
+      "sha1": "6dd8df2c037909ef3fe281435651e382c0c1f1e4"
     },
     {
-      "path": "assets/fonts/SairaStencil-Variable.ttf",
-      "sha1": "0fbfde4e1bc3a4b5f53194a1bf800831a7f75e3a"
+      "path": "../../packages/shared/assets/fonts/fonts.css",
+      "sha1": "4e38620a47c6f0a137bb7a2561ce7df46baf380d"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/Geist-VariableFont_wght.ttf",
+      "sha1": "28d65e8e3bc0decd426ed5b3cab3f7bfa20c58eb"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/GeistMono-VariableFont_wght.ttf",
+      "sha1": "826f70d8436f5dc7c58585b24cbfddafffcedaf4"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/Stardom-Regular.ttf",
+      "sha1": "e23a82f302c63c1c89ede2371c3061c0c59ff872"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/Stardom-Regular.woff",
+      "sha1": "28a7579975841f1ba685c9d5d06906280c121071"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/Stardom-Regular.woff2",
+      "sha1": "9ed21d240fd6b2f353e1d93e2407f3c8cfb8e95b"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/Wagon-Bold.ttf",
+      "sha1": "b27418d309280edd355bc8987ab527d3989f103f"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/Wagon-ExtraLight.ttf",
+      "sha1": "805dddb5675267645847f1ae2fa47eef00b9343e"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/Wagon-ExtraLightItalic.ttf",
+      "sha1": "6ad918ac384fde7c39bff79d64c89c2f78c45f77"
     }
   ]
 }

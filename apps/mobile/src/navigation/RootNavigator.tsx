@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
+import { Animated } from 'react-native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { useTheme } from '../contexts/ThemeContext'
 import ConnectScreen from '../screens/ConnectScreen'
@@ -16,6 +17,37 @@ import type { RootStackParamList } from './types'
 import { typeStyles } from '../theme/typography'
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
+
+function SlideDownTitle({ children }: { children: string }) {
+  const translateY = useRef(new Animated.Value(-14)).current
+  const opacity = useRef(new Animated.Value(0)).current
+  const { colors } = useTheme()
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 280 }),
+      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+    ]).start()
+  }, [])
+
+  return (
+    <Animated.Text
+      style={[
+        {
+          fontFamily: typeStyles.sectionTitle.fontFamily,
+          fontSize: typeStyles.sectionTitle.fontSize,
+          fontWeight: '800',
+          color: colors.text,
+          textTransform: 'uppercase',
+          letterSpacing: typeStyles.sectionTitle.letterSpacing,
+        },
+        { transform: [{ translateY }], opacity },
+      ]}
+    >
+      {children}
+    </Animated.Text>
+  )
+}
 
 export default function RootNavigator() {
   const { colors } = useTheme()
@@ -72,7 +104,11 @@ export default function RootNavigator() {
       <Stack.Screen
         name="NewTask"
         component={NewTaskScreen}
-        options={{ title: 'New Task' }}
+        options={{
+          headerTitle: () => <SlideDownTitle>New Task</SlideDownTitle>,
+          headerBackButtonDisplayMode: 'minimal',
+          animation: 'slide_from_bottom',
+        }}
       />
       <Stack.Screen
         name="Projects"

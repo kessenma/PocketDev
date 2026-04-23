@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet, Image } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { RefreshCw } from 'lucide-react-native'
 import { spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useConnectionStore } from '../../../stores/connection'
 import { fetchMinimaxSetupStatus } from '../../../services/api'
-import { Assets } from '../../../../assets'
+import MinimaxSetupAnimation from '../../animations/MinimaxSetupAnimation'
 import type { MinimaxSetupStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
@@ -18,28 +18,35 @@ interface Props {
 }
 
 export default function DetectStep({ dispatch }: Props) {
-  const { colors, isDark } = useTheme()
+  const { colors } = useTheme()
   const server = useConnectionStore((state) => state.server)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [animationReady, setAnimationReady] = useState(false)
+  const [statusResult, setStatusResult] = useState<MinimaxSetupStatus | null>(null)
 
   useEffect(() => {
     void detect()
   }, [])
 
+  // Dispatch when the animation begins its exit fade AND the API result is ready.
+  // Using onBeforeFade (rather than onComplete) means the next step renders during
+  // the fade instead of after it, eliminating the blank-screen gap.
+  useEffect(() => {
+    if (animationReady && statusResult) {
+      dispatch({ type: 'DETECTION_COMPLETE', minimaxStatus: statusResult })
+    }
+  }, [animationReady, statusResult])
+
   async function detect() {
     if (!server) return
-    setLoading(true)
     setError(null)
     try {
       const status = await fetchMinimaxSetupStatus(server.ip, server.port)
-      dispatch({ type: 'DETECTION_COMPLETE', minimaxStatus: status })
+      setStatusResult(status)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to check Minimax status'
       setError(message)
       dispatch({ type: 'STEP_FAILED', step: 'detect', error: message })
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -56,36 +63,25 @@ export default function DetectStep({ dispatch }: Props) {
   }
 
   return (
-    <View style={styles.center}>
-      <Image source={isDark ? Assets.minimaxWhite : Assets.minimaxBlack} style={styles.logo} resizeMode="contain" />
-      {loading ? <ActivityIndicator color={colors.primary} size="small" /> : null}
-      <Text style={[styles.title, { color: colors.text }]}>Checking Minimax configuration</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        PocketDev is checking whether Minimax is already configured on the paired workspace.
-      </Text>
+    <View style={styles.container}>
+      <MinimaxSetupAnimation
+        onBeforeFade={() => setAnimationReady(true)}
+        onComplete={() => {}}
+      />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing[3],
     paddingHorizontal: spacing[6],
-  },
-  logo: {
-    width: 48,
-    height: 48,
-  },
-  title: {
-    ...typeStyles.screenTitle,
-    textAlign: 'center',
-  },
-  subtitle: {
-    ...typeStyles.bodySmall,
-    textAlign: 'center',
   },
   errorText: {
     ...typeStyles.bodySmall,

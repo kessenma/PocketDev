@@ -29,10 +29,11 @@ function readConfigJson(path: string): Record<string, unknown> {
 }
 
 function getApiKeyFromConfig(config: Record<string, unknown>): string | null {
-  const providers = config.providers as Record<string, unknown> | undefined
-  if (providers) {
-    const minimax = providers.minimax as Record<string, unknown> | undefined
-    if (typeof minimax?.apiKey === 'string' && minimax.apiKey) return minimax.apiKey
+  const provider = config.provider as Record<string, unknown> | undefined
+  if (provider) {
+    const minimax = provider.minimax as Record<string, unknown> | undefined
+    const options = minimax?.options as Record<string, unknown> | undefined
+    if (typeof options?.apiKey === 'string' && options.apiKey) return options.apiKey
   }
   return null
 }
@@ -95,7 +96,7 @@ export async function configureMinimaxKey(apiKey: string): Promise<MinimaxConfig
   if (openCodeStatus.installed && openCodeStatus.path) {
     const home = process.env.HOME ?? '/root'
     const proc = Bun.spawn(
-      [openCodeStatus.path, 'config', 'set', 'providers.minimax.apiKey', trimmedKey],
+      [openCodeStatus.path, 'config', 'set', 'provider.minimax.options.apiKey', trimmedKey],
       { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, HOME: home } },
     )
     await proc.exited
@@ -118,7 +119,7 @@ export async function configureMinimaxKey(apiKey: string): Promise<MinimaxConfig
   }
 
   const config = readConfigJson(configPath)
-  deepSet(config, ['providers', 'minimax', 'apiKey'], trimmedKey)
+  deepSet(config, ['provider', 'minimax', 'options', 'apiKey'], trimmedKey)
 
   try {
     writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')

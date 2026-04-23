@@ -46,7 +46,7 @@ import { pathToName } from '../files/model'
 import { Assets } from '../../../assets'
 
 type Props = {
-  onSubmitted: () => void
+  onSubmitted: (existingTaskIds: ReadonlySet<string>) => void
 }
 
 const PROVIDER_LOGOS: Record<string, { light: ReturnType<typeof require>; dark: ReturnType<typeof require> }> = {
@@ -86,6 +86,8 @@ export default function NewTaskForm({ onSubmitted }: Props) {
 
   const selectedProvider = getProviderById(selectedProviderId as ModelProviderId, providerCatalog)
   const selectedModel = getModelById(selectedProviderId as ModelProviderId, selectedModelId, providerCatalog)
+
+  const [submitting, setSubmitting] = React.useState(false)
 
   // --- Model sheet state ---
   const [showModelSheet, setShowModelSheet] = React.useState(false)
@@ -245,11 +247,13 @@ export default function NewTaskForm({ onSubmitted }: Props) {
 
   function handleSubmit() {
     const trimmedPrompt = prompt.trim()
-    if (!trimmedPrompt) return
+    if (!trimmedPrompt || submitting) return
 
-    addRecentPrompt(trimmedPrompt)
+    setSubmitting(true)
+    const existingIds = new Set(useTaskStore.getState().tasks.keys())
 
     const agentType = providerToAgentType(selectedProviderId)
+    addRecentPrompt(trimmedPrompt, agentType)
     const contextSection = contextPaths.length > 0
       ? contextPaths.map((path) => `- ${path}`).join('\n')
       : '- No specific files pinned'
@@ -272,7 +276,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
     const cliModelId = getCliModelId(selectedProviderId as ModelProviderId, selectedModelId, providerCatalog)
     startTask(taskPrompt, agentType, rootPath || null, cliModelId, selectedTaskMode)
     submitDraft()
-    onSubmitted()
+    onSubmitted(existingIds)
   }
 
   return (
@@ -534,7 +538,8 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <BauhausButton
           onPress={handleSubmit}
-          disabled={prompt.trim().length === 0 || (providerAvailability != null && providerAvailability !== 'available')}
+          loading={submitting}
+          disabled={submitting || prompt.trim().length === 0 || (providerAvailability != null && providerAvailability !== 'available')}
         >
           {providerAvailability === 'not_installed'
             ? `${selectedProvider.label} not installed`

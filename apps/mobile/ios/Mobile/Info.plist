@@ -59,8 +59,14 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>MaterialDesignIcons.ttf</string>
-		<string>SairaStencil-ExtraBold.ttf</string>
-		<string>AfacadFlux-Variable.ttf</string>
+		<string>Geist-VariableFont_wght.ttf</string>
+		<string>Wagon-ExtraLight.ttf</string>
+		<string>GeistMono-VariableFont_wght.ttf</string>
+		<string>Britney-Variable.ttf</string>
+		<string>Stardom-Regular.ttf</string>
+		<string>Wagon-ExtraLightItalic.ttf</string>
+		<string>Wagon-Bold.ttf</string>
+		<string>Durer.ttf</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>

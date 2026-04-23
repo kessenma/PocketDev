@@ -24,6 +24,7 @@ import type {
 interface Props {
   onDismiss: () => void
   onComplete: () => void
+  entryMode?: 'full' | 'auth_repair'
 }
 
 const ALL_STEPS: CopilotWizardStep[] = ['detect', 'install', 'authenticate', 'trust', 'verify']
@@ -52,11 +53,28 @@ type WizardAction =
   | { type: 'SET_TRUST_SESSION'; trustSession: CopilotTrustSessionStatus | null }
   | { type: 'GO_BACK' }
 
-function getInitialState(): WizardState {
+function getInitialStateForMode(entryMode: 'full' | 'auth_repair' = 'full'): WizardState {
   const stepStatuses = {} as Record<CopilotWizardStep, CopilotWizardStepStatus>
   for (const step of ALL_STEPS) {
-    stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
+    stepStatuses[step] = 'pending'
   }
+
+  if (entryMode === 'auth_repair') {
+    stepStatuses.detect = 'skipped'
+    stepStatuses.install = 'skipped'
+    stepStatuses.authenticate = 'active'
+    return {
+      currentStep: 'authenticate',
+      stepStatuses,
+      copilotStatus: null,
+      authSession: null,
+      trustSession: null,
+      error: null,
+      allConfigured: false,
+    }
+  }
+
+  stepStatuses.detect = 'active'
   return {
     currentStep: 'detect',
     stepStatuses,
@@ -168,10 +186,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-export default function CopilotWizardSheet({ onDismiss, onComplete }: Props) {
+export default function CopilotWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
-  const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
+  const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
 
   const handleDone = useCallback(() => {
     fetchPrerequisites()
@@ -183,7 +201,8 @@ export default function CopilotWizardSheet({ onDismiss, onComplete }: Props) {
     onDismiss()
   }, [fetchPrerequisites, onDismiss])
 
-  const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
+  const minBackIndex = entryMode === 'auth_repair' ? 2 : 1
+  const canGoBack = ALL_STEPS.indexOf(state.currentStep) > minBackIndex && !state.allConfigured
 
   function renderStep() {
     if (state.allConfigured) {

@@ -1,7 +1,7 @@
 import React from 'react'
 import {
+  Image,
   NativeModules,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,8 +16,18 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { Task } from '@pocketdev/shared/types'
 import type { TaskStatus } from '@pocketdev/shared/schema'
 import { useTheme } from '../../contexts/ThemeContext'
-import { getRecentPrompts } from '../../services/storage'
 import { typeStyles } from '../../theme/typography'
+import { Assets } from '../../../assets'
+
+function getAgentLogo(agentType: string, isDark: boolean) {
+  switch (agentType) {
+    case 'claude': return isDark ? Assets.claudeWhite : Assets.claudeBlack
+    case 'codex': return isDark ? Assets.codexWhite : Assets.codexBlack
+    case 'copilot': return isDark ? Assets.githubCopilotWhite : Assets.githubCopilotBlack
+    case 'minimax': return isDark ? Assets.minimaxWhite : Assets.minimaxBlack
+    default: return null
+  }
+}
 
 function getDisplayPrompt(prompt: string): string {
   const marker = 'User request:\n'
@@ -29,7 +39,6 @@ type Props = {
   tasks: Task[]
   activeTaskId?: string | null
   onTaskPress: (task: Task, sourceTag?: number) => void
-  onRecentPromptPress?: (prompt: string) => void
   refreshing: boolean
   onRefresh: () => void
   tablet?: boolean
@@ -47,15 +56,13 @@ export default function TaskListPane({
   tasks,
   activeTaskId,
   onTaskPress,
-  onRecentPromptPress,
   refreshing,
   onRefresh,
   tablet = false,
 }: Props) {
-  const { colors } = useTheme()
+  const { colors, isDark } = useTheme()
   const { width: windowWidth } = useWindowDimensions()
   const cardWidth = windowWidth - 2 * spacing[4]
-  const recentPrompts = getRecentPrompts()
 
   if (tasks.length === 0 && !refreshing) {
     return (
@@ -85,14 +92,21 @@ export default function TaskListPane({
         const statusColor = STATUS_COLORS[item.status]
         const isActive = item.id === activeTaskId
 
+        const agentLogo = getAgentLogo(item.agent_type, isDark)
+
         const cardContent = (
           <View style={[styles.taskCard, { backgroundColor: isActive ? colors.panelAlt : colors.panel }]}>
             <Text style={[styles.taskPrompt, { color: colors.text }]} numberOfLines={2}>
               {getDisplayPrompt(item.prompt)}
             </Text>
-            <Text style={[styles.taskTime, { color: colors.textTertiary }]}>
-              {formatTime(item.created_at)}
-            </Text>
+            <View style={styles.taskMeta}>
+              {agentLogo ? (
+                <Image source={agentLogo} style={styles.agentLogo} />
+              ) : null}
+              <Text style={[styles.taskTime, { color: colors.textTertiary }]}>
+                {formatTime(item.created_at)}
+              </Text>
+            </View>
           </View>
         )
 
@@ -123,24 +137,6 @@ export default function TaskListPane({
       ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
       refreshing={refreshing}
       onRefresh={onRefresh}
-      ListHeaderComponent={
-        recentPrompts.length > 0 && onRecentPromptPress ? (
-          <View style={[styles.recentSection, { borderColor: colors.border }]}>
-            <Text style={[styles.recentTitle, { color: colors.textTertiary }]}>Recent prompts</Text>
-            {recentPrompts.slice(0, 5).map((item, i) => (
-              <Pressable
-                key={`recent-${i}`}
-                style={[styles.recentItem, { borderColor: colors.border }]}
-                onPress={() => onRecentPromptPress(item)}
-              >
-                <Text style={[styles.recentText, { color: colors.textSecondary }]} numberOfLines={2}>
-                  {item}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null
-      }
     />
   )
 }
@@ -175,24 +171,18 @@ const styles = StyleSheet.create({
   taskPrompt: {
     ...typeStyles.body,
   },
-  taskTime: {
-    ...typeStyles.meta,
-  },
-  recentSection: {
-    borderBottomWidth: 2,
-    paddingBottom: spacing[3],
-    marginBottom: spacing[1],
+  taskMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing[2],
   },
-  recentTitle: {
-    ...typeStyles.sectionTitle,
+  agentLogo: {
+    width: 14,
+    height: 14,
+    resizeMode: 'contain',
   },
-  recentItem: {
-    paddingVertical: spacing[2],
-    borderBottomWidth: 1,
-  },
-  recentText: {
-    ...typeStyles.bodySmall,
+  taskTime: {
+    ...typeStyles.meta,
   },
   emptyContainer: {
     flex: 1,

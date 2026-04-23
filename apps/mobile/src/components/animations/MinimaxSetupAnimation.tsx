@@ -1,154 +1,108 @@
 import React, { useEffect } from 'react'
-import { Dimensions, Image, StyleSheet } from 'react-native'
+import { Dimensions, Image, StyleSheet, View } from 'react-native'
+import Svg, { Path } from 'react-native-svg'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Assets } from '../../../assets'
-import { palette } from '@pocketdev/shared/theme'
 import { useExitFade } from './useExitFade'
 import Animated, {
   Easing,
-  interpolate,
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withRepeat,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated'
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
-
-const BAUHAUS = palette.bauhaus
-const MINIMAX_BG = palette.brand.minimax
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 // Timing
-const BAR_STAGGER = 72         // stagger delay per step outward from center
-const GROW_DURATION = 460
-const WAVE_CYCLE = 1300        // ms for one full traveling wave pass
-const HOLD_DURATION = WAVE_CYCLE * 2.1
-const ICON_FADE_IN = 320
-const COLLAPSE_DURATION = 520
+const WAVE_COUNT = 13
+const LINE_STAGGER = 60       // ms between each wave line entering
+const LINE_ENTRY_DURATION = 400
+const HOLD_DURATION = 1500
+const COLLAPSE_DURATION = 500
 const FINAL_FADE_DURATION = 200
 
-// 13 vertical bars that grow both up and down from the horizontal center line
-const BAR_COUNT = 13
-const CENTER_INDEX = Math.floor(BAR_COUNT / 2)  // = 6
-const BAR_WIDTH = SCREEN_WIDTH * 0.036
-const BAR_SPACING = SCREEN_WIDTH * 0.072
-const BAR_MAX_HEIGHT = SCREEN_HEIGHT * 0.34
-const BAR_MIN_HEIGHT = SCREEN_HEIGHT * 0.055
-const WAVE_AMP = 0.30  // ±30% height variation during traveling wave
+// Wave geometry
+const LINE_HEIGHT = 22        // px per wave lane
+const AMPLITUDE = 12          // px of vertical oscillation
+const FREQUENCY = 1.7         // wave cycles across screen width
+const PHASE_STEP = 0.52       // radians phase shift per line (creates terrain undulation)
+const STROKE_WIDTH = 1.8
 
-// Height profile approximating the logo's multi-peak waveform shape —
-// symmetric, with 3 tall peaks (index 2, 6, 10) and shorter shoulders
-const HEIGHT_PROFILE = [0.38, 0.70, 0.95, 0.70, 0.38, 0.62, 1.0, 0.62, 0.38, 0.70, 0.95, 0.70, 0.38]
+const ALL_WAVES_IN = LINE_STAGGER * (WAVE_COUNT - 1) + LINE_ENTRY_DURATION + 80
+const TOTAL_DURATION = ALL_WAVES_IN + HOLD_DURATION + COLLAPSE_DURATION + FINAL_FADE_DURATION
 
-// Colors — blue-dominant (Minimax's cool-toned brand) with Bauhaus accents
-const BAR_COLORS = [
-  BAUHAUS.black, BAUHAUS.blue,  BAUHAUS.black, BAUHAUS.red,
-  BAUHAUS.blue,  BAUHAUS.yellow, BAUHAUS.blue, BAUHAUS.yellow,
-  BAUHAUS.blue,  BAUHAUS.red,   BAUHAUS.black, BAUHAUS.blue, BAUHAUS.black,
-]
-
-type BarConfig = {
-  index: number
-  x: number
-  naturalHeight: number
-  color: string
-  entryDelay: number
+function makeWavePath(phase: number): string {
+  const steps = 100
+  const cy = LINE_HEIGHT / 2
+  let d = ''
+  for (let i = 0; i <= steps; i++) {
+    const x = (i / steps) * SCREEN_WIDTH
+    const y = cy + AMPLITUDE * Math.sin(2 * Math.PI * FREQUENCY * (i / steps) + phase)
+    d += i === 0 ? `M ${x.toFixed(1)},${y.toFixed(1)}` : ` L ${x.toFixed(1)},${y.toFixed(1)}`
+  }
+  return d
 }
 
-// Stagger entry from center outward so bars radiate from the icon position
-const BARS: BarConfig[] = Array.from({ length: BAR_COUNT }, (_, i) => ({
-  index: i,
-  x: (i - CENTER_INDEX) * BAR_SPACING,
-  naturalHeight: BAR_MIN_HEIGHT + HEIGHT_PROFILE[i] * (BAR_MAX_HEIGHT - BAR_MIN_HEIGHT),
-  color: BAR_COLORS[i],
-  entryDelay: Math.abs(i - CENTER_INDEX) * BAR_STAGGER,
-}))
+// Pre-compute paths at module level — never changes
+const WAVE_PATHS = Array.from({ length: WAVE_COUNT }, (_, i) => makeWavePath(i * PHASE_STEP))
 
-type Props = {
-  onComplete: () => void
-}
+type Props = { onComplete: () => void; onBeforeFade?: () => void }
 
-export default function MinimaxSetupAnimation({ onComplete }: Props) {
-  const { isDark } = useTheme()
+export default function MinimaxSetupAnimation({ onComplete, onBeforeFade }: Props) {
+  const { isDark, colors } = useTheme()
   const overlayOpacity = useSharedValue(0)
-  const { triggerExit } = useExitFade(overlayOpacity, onComplete)
+  const { triggerExit } = useExitFade(overlayOpacity, onComplete, onBeforeFade)
   const iconOpacity = useSharedValue(0)
-  const iconScale = useSharedValue(0.4)
-  const waveProgress = useSharedValue(0)
+  const iconScale = useSharedValue(0.5)
   const collapseProgress = useSharedValue(0)
-  const fadeProgress = useSharedValue(0)
 
   useEffect(() => {
     overlayOpacity.value = withTiming(1, { duration: 200, easing: Easing.out(Easing.cubic) })
 
-    // Outermost bar arrives at: CENTER_INDEX * BAR_STAGGER + GROW_DURATION
-    const allBarsIn = CENTER_INDEX * BAR_STAGGER + GROW_DURATION + 80
-
-    // Traveling wave starts once bars are in place
-    waveProgress.value = withDelay(
-      allBarsIn,
-      withRepeat(
-        withTiming(1, { duration: WAVE_CYCLE, easing: Easing.linear }),
-        -1,
-        false,
-      ),
-    )
-
-    // Icon fades in during the first wave pass
     iconOpacity.value = withDelay(
-      allBarsIn + WAVE_CYCLE * 0.35,
-      withTiming(1, { duration: ICON_FADE_IN, easing: Easing.out(Easing.cubic) }),
+      ALL_WAVES_IN * 0.45,
+      withTiming(1, { duration: 340, easing: Easing.out(Easing.cubic) }),
     )
     iconScale.value = withDelay(
-      allBarsIn + WAVE_CYCLE * 0.35,
-      withTiming(1, { duration: ICON_FADE_IN, easing: Easing.out(Easing.cubic) }),
+      ALL_WAVES_IN * 0.45,
+      withSpring(1, { damping: 14, stiffness: 100 }),
     )
 
     collapseProgress.value = withDelay(
-      allBarsIn + HOLD_DURATION,
+      ALL_WAVES_IN + HOLD_DURATION,
       withTiming(1, { duration: COLLAPSE_DURATION, easing: Easing.inOut(Easing.cubic) }),
     )
 
-    fadeProgress.value = withDelay(
-      allBarsIn + HOLD_DURATION + COLLAPSE_DURATION,
-      withTiming(1, { duration: FINAL_FADE_DURATION, easing: Easing.in(Easing.cubic) }),
-    )
-
-    const totalDuration = allBarsIn + HOLD_DURATION + COLLAPSE_DURATION + FINAL_FADE_DURATION
-    const timeout = setTimeout(() => {
-      triggerExit()
-    }, totalDuration + 40)
-
+    const timeout = setTimeout(triggerExit, TOTAL_DURATION + 40)
     return () => clearTimeout(timeout)
-  }, [overlayOpacity, iconOpacity, iconScale, waveProgress, collapseProgress, fadeProgress, triggerExit])
+  }, [overlayOpacity, iconOpacity, iconScale, collapseProgress, triggerExit])
 
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlayOpacity.value,
-  }))
-
+  const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.value }))
   const iconStyle = useAnimatedStyle(() => ({
-    opacity: iconOpacity.value * (1 - fadeProgress.value),
-    transform: [
-      { scale: interpolate(collapseProgress.value, [0, 1], [iconScale.value, 1.04]) },
-    ],
+    opacity: iconOpacity.value * (1 - collapseProgress.value),
+    transform: [{ scale: 1 + collapseProgress.value * 0.04 }],
   }))
 
-  const bgColor = isDark ? 'rgba(10, 10, 10, 0.96)' : MINIMAX_BG
+  const lineColor = isDark ? 'rgba(244,239,223,0.52)' : 'rgba(30,24,16,0.50)'
 
   return (
-    <Animated.View style={[styles.overlay, { backgroundColor: bgColor }, overlayStyle]}>
-      {BARS.map((bar) => (
-        <WaveformBar
-          key={bar.index}
-          config={bar}
-          isDark={isDark}
-          waveProgress={waveProgress}
-          collapseProgress={collapseProgress}
-          fadeProgress={fadeProgress}
-        />
-      ))}
+    <Animated.View style={[styles.overlay, { backgroundColor: colors.background }, overlayStyle]}>
+      <View style={styles.waveBlock} pointerEvents="none">
+        {WAVE_PATHS.map((path, i) => (
+          <WaveLine
+            key={i}
+            index={i}
+            path={path}
+            lineColor={lineColor}
+            collapseProgress={collapseProgress}
+          />
+        ))}
+      </View>
+
+      <View style={styles.gap} />
 
       <Animated.View style={[styles.iconContainer, iconStyle]}>
         <Image
@@ -161,73 +115,45 @@ export default function MinimaxSetupAnimation({ onComplete }: Props) {
   )
 }
 
-function WaveformBar({
-  config,
-  isDark,
-  waveProgress,
+function WaveLine({
+  index,
+  path,
+  lineColor,
   collapseProgress,
-  fadeProgress,
 }: {
-  config: BarConfig
-  isDark: boolean
-  waveProgress: SharedValue<number>
+  index: number
+  path: string
+  lineColor: string
   collapseProgress: SharedValue<number>
-  fadeProgress: SharedValue<number>
 }) {
-  const entryScale = useSharedValue(0)
   const opacity = useSharedValue(0)
+  const translateY = useSharedValue(-18)
 
   useEffect(() => {
+    const delay = index * LINE_STAGGER
     opacity.value = withDelay(
-      config.entryDelay,
-      withTiming(isDark ? 0.75 : 0.88, { duration: GROW_DURATION * 0.4, easing: Easing.out(Easing.cubic) }),
+      delay,
+      withTiming(1, { duration: LINE_ENTRY_DURATION, easing: Easing.out(Easing.cubic) }),
     )
-    entryScale.value = withDelay(
-      config.entryDelay,
-      withTiming(1, { duration: GROW_DURATION, easing: Easing.out(Easing.cubic) }),
+    translateY.value = withDelay(
+      delay,
+      withSpring(0, { damping: 22, stiffness: 140 }),
     )
-  }, [config, isDark, entryScale, opacity])
+  }, [index, opacity, translateY])
 
-  // Phase offset creates leftward → rightward traveling wave
-  // 2.5 wavelengths across the full bar span for visible wave motion
-  const phaseOffset = (config.index / (BAR_COUNT - 1)) * Math.PI * 2.5
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const wave = 1 + WAVE_AMP * Math.sin(waveProgress.value * Math.PI * 2 - phaseOffset)
-    const scaleY = entryScale.value * wave * (1 - collapseProgress.value)
-
-    // Converge X positions toward center as bars collapse inward
-    const translateX = interpolate(collapseProgress.value, [0, 1], [config.x, 0])
-
-    return {
-      opacity: opacity.value * (1 - fadeProgress.value),
-      transform: [
-        { translateX },
-        { scaleY },
-      ],
-    }
-  })
-
-  const barColor = isDark
-    ? config.color === BAUHAUS.black ? 'rgba(255,255,255,0.22)' : config.color
-    : config.color
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value * (1 - collapseProgress.value),
+    transform: [
+      { translateY: translateY.value - collapseProgress.value * 24 },
+    ],
+  }))
 
   return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        styles.bar,
-        {
-          width: BAR_WIDTH,
-          height: config.naturalHeight,
-          borderRadius: BAR_WIDTH / 2,
-          backgroundColor: barColor,
-          marginLeft: -BAR_WIDTH / 2,
-          marginTop: -config.naturalHeight / 2,
-        },
-        animatedStyle,
-      ]}
-    />
+    <Animated.View style={[{ height: LINE_HEIGHT }, animatedStyle]} pointerEvents="none">
+      <Svg width={SCREEN_WIDTH} height={LINE_HEIGHT}>
+        <Path d={path} stroke={lineColor} strokeWidth={STROKE_WIDTH} fill="none" strokeLinecap="round" />
+      </Svg>
+    </Animated.View>
   )
 }
 
@@ -240,18 +166,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  waveBlock: {
+    width: SCREEN_WIDTH,
+  },
+  gap: {
+    height: 48,
+  },
   iconContainer: {
     width: ICON_SIZE,
     height: ICON_SIZE,
-    zIndex: 10,
   },
   icon: {
     width: ICON_SIZE,
     height: ICON_SIZE,
-  },
-  bar: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
   },
 })

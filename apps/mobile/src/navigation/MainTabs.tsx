@@ -100,6 +100,7 @@ export default function MainTabs() {
         component={TasksScreen}
         options={{
           title: 'Tasks',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => renderTabIcon('Tasks', { color, size }),
         }}
       />

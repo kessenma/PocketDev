@@ -18,8 +18,10 @@ const EXIT_FADE_DURATION = 350
 export function useExitFade(
   overlayOpacity: SharedValue<number>,
   onComplete: () => void,
+  onBeforeFade?: () => void,
 ) {
   const triggerExit = useCallback(() => {
+    onBeforeFade?.()
     overlayOpacity.value = withTiming(
       0,
       { duration: EXIT_FADE_DURATION, easing: Easing.in(Easing.cubic) },

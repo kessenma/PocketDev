@@ -1,0 +1,25 @@
+/* pd-display — change src here to swap the heading/display font project-wide */
+@font-face {
+  font-family: 'pd-display';
+  src: url('./Stardom-Regular.woff2') format('woff2'),
+       url('./Stardom-Regular.woff') format('woff'),
+       url('./Stardom-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* pd-sans — change src here to swap the body font project-wide */
+@font-face {
+  font-family: 'pd-sans';
+  src: url('./Geist-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+/* pd-mono — change src here to swap the monospace font project-wide */
+@font-face {
+  font-family: 'pd-mono';
+  src: url('./GeistMono-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
