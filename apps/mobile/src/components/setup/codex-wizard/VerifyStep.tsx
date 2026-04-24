@@ -4,13 +4,12 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
-import { postVerifyCodexAuth } from '../../../services/api'
+import { postVerifyOpenCodeProvider } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { Check, RefreshCw, ChevronLeft } from 'lucide-react-native'
-import type { CodexSetupStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
-  | { type: 'STEP_COMPLETE'; step: 'verify'; codexStatus?: CodexSetupStatus | null }
+  | { type: 'STEP_COMPLETE'; step: 'verify' }
   | { type: 'STEP_FAILED'; step: 'verify'; error: string }
   | { type: 'GO_BACK' }
 
@@ -33,17 +32,16 @@ export default function VerifyStep({ dispatch }: Props) {
     setError(null)
 
     try {
-      const result = await postVerifyCodexAuth(server.ip, server.port)
+      const result = await postVerifyOpenCodeProvider(server.ip, server.port, 'openai')
       if (result.authenticated) {
-        setVersion(result.version)
+        setVersion(result.opencode_version)
         setState('success')
-        // Short delay so user sees the success state
         setTimeout(() => {
-          dispatch({ type: 'STEP_COMPLETE', step: 'verify', codexStatus: result })
+          dispatch({ type: 'STEP_COMPLETE', step: 'verify' })
         }, 800)
       } else {
         setState('failed')
-        setError(result.auth_output || 'Authentication not detected. Please try signing in again.')
+        setError('OpenAI authentication not detected in opencode. Please sign in again.')
       }
     } catch (err) {
       setState('failed')
@@ -87,10 +85,10 @@ export default function VerifyStep({ dispatch }: Props) {
 
         {/* Subtitle */}
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {state === 'success' ? `Codex CLI v${version ?? 'unknown'} is ready` :
-            state === 'loading' ? 'Checking your authentication status...' :
+          {state === 'success' ? `OpenAI is authenticated in opencode${version ? ` (v${version})` : ''}` :
+            state === 'loading' ? 'Checking OpenAI auth status in opencode...' :
             state === 'failed' ? 'Authentication could not be verified' :
-            'Confirm that Codex CLI is signed in to your account'}
+            'Confirm that OpenAI is authenticated in opencode'}
         </Text>
 
         {/* Error message */}

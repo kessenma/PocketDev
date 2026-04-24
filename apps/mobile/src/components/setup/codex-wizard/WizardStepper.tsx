@@ -7,8 +7,6 @@ import { Check, Minus, X } from 'lucide-react-native'
 import type { CodexWizardStep, CodexWizardStepStatus } from '@pocketdev/shared/types'
 
 const VISIBLE_STEPS: { key: CodexWizardStep; label: string }[] = [
-  { key: 'review', label: 'Review' },
-  { key: 'install', label: 'Install' },
   { key: 'authenticate', label: 'Sign In' },
   { key: 'verify', label: 'Verify' },
 ]

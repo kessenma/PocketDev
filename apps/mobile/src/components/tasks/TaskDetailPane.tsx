@@ -5,7 +5,7 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
-import { Bug, Check, Copy, FileText, GalleryVerticalEnd, Info, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal } from 'lucide-react-native'
+import { Bug, Check, Copy, FileText, GalleryVerticalEnd, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useSetupStore } from '../../stores/setup'
 import { useTaskStore } from '../../stores/tasks'
@@ -144,14 +144,6 @@ function DetailHeader({
         </View>
       )}
 
-      {task.agent_type === 'copilot' && (
-        <View style={[styles.copilotBanner, { backgroundColor: colors.panelAlt, borderColor: colors.border }]}>
-          <Info color={colors.textTertiary} size={16} strokeWidth={2.25} />
-          <Text style={[styles.copilotBannerText, { color: colors.textSecondary }]}>
-            Copilot runs as a TUI session in tmux. {task.model ? `Selected model: ${task.model}. ` : ''}Task completion is auto-detected when the agent returns to idle.
-          </Text>
-        </View>
-      )}
     </>
   )
 }

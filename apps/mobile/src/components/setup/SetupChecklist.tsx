@@ -15,6 +15,7 @@ import {
   getCopilotBlockedReason,
   getMinimaxBlockedReason,
   getLanguageTools,
+  getOpenCodeTool,
   getRequiredSetupTools,
   getServerSetupStatus,
   getSupportingTools,
@@ -92,6 +93,7 @@ export default function SetupChecklist({
   const showSkeletonState = !report && (loading || revalidating || !hydrated)
 
   const required = getRequiredSetupTools(report)
+  const opencodeTool = getOpenCodeTool(report)
   const aiAssistants = getAiAssistantTools(report)
   const languages = getLanguageTools(report)
   const supportingTools = getSupportingTools(report)
@@ -244,9 +246,49 @@ export default function SetupChecklist({
                 {renderTools(required)}
               </View>
 
+              {opencodeTool ? (
+                <>
+                  <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Runtime</Text>
+                  <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+                    opencode is required for Codex (OpenAI) and GitHub Copilot.
+                  </Text>
+                  <View style={[styles.section, showCachedLoadingState && styles.sectionMuted]}>
+                    <SetupCheckItem
+                      tool={opencodeTool}
+                      onInstall={onInstall}
+                      onAuthenticate={onAuthenticate}
+                      onGitWizard={onGitWizard}
+                      onClaudeWizard={onClaudeWizard}
+                      onCodexWizard={onCodexWizard}
+                      onBlockedCodexWizard={onBlockedCodexWizard}
+                      onCopilotWizard={onCopilotWizard}
+                      onBlockedCopilotWizard={onBlockedCopilotWizard}
+                      onOpenCodeWizard={onOpenCodeWizard}
+                      onPkgWizard={onPkgWizard}
+                      onPythonWizard={onPythonWizard}
+                      onRustWizard={onRustWizard}
+                      onGoWizard={onGoWizard}
+                      onTypeScriptWizard={onTypeScriptWizard}
+                      onDockerWizard={onDockerWizard}
+                      onMinimaxWizard={onMinimaxWizard}
+                      disabledReason={null}
+                      disabled={showCachedLoadingState}
+                      showLoadingState={showCachedLoadingState}
+                      onDisabledPress={() => {
+                        toast({
+                          title: 'Checking workspace status',
+                          description: 'Setup actions are locked until the server confirms the current tool status.',
+                          variant: 'info',
+                        })
+                      }}
+                    />
+                  </View>
+                </>
+              ) : null}
+
               <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Assistant</Text>
               <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-                Choose at least one: Claude, Codex, GitHub Copilot, or OpenCode.
+                Choose at least one: Claude, Codex (OpenAI), or GitHub Copilot.
               </Text>
               <View style={[styles.section, showCachedLoadingState && styles.sectionMuted]}>
                 {renderTools(aiAssistants)}

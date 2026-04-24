@@ -54,6 +54,12 @@ import type {
   CopilotTrustSessionStatus,
   OpenCodeSetupStatus,
   OpenCodeInstallResult,
+  OpenCodeProviderAuthStatus,
+  OpenAIOpenCodeAuthMethod,
+  OpenAIOpenCodeAuthStartResult,
+  OpenAIOpenCodeAuthSessionStatus,
+  CopilotOpenCodeAuthStartResult,
+  CopilotOpenCodeAuthSessionStatus,
   MinimaxSetupStatus,
   MinimaxConfigureRequest,
   MinimaxConfigureResult,
@@ -1020,6 +1026,100 @@ export async function postVerifyOpenCode(ip: string, port: number): Promise<Open
   })
   if (!response.ok) throw new Error(`Failed to verify OpenCode CLI (${response.status})`)
   return response.json() as Promise<OpenCodeSetupStatus>
+}
+
+// ─── OpenCode Provider Auth ────────────────────────────────────────
+
+export async function fetchOpenCodeProviderAuthStatus(
+  ip: string,
+  port: number,
+  provider: 'openai' | 'github-copilot',
+): Promise<OpenCodeProviderAuthStatus> {
+  const response = await fetch(apiUrl(ip, port, `/opencode-setup/provider-auth-status?provider=${encodeURIComponent(provider)}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch provider auth status (${response.status})`)
+  return response.json() as Promise<OpenCodeProviderAuthStatus>
+}
+
+export async function postStartOpenAIOpenCodeAuth(
+  ip: string,
+  port: number,
+  method: OpenAIOpenCodeAuthMethod,
+  apiKey?: string,
+): Promise<OpenAIOpenCodeAuthStartResult> {
+  const response = await fetch(apiUrl(ip, port, '/opencode-setup/openai-auth/start'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ method, ...(apiKey ? { api_key: apiKey } : {}) }),
+  })
+  if (!response.ok) throw new Error(`Failed to start OpenAI auth (${response.status})`)
+  return response.json() as Promise<OpenAIOpenCodeAuthStartResult>
+}
+
+export async function fetchOpenAIOpenCodeAuthStatus(
+  ip: string,
+  port: number,
+  sessionId: string,
+): Promise<OpenAIOpenCodeAuthSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, `/opencode-setup/openai-auth/status/${encodeURIComponent(sessionId)}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch OpenAI auth status (${response.status})`)
+  return response.json() as Promise<OpenAIOpenCodeAuthSessionStatus>
+}
+
+export async function postOpenAIOpenCodeAuthCallback(
+  ip: string,
+  port: number,
+  sessionId: string,
+  callbackUrl: string,
+): Promise<OpenAIOpenCodeAuthSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, `/opencode-setup/openai-auth/callback/${encodeURIComponent(sessionId)}`), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callback_url: callbackUrl }),
+  })
+  if (!response.ok) throw new Error(`Failed to submit OpenAI auth callback (${response.status})`)
+  return response.json() as Promise<OpenAIOpenCodeAuthSessionStatus>
+}
+
+export async function postStartCopilotOpenCodeAuth(
+  ip: string,
+  port: number,
+): Promise<CopilotOpenCodeAuthStartResult> {
+  const response = await fetch(apiUrl(ip, port, '/opencode-setup/copilot-auth/start'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to start Copilot auth (${response.status})`)
+  return response.json() as Promise<CopilotOpenCodeAuthStartResult>
+}
+
+export async function fetchCopilotOpenCodeAuthStatus(
+  ip: string,
+  port: number,
+  sessionId: string,
+): Promise<CopilotOpenCodeAuthSessionStatus> {
+  const response = await fetch(apiUrl(ip, port, `/opencode-setup/copilot-auth/status/${encodeURIComponent(sessionId)}`), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch Copilot auth status (${response.status})`)
+  return response.json() as Promise<CopilotOpenCodeAuthSessionStatus>
+}
+
+export async function postVerifyOpenCodeProvider(
+  ip: string,
+  port: number,
+  provider: 'openai' | 'github-copilot',
+): Promise<OpenCodeProviderAuthStatus> {
+  const response = await fetch(apiUrl(ip, port, '/opencode-setup/verify-provider'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider }),
+  })
+  if (!response.ok) throw new Error(`Failed to verify provider auth (${response.status})`)
+  return response.json() as Promise<OpenCodeProviderAuthStatus>
 }
 
 // ─── Minimax Provider Setup ────────────────────────────────────────

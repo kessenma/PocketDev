@@ -4,12 +4,11 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
-import { postVerifyCopilotSetup } from '../../../services/api'
+import { postVerifyOpenCodeProvider } from '../../../services/api'
 import { CheckCircle, RefreshCw, XCircle } from 'lucide-react-native'
-import type { CopilotSetupStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
-  | { type: 'STEP_COMPLETE'; step: 'verify'; copilotStatus?: CopilotSetupStatus | null }
+  | { type: 'STEP_COMPLETE'; step: 'verify' }
   | { type: 'STEP_FAILED'; step: 'verify'; error: string }
 
 interface Props {
@@ -22,7 +21,6 @@ export default function VerifyStep({ dispatch }: Props) {
   const { colors } = useTheme()
   const server = useConnectionStore((s) => s.server)
   const [state, setState] = useState<VerifyState>('idle')
-  const [status, setStatus] = useState<CopilotSetupStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   async function handleVerify() {
@@ -31,19 +29,16 @@ export default function VerifyStep({ dispatch }: Props) {
     setError(null)
 
     try {
-      const result = await postVerifyCopilotSetup(server.ip, server.port)
-      setStatus(result)
-
-      if (result.installed && result.tmux_installed && result.authenticated && result.trust_configured) {
+      const result = await postVerifyOpenCodeProvider(server.ip, server.port, 'github-copilot')
+      if (result.authenticated) {
         setState('success')
         setTimeout(() => {
-          dispatch({ type: 'STEP_COMPLETE', step: 'verify', copilotStatus: result })
+          dispatch({ type: 'STEP_COMPLETE', step: 'verify' })
         }, 800)
-        return
+      } else {
+        setState('failed')
+        setError('GitHub Copilot authentication not found in opencode. Please sign in again.')
       }
-
-      setState('failed')
-      setError('Copilot is still missing tmux, install, GitHub authentication, or workspace trust.')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Verification failed'
       setState('failed')
@@ -68,26 +63,17 @@ export default function VerifyStep({ dispatch }: Props) {
         )}
 
         <Text style={[styles.title, { color: colors.text }]}>
-          {state === 'success' ? 'Copilot is ready!' :
-            state === 'loading' ? 'Verifying...' :
+          {state === 'success' ? 'GitHub Copilot is ready!' :
+            state === 'loading' ? 'Verifying…' :
             state === 'failed' ? 'Verification failed' :
             'Verify Copilot'}
         </Text>
 
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {state === 'success'
-            ? 'tmux, Copilot install, GitHub authentication, and workspace trust all passed.'
-            : 'Confirm that tmux and GitHub Copilot CLI are installed, authenticated, and trusted for this workspace.'}
+            ? 'GitHub Copilot is authenticated in opencode and ready to use.'
+            : 'Confirm that GitHub Copilot is authenticated in opencode.'}
         </Text>
-
-        {status ? (
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <DetailRow label="tmux" ok={status.tmux_installed} value={status.tmux_path ?? 'Missing'} colors={colors} />
-            <DetailRow label="Install" ok={status.installed} value={status.version ? `v${status.version}` : 'Missing'} colors={colors} />
-            <DetailRow label="GitHub" ok={status.authenticated} value={status.github_username ? `@${status.github_username}` : 'Not connected'} colors={colors} />
-            <DetailRow label="Trust" ok={status.trust_configured} value={status.trust_target ?? 'Not trusted'} colors={colors} />
-          </View>
-        ) : null}
 
         {error ? (
           <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
@@ -112,47 +98,8 @@ export default function VerifyStep({ dispatch }: Props) {
   )
 }
 
-function DetailRow({
-  label,
-  ok,
-  value,
-  colors,
-}: {
-  label: string
-  ok: boolean
-  value: string
-  colors: ReturnType<typeof useTheme>['colors']
-}) {
-  return (
-    <View style={detailStyles.row}>
-      <Text style={[detailStyles.label, { color: colors.textSecondary }]}>{label}</Text>
-      <Text style={[detailStyles.value, { color: ok ? '#22c55e' : colors.error }]}>{value}</Text>
-    </View>
-  )
-}
-
-const detailStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: spacing[3],
-  },
-  label: {
-    ...typeStyles.bodySmall,
-  },
-  value: {
-    ...typeStyles.mono,
-    flex: 1,
-    textAlign: 'right',
-  },
-})
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    gap: spacing[4],
-  },
+  container: { flex: 1, gap: spacing[4] },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -168,25 +115,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing[2],
   },
-  title: {
-    ...typeStyles.screenTitle,
-    textAlign: 'center',
-  },
-  subtitle: {
-    ...typeStyles.bodySmall,
-    textAlign: 'center',
-  },
-  card: {
-    width: '100%',
-    borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    padding: spacing[4],
-    gap: spacing[2],
-  },
-  errorText: {
-    ...typeStyles.bodySmall,
-    textAlign: 'center',
-  },
+  title: { ...typeStyles.screenTitle, textAlign: 'center' },
+  subtitle: { ...typeStyles.bodySmall, textAlign: 'center' },
+  errorText: { ...typeStyles.bodySmall, textAlign: 'center' },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -195,7 +126,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[4],
     borderRadius: borderRadius.lg,
   },
-  buttonText: {
-    ...typeStyles.button,
-  },
+  buttonText: { ...typeStyles.button },
 })

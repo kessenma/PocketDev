@@ -220,8 +220,46 @@ export interface CodexAuthCallbackReplayResult {
   session_prompt?: string | null
 }
 
-export type CodexWizardStep = 'detect' | 'review' | 'install' | 'authenticate' | 'verify'
+export type CodexWizardStep = 'detect' | 'authenticate' | 'verify'
 export type CodexWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
+// ─── OpenAI provider auth via OpenCode ────────────────────────────
+
+export interface OpenCodeProviderAuthStatus {
+  opencode_installed: boolean
+  opencode_version: string | null
+  provider: 'openai' | 'github-copilot'
+  authenticated: boolean
+  auth_type: 'oauth' | 'api' | null
+}
+
+export type OpenAIOpenCodeAuthMethod = 'browser' | 'headless' | 'api_key'
+
+export type OpenAIOpenCodeAuthSessionState =
+  | 'starting'
+  | 'awaiting_browser'
+  | 'awaiting_device_code'
+  | 'pending'
+  | 'authenticated'
+  | 'failed'
+
+export interface OpenAIOpenCodeAuthSessionStatus {
+  session_id: string
+  method: OpenAIOpenCodeAuthMethod
+  state: OpenAIOpenCodeAuthSessionState
+  authenticated: boolean
+  auth_url: string | null
+  verification_url: string | null
+  user_code: string | null
+  output_excerpt: string | null
+  error: string | null
+}
+
+export interface OpenAIOpenCodeAuthStartResult extends OpenAIOpenCodeAuthSessionStatus {}
+
+export interface OpenAIOpenCodeAuthCallbackRequest {
+  callback_url: string
+}
 
 export interface BrowserSessionCreateRequest {
   target_url: string
@@ -279,8 +317,29 @@ export interface CopilotTrustSessionStatus {
 
 export interface CopilotTrustStartResult extends CopilotTrustSessionStatus {}
 
-export type CopilotWizardStep = 'detect' | 'install' | 'authenticate' | 'trust' | 'verify'
+export type CopilotWizardStep = 'detect' | 'authenticate' | 'verify'
 export type CopilotWizardStepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'failed'
+
+// ─── GitHub Copilot provider auth via OpenCode ─────────────────────
+
+export type CopilotOpenCodeAuthSessionState =
+  | 'starting'
+  | 'awaiting_device_code'
+  | 'pending'
+  | 'authenticated'
+  | 'failed'
+
+export interface CopilotOpenCodeAuthSessionStatus {
+  session_id: string
+  state: CopilotOpenCodeAuthSessionState
+  authenticated: boolean
+  verification_uri: string | null
+  user_code: string | null
+  output_excerpt: string | null
+  error: string | null
+}
+
+export interface CopilotOpenCodeAuthStartResult extends CopilotOpenCodeAuthSessionStatus {}
 
 // ─── OpenCode wizard types ─────────────────────────────────────────
 

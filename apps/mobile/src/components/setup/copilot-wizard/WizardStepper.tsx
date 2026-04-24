@@ -7,9 +7,7 @@ import { Check, Minus, X } from 'lucide-react-native'
 import type { CopilotWizardStep, CopilotWizardStepStatus } from '@pocketdev/shared/types'
 
 const VISIBLE_STEPS: { key: CopilotWizardStep; label: string }[] = [
-  { key: 'install', label: 'Install' },
   { key: 'authenticate', label: 'Sign In' },
-  { key: 'trust', label: 'Trust' },
   { key: 'verify', label: 'Verify' },
 ]
 

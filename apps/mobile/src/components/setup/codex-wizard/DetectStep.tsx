@@ -4,14 +4,13 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
-import { fetchCodexSetupStatus, fetchPrerequisites } from '../../../services/api'
+import { fetchOpenCodeProviderAuthStatus } from '../../../services/api'
 import CodexSetupAnimation from '../../animations/CodexSetupAnimation'
 import { RefreshCw } from 'lucide-react-native'
-import type { CodexSetupStatus } from '@pocketdev/shared/types'
-import { getCodexBlockedReason } from '../setup-tool-utils'
+import type { OpenCodeProviderAuthStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; codexStatus: CodexSetupStatus; npmReady: boolean }
+  | { type: 'DETECTION_COMPLETE'; providerStatus: OpenCodeProviderAuthStatus }
   | { type: 'STEP_FAILED'; step: 'detect'; error: string }
 
 interface Props {
@@ -22,39 +21,29 @@ export default function DetectStep({ dispatch }: Props) {
   const { colors } = useTheme()
   const server = useConnectionStore((s) => s.server)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [animationDone, setAnimationDone] = useState(false)
-  const [statusResult, setStatusResult] = useState<CodexSetupStatus | null>(null)
-  const [npmReady, setNpmReady] = useState(false)
+  const [statusResult, setStatusResult] = useState<OpenCodeProviderAuthStatus | null>(null)
 
   useEffect(() => {
     detect()
   }, [])
 
-  // Once both animation and API call are done, dispatch
   useEffect(() => {
     if (animationDone && statusResult) {
-      dispatch({ type: 'DETECTION_COMPLETE', codexStatus: statusResult, npmReady })
+      dispatch({ type: 'DETECTION_COMPLETE', providerStatus: statusResult })
     }
-  }, [animationDone, statusResult, npmReady])
+  }, [animationDone, statusResult])
 
   async function detect() {
     if (!server) return
-    setLoading(true)
     setError(null)
     try {
-      const [status, prerequisites] = await Promise.all([
-        fetchCodexSetupStatus(server.ip, server.port),
-        fetchPrerequisites(server.ip, server.port),
-      ])
+      const status = await fetchOpenCodeProviderAuthStatus(server.ip, server.port, 'openai')
       setStatusResult(status)
-      setNpmReady(!getCodexBlockedReason(prerequisites))
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to check Codex CLI status'
+      const message = err instanceof Error ? err.message : 'Failed to check OpenAI provider status'
       setError(message)
       dispatch({ type: 'STEP_FAILED', step: 'detect', error: message })
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -82,9 +71,7 @@ export default function DetectStep({ dispatch }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -92,10 +79,7 @@ const styles = StyleSheet.create({
     gap: spacing[4],
     paddingHorizontal: spacing[6],
   },
-  errorText: {
-    ...typeStyles.bodySmall,
-    textAlign: 'center',
-  },
+  errorText: { ...typeStyles.bodySmall, textAlign: 'center' },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -105,7 +89,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[2],
   },
-  retryText: {
-    ...typeStyles.bodySmall,
-  },
+  retryText: { ...typeStyles.bodySmall },
 })

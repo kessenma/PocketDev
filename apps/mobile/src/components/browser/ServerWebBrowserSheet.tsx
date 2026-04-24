@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, LayoutChangeEvent, Linking, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import WebView, { type WebViewNavigation, type WebViewProps } from 'react-native-webview'
 import { X, ChevronLeft, ChevronRight, RotateCw, ExternalLink, AlertCircle } from 'lucide-react-native'
@@ -29,6 +29,7 @@ export default function ServerWebBrowserSheet({
   onLoadFailure,
 }: Props) {
   const { colors } = useTheme()
+  const { height: windowHeight } = useWindowDimensions()
   const sheetRef = useRef<TrueSheet>(null)
   const webViewRef = useRef<WebView>(null)
   const [currentUrl, setCurrentUrl] = useState(initialUrl)
@@ -36,6 +37,15 @@ export default function ServerWebBrowserSheet({
   const [canGoForward, setCanGoForward] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [headerHeight, setHeaderHeight] = useState(0)
+
+  const bodyHeight = headerHeight > 0 ? windowHeight - headerHeight : 0
+
+  function handleHeaderLayout(e: LayoutChangeEvent) {
+    const h = e.nativeEvent.layout.height
+    console.log('[ServerWebBrowserSheet] header layout height:', h, 'window:', windowHeight, 'computed body:', windowHeight - h)
+    setHeaderHeight(h)
+  }
 
   const source = useMemo<WebViewProps['source']>(() => ({ uri: initialUrl }), [initialUrl])
 
@@ -71,7 +81,7 @@ export default function ServerWebBrowserSheet({
       cornerRadius={24}
       onDidDismiss={onDismiss}
     >
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]} onLayout={handleHeaderLayout}>
         <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} style={styles.iconButton} activeOpacity={0.7}>
           <X color={colors.text} size={20} strokeWidth={2.25} />
         </TouchableOpacity>
@@ -105,22 +115,28 @@ export default function ServerWebBrowserSheet({
         </View>
       </View>
 
-      <View style={styles.body}>
+      <View style={[styles.body, bodyHeight > 0 ? { height: bodyHeight } : undefined]}>
         <WebView
           ref={webViewRef}
           source={source}
           onNavigationStateChange={handleNavigationStateChange}
           onShouldStartLoadWithRequest={handleShouldStart}
           onLoadStart={() => {
+            console.log('[ServerWebBrowserSheet] onLoadStart url:', initialUrl)
             setLoading(true)
             setLoadError(null)
           }}
           onLoad={() => {
+            console.log('[ServerWebBrowserSheet] onLoad success')
             setLoading(false)
             onLoadSuccess?.()
           }}
-          onLoadEnd={() => setLoading(false)}
+          onLoadEnd={() => {
+            console.log('[ServerWebBrowserSheet] onLoadEnd')
+            setLoading(false)
+          }}
           onError={(event) => {
+            console.log('[ServerWebBrowserSheet] onError:', event.nativeEvent.description)
             setLoading(false)
             const message = event.nativeEvent.description || 'Failed to load page.'
             setLoadError(message)
@@ -200,7 +216,7 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   body: {
-    flex: 1,
+    overflow: 'hidden',
   },
   webview: {
     flex: 1,

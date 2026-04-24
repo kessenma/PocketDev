@@ -112,11 +112,11 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const handleCodexWizard = useCallback(() => {
     if (codexBlockedReason) {
       Alert.alert(
-        'Enable package tools first',
+        'Install opencode first',
         codexBlockedReason,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Package Tools', onPress: () => setShowPkgWizard(true) },
+          { text: 'Open opencode Setup', onPress: () => setShowOpenCodeWizard(true) },
         ],
       )
       return
@@ -133,11 +133,11 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const handleCopilotWizard = useCallback(() => {
     if (copilotBlockedReason) {
       Alert.alert(
-        'Enable GitHub tools first',
+        'Install opencode first',
         copilotBlockedReason,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Git Setup', onPress: () => setShowGitWizard(true) },
+          { text: 'Open opencode Setup', onPress: () => setShowOpenCodeWizard(true) },
         ],
       )
       return
@@ -168,22 +168,22 @@ export default function ServerSetupScreen({ navigation }: Props) {
 
   const handleBlockedCodexWizard = useCallback(() => {
     Alert.alert(
-      'Enable package tools first',
-      codexBlockedReason ?? 'Enable package tools first so Codex can use npm.',
+      'Install opencode first',
+      codexBlockedReason ?? 'Install opencode first — Codex runs through opencode as its AI runtime.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Package Tools', onPress: () => setShowPkgWizard(true) },
+        { text: 'Open opencode Setup', onPress: () => setShowOpenCodeWizard(true) },
       ],
     )
   }, [codexBlockedReason])
 
   const handleBlockedCopilotWizard = useCallback(() => {
     Alert.alert(
-      'Enable GitHub tools first',
-      copilotBlockedReason ?? 'Complete Git and GitHub CLI setup before enabling Copilot.',
+      'Install opencode first',
+      copilotBlockedReason ?? 'Install opencode first — GitHub Copilot runs through opencode as its AI runtime.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Open Git Setup', onPress: () => setShowGitWizard(true) },
+        { text: 'Open opencode Setup', onPress: () => setShowOpenCodeWizard(true) },
       ],
     )
   }, [copilotBlockedReason])

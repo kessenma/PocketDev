@@ -12,7 +12,8 @@
     "check-types": "tsc --noEmit",
     "deploy:ios:beta": "node scripts/deploy-testflight.js beta",
     "deploy:ios:release": "node scripts/deploy-testflight.js release",
-    "grant-clipboard": "node scripts/grant-clipboard-permission.js"
+    "grant-clipboard": "node scripts/grant-clipboard-permission.js",
+    "sync-clipboard": "pbpaste | xcrun simctl pbcopy booted"
   },
   "dependencies": {
     "@lodev09/react-native-true-sheet": "^3.10.0",

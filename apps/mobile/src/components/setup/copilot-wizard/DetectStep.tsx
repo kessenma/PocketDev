@@ -4,13 +4,13 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import { spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useConnectionStore } from '../../../stores/connection'
-import { fetchCopilotSetupStatus } from '../../../services/api'
+import { fetchOpenCodeProviderAuthStatus } from '../../../services/api'
 import CopilotSetupAnimation from '../../animations/CopilotSetupAnimation'
 import { RefreshCw } from 'lucide-react-native'
-import type { CopilotSetupStatus } from '@pocketdev/shared/types'
+import type { OpenCodeProviderAuthStatus } from '@pocketdev/shared/types'
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; copilotStatus: CopilotSetupStatus }
+  | { type: 'DETECTION_COMPLETE'; providerStatus: OpenCodeProviderAuthStatus }
   | { type: 'STEP_FAILED'; step: 'detect'; error: string }
 
 interface Props {
@@ -22,7 +22,7 @@ export default function DetectStep({ dispatch }: Props) {
   const server = useConnectionStore((s) => s.server)
   const [error, setError] = useState<string | null>(null)
   const [animationDone, setAnimationDone] = useState(false)
-  const [statusResult, setStatusResult] = useState<CopilotSetupStatus | null>(null)
+  const [statusResult, setStatusResult] = useState<OpenCodeProviderAuthStatus | null>(null)
 
   useEffect(() => {
     void detect()
@@ -30,7 +30,7 @@ export default function DetectStep({ dispatch }: Props) {
 
   useEffect(() => {
     if (animationDone && statusResult) {
-      dispatch({ type: 'DETECTION_COMPLETE', copilotStatus: statusResult })
+      dispatch({ type: 'DETECTION_COMPLETE', providerStatus: statusResult })
     }
   }, [animationDone, dispatch, statusResult])
 
@@ -38,7 +38,7 @@ export default function DetectStep({ dispatch }: Props) {
     if (!server) return
     setError(null)
     try {
-      const status = await fetchCopilotSetupStatus(server.ip, server.port)
+      const status = await fetchOpenCodeProviderAuthStatus(server.ip, server.port, 'github-copilot')
       setStatusResult(status)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to check GitHub Copilot status.'
@@ -53,7 +53,7 @@ export default function DetectStep({ dispatch }: Props) {
         <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
         <TouchableOpacity
           style={[styles.retryButton, { borderColor: colors.border }]}
-          onPress={() => { void detect() }}
+          onPress={() => { setError(null); void detect() }}
           activeOpacity={0.7}
         >
           <RefreshCw color={colors.text} size={16} strokeWidth={2.25} />
@@ -71,9 +71,7 @@ export default function DetectStep({ dispatch }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -81,10 +79,7 @@ const styles = StyleSheet.create({
     gap: spacing[4],
     paddingHorizontal: spacing[6],
   },
-  errorText: {
-    ...typeStyles.bodySmall,
-    textAlign: 'center',
-  },
+  errorText: { ...typeStyles.bodySmall, textAlign: 'center' },
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -94,7 +89,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[2],
   },
-  retryText: {
-    ...typeStyles.button,
-  },
+  retryText: { ...typeStyles.button },
 })

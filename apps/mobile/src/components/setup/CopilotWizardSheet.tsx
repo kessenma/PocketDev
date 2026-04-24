@@ -9,16 +9,13 @@ import { ChevronLeft, X, Check } from 'lucide-react-native'
 import SetupWizardScreen from './SetupWizardScreen'
 import WizardStepper from './copilot-wizard/WizardStepper'
 import DetectStep from './copilot-wizard/DetectStep'
-import InstallStep from './copilot-wizard/InstallStep'
 import AuthenticateStep from './copilot-wizard/AuthenticateStep'
-import TrustStep from './copilot-wizard/TrustStep'
 import VerifyStep from './copilot-wizard/VerifyStep'
 import type {
-  CopilotSetupStatus,
-  CopilotTrustSessionStatus,
+  OpenCodeProviderAuthStatus,
+  CopilotOpenCodeAuthSessionStatus,
   CopilotWizardStep,
   CopilotWizardStepStatus,
-  GitHubCliAuthSessionStatus,
 } from '@pocketdev/shared/types'
 
 interface Props {
@@ -27,30 +24,22 @@ interface Props {
   entryMode?: 'full' | 'auth_repair'
 }
 
-const ALL_STEPS: CopilotWizardStep[] = ['detect', 'install', 'authenticate', 'trust', 'verify']
+const ALL_STEPS: CopilotWizardStep[] = ['detect', 'authenticate', 'verify']
 
 interface WizardState {
   currentStep: CopilotWizardStep
   stepStatuses: Record<CopilotWizardStep, CopilotWizardStepStatus>
-  copilotStatus: CopilotSetupStatus | null
-  authSession: GitHubCliAuthSessionStatus | null
-  trustSession: CopilotTrustSessionStatus | null
+  providerStatus: OpenCodeProviderAuthStatus | null
+  authSession: CopilotOpenCodeAuthSessionStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; copilotStatus: CopilotSetupStatus }
-  | {
-    type: 'STEP_COMPLETE'
-    step: CopilotWizardStep
-    copilotStatus?: CopilotSetupStatus | null
-    authSession?: GitHubCliAuthSessionStatus | null
-    trustSession?: CopilotTrustSessionStatus | null
-  }
+  | { type: 'DETECTION_COMPLETE'; providerStatus: OpenCodeProviderAuthStatus }
+  | { type: 'STEP_COMPLETE'; step: CopilotWizardStep }
   | { type: 'STEP_FAILED'; step: CopilotWizardStep; error: string }
-  | { type: 'SET_AUTH_SESSION'; authSession: GitHubCliAuthSessionStatus | null }
-  | { type: 'SET_TRUST_SESSION'; trustSession: CopilotTrustSessionStatus | null }
+  | { type: 'SET_AUTH_SESSION'; authSession: CopilotOpenCodeAuthSessionStatus | null }
   | { type: 'GO_BACK' }
 
 function getInitialStateForMode(entryMode: 'full' | 'auth_repair' = 'full'): WizardState {
@@ -61,14 +50,13 @@ function getInitialStateForMode(entryMode: 'full' | 'auth_repair' = 'full'): Wiz
 
   if (entryMode === 'auth_repair') {
     stepStatuses.detect = 'skipped'
-    stepStatuses.install = 'skipped'
     stepStatuses.authenticate = 'active'
+    stepStatuses.verify = 'pending'
     return {
       currentStep: 'authenticate',
       stepStatuses,
-      copilotStatus: null,
+      providerStatus: null,
       authSession: null,
-      trustSession: null,
       error: null,
       allConfigured: false,
     }
@@ -78,22 +66,21 @@ function getInitialStateForMode(entryMode: 'full' | 'auth_repair' = 'full'): Wiz
   return {
     currentStep: 'detect',
     stepStatuses,
-    copilotStatus: null,
+    providerStatus: null,
     authSession: null,
-    trustSession: null,
     error: null,
     allConfigured: false,
   }
 }
 
-function findNextActiveStep(statuses: Record<CopilotWizardStep, CopilotWizardStepStatus>, afterIndex: number): CopilotWizardStep | null {
+function findNextPendingStep(statuses: Record<CopilotWizardStep, CopilotWizardStepStatus>, afterIndex: number): CopilotWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<CopilotWizardStep, CopilotWizardStepStatus>, beforeIndex: number): CopilotWizardStep | null {
+function findPrevStep(statuses: Record<CopilotWizardStep, CopilotWizardStepStatus>, beforeIndex: number): CopilotWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) {
     const status = statuses[ALL_STEPS[i]]
     if (status === 'completed' || status === 'active') return ALL_STEPS[i]
@@ -104,36 +91,30 @@ function findPrevActiveStep(statuses: Record<CopilotWizardStep, CopilotWizardSte
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const copilotStatus = action.copilotStatus
+      const providerStatus = action.providerStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses.detect = 'completed'
 
-      if (copilotStatus.installed && copilotStatus.tmux_installed) newStatuses.install = 'skipped'
-      if (copilotStatus.authenticated) newStatuses.authenticate = 'skipped'
-      if (copilotStatus.trust_configured) newStatuses.trust = 'skipped'
-      if (copilotStatus.installed && copilotStatus.tmux_installed && copilotStatus.authenticated && copilotStatus.trust_configured) {
+      if (providerStatus.authenticated) {
+        newStatuses.authenticate = 'skipped'
         newStatuses.verify = 'skipped'
-      }
-
-      const allSkipped = ALL_STEPS.slice(1).every((step) => newStatuses[step] === 'skipped')
-      if (allSkipped) {
         return {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          copilotStatus,
+          providerStatus,
+          authSession: null,
           allConfigured: true,
         }
       }
 
-      const firstPending = ALL_STEPS.find((step) => newStatuses[step] === 'pending')
-      if (firstPending) newStatuses[firstPending] = 'active'
-
+      newStatuses.authenticate = 'active'
       return {
         ...state,
-        currentStep: firstPending ?? 'detect',
+        currentStep: 'authenticate',
         stepStatuses: newStatuses,
-        copilotStatus,
+        providerStatus,
+        authSession: null,
       }
     }
 
@@ -142,16 +123,13 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       newStatuses[action.step] = 'completed'
 
       const currentIndex = ALL_STEPS.indexOf(action.step)
-      const next = findNextActiveStep(newStatuses, currentIndex)
+      const next = findNextPendingStep(newStatuses, currentIndex)
       if (next) newStatuses[next] = 'active'
 
       return {
         ...state,
         currentStep: next ?? action.step,
         stepStatuses: newStatuses,
-        copilotStatus: action.copilotStatus ?? state.copilotStatus,
-        authSession: action.authSession ?? state.authSession,
-        trustSession: action.trustSession ?? state.trustSession,
         error: null,
         allConfigured: !next,
       }
@@ -166,12 +144,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
     case 'SET_AUTH_SESSION':
       return { ...state, authSession: action.authSession }
 
-    case 'SET_TRUST_SESSION':
-      return { ...state, trustSession: action.trustSession }
-
     case 'GO_BACK': {
       const currentIndex = ALL_STEPS.indexOf(state.currentStep)
-      const previous = findPrevActiveStep(state.stepStatuses, currentIndex)
+      const previous = findPrevStep(state.stepStatuses, currentIndex)
       if (!previous) return state
 
       const newStatuses = { ...state.stepStatuses }
@@ -218,13 +193,8 @@ export default function CopilotWizardSheet({ onDismiss, onComplete, entryMode = 
           />
           <Text style={[styles.completedTitle, { color: colors.text }]}>GitHub Copilot is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your paired workspace can now launch Copilot with tmux, GitHub auth, and trusted folder access.
+            Your GitHub Copilot account is authenticated in opencode.
           </Text>
-          {state.copilotStatus?.version ? (
-            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              v{state.copilotStatus.version}
-            </Text>
-          ) : null}
         </View>
       )
     }
@@ -232,12 +202,8 @@ export default function CopilotWizardSheet({ onDismiss, onComplete, entryMode = 
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
-      case 'install':
-        return <InstallStep dispatch={dispatch} />
       case 'authenticate':
         return <AuthenticateStep dispatch={dispatch} authSession={state.authSession} />
-      case 'trust':
-        return <TrustStep dispatch={dispatch} trustSession={state.trustSession} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
@@ -247,37 +213,37 @@ export default function CopilotWizardSheet({ onDismiss, onComplete, entryMode = 
 
   return (
     <SetupWizardScreen backgroundColor={colors.background} onClose={handleClose}>
-        <View style={styles.header}>
-          {canGoBack ? (
-            <TouchableOpacity onPress={() => dispatch({ type: 'GO_BACK' })} style={styles.headerButton}>
-              <ChevronLeft color={colors.text} size={22} strokeWidth={2.25} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.headerButton} />
-          )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>GitHub Copilot</Text>
-          <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
-            <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
+      <View style={styles.header}>
+        {canGoBack ? (
+          <TouchableOpacity onPress={() => dispatch({ type: 'GO_BACK' })} style={styles.headerButton}>
+            <ChevronLeft color={colors.text} size={22} strokeWidth={2.25} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerButton} />
+        )}
+        <Text style={[styles.headerTitle, { color: colors.text }]}>GitHub Copilot via opencode</Text>
+        <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
+          <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
+        </TouchableOpacity>
+      </View>
+
+      {state.currentStep !== 'detect' && !state.allConfigured ? (
+        <WizardStepper currentStep={state.currentStep} stepStatuses={state.stepStatuses} />
+      ) : null}
+
+      <View style={styles.content}>{renderStep()}</View>
+
+      {state.allConfigured ? (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.doneButton, { backgroundColor: colors.primary }]}
+            onPress={handleDone}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
           </TouchableOpacity>
         </View>
-
-        {state.currentStep !== 'detect' && !state.allConfigured ? (
-          <WizardStepper currentStep={state.currentStep} stepStatuses={state.stepStatuses} />
-        ) : null}
-
-        <View style={styles.content}>{renderStep()}</View>
-
-        {state.allConfigured ? (
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.doneButton, { backgroundColor: colors.primary }]}
-              onPress={handleDone}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
+      ) : null}
     </SetupWizardScreen>
   )
 }
@@ -296,9 +262,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    ...typeStyles.heading,
-  },
+  headerTitle: { ...typeStyles.heading },
   content: {
     flex: 1,
     paddingHorizontal: spacing[4],
@@ -313,9 +277,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[4],
     alignItems: 'center',
   },
-  doneText: {
-    ...typeStyles.button,
-  },
+  doneText: { ...typeStyles.button },
   completedContainer: {
     flex: 1,
     alignItems: 'center',
@@ -330,19 +292,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  completedLogo: {
-    width: 44,
-    height: 44,
-  },
-  completedTitle: {
-    ...typeStyles.heading,
-    textAlign: 'center',
-  },
-  completedSubtitle: {
-    ...typeStyles.body,
-    textAlign: 'center',
-  },
-  completedDetail: {
-    ...typeStyles.bodySmall,
-  },
+  completedLogo: { width: 44, height: 44 },
+  completedTitle: { ...typeStyles.heading, textAlign: 'center' },
+  completedSubtitle: { ...typeStyles.body, textAlign: 'center' },
 })

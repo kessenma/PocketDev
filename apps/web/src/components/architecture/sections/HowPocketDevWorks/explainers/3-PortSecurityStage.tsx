@@ -113,8 +113,8 @@ export function PortSecurityStage({
 
   // Last shape locks at p=0.66
   const allLockedP   = mapP(p, 0.66, 0.69)  // glow flash on unlock
-  const doorOpenP    = mapP(p, 0.68, 0.74)  // door panels slide apart
-  const consoleRevP  = mapP(p, 0.69, 0.75)  // laptop console fades in behind door
+  const doorOpenP    = mapP(p, 0.68, 0.82)  // door swings open
+  const consoleRevP  = mapP(p, 0.70, 0.80)  // laptop console fades in behind door
 
   // Big blue circle: grows from phone screen token, then moves right for overlay handoff
   const circleGrowP   = mapP(p, 0.00, 0.18)
@@ -141,9 +141,29 @@ export function PortSecurityStage({
   const subY  = vpSize.h * (isDesktopLayout ? 0.82 : 0.78)
   const subX  = isDesktopLayout ? vpSize.w * 0.58 : vpSize.w * 0.50
 
-  // Door panel slide amount when opening
-  const doorSlide = easeInOut(doorOpenP) * (DOOR_W / 2 + 35)
-  const doorOpacity = doorFadeP * (1 - easeOutQuad(doorOpenP))
+  // Single hinged door — hinge on right, free edge swings toward viewer
+  const HINGE_X     = DOOR_W / 2
+  const openAngle   = easeInOut(doorOpenP) * (Math.PI * 0.52)   // ~94° full open
+  const cosA        = Math.cos(openAngle)
+  const sinA        = Math.sin(openAngle)
+  const freeX       = HINGE_X - DOOR_W * cosA                   // free edge x
+  const yConv       = sinA * 10                                  // perspective height convergence
+  const doorOpacity = doorFadeP * (1 - easeOutQuad(mapP(doorOpenP, 0.72, 1.0)))
+  // Pre-compute polygon point strings
+  const doorFacePoints = [
+    `${freeX.toFixed(2)},${(-DOOR_H / 2 + yConv).toFixed(2)}`,
+    `${HINGE_X},${-DOOR_H / 2}`,
+    `${HINGE_X},${DOOR_H / 2}`,
+    `${freeX.toFixed(2)},${(DOOR_H / 2 - yConv).toFixed(2)}`,
+  ].join(' ')
+  const edgeW          = sinA * 6
+  const edgeX2         = freeX - (cosA >= 0 ? 1 : -1) * edgeW
+  const doorEdgePoints = [
+    `${edgeX2.toFixed(2)},${(-DOOR_H / 2 + yConv + 2).toFixed(2)}`,
+    `${freeX.toFixed(2)},${(-DOOR_H / 2 + yConv).toFixed(2)}`,
+    `${freeX.toFixed(2)},${(DOOR_H / 2 - yConv).toFixed(2)}`,
+    `${edgeX2.toFixed(2)},${(DOOR_H / 2 - yConv - 2).toFixed(2)}`,
+  ].join(' ')
 
   return (
     <svg
@@ -236,51 +256,41 @@ export function PortSecurityStage({
           </g>
         )}
 
-        {/* ── Vault door — left panel (slides left on open) ──────────────── */}
+        {/* ── Door frame at hinge ──────────────────────────────────────────── */}
         {doorFadeP > 0 && (
-          <g transform={`translate(${-doorSlide} 0)`} opacity={doorOpacity}>
-            <rect x={-DOOR_W / 2} y={-DOOR_H / 2} width={DOOR_W / 2} height={DOOR_H}
-              fill={palette.bauhaus.black} />
-            {/* Frame edge */}
-            <rect x={-DOOR_W / 2} y={-DOOR_H / 2} width={DOOR_W / 2} height={DOOR_H}
-              fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
-            {/* Horizontal accent lines */}
-            {[-50, 0, 50].map((dy) => (
-              <line key={dy} x1={-DOOR_W / 2 + 6} y1={dy} x2={-2} y2={dy}
-                stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+          <line
+            x1={HINGE_X} y1={-DOOR_H / 2 - 20}
+            x2={HINGE_X} y2={ DOOR_H / 2 + 20}
+            stroke="rgba(255,255,255,0.14)" strokeWidth="4"
+            opacity={doorFadeP}
+          />
+        )}
+
+        {/* ── Door — single panel, right-hinged, swings toward viewer ─────── */}
+        {doorFadeP > 0 && (
+          <g opacity={doorOpacity}>
+            {sinA > 0.04 && (
+              <polygon points={doorEdgePoints} fill="rgba(255,255,255,0.07)" />
+            )}
+            <polygon points={doorFacePoints} fill={palette.bauhaus.black} />
+            <polygon points={doorFacePoints} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
+            {(HINGE_X - freeX) > 12 && [-50, 0, 50].map((dy) => (
+              <line key={dy}
+                x1={freeX + 6} y1={dy} x2={HINGE_X - 6} y2={dy}
+                stroke="rgba(255,255,255,0.06)" strokeWidth="0.8"
+              />
             ))}
-            {/* Hinge marks */}
             {[0.25, 0.75].map((frac, i) => (
-              <circle key={i} cx={-DOOR_W / 2 + 5} cy={-DOOR_H / 2 + DOOR_H * frac} r={3.5}
-                fill="rgba(255,255,255,0.12)" />
+              <circle key={i}
+                cx={HINGE_X} cy={-DOOR_H / 2 + DOOR_H * frac} r={3.5}
+                fill="rgba(255,255,255,0.20)"
+              />
             ))}
+            <circle cx={mix(freeX, HINGE_X, 0.14)} cy={4} r={4.5} fill="rgba(255,255,255,0.22)" />
           </g>
         )}
 
-        {/* ── Vault door — right panel (slides right on open) ─────────────── */}
-        {doorFadeP > 0 && (
-          <g transform={`translate(${doorSlide} 0)`} opacity={doorOpacity}>
-            <rect x={0} y={-DOOR_H / 2} width={DOOR_W / 2} height={DOOR_H}
-              fill={palette.bauhaus.black} />
-            <rect x={0} y={-DOOR_H / 2} width={DOOR_W / 2} height={DOOR_H}
-              fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
-            {[-50, 0, 50].map((dy) => (
-              <line key={dy} x1={2} y1={dy} x2={DOOR_W / 2 - 6} y2={dy}
-                stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
-            ))}
-            {[0.25, 0.75].map((frac, i) => (
-              <circle key={i} cx={DOOR_W / 2 - 5} cy={-DOOR_H / 2 + DOOR_H * frac} r={3.5}
-                fill="rgba(255,255,255,0.12)" />
-            ))}
-          </g>
-        )}
-
-        {/* ── Center seam + PORT label ─────────────────────────────────────── */}
-        {doorFadeP > 0 && doorOpenP < 0.5 && (
-          <line x1={0} y1={-DOOR_H / 2} x2={0} y2={DOOR_H / 2}
-            stroke="rgba(255,255,255,0.07)" strokeWidth="1"
-            opacity={doorOpacity} />
-        )}
+        {/* ── PORT label ───────────────────────────────────────────────────── */}
         <text
           x={0} y={-DOOR_H / 2 - 10}
           textAnchor="middle"

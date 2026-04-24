@@ -9,13 +9,11 @@ import { ChevronLeft, X, Check } from 'lucide-react-native'
 import SetupWizardScreen from './SetupWizardScreen'
 import WizardStepper from './codex-wizard/WizardStepper'
 import DetectStep from './codex-wizard/DetectStep'
-import ReviewStep from './codex-wizard/ReviewStep'
-import InstallStep from './codex-wizard/InstallStep'
 import AuthenticateStep from './codex-wizard/AuthenticateStep'
 import VerifyStep from './codex-wizard/VerifyStep'
 import type {
-  CodexAuthSessionStatus,
-  CodexSetupStatus,
+  OpenCodeProviderAuthStatus,
+  OpenAIOpenCodeAuthSessionStatus,
   CodexWizardStep,
   CodexWizardStepStatus,
 } from '@pocketdev/shared/types'
@@ -26,29 +24,24 @@ interface Props {
   entryMode?: 'full' | 'auth_repair'
 }
 
-const ALL_STEPS: CodexWizardStep[] = ['detect', 'review', 'install', 'authenticate', 'verify']
+const ALL_STEPS: CodexWizardStep[] = ['detect', 'authenticate', 'verify']
 
 interface WizardState {
   currentStep: CodexWizardStep
   stepStatuses: Record<CodexWizardStep, CodexWizardStepStatus>
-  codexStatus: CodexSetupStatus | null
-  npmReady: boolean
-  authSession: CodexAuthSessionStatus | null
+  providerStatus: OpenCodeProviderAuthStatus | null
+  authSession: OpenAIOpenCodeAuthSessionStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; codexStatus: CodexSetupStatus; npmReady: boolean }
-  | { type: 'STEP_COMPLETE'; step: CodexWizardStep; codexStatus?: CodexSetupStatus | null; authSession?: CodexAuthSessionStatus | null }
+  | { type: 'DETECTION_COMPLETE'; providerStatus: OpenCodeProviderAuthStatus }
+  | { type: 'STEP_COMPLETE'; step: CodexWizardStep }
   | { type: 'STEP_FAILED'; step: CodexWizardStep; error: string }
   | { type: 'GO_BACK' }
-  | { type: 'SET_AUTH_SESSION'; authSession: CodexAuthSessionStatus | null }
+  | { type: 'SET_AUTH_SESSION'; authSession: OpenAIOpenCodeAuthSessionStatus | null }
   | { type: 'RETRY' }
-
-function getInitialState(): WizardState {
-  return getInitialStateForMode('full')
-}
 
 function getInitialStateForMode(entryMode: Props['entryMode'] = 'full'): WizardState {
   const stepStatuses = {} as Record<CodexWizardStep, CodexWizardStepStatus>
@@ -58,16 +51,13 @@ function getInitialStateForMode(entryMode: Props['entryMode'] = 'full'): WizardS
 
   if (entryMode === 'auth_repair') {
     stepStatuses.detect = 'skipped'
-    stepStatuses.review = 'skipped'
-    stepStatuses.install = 'skipped'
     stepStatuses.authenticate = 'active'
     stepStatuses.verify = 'pending'
 
     return {
       currentStep: 'authenticate',
       stepStatuses,
-      codexStatus: null,
-      npmReady: true,
+      providerStatus: null,
       authSession: null,
       error: null,
       allConfigured: false,
@@ -78,22 +68,21 @@ function getInitialStateForMode(entryMode: Props['entryMode'] = 'full'): WizardS
   return {
     currentStep: 'detect',
     stepStatuses,
-    codexStatus: null,
-    npmReady: false,
+    providerStatus: null,
     authSession: null,
     error: null,
     allConfigured: false,
   }
 }
 
-function findNextActiveStep(statuses: Record<CodexWizardStep, CodexWizardStepStatus>, afterIndex: number): CodexWizardStep | null {
+function findNextPendingStep(statuses: Record<CodexWizardStep, CodexWizardStepStatus>, afterIndex: number): CodexWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<CodexWizardStep, CodexWizardStepStatus>, beforeIndex: number): CodexWizardStep | null {
+function findPrevStep(statuses: Record<CodexWizardStep, CodexWizardStepStatus>, beforeIndex: number): CodexWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) {
     const status = statuses[ALL_STEPS[i]]
     if (status === 'completed' || status === 'active') return ALL_STEPS[i]
@@ -104,40 +93,29 @@ function findPrevActiveStep(statuses: Record<CodexWizardStep, CodexWizardStepSta
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const codexStatus = action.codexStatus
+      const providerStatus = action.providerStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses.detect = 'completed'
 
-      if (codexStatus.authenticated) {
-        newStatuses.install = codexStatus.installed ? 'skipped' : 'pending'
+      if (providerStatus.authenticated) {
         newStatuses.authenticate = 'skipped'
         newStatuses.verify = 'skipped'
-      } else if (codexStatus.installed) {
-        newStatuses.install = 'skipped'
-      }
-
-      const allSkipped = ALL_STEPS.slice(1).every((step) => newStatuses[step] === 'skipped')
-      if (allSkipped) {
         return {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          codexStatus,
-          npmReady: action.npmReady,
+          providerStatus,
           authSession: null,
           allConfigured: true,
         }
       }
 
-      const firstPending = ALL_STEPS.find((step) => newStatuses[step] === 'pending')
-      if (firstPending) newStatuses[firstPending] = 'active'
-
+      newStatuses.authenticate = 'active'
       return {
         ...state,
-        currentStep: firstPending ?? 'detect',
+        currentStep: 'authenticate',
         stepStatuses: newStatuses,
-        codexStatus,
-        npmReady: action.npmReady,
+        providerStatus,
         authSession: null,
       }
     }
@@ -147,18 +125,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       newStatuses[action.step] = 'completed'
 
       const currentIndex = ALL_STEPS.indexOf(action.step)
-      const next = findNextActiveStep(newStatuses, currentIndex)
+      const next = findNextPendingStep(newStatuses, currentIndex)
 
-      if (next) {
-        newStatuses[next] = 'active'
-      }
+      if (next) newStatuses[next] = 'active'
 
       return {
         ...state,
         currentStep: next ?? action.step,
         stepStatuses: newStatuses,
-        codexStatus: action.codexStatus ?? state.codexStatus,
-        authSession: action.authSession ?? state.authSession,
         error: null,
         allConfigured: !next,
       }
@@ -172,7 +146,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
     case 'GO_BACK': {
       const currentIndex = ALL_STEPS.indexOf(state.currentStep)
-      const previous = findPrevActiveStep(state.stepStatuses, currentIndex)
+      const previous = findPrevStep(state.stepStatuses, currentIndex)
       if (!previous) return state
 
       const newStatuses = { ...state.stepStatuses }
@@ -225,15 +199,10 @@ export default function CodexWizardSheet({ onDismiss, onComplete, entryMode = 'f
             style={styles.completedLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Codex is ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>OpenAI is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your paired workspace is connected and ready to run Codex.
+            Your OpenAI account is authenticated in opencode.
           </Text>
-          {state.codexStatus?.version ? (
-            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              v{state.codexStatus.version}
-            </Text>
-          ) : null}
         </View>
       )
     }
@@ -241,10 +210,6 @@ export default function CodexWizardSheet({ onDismiss, onComplete, entryMode = 'f
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
-      case 'review':
-        return <ReviewStep codexStatus={state.codexStatus} npmReady={state.npmReady} dispatch={dispatch} />
-      case 'install':
-        return <InstallStep dispatch={dispatch} />
       case 'authenticate':
         return <AuthenticateStep dispatch={dispatch} authSession={state.authSession} />
       case 'verify':
@@ -256,37 +221,37 @@ export default function CodexWizardSheet({ onDismiss, onComplete, entryMode = 'f
 
   return (
     <SetupWizardScreen backgroundColor={colors.background} onClose={handleClose}>
-        <View style={styles.header}>
-          {canGoBack ? (
-            <TouchableOpacity onPress={() => dispatch({ type: 'GO_BACK' })} style={styles.headerButton}>
-              <ChevronLeft color={colors.text} size={22} strokeWidth={2.25} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.headerButton} />
-          )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Codex</Text>
-          <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
-            <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
+      <View style={styles.header}>
+        {canGoBack ? (
+          <TouchableOpacity onPress={() => dispatch({ type: 'GO_BACK' })} style={styles.headerButton}>
+            <ChevronLeft color={colors.text} size={22} strokeWidth={2.25} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerButton} />
+        )}
+        <Text style={[styles.headerTitle, { color: colors.text }]}>OpenAI via opencode</Text>
+        <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
+          <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
+        </TouchableOpacity>
+      </View>
+
+      {state.currentStep !== 'detect' && !state.allConfigured ? (
+        <WizardStepper currentStep={state.currentStep} stepStatuses={state.stepStatuses} />
+      ) : null}
+
+      <View style={styles.content}>{renderStep()}</View>
+
+      {state.allConfigured ? (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.doneButton, { backgroundColor: colors.primary }]}
+            onPress={handleDone}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
           </TouchableOpacity>
         </View>
-
-        {state.currentStep !== 'detect' && !state.allConfigured ? (
-          <WizardStepper currentStep={state.currentStep} stepStatuses={state.stepStatuses} />
-        ) : null}
-
-        <View style={styles.content}>{renderStep()}</View>
-
-        {state.allConfigured ? (
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.doneButton, { backgroundColor: colors.primary }]}
-              onPress={handleDone}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
+      ) : null}
     </SetupWizardScreen>
   )
 }
@@ -306,9 +271,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: {
-    ...typeStyles.heading,
-  },
+  headerTitle: { ...typeStyles.heading },
   content: {
     flex: 1,
     paddingHorizontal: spacing[4],
@@ -333,16 +296,8 @@ const styles = StyleSheet.create({
     height: 48,
     marginBottom: spacing[1],
   },
-  completedTitle: {
-    ...typeStyles.heading,
-  },
-  completedSubtitle: {
-    ...typeStyles.body,
-    textAlign: 'center',
-  },
-  completedDetail: {
-    ...typeStyles.mono,
-  },
+  completedTitle: { ...typeStyles.heading },
+  completedSubtitle: { ...typeStyles.body, textAlign: 'center' },
   footer: {
     paddingHorizontal: spacing[6],
     paddingBottom: spacing[8],
@@ -353,7 +308,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[4],
     alignItems: 'center',
   },
-  doneText: {
-    ...typeStyles.button,
-  },
+  doneText: { ...typeStyles.button },
 })

@@ -9,17 +9,30 @@ import { db } from '@pocketdev/db'
 import { betaSignups } from '@pocketdev/db/schema'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import { architectureTokens, architectureFonts } from '#/components/architecture/shared/theme'
 import { palette } from '@pocketdev/shared/theme'
 
 const submitBetaInterest = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ email: z.string().email() }))
+  .inputValidator(z.object({
+    email: z.string().email(),
+    jobResponsibility: z.string().min(1),
+    jobResponsibilityOther: z.string().optional(),
+    useType: z.string().min(1),
+    employer: z.string().optional(),
+  }))
   .handler(async ({ data }) => {
     const existing = await db.query.betaSignups.findFirst({
       where: (t, { eq }) => eq(t.email, data.email),
     })
     if (existing) return { success: true, alreadyRegistered: true }
-    await db.insert(betaSignups).values({ email: data.email })
+    await db.insert(betaSignups).values({
+      email: data.email,
+      jobResponsibility: data.jobResponsibility,
+      jobResponsibilityOther: data.jobResponsibilityOther,
+      useType: data.useType,
+      employer: data.employer,
+    })
     return { success: true, alreadyRegistered: false }
   })
 
@@ -88,6 +101,10 @@ interface BetaSheetProps {
 
 export function BetaSheet({ isOpen, onClose }: BetaSheetProps) {
   const [email, setEmail] = useState('')
+  const [jobResponsibility, setJobResponsibility] = useState('')
+  const [jobResponsibilityOther, setJobResponsibilityOther] = useState('')
+  const [useType, setUseType] = useState('')
+  const [employer, setEmployer] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'already' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -106,11 +123,19 @@ export function BetaSheet({ isOpen, onClose }: BetaSheetProps) {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!email) return
+    if (!email || !jobResponsibility || !useType) return
     setStatus('loading')
     setErrorMsg('')
     try {
-      const result = await submitBetaInterest({ data: { email } })
+      const result = await submitBetaInterest({
+        data: {
+          email,
+          jobResponsibility,
+          jobResponsibilityOther: jobResponsibility === 'other' ? jobResponsibilityOther : undefined,
+          useType,
+          employer: employer || undefined,
+        },
+      })
       setStatus(result.alreadyRegistered ? 'already' : 'success')
     } catch {
       setStatus('error')
@@ -122,6 +147,10 @@ export function BetaSheet({ isOpen, onClose }: BetaSheetProps) {
     onClose()
     setTimeout(() => {
       setEmail('')
+      setJobResponsibility('')
+      setJobResponsibilityOther('')
+      setUseType('')
+      setEmployer('')
       setStatus('idle')
       setErrorMsg('')
     }, 450)
@@ -226,7 +255,7 @@ export function BetaSheet({ isOpen, onClose }: BetaSheetProps) {
                 </motion.div>
               ) : (
                 <>
-                  <form onSubmit={handleSubmit} className="flex gap-2">
+                  <form onSubmit={handleSubmit} className="space-y-3">
                     <Input
                       type="email"
                       placeholder="you@example.com"
@@ -234,7 +263,6 @@ export function BetaSheet({ isOpen, onClose }: BetaSheetProps) {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       disabled={status === 'loading'}
-                      className="flex-1"
                       style={{
                         backgroundColor: 'rgba(255,255,255,0.8)',
                         borderColor: isTyping ? palette.bauhaus.blue : architectureTokens.colors.border,
@@ -242,7 +270,56 @@ export function BetaSheet({ isOpen, onClose }: BetaSheetProps) {
                         transition: 'border-color 0.3s ease',
                       }}
                     />
-                    <Button type="submit" disabled={status === 'loading'}>
+
+                    <Select value={jobResponsibility} onValueChange={(v) => setJobResponsibility(v ?? '')} disabled={status === 'loading'} required>
+                      <SelectTrigger style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}>
+                        <SelectValue placeholder="Job responsibility" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="software_development">Software Development</SelectItem>
+                        <SelectItem value="linux_administration">Linux Administration</SelectItem>
+                        <SelectItem value="network_engineering">Network Engineering</SelectItem>
+                        <SelectItem value="devops_sre">DevOps / SRE</SelectItem>
+                        <SelectItem value="security">Security / Infosec</SelectItem>
+                        <SelectItem value="data_engineering">Data Engineering</SelectItem>
+                        <SelectItem value="product_management">Product Management</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {jobResponsibility === 'other' && (
+                      <Input
+                        type="text"
+                        placeholder="Describe your role"
+                        value={jobResponsibilityOther}
+                        onChange={(e) => setJobResponsibilityOther(e.target.value)}
+                        required
+                        disabled={status === 'loading'}
+                        style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}
+                      />
+                    )}
+
+                    <Select value={useType} onValueChange={(v) => setUseType(v ?? '')} disabled={status === 'loading'} required>
+                      <SelectTrigger style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}>
+                        <SelectValue placeholder="Intended use" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="personal">Personal</SelectItem>
+                        <SelectItem value="commercial">Commercial</SelectItem>
+                        <SelectItem value="experimental">Experimental / Research</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Input
+                      type="text"
+                      placeholder="Employer (optional)"
+                      value={employer}
+                      onChange={(e) => setEmployer(e.target.value)}
+                      disabled={status === 'loading'}
+                      style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}
+                    />
+
+                    <Button type="submit" disabled={status === 'loading' || !jobResponsibility || !useType} className="w-full">
                       {status === 'loading' ? 'Sending…' : 'Notify me'}
                     </Button>
                   </form>
