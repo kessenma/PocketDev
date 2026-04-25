@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { useConsoleData } from '#/context/ConsoleDataContext'
-import { ArrowUpCircle, ChevronDown, Loader2, RotateCcw, TriangleAlert } from 'lucide-react'
+import { ArrowUpCircle, Check, ChevronDown, Loader2, TriangleAlert } from 'lucide-react'
 
 export function UpdateBanner() {
   const { agentVersion: version, updateInfo: update, upgrading, upgradeError, handleUpgrade } = useConsoleData()
@@ -16,6 +16,9 @@ export function UpdateBanner() {
   const runningBeta = version.includes('-beta.')
   const onLatestBeta = !!update?.beta && update.beta.version === version
   const stableSwitchAvailable = runningBeta && !!update?.updateAvailable
+
+  // The latest stable version is first in the array
+  const latestStable = update?.versions[0]
 
   useEffect(() => {
     if (!dropdownOpen) return
@@ -103,61 +106,75 @@ export function UpdateBanner() {
                   className="bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs"
                   onClick={() => setDropdownOpen((o) => !o)}
                 >
-                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                   Version History
                   <ChevronDown className={`ml-1.5 h-3.5 w-3.5 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                 </Button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 top-full z-[200] mt-1.5 w-64 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+                  <div className="absolute right-0 top-full z-[200] mt-1.5 w-72 rounded-xl border border-border bg-card shadow-xl">
+                    {/* Currently installed header */}
+                    <div className="border-b border-border px-4 py-3">
+                      <p className="text-xs text-foreground/50">Currently installed</p>
+                      <p className="font-mono text-sm font-semibold text-foreground">{version}</p>
+                    </div>
+
                     {/* Stable versions */}
-                    <div className="border-b border-border px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-foreground/40">Stable Releases</p>
-                    </div>
-                    <div className="max-h-52 overflow-y-auto">
-                      {update?.versions.map((v) => {
-                        const label = versionLabel(v)
-                        const isCurrent = v === version
-                        return (
-                          <button
-                            key={v}
-                            className="flex w-full items-center justify-between px-3 py-2.5 text-left transition-colors hover:bg-secondary/60 disabled:cursor-default"
-                            onClick={() => !isCurrent && handleVersionSelect(v)}
-                            disabled={isCurrent || upgrading}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-sm">v{v}</span>
-                              {isCurrent && (
-                                <Badge className="bg-[var(--bauhaus-yellow)] text-black text-[10px] px-1.5 py-0">Current</Badge>
-                              )}
-                            </div>
-                            {!isCurrent && (
-                              <span className={`text-xs font-medium ${label === 'Upgrade' || label === 'Switch' ? 'text-[var(--bauhaus-yellow)]' : 'text-foreground/50'}`}>
-                                {label}
-                              </span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
+                    {update && update.versions.length > 0 && (
+                      <div>
+                        <div className="px-4 pb-1 pt-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-foreground/40">Stable Releases</p>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto pb-1">
+                          {update.versions.map((v) => {
+                            const label = versionLabel(v)
+                            const isCurrent = v === version
+                            const isLatest = v === latestStable
+                            return (
+                              <button
+                                key={v}
+                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-secondary/60 disabled:cursor-default"
+                                onClick={() => !isCurrent && handleVersionSelect(v)}
+                                disabled={isCurrent || upgrading}
+                              >
+                                <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+                                  {isCurrent && <Check className="h-3.5 w-3.5 text-[var(--bauhaus-yellow)]" />}
+                                </div>
+                                <span className="flex-1 font-mono text-sm">v{v}</span>
+                                {isLatest && !isCurrent && (
+                                  <span className="text-[10px] text-foreground/40">(latest)</span>
+                                )}
+                                {!isCurrent && (
+                                  <span className={`text-xs font-medium ${label === 'Upgrade' || label === 'Switch' ? 'text-[var(--bauhaus-yellow)]' : 'text-foreground/40'}`}>
+                                    {label}
+                                  </span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Beta section */}
                     {update?.beta && (
-                      <>
-                        <div className="border-t border-[var(--bauhaus-yellow)]/30 bg-[var(--bauhaus-yellow)]/5 px-3 py-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--bauhaus-yellow)]/70">Beta Track</p>
+                      <div className="border-t border-[var(--bauhaus-yellow)]/20">
+                        <div className="px-4 pb-1 pt-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--bauhaus-yellow)]/60">Beta Track</p>
                         </div>
-                        <div className="bg-[var(--bauhaus-yellow)]/5 px-3 pb-3 pt-1">
-                          <div className="mb-2 flex items-start gap-1.5">
-                            <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0 text-[var(--bauhaus-yellow)]" />
-                            <p className="text-[10px] text-foreground/50">For TestFlight users and developers — may be unstable.</p>
+                        <div className="px-3 pb-3">
+                          <div className="mb-2 flex items-start gap-1.5 px-1">
+                            <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0 text-[var(--bauhaus-yellow)]/70" />
+                            <p className="text-[10px] text-foreground/40">For TestFlight users and developers — may be unstable.</p>
                           </div>
                           <button
-                            className="flex w-full items-center justify-between rounded-lg border border-[var(--bauhaus-yellow)]/30 px-3 py-2 transition-colors hover:bg-[var(--bauhaus-yellow)]/10 disabled:cursor-default disabled:opacity-50"
+                            className="flex w-full items-center gap-3 rounded-lg border border-[var(--bauhaus-yellow)]/20 px-3 py-2.5 transition-colors hover:bg-[var(--bauhaus-yellow)]/8 disabled:cursor-default disabled:opacity-50"
                             onClick={() => !onLatestBeta && handleVersionSelect('nightly')}
                             disabled={onLatestBeta || upgrading}
                           >
-                            <div>
+                            <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+                              {onLatestBeta && <Check className="h-3.5 w-3.5 text-[var(--bauhaus-yellow)]" />}
+                            </div>
+                            <div className="flex-1">
                               <span className="font-mono text-sm">{update.beta.version}</span>
                               <p className="text-[10px] text-foreground/40">
                                 {new Date(update.beta.publishedAt).toLocaleDateString()}
@@ -168,7 +185,7 @@ export function UpdateBanner() {
                             </span>
                           </button>
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
                 )}

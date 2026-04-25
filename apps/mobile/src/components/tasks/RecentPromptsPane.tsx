@@ -57,12 +57,8 @@ export default function RecentPromptsPane({ onPromptPress }: Props) {
               </Text>
             </Pressable>
             {logo ? (
-              <View
-                style={[
-                  styles.badge,
-                  { backgroundColor: colors.background, borderColor: colors.border },
-                ]}
-              >
+              <View style={styles.badge}>
+                <View style={[styles.badgeMask, { backgroundColor: colors.panel }]} />
                 <Image source={logo} style={styles.badgeLogo} />
               </View>
             ) : null}
@@ -77,7 +73,6 @@ export default function RecentPromptsPane({ onPromptPress }: Props) {
 const styles = StyleSheet.create({
   list: {
     padding: spacing[4],
-    paddingTop: spacing[4] + BADGE_OFFSET,
   },
   separator: {
     height: spacing[3],
@@ -97,11 +92,16 @@ const styles = StyleSheet.create({
     left: spacing[3],
     width: BADGE_SIZE,
     height: BADGE_SIZE,
-    borderRadius: borderRadius.md,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
+  },
+  badgeMask: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: BADGE_OFFSET,
   },
   badgeLogo: {
     width: 18,

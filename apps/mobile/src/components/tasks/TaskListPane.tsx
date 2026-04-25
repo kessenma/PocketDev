@@ -11,6 +11,8 @@ import {
 import { MorphCardSource } from 'react-native-morph-card'
 
 const MORPH_AVAILABLE = !!NativeModules.RNCMorphCardModule
+const BADGE_SIZE = 32
+const BADGE_OFFSET = BADGE_SIZE / 2
 import { FlashList } from '@shopify/flash-list'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { Task } from '@pocketdev/shared/types'
@@ -101,9 +103,6 @@ export default function TaskListPane({
               {getDisplayPrompt(item.prompt)}
             </Text>
             <View style={styles.taskMeta}>
-              {agentLogo ? (
-                <Image source={agentLogo} style={styles.agentLogo} />
-              ) : null}
               <Text style={[styles.taskTime, { color: colors.textTertiary }]}>
                 {formatTime(item.created_at)}
               </Text>
@@ -112,25 +111,33 @@ export default function TaskListPane({
         )
 
         return (
-          <View style={[styles.taskCardFrame, { borderColor: statusColor }]}>
-            {MORPH_AVAILABLE ? (
-              <MorphCardSource
-                width={cardWidth - 4}
-                height={106}
-                borderRadius={borderRadius.lg - 2}
-                backgroundColor={isActive ? colors.panelAlt : colors.panel}
-                onPress={(sourceTag) => onTaskPress(item, sourceTag)}
-              >
-                {cardContent}
-              </MorphCardSource>
-            ) : (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => onTaskPress(item)}
-              >
-                {cardContent}
-              </TouchableOpacity>
-            )}
+          <View style={styles.cardWrapper}>
+            <View style={[styles.taskCardFrame, { borderColor: statusColor }]}>
+              {MORPH_AVAILABLE ? (
+                <MorphCardSource
+                  width={cardWidth - 4}
+                  height={106}
+                  borderRadius={borderRadius.lg - 2}
+                  backgroundColor={isActive ? colors.panelAlt : colors.panel}
+                  onPress={(sourceTag) => onTaskPress(item, sourceTag)}
+                >
+                  {cardContent}
+                </MorphCardSource>
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => onTaskPress(item)}
+                >
+                  {cardContent}
+                </TouchableOpacity>
+              )}
+            </View>
+            {agentLogo ? (
+              <View style={styles.badge}>
+                <View style={[styles.badgeMask, { backgroundColor: isActive ? colors.panelAlt : colors.panel }]} />
+                <Image source={agentLogo} style={styles.badgeLogo} />
+              </View>
+            ) : null}
           </View>
         )
       }}
@@ -160,6 +167,31 @@ const styles = StyleSheet.create({
   listSeparator: {
     height: spacing[3],
   },
+  cardWrapper: {
+    marginTop: BADGE_OFFSET,
+  },
+  badge: {
+    position: 'absolute',
+    top: -BADGE_OFFSET,
+    left: spacing[3],
+    width: BADGE_SIZE,
+    height: BADGE_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  badgeMask: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: BADGE_OFFSET,
+  },
+  badgeLogo: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+  },
   taskCardFrame: {
     borderWidth: 2,
     borderRadius: borderRadius.lg,
@@ -177,12 +209,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing[2],
   },
-  agentLogo: {
-    width: 14,
-    height: 14,
-    resizeMode: 'contain',
-  },
-  taskTime: {
+taskTime: {
     ...typeStyles.meta,
   },
   emptyContainer: {
