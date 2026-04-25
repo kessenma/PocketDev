@@ -48,7 +48,7 @@ export function UpdateBanner() {
   }
 
   return (
-    <div className="mb-4 overflow-hidden rounded-[1.1rem] border-2 border-[var(--bauhaus-yellow)]/40 bg-card">
+    <div className="mb-4 rounded-[1.1rem] border-2 border-[var(--bauhaus-yellow)]/40 bg-card">
       <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--bauhaus-yellow)]/15 text-[var(--bauhaus-yellow)]">
@@ -109,7 +109,7 @@ export function UpdateBanner() {
                 </Button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+                  <div className="absolute right-0 top-full z-[200] mt-1.5 w-64 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
                     {/* Stable versions */}
                     <div className="border-b border-border px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-foreground/40">Stable Releases</p>

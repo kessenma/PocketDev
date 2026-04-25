@@ -6,6 +6,9 @@ import { getRecentPrompts } from '../../services/storage'
 import { typeStyles } from '../../theme/typography'
 import { Assets } from '../../../assets'
 
+const BADGE_SIZE = 32
+const BADGE_OFFSET = BADGE_SIZE / 2
+
 function getAgentLogo(agentType: string, isDark: boolean) {
   switch (agentType) {
     case 'claude': return isDark ? Assets.claudeWhite : Assets.claudeBlack
@@ -44,15 +47,26 @@ export default function RecentPromptsPane({ onPromptPress }: Props) {
       renderItem={({ item }) => {
         const logo = getAgentLogo(item.agentType, isDark)
         return (
-          <Pressable
-            style={[styles.item, { backgroundColor: colors.panel, borderColor: colors.border }]}
-            onPress={() => onPromptPress(item.prompt, item.agentType)}
-          >
-            {logo ? <Image source={logo} style={styles.logo} /> : null}
-            <Text style={[styles.text, { color: colors.text }]} numberOfLines={3}>
-              {item.prompt}
-            </Text>
-          </Pressable>
+          <View style={styles.cardWrapper}>
+            <Pressable
+              style={[styles.item, { backgroundColor: colors.panel, borderColor: colors.border }]}
+              onPress={() => onPromptPress(item.prompt, item.agentType)}
+            >
+              <Text style={[styles.text, { color: colors.text }]} numberOfLines={3}>
+                {item.prompt}
+              </Text>
+            </Pressable>
+            {logo ? (
+              <View
+                style={[
+                  styles.badge,
+                  { backgroundColor: colors.background, borderColor: colors.border },
+                ]}
+              >
+                <Image source={logo} style={styles.badgeLogo} />
+              </View>
+            ) : null}
+          </View>
         )
       }}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -63,28 +77,39 @@ export default function RecentPromptsPane({ onPromptPress }: Props) {
 const styles = StyleSheet.create({
   list: {
     padding: spacing[4],
+    paddingTop: spacing[4] + BADGE_OFFSET,
   },
   separator: {
     height: spacing[3],
   },
+  cardWrapper: {
+    marginTop: BADGE_OFFSET,
+  },
   item: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing[3],
     padding: spacing[4],
+    paddingTop: spacing[3],
     borderWidth: 2,
     borderRadius: borderRadius.lg,
   },
-  logo: {
-    width: 16,
-    height: 16,
+  badge: {
+    position: 'absolute',
+    top: -BADGE_OFFSET,
+    left: spacing[3],
+    width: BADGE_SIZE,
+    height: BADGE_SIZE,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  badgeLogo: {
+    width: 18,
+    height: 18,
     resizeMode: 'contain',
-    marginTop: 2,
-    flexShrink: 0,
   },
   text: {
     ...typeStyles.body,
-    flex: 1,
   },
   empty: {
     flex: 1,
