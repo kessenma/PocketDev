@@ -50,11 +50,21 @@ jobs:
           AGENT_VERSION: ${{ steps.ver.outputs.version }}
         run: bash scripts/build-agent-bundle.sh
 
-      - name: Replace nightly-latest pre-release
+      - name: Publish beta releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BETA_VERSION="${{ steps.ver.outputs.version }}"
+
+          # Create individual versioned pre-release (preserved for version history)
+          gh release create "nightly-${BETA_VERSION}" \
+            --title "Beta: ${BETA_VERSION}" \
+            --notes "Automated beta build from main. Version: ${BETA_VERSION}" \
+            --prerelease \
+            "apps/web/public/agent-bundle.tar.gz#agent-bundle.tar.gz" \
+            "apps/web/public/agent-versions/${BETA_VERSION}.tar.gz#${BETA_VERSION}.tar.gz"
+
+          # Replace rolling nightly-latest alias
           gh release delete nightly-latest --yes --cleanup-tag 2>/dev/null || true
           gh release create nightly-latest \
             --title "Beta (nightly-latest): $BETA_VERSION" \
@@ -62,3 +72,8 @@ jobs:
             --prerelease \
             "apps/web/public/agent-bundle.tar.gz#agent-bundle.tar.gz" \
             "apps/web/public/agent-versions/${BETA_VERSION}.tar.gz#${BETA_VERSION}.tar.gz"
+
+          # Prune individual nightly releases — keep only the 10 most recent
+          gh release list --limit 100 --json tagName,publishedAt \
+            | jq -r '[.[] | select(.tagName != "nightly-latest" and (.tagName | startswith("nightly-")))] | sort_by(.publishedAt) | reverse | .[10:] | .[].tagName' \
+            | xargs -r -I{} gh release delete {} --yes --cleanup-tag

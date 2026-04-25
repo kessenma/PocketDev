@@ -38,7 +38,7 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
     case 'opencode': {
       const opencodePath = getToolPath('opencode_cli') ?? 'opencode'
       const modelFlag = model ? ['-m', model] : []
-      return [opencodePath, 'run', ...modelFlag, prompt]
+      return [opencodePath, 'run', '--format', 'json', ...modelFlag, prompt]
     }
     case 'shell':
       return ['sh', '-c', prompt]

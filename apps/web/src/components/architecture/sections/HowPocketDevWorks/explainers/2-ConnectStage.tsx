@@ -110,7 +110,7 @@ export function ConnectTakeoverScene({
   const laptopScale = isDesktopLayout ? 0.62 : 0.56
 
   const phoneLocalCx = isDesktopLayout ? 80 : 0
-  const phoneLocalCy = isDesktopLayout ? -6 : 50
+  const phoneLocalCy = isDesktopLayout ? -6 : 80
   const phoneW = 52
   const phoneH = 96
   const phoneLocalY = phoneLocalCy - phoneH / 2

@@ -36,8 +36,7 @@ const KEY_OY = 498.5  // y center (after -350 shift)
 
 // Key geometry in path coords:
 //   Bow center x ≈ 207, Bit right x ≈ 896
-//   → phone-local: bow cx ≈ -9.5, bit right ≈ 13.3, bow-to-bit = 22.8 units
-const BOW_CENTER_PHONE = (207 - KEY_OX) * KEY_S  // ≈ -9.5
+//   → phone-local: bit right ≈ 13.3, bow-to-bit = 22.8 units
 const BIT_RIGHT_PHONE  = (896 - KEY_OX) * KEY_S  // ≈ 13.3
 const BOW_CY_PHONE     = (488 - KEY_OY) * KEY_S  // ≈ -0.3 ≈ 0
 
@@ -131,33 +130,56 @@ export function PortSecurityStage({
   const animCenterX = vpSize.w / 2
   const animCenterY = vpSize.h * (isDesktopLayout ? 0.42 : 0.40)
 
-  // ── Timeline ──────────────────────────────────────────────────────────────
-  const doorFadeP  = mapP(p, 0.00, 0.12)
-  const labelsP    = mapP(p, 0.08, 0.22)
-  const morphT     = easeInOut(mapP(p, 0.28, 0.52))  // shapes → key on phone
+  // ── Layout — same as Connect scene end state ──────────────────────────────
+  // Desktop: laptop at (-50, 0), phone at (80, -6)
+  // Mobile:  laptop at (0, -40), phone at (0, 80)
+  const laptopLocalCx = isDesktopLayout ? -50 : 0
+  const laptopLocalCy = isDesktopLayout ? 0 : -40
+  const laptopScale   = isDesktopLayout ? 0.62 : 0.56
 
-  const keyDepartP = mapP(p, 0.62, 0.74)  // key slides from phone to door
-  const keyInsertP = mapP(p, 0.74, 0.80)  // key slides into handle
-  const keyTurnP   = mapP(p, 0.79, 0.84)  // key foreshortens into lock
-  const doorOpenP  = mapP(p, 0.83, 0.95)
+  const phoneCx    = isDesktopLayout ? 80 : 0
+  const phoneCy    = isDesktopLayout ? -6 : 80
+  const phoneScale = 52 / 60
+
+  // ── Door position — centered over laptop ──────────────────────────────────
+  const doorTx = laptopLocalCx  // Desktop: -50, Mobile: 0
+  const doorTy = laptopLocalCy  // Desktop:  0,  Mobile: -40
+
+  // ── Timeline ──────────────────────────────────────────────────────────────
+  // Door slides in from right during first 25% of progress
+  const doorSlideP  = easeInOut(mapP(p, 0.00, 0.25))
+  const doorFadeP   = mapP(p, 0.00, 0.18)
+  const labelsP     = mapP(p, 0.08, 0.22)
+  const morphT      = easeInOut(mapP(p, 0.28, 0.52))  // shapes → key on phone
+
+  const keyDepartP  = mapP(p, 0.62, 0.74)  // key slides from phone to door
+  const keyInsertP  = mapP(p, 0.74, 0.80)  // key slides into handle
+  const keyTurnP    = mapP(p, 0.79, 0.84)  // key foreshortens into lock
+  const doorOpenP   = mapP(p, 0.83, 0.95)
   const consoleRevP = mapP(p, 0.85, 0.95)
   const circleGrowP = mapP(p, 0.00, 0.18)
   const circleMoveP = mapP(p, 0.79, 0.84)
 
-  // ── Layout ───────────────────────────────────────────────────────────────
-  const phoneCx    = isDesktopLayout ? -152 : -112
-  const phoneCy    = isDesktopLayout ?    0 :   22
-  const phoneScale = 44 / 60
+  // ── Door slide-in ─────────────────────────────────────────────────────────
+  // Door starts off-screen to the right (doorTx + 300) and lands at doorTx
+  const doorGroupTx = mix(doorTx + 300, doorTx, doorSlideP)
 
   // ── Key wrapper transform — one continuous journey from phone to door ──────
-  // Scale factor: match bauhaus key's bow-to-bit distance to BauhausKeyShape's
-  // Mobile: bowToBit_anim = 37 (keyBowCx -93, bit pre-insert -56), sDoor = 37/22.8 = 1.62
-  // Desktop: bowToBit_anim = 47 (keyBowCx -103, bit pre-insert -56), sDoor = 47/22.8 = 2.06
-  // After insertion (+12 anim units), bit tip reaches ≈ -44 (door knob at -43.2) ✓
+  // Scale factor: match bauhaus key's bow-to-bit distance to phone-local scale
+  // Mobile: sDoor = 1.62, Desktop: sDoor = 2.06
   const KEY_S_DOOR = isDesktopLayout ? 2.06 : 1.62
-  // txDoor: bit right at door = txDoor + BIT_RIGHT_PHONE * KEY_S_DOOR = -56 (pre-insert)
-  const TX_DOOR = -56 - BIT_RIGHT_PHONE * KEY_S_DOOR  // ≈ -77.6 mobile, ≈ -83.4 desktop
-  const TY_DOOR = -BOW_CY_PHONE * KEY_S_DOOR          // ≈ 0 (centers key vertically)
+
+  // TX_DOOR: position key so bit right tip (+ 12 insert units) reaches door knob
+  // Door knob at x = doorTx + mix(-DOOR_W/2, DOOR_W/2, 0.14) = doorTx - 43.2 in anim coords
+  // TX_DOOR + BIT_RIGHT_PHONE * KEY_S_DOOR + 12 = doorTx - 43.2
+  // TX_DOOR = doorTx - 55.2 - BIT_RIGHT_PHONE * KEY_S_DOOR
+  // Desktop: -50 - 55.2 - 13.266 * 2.06 ≈ -132.5
+  // Mobile:   0 - 55.2 - 13.266 * 1.62 ≈ -76.7
+  const TX_DOOR = doorTx - 55.2 - BIT_RIGHT_PHONE * KEY_S_DOOR
+
+  // TY_DOOR: center key vertically at door center
+  // Desktop: ~0, Mobile: ~-40
+  const TY_DOOR = doorTy - BOW_CY_PHONE * KEY_S_DOOR
 
   const keyDepartT  = easeInOut(keyDepartP)
   const keyInsertTx = easeInOut(keyInsertP) * 12       // 12 anim-group units toward handle
@@ -174,19 +196,18 @@ export function PortSecurityStage({
   const TURN_PIVOT = BIT_RIGHT_PHONE  // ≈ 13.3
 
   // ── Text layout ──────────────────────────────────────────────────────────
-  const titleX  = isDesktopLayout ? vpSize.w * 0.24 : vpSize.w * 0.70
-  const titleY  = vpSize.h * (isDesktopLayout ? 0.14 : 0.10)
-  const titleSz = isDesktopLayout ? Math.min(vpSize.w * 0.04, 56) : Math.min(vpSize.w * 0.068, 36)
   const subSz   = isDesktopLayout ? Math.min(vpSize.w * 0.015, 20) : Math.min(vpSize.w * 0.04, 18)
   const subLH   = Math.round(subSz * 1.55)
   const subY    = vpSize.h * (isDesktopLayout ? 0.82 : 0.78)
   const subX    = isDesktopLayout ? vpSize.w * 0.58 : vpSize.w * 0.50
 
-  // ── Door geometry ────────────────────────────────────────────────────────
-  const HINGE_X    = DOOR_W / 2
+  // ── Door geometry (hinge at right side of door face) ─────────────────────
+  const HINGE_X    = DOOR_W / 2  // = 60, hinge at right edge relative to door center
   const openAngle  = easeInOut(doorOpenP) * (Math.PI * 0.52)
   const cosA       = Math.cos(openAngle)
   const sinA       = Math.sin(openAngle)
+  // Free (left) edge swings rightward as door opens
+  // At closed: freeX = HINGE_X - DOOR_W = -60 (relative to doorGroupTx)
   const freeX      = HINGE_X - DOOR_W * cosA
   const yConv      = sinA * 10
   const doorOpacity = doorFadeP * (1 - easeOutQuad(mapP(doorOpenP, 0.72, 1.0)))
@@ -205,6 +226,13 @@ export function PortSecurityStage({
     `${edgeX2.toFixed(2)},${(DOOR_H / 2 - yConv - 2).toFixed(2)}`,
   ].join(' ')
 
+  // Door face center x (in door-local coords, for text centering)
+  // When closed: center = (freeX + HINGE_X) / 2 = (-60 + 60)/2 = 0
+  // Text is centered at x=0 in door-local coords (which maps to doorGroupTx in anim-group)
+  const doorFaceCenterX = (freeX + HINGE_X) / 2
+  // Only show label text while door is mostly closed
+  const doorLabelOpacity = doorOpacity
+
   // Morphed paths (curveCalc at current morphT)
   const morphedBowD   = morphLib ? morphLib.path2string(morphLib.curveCalc(morphLib.circleCurve,   morphLib.bowCurve,   morphT)) : null
   const morphedShaftD = morphLib ? morphLib.path2string(morphLib.curveCalc(morphLib.triangleCurve, morphLib.shaftCurve, morphT)) : null
@@ -217,12 +245,7 @@ export function PortSecurityStage({
       preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <rect width="100%" height="100%" fill={architectureTokens.colors.paper} />
 
-      <text x={titleX} y={titleY} fill={architectureTokens.colors.text}
-        fontFamily={architectureFonts.display} fontSize={titleSz} fontWeight="700"
-        letterSpacing="-0.03em" textAnchor="middle" opacity={labelsP}>
-        Lock the port
-      </text>
-
+      {/* Subtitle — bottom of screen */}
       <SvgAutoWrapText x={subX} y={subY} font={`${subSz}px ${architectureFonts.body}`}
         maxWidth={vpSize.w * (isDesktopLayout ? 0.38 : 0.42)} lineHeight={subLH}
         fill={architectureTokens.colors.textSecondary} fontFamily={architectureFonts.body}
@@ -233,6 +256,31 @@ export function PortSecurityStage({
       </SvgAutoWrapText>
 
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>
+
+        {/* ── Laptop — always visible, sits behind door ──────────────────── */}
+        <BauhausLaptop cx={laptopLocalCx} cy={laptopLocalCy} scale={laptopScale}>
+          <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
+          <circle cx={-63} cy={-112} r={3} fill={palette.bauhaus.yellow} />
+          <circle cx={-52} cy={-112} r={3} fill={palette.bauhaus.blue} />
+          <rect x={-78} y={-112} width={156} height={18} rx={4} fill="rgba(255,255,255,0.06)" />
+          <rect x={-72} y={-109} width={12} height={12} rx={3} fill={palette.bauhaus.yellow} />
+          <rect x={-56} y={-108} width={40} height={3} rx={1.5} fill="rgba(255,255,255,0.5)" />
+          <rect x={-56} y={-103} width={24} height={2.5} rx={1} fill="rgba(255,255,255,0.25)" />
+          <rect x={20}  y={-108} width={18} height={6} rx={3} fill={palette.bauhaus.yellow} opacity={0.7} />
+          <rect x={42}  y={-108} width={14} height={6} rx={3} fill={palette.bauhaus.blue} opacity={0.5} />
+          <rect x={-78} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+          <text x={-70} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Pairing</text>
+          <rect x={2} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
+          <text x={10} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Devices</text>
+          {[0, 1, 2].map((i) => (
+            <g key={`dev-${i}`}>
+              <rect x={10} y={-70 + i * 16} width={58} height={12} rx={4} fill="rgba(255,255,255,0.04)" />
+              <circle cx={18} cy={-64 + i * 16} r={3} fill={i === 0 ? palette.bauhaus.blue : 'rgba(255,255,255,0.15)'} />
+              <rect x={24} y={-66 + i * 16} width={i === 0 ? 30 : 20 + i * 4} height={3} rx={1.5} fill={i === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)'} />
+            </g>
+          ))}
+          <text x={0} y={-17} textAnchor="middle" fontFamily={architectureFonts.body} fontSize="5" letterSpacing="0.16em" fill="rgba(255,255,255,0.5)">SERVER CONTROL BOARD</text>
+        </BauhausLaptop>
 
         {/* ── Big blue circle ─────────────────────────────────────────── */}
         {!hideBlueCircle && (() => {
@@ -246,44 +294,18 @@ export function PortSecurityStage({
             r={growR} fill={palette.bauhaus.blue} opacity={0.96} />
         })()}
 
-        {/* ── Console laptop — behind door ─────────────────────────────── */}
-        {consoleRevP > 0 && (
-          <g opacity={easeOutQuad(consoleRevP)}>
-            <BauhausLaptop cx={0} cy={isDesktopLayout ? -18 : -10} scale={isDesktopLayout ? 0.50 : 0.43}>
-              <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
-              <circle cx={-63} cy={-112} r={3} fill={palette.bauhaus.yellow} />
-              <circle cx={-52} cy={-112} r={3} fill={palette.bauhaus.blue} />
-              <rect x={-78} y={-112} width={156} height={18} rx={4} fill="rgba(255,255,255,0.06)" />
-              <rect x={-72} y={-109} width={12} height={12} rx={3} fill={palette.bauhaus.yellow} />
-              <rect x={-56} y={-108} width={40} height={3} rx={1.5} fill="rgba(255,255,255,0.5)" />
-              <rect x={-56} y={-103} width={24} height={2.5} rx={1} fill="rgba(255,255,255,0.25)" />
-              <rect x={20}  y={-108} width={18} height={6} rx={3} fill={palette.bauhaus.yellow} opacity={0.7} />
-              <rect x={42}  y={-108} width={14} height={6} rx={3} fill={palette.bauhaus.blue} opacity={0.5} />
-              <rect x={-78} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
-              <text x={-70} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Pairing</text>
-              <rect x={2} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
-              <text x={10} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Devices</text>
-              {[0, 1, 2].map((i) => (
-                <g key={`dev-${i}`}>
-                  <rect x={10} y={-70 + i * 16} width={58} height={12} rx={4} fill="rgba(255,255,255,0.04)" />
-                  <circle cx={18} cy={-64 + i * 16} r={3} fill={i === 0 ? palette.bauhaus.blue : 'rgba(255,255,255,0.15)'} />
-                  <rect x={24} y={-66 + i * 16} width={i === 0 ? 30 : 20 + i * 4} height={3} rx={1.5} fill={i === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)'} />
-                </g>
-              ))}
-              <text x={0} y={-17} textAnchor="middle" fontFamily={architectureFonts.body} fontSize="5" letterSpacing="0.16em" fill="rgba(255,255,255,0.5)">SERVER CONTROL BOARD</text>
-            </BauhausLaptop>
-          </g>
+        {/* ── Door frame (hinge line) — translates with door group ─────── */}
+        {doorFadeP > 0 && (
+          <line
+            x1={doorGroupTx + HINGE_X} y1={doorTy + (-DOOR_H / 2 - 20)}
+            x2={doorGroupTx + HINGE_X} y2={doorTy + (DOOR_H / 2 + 20)}
+            stroke="rgba(255,255,255,0.14)" strokeWidth="4" opacity={doorFadeP}
+          />
         )}
 
-        {/* ── Door frame at hinge ─────────────────────────────────────── */}
+        {/* ── Door group — slides in from right ─────────────────────── */}
         {doorFadeP > 0 && (
-          <line x1={HINGE_X} y1={-DOOR_H / 2 - 20} x2={HINGE_X} y2={DOOR_H / 2 + 20}
-            stroke="rgba(255,255,255,0.14)" strokeWidth="4" opacity={doorFadeP} />
-        )}
-
-        {/* ── Single hinged door ──────────────────────────────────────── */}
-        {doorFadeP > 0 && (
-          <g opacity={doorOpacity}>
+          <g transform={`translate(${doorGroupTx} ${doorTy})`} opacity={doorOpacity}>
             {sinA > 0.04 && <polygon points={doorEdgePoints} fill="rgba(255,255,255,0.07)" />}
             <polygon points={doorFacePoints} fill={palette.bauhaus.black} />
             <polygon points={doorFacePoints} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
@@ -296,16 +318,33 @@ export function PortSecurityStage({
                 fill="rgba(255,255,255,0.20)" />
             ))}
             <circle cx={mix(freeX, HINGE_X, 0.14)} cy={4} r={4.5} fill="rgba(255,255,255,0.22)" />
+
+            {/* ── "LOCK THE PORT" label on door face ──────────────────── */}
+            <text
+              x={doorFaceCenterX}
+              y={-18}
+              textAnchor="middle"
+              fontFamily={architectureFonts.mono}
+              fontSize="7"
+              fontWeight="600"
+              letterSpacing="0.12em"
+              fill="rgba(255,255,255,0.75)"
+              opacity={doorLabelOpacity}
+            >
+              LOCK THE PORT
+            </text>
           </g>
         )}
 
-        {/* ── PORT label ──────────────────────────────────────────────── */}
-        <text x={0} y={-DOOR_H / 2 - 10} textAnchor="middle" fontFamily={architectureFonts.mono}
-          fontSize="9" fontWeight="600" letterSpacing="0.07em"
-          fill={architectureTokens.colors.textSecondary}
-          opacity={labelsP * 0.8 * (1 - doorOpenP)}>
-          PORT 4387
-        </text>
+        {/* ── Unlock pulse — centered on door position ─────────────────── */}
+        {keyTurnP > 0 && keyTurnP < 1 && (
+          <rect
+            x={doorTx - DOOR_W / 2} y={doorTy - DOOR_H / 2}
+            width={DOOR_W} height={DOOR_H}
+            fill={palette.bauhaus.blue}
+            opacity={Math.sin(keyTurnP * Math.PI) * 0.28}
+          />
+        )}
 
         {/* ── Phone body only (no children — key is a sibling group) ─── */}
         <g opacity={hidePhone ? 0 : 1}>
@@ -336,15 +375,11 @@ export function PortSecurityStage({
           </g>
         )}
 
-        {/* ── Unlock pulse ────────────────────────────────────────────── */}
-        {keyTurnP > 0 && keyTurnP < 1 && (
-          <rect x={-DOOR_W / 2} y={-DOOR_H / 2} width={DOOR_W} height={DOOR_H}
-            fill={palette.bauhaus.blue} opacity={Math.sin(keyTurnP * Math.PI) * 0.28} />
-        )}
-
         {/* ── Dashed signal line (after door opens) ───────────────────── */}
         {consoleRevP > 0 && (
-          <motion.line x1={phoneCx + 22 * phoneScale} y1={phoneCy} x2={-DOOR_W / 2 - 4} y2={0}
+          <motion.line
+            x1={phoneCx + 22 * phoneScale} y1={phoneCy}
+            x2={doorTx - DOOR_W / 2 - 4} y2={doorTy}
             stroke={palette.bauhaus.blue} strokeWidth="2" strokeLinecap="round" strokeDasharray="5 4"
             animate={{
               opacity: easeOutQuad(consoleRevP) * (1 - circleMoveP),

@@ -32,7 +32,7 @@ interface BetaInfo {
 interface CacheData {
   latest: StableEntry
   stableVersions: StableEntry[]
-  beta: BetaInfo | null
+  betas: BetaInfo[]
   fetchedAt: number
 }
 
@@ -97,25 +97,21 @@ async function fetchFromGitHub(): Promise<CacheData> {
     pinnedApiUrl: extractPinnedApiUrl(effectiveLatest) ?? latestApiUrl,
   }
 
-  const nightlyRelease = allData.find((r) => r.prerelease && r.tag_name === 'nightly-latest')
-  let beta: BetaInfo | null = null
-  if (nightlyRelease) {
-    const betaApiUrl = extractBundleApiUrl(nightlyRelease)
-    const betaAsset = nightlyRelease.assets.find(
-      (a) => a.name.endsWith('.tar.gz') && a.name !== 'agent-bundle.tar.gz',
-    )
-    const betaVersion = betaAsset?.name.replace(/\.tar\.gz$/, '') ?? nightlyRelease.tag_name
-    if (betaApiUrl) {
-      beta = {
-        version: betaVersion,
-        publishedAt: nightlyRelease.published_at,
-        assetApiUrl: betaApiUrl,
-        pinnedApiUrl: extractPinnedApiUrl(nightlyRelease) ?? betaApiUrl,
-      }
-    }
-  }
+  // Individual beta releases have tags like `nightly-0.2.0-beta.abc1234`.
+  // `nightly-latest` is a rolling alias — exclude it so we don't double-count.
+  const betas: BetaInfo[] = allData
+    .filter((r) => r.prerelease && r.tag_name.startsWith('nightly-') && r.tag_name !== 'nightly-latest')
+    .slice(0, 10)
+    .map((r) => {
+      const pinnedAsset = r.assets.find((a) => a.name.endsWith('.tar.gz') && a.name !== 'agent-bundle.tar.gz')
+      const version = pinnedAsset?.name.replace(/\.tar\.gz$/, '') ?? r.tag_name.replace(/^nightly-/, '')
+      const assetApiUrl = extractBundleApiUrl(r) ?? pinnedAsset?.url ?? ''
+      const pinnedApiUrl = pinnedAsset?.url ?? assetApiUrl
+      return { version, publishedAt: r.published_at, assetApiUrl, pinnedApiUrl }
+    })
+    .filter((b) => b.assetApiUrl)
 
-  return { latest, stableVersions, beta, fetchedAt: Date.now() }
+  return { latest, stableVersions, betas, fetchedAt: Date.now() }
 }
 
 async function getCache(): Promise<CacheData | null> {
@@ -171,8 +167,8 @@ export async function handleVersionCheck(): Promise<Response> {
     {
       version: result.latest.version,
       versions: result.stableVersions.map((r) => r.version),
-      beta: result.beta
-        ? { version: result.beta.version, publishedAt: result.beta.publishedAt }
+      betas: result.betas.length
+        ? result.betas.map((b) => ({ version: b.version, publishedAt: b.publishedAt }))
         : undefined,
       changelog_url: 'https://pocketdev.run/changelog',
     },
@@ -186,23 +182,23 @@ export async function handleBundleDownload(pathname: string): Promise<Response> 
     return new Response('Version info unavailable — GitHub API unreachable', { status: 503 })
   }
 
-  // /agent/bundle/nightly → latest beta pre-release
+  // /agent/bundle/nightly → most recent individual beta release
   if (pathname === '/agent/bundle/nightly') {
-    if (!result.beta) {
+    if (!result.betas.length) {
       return new Response('No beta release available.', { status: 404 })
     }
-    return proxyAsset(result.beta.assetApiUrl, 'agent-bundle.tar.gz')
+    return proxyAsset(result.betas[0].assetApiUrl, 'agent-bundle.tar.gz')
   }
 
-  // /agent/bundle/{version} → pinned stable release
+  // /agent/bundle/{version} → pinned stable or beta release
   const versionMatch = pathname.match(/^\/agent\/bundle\/(.+)$/)
   if (versionMatch) {
     const requestedVersion = versionMatch[1]
-    const release = result.stableVersions.find((r) => r.version === requestedVersion)
-    if (!release) {
-      return new Response(`Version ${requestedVersion} not found.`, { status: 404 })
-    }
-    return proxyAsset(release.pinnedApiUrl, `${requestedVersion}.tar.gz`)
+    const stable = result.stableVersions.find((r) => r.version === requestedVersion)
+    if (stable) return proxyAsset(stable.pinnedApiUrl, `${requestedVersion}.tar.gz`)
+    const beta = result.betas.find((b) => b.version === requestedVersion)
+    if (beta) return proxyAsset(beta.pinnedApiUrl, `${requestedVersion}.tar.gz`)
+    return new Response(`Version ${requestedVersion} not found.`, { status: 404 })
   }
 
   // /agent/bundle → latest stable

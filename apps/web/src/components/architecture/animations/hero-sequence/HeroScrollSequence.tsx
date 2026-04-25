@@ -26,7 +26,7 @@ import { BrandAssetIcon } from '../../shared/BrandAssetIcon'
 import { architectureTextStyles } from '../../shared/theme'
 import { HeroScene } from './HeroScene'
 import { BetaInlineView } from './BetaInlineView'
-import { WhoIsItForView } from './WhoIsItForView'
+import { WhoIsItForScene } from './WhoIsItForScene'
 
 const PAPER = '#f7f1e3'
 const INSTALL_COMMAND = 'curl -fsSL https://pocketdev.run/install.sh | bash'
@@ -35,6 +35,10 @@ const INSTALL_COMMAND_LINES = [
   'https://pocketdev.run/install.sh',
   '| bash',
 ]
+
+// who-is-it-for scroll phase bounds (must match HeroScene breakpoints)
+const WHO_START = 0.28
+const WHO_END   = 0.72
 
 export function HeroScrollSequence({
   onProgressChange,
@@ -47,7 +51,6 @@ export function HeroScrollSequence({
   const [vpSize, setVpSize] = useState({ w: 1280, h: 800 })
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
   const [betaOpen, setBetaOpen] = useState(false)
-  const [whoIsItForOpen, setWhoIsItForOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -66,11 +69,10 @@ export function HeroScrollSequence({
     return () => mq.removeEventListener('change', sync)
   }, [])
 
-  // Lock scroll while any modal is open
   useEffect(() => {
-    document.body.style.overflow = (betaOpen || whoIsItForOpen) ? 'hidden' : ''
+    document.body.style.overflow = betaOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
-  }, [betaOpen, whoIsItForOpen])
+  }, [betaOpen])
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -82,18 +84,20 @@ export function HeroScrollSequence({
     onProgressChange?.(latest)
   })
 
-  const headerOpacity = useTransform(scrollYProgress, [0, 0.25, 0.40], [1, 1, 0])
-  const headerY = useTransform(scrollYProgress, [0.25, 0.42], [0, -Math.max(vpSize.h, 420)])
-  const pillsOpacity = useTransform(scrollYProgress, [0.78, 0.86, 0.88, 0.94], [0, 1, 1, 0])
-  const pillsY = useTransform(scrollYProgress, [0.78, 0.86], [20, 0])
+  const headerOpacity = useTransform(scrollYProgress, [0, 0.12, 0.20], [1, 1, 0])
+  const headerY       = useTransform(scrollYProgress, [0.12, 0.22], [0, -Math.max(vpSize.h, 420)])
+  const pillsOpacity  = useTransform(scrollYProgress, [0.88, 0.93, 0.94, 0.98], [0, 1, 1, 0])
+  const pillsY        = useTransform(scrollYProgress, [0.88, 0.93], [20, 0])
+  const whoOpacity    = useTransform(scrollYProgress, [0.24, 0.30, 0.68, 0.74], [0, 1, 1, 0])
 
-  const hideLaptop = progress >= 1.0
+  const whoProgress = Math.min(1, Math.max(0, (progress - WHO_START) / (WHO_END - WHO_START)))
+  const hideLaptop  = progress >= 1.0
 
   if (reduceMotion) {
     return (
       <header className="flex flex-col items-center px-6 pt-24 pb-8 text-center">
         <HeroTitle />
-        <HeroDescription onOpen={() => setBetaOpen(true)} onWhoOpen={() => setWhoIsItForOpen(true)} />
+        <HeroDescription onOpen={() => setBetaOpen(true)} />
         <PocketHeroSvg className="mt-12 w-48 sm:w-56" />
         <ArchitectureHeroAnimation className="mt-12 w-full max-w-lg" />
         <Pills />
@@ -104,24 +108,24 @@ export function HeroScrollSequence({
   const spring = { type: 'spring', stiffness: 220, damping: 26 } as const
 
   return (
-    <section ref={sectionRef} className="relative" style={{ height: '400vh' }}>
+    <section ref={sectionRef} className="relative" style={{ height: '600vh' }}>
       <div className="sticky top-0 h-screen overflow-hidden" style={{ backgroundColor: PAPER }}>
 
         {/* Header — pushed up when betaOpen */}
         <motion.div
           className="absolute inset-x-0 top-0 z-10 flex flex-col items-center px-6 pt-24 text-center"
           style={{ opacity: headerOpacity, y: headerY }}
-          animate={(betaOpen || whoIsItForOpen) ? { y: -vpSize.h, opacity: 0 } : {}}
+          animate={betaOpen ? { y: -vpSize.h, opacity: 0 } : {}}
           transition={spring}
         >
           <HeroTitle />
-          <HeroDescription onOpen={() => setBetaOpen(true)} onWhoOpen={() => setWhoIsItForOpen(true)} />
+          <HeroDescription onOpen={() => setBetaOpen(true)} />
         </motion.div>
 
         {/* SVG animation — pushed down when betaOpen */}
         <motion.div
           className="absolute inset-0"
-          animate={(betaOpen || whoIsItForOpen) ? { y: vpSize.h } : {}}
+          animate={betaOpen ? { y: vpSize.h } : {}}
           transition={spring}
         >
           <HeroScene
@@ -132,27 +136,32 @@ export function HeroScrollSequence({
           />
         </motion.div>
 
-        {/* Pills — fades out when betaOpen */}
+        {/* Who is it for — scroll-driven scene overlay */}
+        <motion.div
+          className="absolute inset-0"
+          style={{ opacity: whoOpacity }}
+        >
+          <WhoIsItForScene
+            progress={whoProgress}
+            vpSize={vpSize}
+            isDesktopLayout={isDesktopLayout}
+          />
+        </motion.div>
+
+        {/* Pills — fades in near the end */}
         <motion.div
           className="absolute inset-x-0 bottom-8 z-10 flex justify-center px-6"
           style={{ opacity: pillsOpacity, y: pillsY }}
-          animate={(betaOpen || whoIsItForOpen) ? { opacity: 0 } : {}}
+          animate={betaOpen ? { opacity: 0 } : {}}
           transition={spring}
         >
           <Pills />
         </motion.div>
 
-        {/* Beta form — replaces hero content */}
+        {/* Beta form */}
         <AnimatePresence>
           {betaOpen && (
             <BetaInlineView onClose={() => setBetaOpen(false)} />
-          )}
-        </AnimatePresence>
-
-        {/* Who is it for — replaces hero content */}
-        <AnimatePresence>
-          {whoIsItForOpen && (
-            <WhoIsItForView onClose={() => setWhoIsItForOpen(false)} />
           )}
         </AnimatePresence>
 
@@ -172,7 +181,7 @@ function HeroTitle() {
   )
 }
 
-function HeroDescription({ onOpen, onWhoOpen }: { onOpen: () => void; onWhoOpen: () => void }) {
+function HeroDescription({ onOpen }: { onOpen: () => void }) {
   return (
     <>
       <p
@@ -202,13 +211,6 @@ function HeroDescription({ onOpen, onWhoOpen }: { onOpen: () => void; onWhoOpen:
           className="rounded-full border border-foreground/80 bg-foreground px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-background shadow-sm transition-opacity hover:opacity-80 cursor-pointer"
         >
           Request Beta access →
-        </button>
-        <button
-          type="button"
-          onClick={onWhoOpen}
-          className="rounded-full border border-foreground/40 bg-transparent px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-foreground/70 transition-opacity hover:opacity-80 cursor-pointer"
-        >
-          for who? →
         </button>
       </div>
     </>

@@ -151,12 +151,13 @@ export function HeroScene({ progress, vpSize, isDesktopLayout, hideLaptop }: Pro
   const reduceMotion = useReducedMotion()
 
   // --- Sub-progress ---
-  const ballRise = mapProgress(progress, 0.0, 0.25)
-  const pocketFade = mapProgress(progress, 0.25, 0.42)
-  const circleSettle = mapProgress(progress, 0.35, 0.55)
-  const diagramBuild = mapProgress(progress, 0.56, 0.82)
+  const ballRise = mapProgress(progress, 0.00, 0.17)
+  const pocketFade = mapProgress(progress, 0.17, 0.28)
+  // circleSettle and diagramBuild start after the who-is-it-for scene (0.28–0.72)
+  const circleSettle = mapProgress(progress, 0.72, 0.86)
+  const diagramBuild = mapProgress(progress, 0.76, 0.94)
   // Zoom starts only after diagram is fully built + a beat
-  const laptopZoom = mapProgress(progress, 0.88, 1.0)
+  const laptopZoom = mapProgress(progress, 0.94, 1.0)
 
   // --- Layout ---
   const layout = isDesktopLayout
@@ -173,7 +174,7 @@ export function HeroScene({ progress, vpSize, isDesktopLayout, hideLaptop }: Pro
   // --- Circle position ---
   const startY = pTy + 400 * pS
   const peekY = pTy + 70 * pS
-  const emergeY = vpSize.h * 0.6
+  const emergeY = vpSize.h * 0.5
 
   let circleX: number
   let circleY: number
@@ -195,7 +196,7 @@ export function HeroScene({ progress, vpSize, isDesktopLayout, hideLaptop }: Pro
   // Circle radius
   const pocketR = pS * 32
   const settledR = isDesktopLayout ? 54 : 46
-  const rProgress = mapProgress(progress, 0.25, 0.55)
+  const rProgress = mapProgress(progress, 0.17, 0.32)
   const circleR = mix(pocketR, settledR, rProgress)
 
   const circleAlpha = clamp(mapProgress(progress, 0.0, 0.1), 0, 1)

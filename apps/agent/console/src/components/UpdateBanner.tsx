@@ -11,10 +11,10 @@ export function UpdateBanner() {
 
   const otherVersions = update?.versions.filter((v) => v !== version) ?? []
   const hasVersionHistory = otherVersions.length > 0
-  const showVersionPicker = hasVersionHistory || !!update?.beta
+  const hasBetas = (update?.betas?.length ?? 0) > 0
+  const showVersionPicker = hasVersionHistory || hasBetas
 
   const runningBeta = version.includes('-beta.')
-  const onLatestBeta = !!update?.beta && update.beta.version === version
   const stableSwitchAvailable = runningBeta && !!update?.updateAvailable
 
   // The latest stable version is first in the array
@@ -31,7 +31,7 @@ export function UpdateBanner() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [dropdownOpen])
 
-  if (!upgrading && (!update || (!update.updateAvailable && !hasVersionHistory && !update.beta))) {
+  if (!upgrading && (!update || (!update.updateAvailable && !hasVersionHistory && !hasBetas))) {
     return null
   }
 
@@ -156,34 +156,40 @@ export function UpdateBanner() {
                     )}
 
                     {/* Beta section */}
-                    {update?.beta && (
+                    {hasBetas && (
                       <div className="border-t border-[var(--bauhaus-yellow)]/20">
-                        <div className="px-4 pb-1 pt-3">
+                        <div className="flex items-center gap-1.5 px-4 pb-1 pt-3">
                           <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--bauhaus-yellow)]/60">Beta Track</p>
+                          <TriangleAlert className="h-3 w-3 text-[var(--bauhaus-yellow)]/50" />
                         </div>
-                        <div className="px-3 pb-3">
-                          <div className="mb-2 flex items-start gap-1.5 px-1">
-                            <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0 text-[var(--bauhaus-yellow)]/70" />
-                            <p className="text-[10px] text-foreground/40">For TestFlight users and developers — may be unstable.</p>
-                          </div>
-                          <button
-                            className="flex w-full items-center gap-3 rounded-lg border border-[var(--bauhaus-yellow)]/20 px-3 py-2.5 transition-colors hover:bg-[var(--bauhaus-yellow)]/8 disabled:cursor-default disabled:opacity-50"
-                            onClick={() => !onLatestBeta && handleVersionSelect('nightly')}
-                            disabled={onLatestBeta || upgrading}
-                          >
-                            <div className="flex h-4 w-4 shrink-0 items-center justify-center">
-                              {onLatestBeta && <Check className="h-3.5 w-3.5 text-[var(--bauhaus-yellow)]" />}
-                            </div>
-                            <div className="flex-1">
-                              <span className="font-mono text-sm">{update.beta.version}</span>
-                              <p className="text-[10px] text-foreground/40">
-                                {new Date(update.beta.publishedAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <span className={`text-xs font-medium ${onLatestBeta ? 'text-foreground/30' : 'text-[var(--bauhaus-yellow)]'}`}>
-                              {onLatestBeta ? 'Installed' : runningBeta ? 'Reinstall' : 'Install Beta'}
-                            </span>
-                          </button>
+                        <div className="max-h-40 overflow-y-auto pb-1">
+                          {update!.betas!.map((beta, i) => {
+                            const isCurrent = beta.version === version
+                            const isLatestBeta = i === 0
+                            return (
+                              <button
+                                key={beta.version}
+                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[var(--bauhaus-yellow)]/8 disabled:cursor-default"
+                                onClick={() => !isCurrent && handleVersionSelect(beta.version)}
+                                disabled={isCurrent || upgrading}
+                              >
+                                <div className="flex h-4 w-4 shrink-0 items-center justify-center">
+                                  {isCurrent && <Check className="h-3.5 w-3.5 text-[var(--bauhaus-yellow)]" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className="block truncate font-mono text-sm">{beta.version}</span>
+                                  <span className="text-[10px] text-foreground/40">
+                                    {new Date(beta.publishedAt).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                {!isCurrent && (
+                                  <span className="text-xs font-medium text-[var(--bauhaus-yellow)]">
+                                    {isLatestBeta ? 'Latest Beta' : 'Install'}
+                                  </span>
+                                )}
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
                     )}

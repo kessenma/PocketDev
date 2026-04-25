@@ -18,7 +18,7 @@ export interface VersionCheckResult {
   updateAvailable: boolean
   changelogUrl: string
   versions: string[]
-  beta?: BetaInfo
+  betas?: BetaInfo[]
 }
 
 let cachedCheck: { result: VersionCheckResult; checkedAt: number } | null = null
@@ -82,7 +82,7 @@ export async function checkForUpdate(): Promise<VersionCheckResult | null> {
       version: string
       versions: string[]
       changelog_url: string
-      beta?: BetaInfo
+      betas?: BetaInfo[]
     }
 
     const current = getAgentVersion()
@@ -92,7 +92,7 @@ export async function checkForUpdate(): Promise<VersionCheckResult | null> {
       updateAvailable: current === 'dev' || current === 'unknown' || isNewer(current, data.version),
       changelogUrl: data.changelog_url,
       versions: data.versions,
-      beta: data.beta,
+      betas: data.betas,
     }
 
     cachedCheck = { result, checkedAt: now }

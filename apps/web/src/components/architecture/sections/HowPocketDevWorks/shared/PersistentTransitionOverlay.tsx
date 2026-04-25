@@ -160,7 +160,7 @@ function connectCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): C
 function connectPhoneEndPose(vpW: number, vpH: number, isDesktop: boolean): Pose {
   const animScale = Math.min(vpW, vpH) / 320
   const localCx = isDesktop ? 80 : 0
-  const localCy = isDesktop ? -6 : 50
+  const localCy = isDesktop ? -6 : 80
   return {
     cx: vpW / 2 + localCx * animScale,
     cy: vpH * (isDesktop ? 0.42 : 0.40) + localCy * animScale,
@@ -168,15 +168,15 @@ function connectPhoneEndPose(vpW: number, vpH: number, isDesktop: boolean): Pose
   }
 }
 
-/** Phone at the start of the PortSecurity scene (left side, always-open position) */
+/** Phone at the start of the PortSecurity scene — same position as Connect end state */
 function portSecurityPhoneStartPose(vpW: number, vpH: number, isDesktop: boolean): Pose {
   const animScale = Math.min(vpW, vpH) / 320
-  const localCx = isDesktop ? -152 : -112
-  const localCy = isDesktop ? 0 : 22
+  const localCx = isDesktop ? 80 : 0
+  const localCy = isDesktop ? -6 : 80
   return {
     cx: vpW / 2 + localCx * animScale,
     cy: vpH * (isDesktop ? 0.42 : 0.40) + localCy * animScale,
-    scale: (44 / 60) * animScale,
+    scale: (52 / 60) * animScale,
   }
 }
 

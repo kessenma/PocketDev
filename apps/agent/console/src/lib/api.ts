@@ -41,16 +41,18 @@ async function readError(response: Response, fallback: string) {
   return data.error || fallback
 }
 
+export interface BetaInfo {
+  version: string
+  publishedAt: string
+}
+
 export interface UpdateInfo {
   current: string
   latest: string
   updateAvailable: boolean
   changelogUrl: string
   versions: string[]
-  beta?: {
-    version: string
-    publishedAt: string
-  }
+  betas?: BetaInfo[]
 }
 
 export async function checkHealth(opts?: { signal?: AbortSignal }): Promise<{
