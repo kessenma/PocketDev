@@ -17,6 +17,8 @@ import DetectStep from './opencode-wizard/DetectStep'
 import ReviewStep from './opencode-wizard/ReviewStep'
 import InstallStep from './opencode-wizard/InstallStep'
 import VerifyStep from './opencode-wizard/VerifyStep'
+import OpencodeSetupAnimation from '../animations/OpencodeSetupAnimation'
+import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
@@ -168,17 +170,21 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
+  const markToolPending = useSetupStore((s) => s.markToolPending)
   const [state, dispatch] = useReducer(reducer, entryMode, getInitialStateForMode)
+  const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
+    markToolPending('opencode_cli')
     fetchPrerequisites()
     onComplete()
-  }, [fetchPrerequisites, onComplete])
+  }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
+    markToolPending('opencode_cli')
     fetchPrerequisites()
     onDismiss()
-  }, [fetchPrerequisites, onDismiss])
+  }, [markToolPending, fetchPrerequisites, onDismiss])
 
   const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
@@ -245,7 +251,7 @@ export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode =
 
         <View style={styles.content}>{renderStep()}</View>
 
-        {state.allConfigured ? (
+        {state.allConfigured && animationDone ? (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}
@@ -255,6 +261,11 @@ export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode =
               <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
             </TouchableOpacity>
           </View>
+        ) : null}
+
+        {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
+        {state.allConfigured && !animationDone ? (
+          <OpencodeSetupAnimation onComplete={onAnimationComplete} />
         ) : null}
     </SetupWizardScreen>
   )

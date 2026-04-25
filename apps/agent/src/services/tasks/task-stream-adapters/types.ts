@@ -25,6 +25,10 @@ export interface TaskStreamAdapterSink {
 
 export interface TaskStreamAdapter {
   handleJsonMessage: (message: Record<string, unknown>) => boolean
+  /** Called for each plain-text stdout line (non-JSON). Used by OpenCode adapter to buffer response text. */
+  handleTextLine?: (line: string) => void
+  /** Called once when the process exits. Used by OpenCode adapter to emit the collected text as a `text` activity. */
+  onProcessExit?: (exitCode: number) => void
   getCollectedText: () => string
   getCollectedThinking: () => string
   getCollectedToolUses: () => CollectedToolUse[]

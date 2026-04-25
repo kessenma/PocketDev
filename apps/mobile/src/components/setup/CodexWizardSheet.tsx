@@ -17,6 +17,8 @@ import type {
   CodexWizardStep,
   CodexWizardStepStatus,
 } from '@pocketdev/shared/types'
+import CodexSetupAnimation from '../animations/CodexSetupAnimation'
+import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
@@ -173,17 +175,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 export default function CodexWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
+  const markToolPending = useSetupStore((s) => s.markToolPending)
   const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
+  const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
+    markToolPending('codex_cli')
     fetchPrerequisites()
     onComplete()
-  }, [fetchPrerequisites, onComplete])
+  }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
+    markToolPending('codex_cli')
     fetchPrerequisites()
     onDismiss()
-  }, [fetchPrerequisites, onDismiss])
+  }, [markToolPending, fetchPrerequisites, onDismiss])
 
   const canGoBack = entryMode === 'full' && ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
@@ -241,7 +247,7 @@ export default function CodexWizardSheet({ onDismiss, onComplete, entryMode = 'f
 
       <View style={styles.content}>{renderStep()}</View>
 
-      {state.allConfigured ? (
+      {state.allConfigured && animationDone ? (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.doneButton, { backgroundColor: colors.primary }]}
@@ -251,6 +257,11 @@ export default function CodexWizardSheet({ onDismiss, onComplete, entryMode = 'f
             <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
           </TouchableOpacity>
         </View>
+      ) : null}
+
+      {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
+      {state.allConfigured && !animationDone ? (
+        <CodexSetupAnimation onComplete={onAnimationComplete} />
       ) : null}
     </SetupWizardScreen>
   )

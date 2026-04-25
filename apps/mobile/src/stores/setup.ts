@@ -38,11 +38,13 @@ interface SetupState {
   revalidating: boolean
   reportSource: ReportSource
   hasLiveConfirmation: boolean
+  pendingToolIds: string[]
   hydrateFromCache: () => Promise<void>
   fetchPrerequisites: () => Promise<void>
   applyLiveReport: (report: PrerequisitesReport) => Promise<void>
   setFetchError: (message: string) => void
   resetForUnpair: (deviceId?: string) => Promise<void>
+  markToolPending: (toolId: string) => void
 }
 
 export const useSetupStore = create<SetupState>((set) => ({
@@ -53,6 +55,7 @@ export const useSetupStore = create<SetupState>((set) => ({
   revalidating: false,
   reportSource: 'none',
   hasLiveConfirmation: false,
+  pendingToolIds: [],
 
   hydrateFromCache: async () => {
     const server = useConnectionStore.getState().server
@@ -119,6 +122,7 @@ export const useSetupStore = create<SetupState>((set) => ({
       revalidating: false,
       reportSource: 'live',
       hasLiveConfirmation: true,
+      pendingToolIds: [],
     })
 
     if (_db && server?.deviceId) {
@@ -157,6 +161,14 @@ export const useSetupStore = create<SetupState>((set) => ({
         e instanceof Error ? e.message : 'Failed to check prerequisites',
       )
     }
+  },
+
+  markToolPending: (toolId: string) => {
+    set((state) => ({
+      pendingToolIds: state.pendingToolIds.includes(toolId)
+        ? state.pendingToolIds
+        : [...state.pendingToolIds, toolId],
+    }))
   },
 
   resetForUnpair: async (deviceId?: string) => {

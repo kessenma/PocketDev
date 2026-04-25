@@ -1,4 +1,4 @@
-import React, { useReducer, useCallback, useState } from 'react'
+import React, { useReducer, useCallback } from 'react'
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
@@ -16,6 +16,7 @@ import VerifyStep from './python-wizard/VerifyStep'
 import type { PythonSetupStatus, PythonWizardStep, PythonWizardStepStatus } from '@pocketdev/shared/types'
 import PythonSetupAnimation from '../animations/PythonSetupAnimation'
 import SetupWizardScreen from './SetupWizardScreen'
+import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
@@ -167,18 +168,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
+  const markToolPending = useSetupStore((s) => s.markToolPending)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
-  const [completionAnimationDone, setCompletionAnimationDone] = useState(false)
+  const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
+    markToolPending('python')
     fetchPrerequisites()
     onComplete()
-  }, [fetchPrerequisites, onComplete])
+  }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
+    markToolPending('python')
     fetchPrerequisites()
     onDismiss()
-  }, [fetchPrerequisites, onDismiss])
+  }, [markToolPending, fetchPrerequisites, onDismiss])
 
   const currentIndex = ALL_STEPS.indexOf(state.currentStep)
   const hasPrevStep = currentIndex > 1 && ALL_STEPS.slice(1, currentIndex).some(
@@ -188,9 +192,6 @@ export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
 
   function renderStep() {
     if (state.allConfigured) {
-      if (!completionAnimationDone) {
-        return <PythonSetupAnimation onComplete={() => setCompletionAnimationDone(true)} />
-      }
       return (
         <View style={styles.completedContainer}>
           <View style={[styles.completedIcon, { backgroundColor: colors.primary }]}>
@@ -263,7 +264,7 @@ export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
         <View style={styles.content}>{renderStep()}</View>
 
         {/* Footer */}
-        {state.allConfigured && completionAnimationDone && (
+        {state.allConfigured && animationDone && (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}
@@ -273,6 +274,11 @@ export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
               <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
+        {state.allConfigured && !animationDone && (
+          <PythonSetupAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )

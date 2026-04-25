@@ -4,8 +4,8 @@ import type { SceneConfig } from '../timeline-types'
 export const portSecurityScene: SceneConfig = {
   id: 'port-security',
   kind: 'takeover',
-  weight: 3,
-  holdRatio: 0.78,
+  weight: 8,
+  holdRatio: 0.96,
   reducedMotionFullBleed: true,
   render: ({ progress, active, isDesktopLayout, hideBlueCircle, hidePhone }) => (
     <div className="relative z-10 h-full w-full">

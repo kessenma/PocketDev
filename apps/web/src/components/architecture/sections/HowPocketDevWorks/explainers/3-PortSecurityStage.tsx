@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { palette } from '@pocketdev/shared/theme'
 import { SvgAutoWrapText } from '../../../shared/SvgAutoWrapText'
@@ -21,60 +21,49 @@ function easeOutQuad(t: number) {
 function easeInOut(t: number) {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
 }
-function easeOutBack(t: number) {
-  const c1 = 1.70158
-  const c3 = c1 + 1
-  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
-}
 
 // ── Door geometry ─────────────────────────────────────────────────────────────
 const DOOR_W = 120
 const DOOR_H = 210
 
-// Shape slots centered on the door (animation-group coords)
-const SLOT_SIZE = 15
-const SLOT_DEFS = [
-  { kind: 'circle'   as const, x: -32, y: 8,  color: palette.bauhaus.blue   },
-  { kind: 'triangle' as const, x:   0, y: 8,  color: palette.bauhaus.yellow },
-  { kind: 'square'   as const, x:  32, y: 8,  color: palette.bauhaus.red    },
-]
+// ── Bauhaus key SVG paths (from bauhaus_key.svg) ──────────────────────────────
+// Combined transform M1*M2 ≈ translate(0, -350) so phone-local coords are:
+//   x_phone = (x_path - KEY_OX) * KEY_S
+//   y_phone = (y_path - KEY_OY) * KEY_S
+const KEY_S  = 0.033
+const KEY_OX = 494    // x center of bounding box in path coords
+const KEY_OY = 498.5  // y center (after -350 shift)
 
-// Per-shape orbit config — each shape spirals from the phone toward its slot
-const SHAPE_ORBIT = [
-  { pStart: 0.18, pEnd: 0.50, revs: 1.2, dir:  1, initAngle: Math.PI * 0.85 },
-  { pStart: 0.27, pEnd: 0.58, revs: 0.9, dir: -1, initAngle: Math.PI * 1.10 },
-  { pStart: 0.36, pEnd: 0.66, revs: 1.5, dir:  1, initAngle: Math.PI * 1.35 },
-]
+// Key geometry in path coords:
+//   Bow center x ≈ 207, Bit right x ≈ 896
+//   → phone-local: bow cx ≈ -9.5, bit right ≈ 13.3, bow-to-bit = 22.8 units
+const BOW_CENTER_PHONE = (207 - KEY_OX) * KEY_S  // ≈ -9.5
+const BIT_RIGHT_PHONE  = (896 - KEY_OX) * KEY_S  // ≈ 13.3
+const BOW_CY_PHONE     = (488 - KEY_OY) * KEY_S  // ≈ -0.3 ≈ 0
 
-// Phone-screen offsets for each shape (BauhausPhone local coords)
-const PHONE_OFFSETS = [
-  { dx: -12, dy: 2 },  // circle
-  { dx:   0, dy: 0 },  // triangle
-  { dx:  12, dy: 0 },  // square
-]
+// Outer bow silhouette only (first subpath of the blue compound path)
+const BOW_OUTER_D = 'M321.93,458.121L321.93,518.867C314.168,519.782 310.87,521.776 305.502,525.59C288.143,537.921 283.024,595.877 235.585,612.239C169.571,635.007 149.386,601.716 142.062,597.986C140.764,597.325 124.869,580.513 121.642,576.679C116.926,571.076 92.38,541.914 92.211,489.985C92.016,430.309 116.045,406.385 127.855,393.049C130.57,389.984 146.788,373.477 153.042,368.828C178.189,350.133 213.828,351.149 230.544,357.877C234.863,359.615 262.799,370.859 276.898,393.058C296.292,423.592 291.464,449.742 321.93,458.121Z'
+// Yellow shaft
+const SHAFT_D = 'M629.267,532.713C621.669,530.796 613.965,525.711 602.913,525.126C600.575,525.002 396.818,519.3 393.322,519.229C350.869,518.356 332.365,517.636 321.93,518.867L321.93,458.121C329.53,460.211 339.328,461.195 352.246,460.865C359.955,460.668 446.284,458.463 448.604,458.123C454.994,457.187 454.898,457.722 461.162,458.904C466.408,459.895 589.206,460.132 598.711,460.063C619.257,459.914 616.702,450.862 627.574,449.697C628.152,449.635 628.717,449.587 629.267,449.553L629.267,532.713Z'
+// Red bit + teeth
+const BIT_D = 'M629.267,449.553C648.754,448.332 650.885,463.83 666.159,458.283C675.507,454.888 678.776,460.627 680.493,461.77C687.056,466.139 861.17,463.288 876.05,465.517C887.45,467.225 898.987,492.973 896.401,500.213C893.167,509.262 887.963,517.838 887.082,519.291C884.673,523.261 878.678,522.091 873.983,521.909C843.481,520.723 843.168,521.117 841.553,523.15C839.342,525.932 840.761,612.145 839.797,633.784C839.163,648.007 833.141,646.755 787.672,646.335C749.886,645.986 710.134,646.73 707.451,644.154C701.241,638.193 708.526,524.985 703.521,520.72C701.451,518.956 681.875,518.935 681.045,519.203C677.157,520.46 679.21,528.838 672.615,527.459C660.301,524.883 659.018,517.912 650.801,525.657C642.31,533.662 635.828,534.369 629.267,532.713L629.267,449.553Z'
 
-function ShapeOutline({ kind, size }: { kind: typeof SLOT_DEFS[number]['kind']; size: number }) {
-  const s = size
-  if (kind === 'circle') {
-    return <circle r={s / 2} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1.5" />
-  }
-  if (kind === 'triangle') {
-    const pts = `0,${-s / 2} ${s * 0.5},${s / 2} ${-s * 0.5},${s / 2}`
-    return <polygon points={pts} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1.5" />
-  }
-  const h = s / 2
-  return <rect x={-h} y={-h} width={s} height={s} rx={2} fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="1.5" />
-}
+// Starting shapes as cubic-bezier paths in phone-local coords
+const CIRCLE_D   = 'M-12,-4 C-8.686,-4 -6,-1.314 -6,2 C-6,5.314 -8.686,8 -12,8 C-15.314,8 -18,5.314 -18,2 C-18,-1.314 -15.314,-4 -12,-4 Z'
+const TRIANGLE_D = 'M0,-7 L5.5,3.5 L-5.5,3.5 Z'
+const SQUARE_D   = 'M6,-6 L18,-6 L18,6 L6,6 Z'
 
-function ShapeFilled({ kind, color, size }: { kind: typeof SLOT_DEFS[number]['kind']; color: string; size: number }) {
-  const s = size
-  if (kind === 'circle') return <circle r={s / 2} fill={color} />
-  if (kind === 'triangle') {
-    const pts = `0,${-s / 2} ${s * 0.5},${s / 2} ${-s * 0.5},${s / 2}`
-    return <polygon points={pts} fill={color} />
-  }
-  const h = s / 2
-  return <rect x={-h} y={-h} width={s} height={s} rx={2} fill={color} />
+type CurveData = (string | number)[][]
+
+interface MorphLib {
+  circleCurve:   CurveData
+  bowCurve:      CurveData
+  triangleCurve: CurveData
+  shaftCurve:    CurveData
+  squareCurve:   CurveData
+  bitCurve:      CurveData
+  curveCalc:   (a: CurveData, b: CurveData, t: number) => CurveData
+  path2string: (c: CurveData) => string
 }
 
 export function PortSecurityStage({
@@ -101,63 +90,114 @@ export function PortSecurityStage({
     return () => window.removeEventListener('resize', sync)
   }, [])
 
+  // Load svg-morpheus-ts dynamically (has window refs — not SSR-safe at module level)
+  const [morphLib, setMorphLib] = useState<MorphLib | null>(null)
+  const morphLibLoading = useRef(false)
+  useEffect(() => {
+    if (morphLibLoading.current) return
+    morphLibLoading.current = true
+    import('svg-morpheus-ts').then(({ path2curve, path2string, curveCalc }) => {
+      function toPhoneLocal(curve: CurveData): CurveData {
+        return curve.map(seg => {
+          if (seg[0] === 'M') return ['M', ((seg[1] as number) - KEY_OX) * KEY_S, ((seg[2] as number) - KEY_OY) * KEY_S]
+          if (seg[0] === 'C') return ['C',
+            ((seg[1] as number) - KEY_OX) * KEY_S, ((seg[2] as number) - KEY_OY) * KEY_S,
+            ((seg[3] as number) - KEY_OX) * KEY_S, ((seg[4] as number) - KEY_OY) * KEY_S,
+            ((seg[5] as number) - KEY_OX) * KEY_S, ((seg[6] as number) - KEY_OY) * KEY_S,
+          ]
+          return seg
+        })
+      }
+      const bowPhoneD   = path2string(toPhoneLocal(path2curve(BOW_OUTER_D) as CurveData))
+      const shaftPhoneD = path2string(toPhoneLocal(path2curve(SHAFT_D) as CurveData))
+      const bitPhoneD   = path2string(toPhoneLocal(path2curve(BIT_D) as CurveData))
+
+      const [circleCurve, bowCurve]     = path2curve(CIRCLE_D,   bowPhoneD)   as [CurveData, CurveData]
+      const [triangleCurve, shaftCurve] = path2curve(TRIANGLE_D, shaftPhoneD) as [CurveData, CurveData]
+      const [squareCurve, bitCurve]     = path2curve(SQUARE_D,   bitPhoneD)   as [CurveData, CurveData]
+
+      setMorphLib({
+        circleCurve, bowCurve,
+        triangleCurve, shaftCurve,
+        squareCurve, bitCurve,
+        curveCalc: curveCalc as MorphLib['curveCalc'],
+        path2string: path2string as MorphLib['path2string'],
+      })
+    })
+  }, [])
+
   const viewBox = `0 0 ${vpSize.w} ${vpSize.h}`
   const scale = Math.min(vpSize.w, vpSize.h) / 320
   const animCenterX = vpSize.w / 2
   const animCenterY = vpSize.h * (isDesktopLayout ? 0.42 : 0.40)
 
-  // ── Animation timeline ────────────────────────────────────────────────────
-  const doorFadeP    = mapP(p, 0.00, 0.14)  // vault door fades in
-  const slotsRevealP = mapP(p, 0.08, 0.22)  // slot outlines pulse in
-  const labelsP      = mapP(p, 0.10, 0.26)  // title + subtitle
+  // ── Timeline ──────────────────────────────────────────────────────────────
+  const doorFadeP  = mapP(p, 0.00, 0.12)
+  const labelsP    = mapP(p, 0.08, 0.22)
+  const morphT     = easeInOut(mapP(p, 0.28, 0.52))  // shapes → key on phone
 
-  // Last shape locks at p=0.66
-  const allLockedP   = mapP(p, 0.66, 0.69)  // glow flash on unlock
-  const doorOpenP    = mapP(p, 0.68, 0.82)  // door swings open
-  const consoleRevP  = mapP(p, 0.70, 0.80)  // laptop console fades in behind door
-
-  // Big blue circle: grows from phone screen token, then moves right for overlay handoff
-  const circleGrowP   = mapP(p, 0.00, 0.18)
-  const circleMoveP   = mapP(p, 0.74, 0.78)
+  const keyDepartP = mapP(p, 0.62, 0.74)  // key slides from phone to door
+  const keyInsertP = mapP(p, 0.74, 0.80)  // key slides into handle
+  const keyTurnP   = mapP(p, 0.79, 0.84)  // key foreshortens into lock
+  const doorOpenP  = mapP(p, 0.83, 0.95)
+  const consoleRevP = mapP(p, 0.85, 0.95)
+  const circleGrowP = mapP(p, 0.00, 0.18)
+  const circleMoveP = mapP(p, 0.79, 0.84)
 
   // ── Layout ───────────────────────────────────────────────────────────────
   const phoneCx    = isDesktopLayout ? -152 : -112
   const phoneCy    = isDesktopLayout ?    0 :   22
   const phoneScale = 44 / 60
 
-  // Phone shapes fade out as they leave the phone screen
-  const phoneShapesFadeOut = mapP(p, SHAPE_ORBIT[0].pStart, SHAPE_ORBIT[0].pStart + 0.10)
+  // ── Key wrapper transform — one continuous journey from phone to door ──────
+  // Scale factor: match bauhaus key's bow-to-bit distance to BauhausKeyShape's
+  // Mobile: bowToBit_anim = 37 (keyBowCx -93, bit pre-insert -56), sDoor = 37/22.8 = 1.62
+  // Desktop: bowToBit_anim = 47 (keyBowCx -103, bit pre-insert -56), sDoor = 47/22.8 = 2.06
+  // After insertion (+12 anim units), bit tip reaches ≈ -44 (door knob at -43.2) ✓
+  const KEY_S_DOOR = isDesktopLayout ? 2.06 : 1.62
+  // txDoor: bit right at door = txDoor + BIT_RIGHT_PHONE * KEY_S_DOOR = -56 (pre-insert)
+  const TX_DOOR = -56 - BIT_RIGHT_PHONE * KEY_S_DOOR  // ≈ -77.6 mobile, ≈ -83.4 desktop
+  const TY_DOOR = -BOW_CY_PHONE * KEY_S_DOOR          // ≈ 0 (centers key vertically)
 
-  // Text — title left of door (desktop) / right (mobile), subtitle bottom-right
+  const keyDepartT  = easeInOut(keyDepartP)
+  const keyInsertTx = easeInOut(keyInsertP) * 12       // 12 anim-group units toward handle
+  const keyTurnScaleX = 1 - easeInOut(keyTurnP)
+  const keyTurnFadeOut = easeOutQuad(mapP(keyTurnP, 0.75, 1.0))
+  const morphedKeyOpacity = (hidePhone ? 0 : 1) * (1 - keyTurnFadeOut)
+
+  // Outer wrapper: phone position → door position
+  const wrapTx = mix(phoneCx, TX_DOOR, keyDepartT) + keyInsertTx
+  const wrapTy = mix(phoneCy, TY_DOOR, keyDepartT)
+  const wrapS  = mix(phoneScale, KEY_S_DOOR, keyDepartT)
+
+  // Foreshortening pivot: bit right edge in phone-local (shrinks key INTO the lock from right)
+  const TURN_PIVOT = BIT_RIGHT_PHONE  // ≈ 13.3
+
+  // ── Text layout ──────────────────────────────────────────────────────────
   const titleX  = isDesktopLayout ? vpSize.w * 0.24 : vpSize.w * 0.70
   const titleY  = vpSize.h * (isDesktopLayout ? 0.14 : 0.10)
-  const titleSz = isDesktopLayout
-    ? Math.min(vpSize.w * 0.04, 56)
-    : Math.min(vpSize.w * 0.068, 36)
-  const subSz = isDesktopLayout
-    ? Math.min(vpSize.w * 0.015, 20)
-    : Math.min(vpSize.w * 0.04, 18)
-  const subLH = Math.round(subSz * 1.55)
-  const subY  = vpSize.h * (isDesktopLayout ? 0.82 : 0.78)
-  const subX  = isDesktopLayout ? vpSize.w * 0.58 : vpSize.w * 0.50
+  const titleSz = isDesktopLayout ? Math.min(vpSize.w * 0.04, 56) : Math.min(vpSize.w * 0.068, 36)
+  const subSz   = isDesktopLayout ? Math.min(vpSize.w * 0.015, 20) : Math.min(vpSize.w * 0.04, 18)
+  const subLH   = Math.round(subSz * 1.55)
+  const subY    = vpSize.h * (isDesktopLayout ? 0.82 : 0.78)
+  const subX    = isDesktopLayout ? vpSize.w * 0.58 : vpSize.w * 0.50
 
-  // Single hinged door — hinge on right, free edge swings toward viewer
-  const HINGE_X     = DOOR_W / 2
-  const openAngle   = easeInOut(doorOpenP) * (Math.PI * 0.52)   // ~94° full open
-  const cosA        = Math.cos(openAngle)
-  const sinA        = Math.sin(openAngle)
-  const freeX       = HINGE_X - DOOR_W * cosA                   // free edge x
-  const yConv       = sinA * 10                                  // perspective height convergence
+  // ── Door geometry ────────────────────────────────────────────────────────
+  const HINGE_X    = DOOR_W / 2
+  const openAngle  = easeInOut(doorOpenP) * (Math.PI * 0.52)
+  const cosA       = Math.cos(openAngle)
+  const sinA       = Math.sin(openAngle)
+  const freeX      = HINGE_X - DOOR_W * cosA
+  const yConv      = sinA * 10
   const doorOpacity = doorFadeP * (1 - easeOutQuad(mapP(doorOpenP, 0.72, 1.0)))
-  // Pre-compute polygon point strings
   const doorFacePoints = [
     `${freeX.toFixed(2)},${(-DOOR_H / 2 + yConv).toFixed(2)}`,
     `${HINGE_X},${-DOOR_H / 2}`,
     `${HINGE_X},${DOOR_H / 2}`,
     `${freeX.toFixed(2)},${(DOOR_H / 2 - yConv).toFixed(2)}`,
   ].join(' ')
-  const edgeW          = sinA * 6
-  const edgeX2         = freeX - (cosA >= 0 ? 1 : -1) * edgeW
+  const edgeW = sinA * 6
+  const edgeX2 = freeX - (cosA >= 0 ? 1 : -1) * edgeW
   const doorEdgePoints = [
     `${edgeX2.toFixed(2)},${(-DOOR_H / 2 + yConv + 2).toFixed(2)}`,
     `${freeX.toFixed(2)},${(-DOOR_H / 2 + yConv).toFixed(2)}`,
@@ -165,52 +205,36 @@ export function PortSecurityStage({
     `${edgeX2.toFixed(2)},${(DOOR_H / 2 - yConv - 2).toFixed(2)}`,
   ].join(' ')
 
+  // Morphed paths (curveCalc at current morphT)
+  const morphedBowD   = morphLib ? morphLib.path2string(morphLib.curveCalc(morphLib.circleCurve,   morphLib.bowCurve,   morphT)) : null
+  const morphedShaftD = morphLib ? morphLib.path2string(morphLib.curveCalc(morphLib.triangleCurve, morphLib.shaftCurve, morphT)) : null
+  const morphedBitD   = morphLib ? morphLib.path2string(morphLib.curveCalc(morphLib.squareCurve,   morphLib.bitCurve,   morphT)) : null
+
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox={viewBox}
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox={viewBox}
       className="block h-full w-full"
       style={{ backgroundColor: architectureTokens.colors.paper }}
-      preserveAspectRatio="xMidYMid slice"
-      aria-hidden="true"
-    >
+      preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <rect width="100%" height="100%" fill={architectureTokens.colors.paper} />
 
-      {/* Title */}
-      <text
-        x={titleX} y={titleY}
-        fill={architectureTokens.colors.text}
-        fontFamily={architectureFonts.display}
-        fontSize={titleSz}
-        fontWeight="700"
-        letterSpacing="-0.03em"
-        textAnchor="middle"
-        opacity={labelsP}
-      >
+      <text x={titleX} y={titleY} fill={architectureTokens.colors.text}
+        fontFamily={architectureFonts.display} fontSize={titleSz} fontWeight="700"
+        letterSpacing="-0.03em" textAnchor="middle" opacity={labelsP}>
         Lock the port
       </text>
 
-      {/* Subtitle */}
-      <SvgAutoWrapText
-        x={subX}
-        y={subY}
-        font={`${subSz}px ${architectureFonts.body}`}
-        maxWidth={vpSize.w * (isDesktopLayout ? 0.38 : 0.42)}
-        lineHeight={subLH}
-        fill={architectureTokens.colors.textSecondary}
-        fontFamily={architectureFonts.body}
-        fontSize={subSz}
-        opacity={labelsP}
-      >
+      <SvgAutoWrapText x={subX} y={subY} font={`${subSz}px ${architectureFonts.body}`}
+        maxWidth={vpSize.w * (isDesktopLayout ? 0.38 : 0.42)} lineHeight={subLH}
+        fill={architectureTokens.colors.textSecondary} fontFamily={architectureFonts.body}
+        fontSize={subSz} opacity={labelsP}>
         {isDesktopLayout
           ? 'Optional. Leave port 4387 open, or flip the switch in mobile app settings to hide it at the firewall level — invisible to scanners. Signed wake requests let you back in.'
           : 'Optional — leave port 4387 open, or enable port locking in mobile app settings to hide it from scanners.'}
       </SvgAutoWrapText>
 
-      {/* ── Main animation group ─────────────────────────────────────────── */}
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>
 
-        {/* ── Big blue circle — behind phone, grows, then moves right ─── */}
+        {/* ── Big blue circle ─────────────────────────────────────────── */}
         {!hideBlueCircle && (() => {
           const startCx = phoneCx + (-12) * phoneScale
           const startCy = phoneCy + 2 * phoneScale
@@ -218,30 +242,25 @@ export function PortSecurityStage({
           const growCx  = mix(startCx, phoneCx, circleGrowP)
           const growCy  = mix(startCy, phoneCy, circleGrowP)
           const growR   = mix(startR, 26, circleGrowP)
-          const cx = mix(growCx, 100, circleMoveP)
-          const cy = mix(growCy, 0,   circleMoveP)
-          return <circle cx={cx} cy={cy} r={growR} fill={palette.bauhaus.blue} opacity={0.96} />
+          return <circle cx={mix(growCx, 100, circleMoveP)} cy={mix(growCy, 0, circleMoveP)}
+            r={growR} fill={palette.bauhaus.blue} opacity={0.96} />
         })()}
 
-        {/* ── Console laptop — rendered BEHIND door panels ─────────────── */}
+        {/* ── Console laptop — behind door ─────────────────────────────── */}
         {consoleRevP > 0 && (
           <g opacity={easeOutQuad(consoleRevP)}>
-            <BauhausLaptop cx={isDesktopLayout ? 0 : 0} cy={isDesktopLayout ? -18 : -10} scale={isDesktopLayout ? 0.50 : 0.43}>
-              {/* Traffic lights */}
+            <BauhausLaptop cx={0} cy={isDesktopLayout ? -18 : -10} scale={isDesktopLayout ? 0.50 : 0.43}>
               <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
               <circle cx={-63} cy={-112} r={3} fill={palette.bauhaus.yellow} />
               <circle cx={-52} cy={-112} r={3} fill={palette.bauhaus.blue} />
-              {/* Header */}
               <rect x={-78} y={-112} width={156} height={18} rx={4} fill="rgba(255,255,255,0.06)" />
               <rect x={-72} y={-109} width={12} height={12} rx={3} fill={palette.bauhaus.yellow} />
               <rect x={-56} y={-108} width={40} height={3} rx={1.5} fill="rgba(255,255,255,0.5)" />
               <rect x={-56} y={-103} width={24} height={2.5} rx={1} fill="rgba(255,255,255,0.25)" />
               <rect x={20}  y={-108} width={18} height={6} rx={3} fill={palette.bauhaus.yellow} opacity={0.7} />
               <rect x={42}  y={-108} width={14} height={6} rx={3} fill={palette.bauhaus.blue} opacity={0.5} />
-              {/* Left card — Pairing */}
               <rect x={-78} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
               <text x={-70} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Pairing</text>
-              {/* Right card — Devices */}
               <rect x={2} y={-88} width={74} height={66} rx={6} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.15)" strokeWidth="0.6" />
               <text x={10} y={-78} fontFamily="var(--font-sans), sans-serif" fontSize="4.5" fontWeight="600" fill="rgba(255,255,255,0.6)">Devices</text>
               {[0, 1, 2].map((i) => (
@@ -256,145 +275,77 @@ export function PortSecurityStage({
           </g>
         )}
 
-        {/* ── Door frame at hinge ──────────────────────────────────────────── */}
+        {/* ── Door frame at hinge ─────────────────────────────────────── */}
         {doorFadeP > 0 && (
-          <line
-            x1={HINGE_X} y1={-DOOR_H / 2 - 20}
-            x2={HINGE_X} y2={ DOOR_H / 2 + 20}
-            stroke="rgba(255,255,255,0.14)" strokeWidth="4"
-            opacity={doorFadeP}
-          />
+          <line x1={HINGE_X} y1={-DOOR_H / 2 - 20} x2={HINGE_X} y2={DOOR_H / 2 + 20}
+            stroke="rgba(255,255,255,0.14)" strokeWidth="4" opacity={doorFadeP} />
         )}
 
-        {/* ── Door — single panel, right-hinged, swings toward viewer ─────── */}
+        {/* ── Single hinged door ──────────────────────────────────────── */}
         {doorFadeP > 0 && (
           <g opacity={doorOpacity}>
-            {sinA > 0.04 && (
-              <polygon points={doorEdgePoints} fill="rgba(255,255,255,0.07)" />
-            )}
+            {sinA > 0.04 && <polygon points={doorEdgePoints} fill="rgba(255,255,255,0.07)" />}
             <polygon points={doorFacePoints} fill={palette.bauhaus.black} />
             <polygon points={doorFacePoints} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
             {(HINGE_X - freeX) > 12 && [-50, 0, 50].map((dy) => (
-              <line key={dy}
-                x1={freeX + 6} y1={dy} x2={HINGE_X - 6} y2={dy}
-                stroke="rgba(255,255,255,0.06)" strokeWidth="0.8"
-              />
+              <line key={dy} x1={freeX + 6} y1={dy} x2={HINGE_X - 6} y2={dy}
+                stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
             ))}
             {[0.25, 0.75].map((frac, i) => (
-              <circle key={i}
-                cx={HINGE_X} cy={-DOOR_H / 2 + DOOR_H * frac} r={3.5}
-                fill="rgba(255,255,255,0.20)"
-              />
+              <circle key={i} cx={HINGE_X} cy={-DOOR_H / 2 + DOOR_H * frac} r={3.5}
+                fill="rgba(255,255,255,0.20)" />
             ))}
             <circle cx={mix(freeX, HINGE_X, 0.14)} cy={4} r={4.5} fill="rgba(255,255,255,0.22)" />
           </g>
         )}
 
-        {/* ── PORT label ───────────────────────────────────────────────────── */}
-        <text
-          x={0} y={-DOOR_H / 2 - 10}
-          textAnchor="middle"
-          fontFamily={architectureFonts.mono}
-          fontSize="9"
-          fontWeight="600"
-          letterSpacing="0.07em"
+        {/* ── PORT label ──────────────────────────────────────────────── */}
+        <text x={0} y={-DOOR_H / 2 - 10} textAnchor="middle" fontFamily={architectureFonts.mono}
+          fontSize="9" fontWeight="600" letterSpacing="0.07em"
           fill={architectureTokens.colors.textSecondary}
-          opacity={labelsP * 0.8 * (1 - doorOpenP)}
-        >
+          opacity={labelsP * 0.8 * (1 - doorOpenP)}>
           PORT 4387
         </text>
 
-        {/* ── Shape lock slots (float above door panels) ───────────────────── */}
-        {SLOT_DEFS.map((slot, i) => {
-          const isLocked = SHAPE_ORBIT[i].pEnd <= p + 0.01
-          return (
-            <g key={`slot-${i}`} transform={`translate(${slot.x} ${slot.y})`}
-              opacity={slotsRevealP * (1 - easeOutQuad(doorOpenP))}>
-              <ShapeOutline kind={slot.kind} size={SLOT_SIZE} />
-              {isLocked && (
-                <>
-                  <ShapeFilled kind={slot.kind} color={slot.color} size={SLOT_SIZE} />
-                  <circle r={SLOT_SIZE * 0.85} fill={slot.color}
-                    opacity={0.15 + allLockedP * 0.20} />
-                </>
-              )}
-            </g>
-          )
-        })}
-
-        {/* ── Unlock glow flash ─────────────────────────────────────────────── */}
-        {allLockedP > 0 && allLockedP < 1 && (
-          <rect x={-DOOR_W / 2} y={-DOOR_H / 2} width={DOOR_W} height={DOOR_H}
-            fill={palette.bauhaus.blue} opacity={allLockedP * 0.28} />
-        )}
-
-        {/* ── Flying shapes — orbit from phone to slot ─────────────────────── */}
-        {SHAPE_ORBIT.map((cfg, i) => {
-          const slot = SLOT_DEFS[i]
-          const phoneOff = PHONE_OFFSETS[i]
-          const totalP = mapP(p, cfg.pStart, cfg.pEnd)
-          if (totalP <= 0 || totalP >= 1) return null
-
-          // Phone-space start position (animation group coords)
-          const phoneX = phoneCx + phoneOff.dx * phoneScale
-          const phoneY = phoneCy + phoneOff.dy * phoneScale
-
-          // Spiral orbit: large radius that collapses toward slot
-          const orbitPhaseP = mapP(totalP, 0, 0.80)
-          const lockP       = mapP(totalP, 0.72, 1.0)
-          const orbitRadius = mix(72, 10, orbitPhaseP)
-          const angle = cfg.initAngle + cfg.dir * cfg.revs * Math.PI * 2 * orbitPhaseP
-
-          const orbitX = slot.x + Math.cos(angle) * orbitRadius
-          const orbitY = slot.y + Math.sin(angle) * orbitRadius
-
-          // Blend from phone into orbit path
-          const joinP = mapP(totalP, 0, 0.28)
-          const inOrbitX = mix(phoneX, orbitX, easeOutQuad(joinP))
-          const inOrbitY = mix(phoneY, orbitY, easeOutQuad(joinP))
-
-          // Snap to slot
-          const fx = mix(inOrbitX, slot.x, easeOutBack(lockP))
-          const fy = mix(inOrbitY, slot.y, easeOutBack(lockP))
-
-          const flySize = mix(9, SLOT_SIZE, easeOutQuad(totalP))
-
-          return (
-            <g key={`fly-${i}`} transform={`translate(${fx} ${fy})`}>
-              <ShapeFilled kind={slot.kind} color={slot.color} size={flySize} />
-            </g>
-          )
-        })}
-
-        {/* ── Phone — renders above everything on left ─────────────────────── */}
+        {/* ── Phone body only (no children — key is a sibling group) ─── */}
         <g opacity={hidePhone ? 0 : 1}>
           <BauhausPhone cx={phoneCx} cy={phoneCy} scale={phoneScale}>
-            {(() => {
-              const preFadeIn  = mapP(p, 0.05, 0.20)
-              const opacity = preFadeIn * (1 - phoneShapesFadeOut)
-              if (opacity <= 0) return <></>
-              return (
-                <g opacity={opacity}>
-                  <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
-                  <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
-                  <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
-                </g>
-              )
-            })()}
+            {/* Fallback shapes when morphLib hasn't loaded yet */}
+            {!morphLib && (
+              <g opacity={1 - morphT}>
+                <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
+                <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
+                <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
+              </g>
+            )}
           </BauhausPhone>
         </g>
 
-        {/* ── Dashed signal line: phone → door center (shows after door opens) ── */}
+        {/* ── Key: morphs on phone, then continuously slides to door ─────
+            Single group with animated wrapper transform — no disappear/reappear.
+            Rendered AFTER phone so it draws on top during on-phone phase.   */}
+        {morphedKeyOpacity > 0.01 && morphedBowD && morphedShaftD && morphedBitD && (
+          <g transform={`translate(${wrapTx} ${wrapTy}) scale(${wrapS})`}
+             opacity={morphedKeyOpacity}>
+            {/* Foreshortening: key shrinks INTO the lock from the bit side */}
+            <g transform={`translate(${TURN_PIVOT} 0) scale(${keyTurnScaleX} 1) translate(${-TURN_PIVOT} 0)`}>
+              <path d={morphedBowD}   fill={palette.bauhaus.blue} />
+              <path d={morphedShaftD} fill={palette.bauhaus.yellow} />
+              <path d={morphedBitD}   fill={palette.bauhaus.red} />
+            </g>
+          </g>
+        )}
+
+        {/* ── Unlock pulse ────────────────────────────────────────────── */}
+        {keyTurnP > 0 && keyTurnP < 1 && (
+          <rect x={-DOOR_W / 2} y={-DOOR_H / 2} width={DOOR_W} height={DOOR_H}
+            fill={palette.bauhaus.blue} opacity={Math.sin(keyTurnP * Math.PI) * 0.28} />
+        )}
+
+        {/* ── Dashed signal line (after door opens) ───────────────────── */}
         {consoleRevP > 0 && (
-          <motion.line
-            x1={phoneCx + 22 * phoneScale}
-            y1={phoneCy}
-            x2={-DOOR_W / 2 - 4}
-            y2={0}
-            stroke={palette.bauhaus.blue}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeDasharray="5 4"
+          <motion.line x1={phoneCx + 22 * phoneScale} y1={phoneCy} x2={-DOOR_W / 2 - 4} y2={0}
+            stroke={palette.bauhaus.blue} strokeWidth="2" strokeLinecap="round" strokeDasharray="5 4"
             animate={{
               opacity: easeOutQuad(consoleRevP) * (1 - circleMoveP),
               strokeDashoffset: [0, -18],

@@ -18,16 +18,11 @@ import TypeScriptWizardSheet from '../components/setup/TypeScriptWizardSheet'
 import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
 import DockerWizardSheet from '../components/setup/DockerWizardSheet'
 import MinimaxWizardSheet from '../components/setup/MinimaxWizardSheet'
-import DockerSetupAnimation from '../components/animations/DockerSetupAnimation'
-import RustSetupAnimation from '../components/animations/RustSetupAnimation'
-import TypeScriptSetupAnimation from '../components/animations/TypeScriptSetupAnimation'
-import PackageInstallAnimation from '../components/animations/PackageInstallAnimation'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import ConnectedAnimation from '../components/animations/ConnectedAnimation'
-import GitHubSetupAnimation from '../components/animations/GitHubSetupAnimation'
 import Dialogue from '../components/shared/Dialogue'
 import { ArrowRight, Check, ChevronLeft, ShieldCheck, Wrench } from 'lucide-react-native'
 import { Assets } from '../../assets'
@@ -64,21 +59,16 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const [showInspect, setShowInspect] = useState(false)
   const [showConnected, setShowConnected] = useState(false)
   const [showGitWizard, setShowGitWizard] = useState(false)
-  const [showGitHubAnimation, setShowGitHubAnimation] = useState(false)
   const [showClaudeWizard, setShowClaudeWizard] = useState(false)
   const [showCodexWizard, setShowCodexWizard] = useState(false)
   const [showCopilotWizard, setShowCopilotWizard] = useState(false)
   const [showOpenCodeWizard, setShowOpenCodeWizard] = useState(false)
   const [showPkgWizard, setShowPkgWizard] = useState(false)
-  const [showPkgAnimation, setShowPkgAnimation] = useState(false)
   const [showDockerWizard, setShowDockerWizard] = useState(false)
-  const [showDockerAnimation, setShowDockerAnimation] = useState(false)
   const [showPythonWizard, setShowPythonWizard] = useState(false)
   const [showRustWizard, setShowRustWizard] = useState(false)
-  const [showRustAnimation, setShowRustAnimation] = useState(false)
   const [showGoWizard, setShowGoWizard] = useState(false)
   const [showTypeScriptWizard, setShowTypeScriptWizard] = useState(false)
-  const [showTypeScriptAnimation, setShowTypeScriptAnimation] = useState(false)
   const [showMissingDialogue, setShowMissingDialogue] = useState(false)
   const [showMinimaxWizard, setShowMinimaxWizard] = useState(false)
 
@@ -92,11 +82,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
 
   const handleGitWizardComplete = useCallback(() => {
     setShowGitWizard(false)
-    setShowGitHubAnimation(true)
-  }, [])
-
-  const handleGitHubAnimationComplete = useCallback(() => {
-    setShowGitHubAnimation(false)
   }, [])
 
   const handleClaudeWizard = useCallback(() => {
@@ -191,11 +176,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const handlePkgWizardComplete = useCallback(() => {
     console.log('[ServerSetup] Pkg wizard complete')
     setShowPkgWizard(false)
-    setShowPkgAnimation(true)
-  }, [])
-
-  const handlePkgAnimationComplete = useCallback(() => {
-    setShowPkgAnimation(false)
   }, [])
 
   const handleDockerWizard = useCallback(() => {
@@ -206,11 +186,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const handleDockerWizardComplete = useCallback(() => {
     console.log('[ServerSetup] Docker wizard complete')
     setShowDockerWizard(false)
-    setShowDockerAnimation(true)
-  }, [])
-
-  const handleDockerAnimationComplete = useCallback(() => {
-    setShowDockerAnimation(false)
   }, [])
 
   const handleMinimaxWizard = useCallback(() => {
@@ -250,11 +225,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const handleRustWizardComplete = useCallback(() => {
     console.log('[ServerSetup] Rust wizard complete')
     setShowRustWizard(false)
-    setShowRustAnimation(true)
-  }, [])
-
-  const handleRustAnimationComplete = useCallback(() => {
-    setShowRustAnimation(false)
   }, [])
 
   const handleGoWizard = useCallback(() => {
@@ -275,11 +245,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const handleTypeScriptWizardComplete = useCallback(() => {
     console.log('[ServerSetup] TypeScript wizard complete')
     setShowTypeScriptWizard(false)
-    setShowTypeScriptAnimation(true)
-  }, [])
-
-  const handleTypeScriptAnimationComplete = useCallback(() => {
-    setShowTypeScriptAnimation(false)
   }, [])
 
   const handleInstall = useCallback((tool: ToolCheck) => {
@@ -646,21 +611,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
         />
       </View>
       {showConnected && <ConnectedAnimation onComplete={handleConnectedComplete} />}
-      {showGitHubAnimation && (
-        <GitHubSetupAnimation onComplete={handleGitHubAnimationComplete} />
-      )}
-      {showPkgAnimation && (
-        <PackageInstallAnimation onComplete={handlePkgAnimationComplete} />
-      )}
-      {showDockerAnimation && (
-        <DockerSetupAnimation onComplete={handleDockerAnimationComplete} />
-      )}
-      {showRustAnimation && (
-        <RustSetupAnimation onComplete={handleRustAnimationComplete} />
-      )}
-      {showTypeScriptAnimation && (
-        <TypeScriptSetupAnimation onComplete={handleTypeScriptAnimationComplete} />
-      )}
     </AnimatedGradientBackground>
   )
 }

@@ -199,6 +199,8 @@ export class ManagedProcess {
 
       const status: TaskStatus = this.codexExpectedStatus ?? (exitCode === 0 ? 'completed' : 'failed')
       const finalExitCode = this.codexExpectedExitCode ?? exitCode
+
+      this.adapter?.onProcessExit?.(finalExitCode)
       this.setStatus(status, finalExitCode)
 
       if (this.adapter?.getCollectedText().trim()) {
@@ -284,6 +286,7 @@ export class ManagedProcess {
 
           if (name === 'stdout') {
             if (this.handleStdoutJson(line)) continue
+            this.adapter?.handleTextLine?.(line)
           }
 
           this.broadcastOutput(line, name)

@@ -7,7 +7,7 @@ export type SelectableModel = {
   cliModelId: string
   name: string
   headline: string
-  description: string
+  description?: string
   contextWindow: string
   premiumMultiplier?: number | null
 }

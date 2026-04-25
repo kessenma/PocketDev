@@ -617,7 +617,7 @@ function providerToAgentType(providerId: string): AgentType {
   if (providerId === 'codex') return 'codex'
   if (providerId === 'claude') return 'claude'
   if (providerId === 'copilot') return 'copilot'
-  if (providerId === 'minimax') return 'minimax'
+  if (providerId === 'minimax') return 'opencode'
   return 'codex'
 }
 

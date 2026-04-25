@@ -11,7 +11,8 @@ function getAgentLogo(agentType: string, isDark: boolean) {
     case 'claude': return isDark ? Assets.claudeWhite : Assets.claudeBlack
     case 'codex': return isDark ? Assets.codexWhite : Assets.codexBlack
     case 'copilot': return isDark ? Assets.githubCopilotWhite : Assets.githubCopilotBlack
-    case 'minimax': return isDark ? Assets.minimaxWhite : Assets.minimaxBlack
+    case 'minimax':
+    case 'opencode': return isDark ? Assets.minimaxWhite : Assets.minimaxBlack
     default: return null
   }
 }

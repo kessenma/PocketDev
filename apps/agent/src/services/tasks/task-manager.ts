@@ -35,9 +35,9 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
       if (model) cmd.push('--model', model)
       return cmd
     }
-    case 'minimax': {
+    case 'opencode': {
       const opencodePath = getToolPath('opencode_cli') ?? 'opencode'
-      const modelFlag = model ? ['-m', model] : ['-m', 'minimax/minimax-text-01']
+      const modelFlag = model ? ['-m', model] : []
       return [opencodePath, 'run', ...modelFlag, '--prompt', prompt]
     }
     case 'shell':

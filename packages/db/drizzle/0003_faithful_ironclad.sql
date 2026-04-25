@@ -1,4 +1,4 @@
-CREATE TABLE "admin_passkeys" (
+CREATE TABLE IF NOT EXISTS "admin_passkeys" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"credential_id" text NOT NULL,
 	"public_key" text NOT NULL,

@@ -69,6 +69,7 @@ export default function SetupChecklist({
     hydrated,
     revalidating,
     reportSource,
+    pendingToolIds,
     fetchPrerequisites,
   } = useSetupStore()
   const bauhaus = palette.bauhaus
@@ -135,7 +136,7 @@ export default function SetupChecklist({
                 : null
         }
         disabled={showCachedLoadingState}
-        showLoadingState={showCachedLoadingState}
+        showLoadingState={showCachedLoadingState || pendingToolIds.includes(tool.id)}
         onDisabledPress={() => {
           toast({
             title: 'Checking workspace status',

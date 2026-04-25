@@ -21,21 +21,19 @@ export default function DetectStep({ dispatch }: Props) {
   const { colors } = useTheme()
   const server = useConnectionStore((state) => state.server)
   const [error, setError] = useState<string | null>(null)
-  const [animationReady, setAnimationReady] = useState(false)
+  const [animationDone, setAnimationDone] = useState(false)
   const [statusResult, setStatusResult] = useState<MinimaxSetupStatus | null>(null)
 
   useEffect(() => {
     void detect()
   }, [])
 
-  // Dispatch when the animation begins its exit fade AND the API result is ready.
-  // Using onBeforeFade (rather than onComplete) means the next step renders during
-  // the fade instead of after it, eliminating the blank-screen gap.
+  // Dispatch once both the animation exit fade AND the API call are complete.
   useEffect(() => {
-    if (animationReady && statusResult) {
+    if (animationDone && statusResult) {
       dispatch({ type: 'DETECTION_COMPLETE', minimaxStatus: statusResult })
     }
-  }, [animationReady, statusResult])
+  }, [animationDone, statusResult])
 
   async function detect() {
     if (!server) return
@@ -65,8 +63,7 @@ export default function DetectStep({ dispatch }: Props) {
   return (
     <View style={styles.container}>
       <MinimaxSetupAnimation
-        onBeforeFade={() => setAnimationReady(true)}
-        onComplete={() => {}}
+        onComplete={() => setAnimationDone(true)}
       />
     </View>
   )

@@ -8,6 +8,7 @@ import { useConnectionStore } from '../../../stores/connection'
 import { postVerifyMinimax } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import type { MinimaxSetupStatus } from '@pocketdev/shared/types'
+import TerminalView from '../../shared/TerminalView'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'verify'; minimaxStatus?: MinimaxSetupStatus | null }
@@ -26,6 +27,7 @@ export default function VerifyStep({ dispatch }: Props) {
   const [state, setState] = useState<VerifyState>('loading')
   const [maskedKey, setMaskedKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [terminalOutput, setTerminalOutput] = useState('→ Verifying Minimax API key…')
 
   useEffect(() => {
     void handleVerify()
@@ -35,22 +37,29 @@ export default function VerifyStep({ dispatch }: Props) {
     if (!server) return
     setState('loading')
     setError(null)
+    setTerminalOutput('→ Verifying Minimax API key…')
 
     try {
       const result = await postVerifyMinimax(server.ip, server.port)
       if (result.verified && result.api_key_configured) {
         setMaskedKey(result.api_key_masked)
+        const output = result.verify_output ? result.verify_output : `✓ API key verified: ${result.api_key_masked ?? '(masked)'}`
+        setTerminalOutput(output)
         setState('success')
         setTimeout(() => {
           dispatch({ type: 'STEP_COMPLETE', step: 'verify', minimaxStatus: result })
         }, 800)
       } else {
+        const output = result.verify_output || 'Minimax API key could not be verified. Please try again.'
+        setTerminalOutput(output)
         setState('failed')
-        setError(result.verify_output || 'Minimax API key could not be verified. Please try again.')
+        setError(output)
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Verification failed'
+      setTerminalOutput(`✗ ${msg}`)
       setState('failed')
-      setError(err instanceof Error ? err.message : 'Verification failed')
+      setError(msg)
     }
   }
 
@@ -92,9 +101,10 @@ export default function VerifyStep({ dispatch }: Props) {
           <Text style={[styles.maskedKey, { color: colors.textTertiary }]}>{maskedKey}</Text>
         ) : null}
 
-        {state === 'failed' && error ? (
-          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-        ) : null}
+      </View>
+
+      <View style={styles.terminal}>
+        <TerminalView output={terminalOutput} aiAssistAvailable={false} />
       </View>
 
       {state === 'failed' ? (
@@ -124,13 +134,13 @@ export default function VerifyStep({ dispatch }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, gap: spacing[4] },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[6] },
+  center: { alignItems: 'center', gap: spacing[3], paddingHorizontal: spacing[6], paddingTop: spacing[4] },
   iconCircle: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: spacing[2] },
   logo: { width: 36, height: 36 },
   title: { ...typeStyles.screenTitle },
   subtitle: { ...typeStyles.body, textAlign: 'center' },
   maskedKey: { ...typeStyles.mono, textAlign: 'center' },
-  errorText: { ...typeStyles.bodySmall, textAlign: 'center', marginTop: spacing[1] },
+  terminal: { flex: 1, borderRadius: borderRadius.lg, overflow: 'hidden', minHeight: 140 },
   actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingVertical: spacing[4], borderRadius: borderRadius.lg },
   buttonText: { ...typeStyles.button },
   failedActions: { flexDirection: 'row', gap: spacing[3] },

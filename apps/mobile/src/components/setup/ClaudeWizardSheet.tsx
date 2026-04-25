@@ -13,6 +13,8 @@ import InstallStep from './claude-wizard/InstallStep'
 import AuthenticateStep from './claude-wizard/AuthenticateStep'
 import VerifyStep from './claude-wizard/VerifyStep'
 import type { ClaudeSetupStatus, ClaudeWizardStep, ClaudeWizardStepStatus } from '@pocketdev/shared/types'
+import ClaudeSetupAnimation from '../animations/ClaudeSetupAnimation'
+import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
@@ -190,17 +192,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
+  const markToolPending = useSetupStore((s) => s.markToolPending)
   const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
+  const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
+    markToolPending('claude_cli')
     fetchPrerequisites()
     onComplete()
-  }, [fetchPrerequisites, onComplete])
+  }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
+    markToolPending('claude_cli')
     fetchPrerequisites()
     onDismiss()
-  }, [fetchPrerequisites, onDismiss])
+  }, [markToolPending, fetchPrerequisites, onDismiss])
 
   const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
@@ -277,7 +283,7 @@ export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = '
         <View style={styles.content}>{renderStep()}</View>
 
         {/* Footer */}
-        {state.allConfigured && (
+        {state.allConfigured && animationDone && (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}
@@ -287,6 +293,11 @@ export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = '
               <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
+        {state.allConfigured && !animationDone && (
+          <ClaudeSetupAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )

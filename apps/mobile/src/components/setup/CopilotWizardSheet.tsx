@@ -17,6 +17,8 @@ import type {
   CopilotWizardStep,
   CopilotWizardStepStatus,
 } from '@pocketdev/shared/types'
+import CopilotSetupAnimation from '../animations/CopilotSetupAnimation'
+import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
@@ -164,17 +166,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 export default function CopilotWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
+  const markToolPending = useSetupStore((s) => s.markToolPending)
   const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
+  const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
+    markToolPending('copilot_cli')
     fetchPrerequisites()
     onComplete()
-  }, [fetchPrerequisites, onComplete])
+  }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
+    markToolPending('copilot_cli')
     fetchPrerequisites()
     onDismiss()
-  }, [fetchPrerequisites, onDismiss])
+  }, [markToolPending, fetchPrerequisites, onDismiss])
 
   const minBackIndex = entryMode === 'auth_repair' ? 2 : 1
   const canGoBack = ALL_STEPS.indexOf(state.currentStep) > minBackIndex && !state.allConfigured
@@ -233,7 +239,7 @@ export default function CopilotWizardSheet({ onDismiss, onComplete, entryMode = 
 
       <View style={styles.content}>{renderStep()}</View>
 
-      {state.allConfigured ? (
+      {state.allConfigured && animationDone ? (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.doneButton, { backgroundColor: colors.primary }]}
@@ -243,6 +249,11 @@ export default function CopilotWizardSheet({ onDismiss, onComplete, entryMode = 
             <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
           </TouchableOpacity>
         </View>
+      ) : null}
+
+      {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
+      {state.allConfigured && !animationDone ? (
+        <CopilotSetupAnimation onComplete={onAnimationComplete} />
       ) : null}
     </SetupWizardScreen>
   )

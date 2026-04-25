@@ -17,6 +17,8 @@ import DetectStep from './minimax-wizard/DetectStep'
 import ReviewStep from './minimax-wizard/ReviewStep'
 import ConfigureStep from './minimax-wizard/ConfigureStep'
 import VerifyStep from './minimax-wizard/VerifyStep'
+import MinimaxSetupAnimation from '../animations/MinimaxSetupAnimation'
+import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
@@ -141,17 +143,21 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 export default function MinimaxWizardSheet({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
+  const markToolPending = useSetupStore((state) => state.markToolPending)
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState)
+  const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
+    markToolPending('minimax_provider')
     fetchPrerequisites()
     onComplete()
-  }, [fetchPrerequisites, onComplete])
+  }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
+    markToolPending('minimax_provider')
     fetchPrerequisites()
     onDismiss()
-  }, [fetchPrerequisites, onDismiss])
+  }, [markToolPending, fetchPrerequisites, onDismiss])
 
   const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
@@ -220,7 +226,7 @@ export default function MinimaxWizardSheet({ onDismiss, onComplete }: Props) {
 
         <View style={styles.content}>{renderStep()}</View>
 
-        {state.allConfigured ? (
+        {state.allConfigured && animationDone ? (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}
@@ -230,6 +236,11 @@ export default function MinimaxWizardSheet({ onDismiss, onComplete }: Props) {
               <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
             </TouchableOpacity>
           </View>
+        ) : null}
+
+        {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
+        {state.allConfigured && !animationDone ? (
+          <MinimaxSetupAnimation onComplete={onAnimationComplete} />
         ) : null}
     </SetupWizardScreen>
   )

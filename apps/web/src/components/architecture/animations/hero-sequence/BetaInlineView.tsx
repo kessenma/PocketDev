@@ -4,12 +4,11 @@ import { useState } from 'react'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X, Pencil } from 'lucide-react'
 import { db } from '@pocketdev/db'
 import { betaSignups } from '@pocketdev/db/schema'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import { architectureTokens, architectureFonts, architectureTheme } from '#/components/architecture/shared/theme'
 import { palette } from '@pocketdev/shared/theme'
 
@@ -35,6 +34,23 @@ const submitBetaInterest = createServerFn({ method: 'POST' })
     })
     return { success: true, alreadyRegistered: false }
   })
+
+const ROLE_OPTIONS: [string, string][] = [
+  ['software_development', 'Software Dev'],
+  ['linux_administration', 'Linux Admin'],
+  ['network_engineering', 'Networking'],
+  ['devops_sre', 'DevOps / SRE'],
+  ['security', 'Security'],
+  ['data_engineering', 'Data Engineering'],
+  ['product_management', 'Product'],
+  ['other', 'Other'],
+]
+const ROLE_LABELS: Record<string, string> = Object.fromEntries(ROLE_OPTIONS)
+const USE_TYPE_LABELS = { personal: 'Personal', commercial: 'Commercial', experimental: 'Experimental' } as const
+
+function isValidEmail(e: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
+}
 
 function PhoneSvg({ fill, showText }: { fill: string; showText: boolean }) {
   return (
@@ -98,6 +114,14 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
   const [employer, setEmployer] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'already' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [activeStep, setActiveStep] = useState(0)
+  const [highWaterMark, setHighWaterMark] = useState(0)
+
+  function advance() {
+    const next = activeStep + 1
+    setActiveStep(next)
+    setHighWaterMark(h => Math.max(h, next))
+  }
 
   // Fills most of the viewport width on mobile, caps at 480 on desktop
   const circleSize = typeof window !== 'undefined' ? Math.min(window.innerWidth - 40, 480) : 480
@@ -179,16 +203,16 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
           className="mb-1 text-xs uppercase tracking-widest"
           style={{ color: architectureTokens.colors.textSecondary, fontFamily: 'var(--font-mono), monospace' }}
         >
-          Private Beta
+          iOS devices only:
         </p>
         <h2
           className="mb-2 text-2xl font-bold"
           style={{ color: architectureTokens.colors.text, fontFamily: architectureFonts.display, letterSpacing: '-0.03em' }}
         >
-          Join the waitlist
+          TestFlight link
         </h2>
         <p className="mb-6 text-sm" style={{ color: architectureTokens.colors.textSecondary }}>
-          Be first to know when PocketDev opens up. No spam, just an invite.
+          Limited to 100 external testers. Link will be sent if selected.
         </p>
 
         {isSuccess ? (
@@ -208,73 +232,293 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
           </motion.div>
         ) : (
           <>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <Input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={status === 'loading'}
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.8)',
-                  borderColor: isTyping ? palette.bauhaus.blue : architectureTokens.colors.border,
-                  color: architectureTokens.colors.text,
-                  transition: 'border-color 0.3s ease',
-                }}
-              />
-
-              <Select value={jobResponsibility} onValueChange={(v) => setJobResponsibility(v ?? '')} disabled={status === 'loading'} required>
-                <SelectTrigger style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}>
-                  <SelectValue placeholder="Job responsibility" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="software_development">Software Development</SelectItem>
-                  <SelectItem value="linux_administration">Linux Administration</SelectItem>
-                  <SelectItem value="network_engineering">Network Engineering</SelectItem>
-                  <SelectItem value="devops_sre">DevOps / SRE</SelectItem>
-                  <SelectItem value="security">Security / Infosec</SelectItem>
-                  <SelectItem value="data_engineering">Data Engineering</SelectItem>
-                  <SelectItem value="product_management">Product Management</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {jobResponsibility === 'other' && (
-                <Input
-                  type="text"
-                  placeholder="Describe your role"
-                  value={jobResponsibilityOther}
-                  onChange={(e) => setJobResponsibilityOther(e.target.value)}
-                  required
-                  disabled={status === 'loading'}
-                  style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}
+            {/* Progress bar */}
+            <div className="flex gap-1 mb-5">
+              {[0, 1, 2, 3].map(i => (
+                <div
+                  key={i}
+                  className="h-0.5 flex-1 rounded-full transition-colors duration-300"
+                  style={{ backgroundColor: i < Math.min(4, Math.max(activeStep + 1, highWaterMark)) ? palette.bauhaus.blue : architectureTokens.colors.border }}
                 />
-              )}
+              ))}
+            </div>
 
-              <Select value={useType} onValueChange={(v) => setUseType(v ?? '')} disabled={status === 'loading'} required>
-                <SelectTrigger style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}>
-                  <SelectValue placeholder="Intended use" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="personal">Personal</SelectItem>
-                  <SelectItem value="commercial">Commercial</SelectItem>
-                  <SelectItem value="experimental">Experimental / Research</SelectItem>
-                </SelectContent>
-              </Select>
+            <form onSubmit={handleSubmit} className="space-y-0">
 
-              <Input
-                type="text"
-                placeholder="Employer (optional)"
-                value={employer}
-                onChange={(e) => setEmployer(e.target.value)}
-                disabled={status === 'loading'}
-                style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}
-              />
+              {/* ── Completed: Email ── */}
+              <AnimatePresence>
+                {activeStep !== 0 && highWaterMark >= 1 && (
+                  <motion.button
+                    key="sum-email"
+                    type="button"
+                    onClick={() => setActiveStep(0)}
+                    className="w-full text-left flex items-center justify-between py-2.5 border-b"
+                    style={{ borderColor: architectureTokens.colors.border }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest" style={{ color: architectureTokens.colors.textSecondary }}>Email</div>
+                      <div className="text-sm font-medium mt-0.5" style={{ color: architectureTokens.colors.text }}>{email}</div>
+                    </div>
+                    <Pencil size={11} style={{ color: architectureTokens.colors.textSecondary, opacity: 0.45 }} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
 
-              <Button type="submit" disabled={status === 'loading' || !jobResponsibility || !useType} className="w-full">
-                {status === 'loading' ? 'Sending…' : 'Notify me'}
-              </Button>
+              {/* ── Active: Email ── */}
+              <AnimatePresence mode="wait">
+                {activeStep === 0 && (
+                  <motion.div
+                    key="step-email"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-2 pb-4"
+                  >
+                    <label className="text-xs font-medium uppercase tracking-wider" style={{ color: architectureTokens.colors.textSecondary }}>Email</label>
+                    <Input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && isValidEmail(email)) { e.preventDefault(); advance() } }}
+                      required
+                      autoFocus
+                      disabled={status === 'loading'}
+                      className="h-11 text-base"
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.8)',
+                        borderColor: isTyping ? palette.bauhaus.blue : architectureTokens.colors.border,
+                        color: architectureTokens.colors.text,
+                        transition: 'border-color 0.3s ease',
+                      }}
+                    />
+                    <AnimatePresence>
+                      {isValidEmail(email) && (
+                        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+                          <Button type="button" className="w-full" onClick={advance}>Continue</Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── Completed: Role ── */}
+              <AnimatePresence>
+                {activeStep !== 1 && highWaterMark >= 2 && (
+                  <motion.button
+                    key="sum-role"
+                    type="button"
+                    onClick={() => setActiveStep(1)}
+                    className="w-full text-left flex items-center justify-between py-2.5 border-b"
+                    style={{ borderColor: architectureTokens.colors.border }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest" style={{ color: architectureTokens.colors.textSecondary }}>Role</div>
+                      <div className="text-sm font-medium mt-0.5" style={{ color: architectureTokens.colors.text }}>{ROLE_LABELS[jobResponsibility] || jobResponsibilityOther}</div>
+                    </div>
+                    <Pencil size={11} style={{ color: architectureTokens.colors.textSecondary, opacity: 0.45 }} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {/* ── Active: Role ── */}
+              <AnimatePresence mode="wait">
+                {activeStep === 1 && (
+                  <motion.div
+                    key="step-role"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-2 pb-4"
+                  >
+                    <label className="text-xs font-medium uppercase tracking-wider" style={{ color: architectureTokens.colors.textSecondary }}>Role</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ROLE_OPTIONS.map(([value, label]) => {
+                        const active = jobResponsibility === value
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            disabled={status === 'loading'}
+                            onClick={() => {
+                              setJobResponsibility(value)
+                              if (value !== 'other') setTimeout(advance, 150)
+                            }}
+                            className="rounded-lg border px-3 py-2 text-xs font-medium text-left transition-all duration-200"
+                            style={{
+                              backgroundColor: active ? palette.bauhaus.blue : 'rgba(255,255,255,0.8)',
+                              borderColor: active ? palette.bauhaus.blue : architectureTokens.colors.border,
+                              color: active ? '#fff' : architectureTokens.colors.textSecondary,
+                            }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <AnimatePresence>
+                      {jobResponsibility === 'other' && (
+                        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-2">
+                          <Input
+                            type="text"
+                            placeholder="Describe your role"
+                            value={jobResponsibilityOther}
+                            onChange={(e) => setJobResponsibilityOther(e.target.value)}
+                            disabled={status === 'loading'}
+                            style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}
+                          />
+                          {jobResponsibilityOther.trim() && (
+                            <Button type="button" className="w-full" onClick={advance}>Continue</Button>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── Completed: Use type ── */}
+              <AnimatePresence>
+                {activeStep !== 2 && highWaterMark >= 3 && (
+                  <motion.button
+                    key="sum-use"
+                    type="button"
+                    onClick={() => setActiveStep(2)}
+                    className="w-full text-left flex items-center justify-between py-2.5 border-b"
+                    style={{ borderColor: architectureTokens.colors.border }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest" style={{ color: architectureTokens.colors.textSecondary }}>Intended use</div>
+                      <div className="text-sm font-medium mt-0.5" style={{ color: architectureTokens.colors.text }}>{USE_TYPE_LABELS[useType as keyof typeof USE_TYPE_LABELS]}</div>
+                    </div>
+                    <Pencil size={11} style={{ color: architectureTokens.colors.textSecondary, opacity: 0.45 }} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {/* ── Active: Use type ── */}
+              <AnimatePresence mode="wait">
+                {activeStep === 2 && (
+                  <motion.div
+                    key="step-use"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-2 pb-4"
+                  >
+                    <label className="text-xs font-medium uppercase tracking-wider" style={{ color: architectureTokens.colors.textSecondary }}>Intended use</label>
+                    <div className="flex gap-2">
+                      {(Object.entries(USE_TYPE_LABELS) as [keyof typeof USE_TYPE_LABELS, string][]).map(([value, label]) => {
+                        const active = useType === value
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            disabled={status === 'loading'}
+                            onClick={() => { setUseType(value); setTimeout(advance, 150) }}
+                            className="flex-1 rounded-lg border py-2 text-xs font-medium transition-all duration-200"
+                            style={{
+                              backgroundColor: active ? palette.bauhaus.blue : 'rgba(255,255,255,0.8)',
+                              borderColor: active ? palette.bauhaus.blue : architectureTokens.colors.border,
+                              color: active ? '#fff' : architectureTokens.colors.textSecondary,
+                            }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── Completed: Employer ── */}
+              <AnimatePresence>
+                {activeStep !== 3 && highWaterMark >= 4 && (
+                  <motion.button
+                    key="sum-employer"
+                    type="button"
+                    onClick={() => setActiveStep(3)}
+                    className="w-full text-left flex items-center justify-between py-2.5 border-b"
+                    style={{ borderColor: architectureTokens.colors.border }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest" style={{ color: architectureTokens.colors.textSecondary }}>Employer</div>
+                      <div className="text-sm font-medium mt-0.5" style={{ color: architectureTokens.colors.text }}>{employer || '—'}</div>
+                    </div>
+                    <Pencil size={11} style={{ color: architectureTokens.colors.textSecondary, opacity: 0.45 }} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {/* ── Active: Employer ── */}
+              <AnimatePresence mode="wait">
+                {activeStep === 3 && (
+                  <motion.div
+                    key="step-employer"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-2 pb-4"
+                  >
+                    <label className="text-xs font-medium uppercase tracking-wider" style={{ color: architectureTokens.colors.textSecondary }}>
+                      Employer <span style={{ color: architectureTokens.colors.border }}>(optional)</span>
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Company or organization"
+                      value={employer}
+                      onChange={(e) => setEmployer(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); advance() } }}
+                      disabled={status === 'loading'}
+                      style={{ backgroundColor: 'rgba(255,255,255,0.8)', borderColor: architectureTokens.colors.border, color: architectureTokens.colors.text }}
+                    />
+                    <Button type="button" className="w-full" onClick={advance}>
+                      {employer.trim() ? 'Continue' : 'Skip'}
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── Submit ── */}
+              <AnimatePresence>
+                {highWaterMark >= 4 && (
+                  <motion.div
+                    key="submit"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2, delay: 0.05 }}
+                    className="pt-3"
+                  >
+                    <Button type="submit" disabled={status === 'loading'} className="w-full h-11 text-sm font-semibold">
+                      {status === 'loading' ? 'Sending…' : 'Join the waitlist'}
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
             </form>
             {status === 'error' && (
               <p className="mt-2 text-xs" style={{ color: palette.bauhaus.red }}>{errorMsg}</p>

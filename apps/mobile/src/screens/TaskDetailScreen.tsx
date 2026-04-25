@@ -1,5 +1,6 @@
 import React from 'react'
-import { Image, LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Image, LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native'
+import Animated, { useSharedValue, withTiming, runOnJS } from 'react-native-reanimated'
 import { Bug, Check, ChevronDown, ChevronUp, Copy, GalleryVerticalEnd, SquareTerminal, Terminal, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { AgentType } from '@pocketdev/shared/schema'
@@ -19,9 +20,17 @@ type Props = NativeStackScreenProps<RootStackParamList, 'TaskDetail'>
 
 export default function TaskDetailScreen({ navigation, route }: Props) {
   const { colors, isDark } = useTheme()
+  const { height: screenHeight } = useWindowDimensions()
   const { taskId, sourceTag } = route.params
   const hasMorph = sourceTag != null
   const isClosingRef = React.useRef(false)
+  const translateY = useSharedValue(0)
+
+  function handleBack() {
+    translateY.value = withTiming(screenHeight, { duration: 320 }, (finished) => {
+      if (finished) runOnJS(navigation.goBack)()
+    })
+  }
 
   // Header state (only used when hasMorph)
   const [showRawLogs, setShowRawLogs] = React.useState(false)
@@ -113,11 +122,22 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
           <Text style={[typeStyles.sectionTitle, { fontWeight: '800', color: colors.text }]}>Task</Text>
         </View>
       ),
+      ...(!hasMorph && {
+        headerLeft: () => (
+          <TouchableOpacity
+            onPress={handleBack}
+            activeOpacity={0.7}
+            style={[styles.headerCloseButton, { backgroundColor: colors.panel, borderColor: colors.border }]}
+          >
+            <ChevronDown color={colors.textSecondary} size={16} strokeWidth={2.5} />
+          </TouchableOpacity>
+        ),
+      }),
     })
-  }, [task?.agent_type, isDark, colors.text]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [task?.agent_type, isDark, colors.text, hasMorph]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <Animated.View style={[styles.container, { backgroundColor: colors.background, transform: [{ translateY }] }]}>
       {hasMorph && (
         <>
           <View style={[styles.actionRow, { borderBottomColor: colors.border }]}>
@@ -203,7 +223,7 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
           emptyBody="The selected task is no longer available in local state."
         />
       </AdaptiveShell>
-    </View>
+    </Animated.View>
   )
 }
 

@@ -1,10 +1,11 @@
 import { Elysia } from 'elysia'
-import type { ServerCapabilities, ServerProvider, ProviderAvailability, ServerProviderId } from '@pocketdev/shared/types'
+import type { ServerCapabilities, ServerProvider, ServerModelDiscovery, ProviderAvailability, ServerProviderId } from '@pocketdev/shared/types'
 import { authenticateRequest } from '../services/auth/auth.ts'
 import { getToolRecord, type ToolPathRow } from '../db/index.ts'
 import { discoverCopilotModels } from '../services/cli-setup/copilot-models.ts'
 import { discoverClaudeModels } from '../services/cli-setup/claude-models.ts'
 import { checkMinimaxStatus } from '../services/cli-setup/minimax-setup.ts'
+import { discoverOpenCodeModels } from '../services/cli-setup/opencode-models.ts'
 
 function toAvailability(row: ToolPathRow | undefined): ProviderAvailability {
   if (!row?.path) return 'not_installed'
@@ -25,6 +26,10 @@ async function buildProviders(): Promise<ServerProvider[]> {
   const minimaxAvailability: ProviderAvailability = minimaxStatus.api_key_configured && minimaxStatus.opencode_installed
     ? 'available'
     : 'not_installed'
+
+  const minimaxModels = minimaxAvailability === 'available'
+    ? await discoverOpenCodeModels('minimax')
+    : { models: [], modelDiscovery: { available: false, discoveredCount: 0, source: null } as ServerModelDiscovery }
 
   return [
     {
@@ -54,6 +59,8 @@ async function buildProviders(): Promise<ServerProvider[]> {
       label: 'Minimax',
       availability: minimaxAvailability,
       version: minimaxStatus.opencode_version ?? null,
+      models: minimaxModels.models,
+      modelDiscovery: minimaxModels.modelDiscovery,
     },
   ]
 }

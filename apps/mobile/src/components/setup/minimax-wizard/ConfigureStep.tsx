@@ -8,6 +8,7 @@ import { useConnectionStore } from '../../../stores/connection'
 import { postConfigureMinimax } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import type { MinimaxSetupStatus } from '@pocketdev/shared/types'
+import TerminalView from '../../shared/TerminalView'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'configure'; minimaxStatus?: MinimaxSetupStatus | null }
@@ -25,23 +26,35 @@ export default function ConfigureStep({ dispatch }: Props) {
   const [saving, setSaving] = useState(false)
   const [savedMasked, setSavedMasked] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [terminalOutput, setTerminalOutput] = useState('')
+
+  function appendTerminal(line: string) {
+    setTerminalOutput((prev) => (prev ? prev + '\n' + line : line))
+  }
 
   async function handleSave() {
     if (!server || !apiKey.trim()) return
     setSaving(true)
     setError(null)
+    setTerminalOutput('')
+    appendTerminal('→ Sending API key to workspace...')
     try {
       const result = await postConfigureMinimax(server.ip, server.port, apiKey.trim())
       if (result.success) {
+        appendTerminal(`✓ Key saved: ${result.api_key_masked ?? '(masked)'}`)
         setSavedMasked(result.api_key_masked)
         setTimeout(() => {
           dispatch({ type: 'STEP_COMPLETE', step: 'configure' })
         }, 300)
       } else {
-        setError(result.error ?? 'Failed to save API key.')
+        const msg = result.error ?? 'Failed to save API key.'
+        appendTerminal(`✗ Error: ${msg}`)
+        setError(msg)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save API key.')
+      const msg = err instanceof Error ? err.message : 'Failed to save API key.'
+      appendTerminal(`✗ Error: ${msg}`)
+      setError(msg)
     } finally {
       setSaving(false)
     }
@@ -100,6 +113,12 @@ export default function ConfigureStep({ dispatch }: Props) {
           </TouchableOpacity>
         </>
       )}
+
+      {terminalOutput ? (
+        <View style={styles.terminal}>
+          <TerminalView output={terminalOutput} aiAssistAvailable={false} />
+        </View>
+      ) : null}
 
       <TouchableOpacity
         style={[
@@ -171,6 +190,11 @@ const styles = StyleSheet.create({
   },
   successText: {
     ...typeStyles.mono,
+  },
+  terminal: {
+    height: 140,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
   saveButton: {
     flexDirection: 'row',

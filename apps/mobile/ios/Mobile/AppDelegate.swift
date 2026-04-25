@@ -65,14 +65,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 }
 
-// Show notifications even when app is in the foreground — notifee handles the display.
+// Suppress notification UI when the app is in the foreground — the task detail pane
+// already reflects completion via WebSocket. Background/inactive delivery is unaffected.
 extension AppDelegate: UNUserNotificationCenterDelegate {
   func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    completionHandler([.banner, .sound, .badge])
+    completionHandler([])
   }
 }
 

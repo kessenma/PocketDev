@@ -1,6 +1,6 @@
 import React from 'react'
-import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { ChevronDown, ChevronUp, Check } from 'lucide-react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Check } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import type { ModelProvider, ModelProviderId } from './model'
@@ -30,7 +30,6 @@ export default function ModelSelector({
   onSelectModel,
 }: Props) {
   const { colors, isDark } = useTheme()
-  const [showDescriptions, setShowDescriptions] = React.useState(false)
   const selectedProvider =
     providers.find((provider) => provider.id === selectedProviderId) ?? providers[0]
 
@@ -96,20 +95,6 @@ export default function ModelSelector({
         </Text>
       )}
 
-      {/* ── Description toggle ── */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={() => setShowDescriptions((prev) => !prev)}
-        style={styles.descToggle}
-      >
-        <Text style={[styles.descToggleText, { color: colors.textTertiary }]}>
-          {showDescriptions ? 'Hide details' : 'Show details'}
-        </Text>
-        {showDescriptions
-          ? <ChevronUp color={colors.textTertiary} size={14} strokeWidth={2.2} />
-          : <ChevronDown color={colors.textTertiary} size={14} strokeWidth={2.2} />}
-      </TouchableOpacity>
-
       {/* ── Model list ── */}
       <View style={styles.modelList}>
         {selectedProvider.models.map((model) => {
@@ -153,12 +138,9 @@ export default function ModelSelector({
                   {model.contextWindow}
                 </Text>
               </View>
-              <Text style={[styles.modelHeadline, { color: colors.textSecondary }]}>
-                {model.headline}
-              </Text>
-              {showDescriptions ? (
-                <Text style={[styles.modelDescription, { color: colors.textTertiary }]}>
-                  {model.description}
+              {model.headline ? (
+                <Text style={[styles.modelHeadline, { color: colors.textSecondary }]}>
+                  {model.headline}
                 </Text>
               ) : null}
             </Pressable>
@@ -198,15 +180,6 @@ const styles = StyleSheet.create({
     ...typeStyles.bodySmall,
     fontWeight: '600',
   },
-  descToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1],
-    alignSelf: 'flex-end',
-  },
-  descToggleText: {
-    ...typeStyles.meta,
-  },
   modelList: {
     gap: spacing[2],
   },
@@ -245,9 +218,5 @@ const styles = StyleSheet.create({
   modelHeadline: {
     ...typeStyles.bodySmall,
     fontWeight: '600',
-  },
-  modelDescription: {
-    ...typeStyles.bodySmall,
-    marginTop: spacing[1],
   },
 })

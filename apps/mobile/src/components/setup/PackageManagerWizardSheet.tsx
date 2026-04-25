@@ -14,6 +14,8 @@ import InstallStep from './pkg-wizard/InstallStep'
 import VerifyStep from './pkg-wizard/VerifyStep'
 import type { PkgInstallTool, PkgManagerStatus, PkgWizardStep, PkgWizardStepStatus } from '@pocketdev/shared/types'
 import { getDefaultSelectedTools } from './pkg-wizard/model'
+import PackageInstallAnimation from '../animations/PackageInstallAnimation'
+import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
@@ -163,17 +165,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 export default function PackageManagerWizardSheet({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
+  const markToolPending = useSetupStore((s) => s.markToolPending)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
+  const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
+    markToolPending('npm')
     fetchPrerequisites()
     onComplete()
-  }, [fetchPrerequisites, onComplete])
+  }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
+    markToolPending('npm')
     fetchPrerequisites()
     onDismiss()
-  }, [fetchPrerequisites, onDismiss])
+  }, [markToolPending, fetchPrerequisites, onDismiss])
 
   const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
@@ -250,7 +256,7 @@ export default function PackageManagerWizardSheet({ onDismiss, onComplete }: Pro
         <View style={styles.content}>{renderStep()}</View>
 
         {/* Footer */}
-        {state.allConfigured && (
+        {state.allConfigured && animationDone && (
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.doneButton, { backgroundColor: colors.primary }]}
@@ -260,6 +266,11 @@ export default function PackageManagerWizardSheet({ onDismiss, onComplete }: Pro
               <Text style={[styles.doneText, { color: colors.primaryText }]}>Done</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
+        {state.allConfigured && !animationDone && (
+          <PackageInstallAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )
