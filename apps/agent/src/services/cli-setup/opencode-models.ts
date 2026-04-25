@@ -18,8 +18,8 @@ const FALLBACK_MODELS: Record<string, ServerSelectableModel[]> = {
   ],
 }
 
-function cacheKey(provider: string) { return `opencode_models_${provider}` }
-function cacheAtKey(provider: string) { return `opencode_models_${provider}_at` }
+function cacheKey(provider: string) { return `opencode_models_v2_${provider}` }
+function cacheAtKey(provider: string) { return `opencode_models_v2_${provider}_at` }
 
 /** Slug-ify a display name for use as a stable ID, e.g. "MiniMax M2.7" → "minimax-m2.7" */
 function toId(provider: string, displayName: string): string {
@@ -38,12 +38,15 @@ function parseModelLines(raw: string, provider: string): ServerSelectableModel[]
     if (Array.isArray(parsed)) {
       for (const item of parsed) {
         if (typeof item === 'string' && item.trim()) {
-          const name = item.trim()
-          if (seen.has(name)) continue
-          seen.add(name)
+          const raw = item.trim()
+          const prefix = `${provider}/`
+          const cliModelId = raw.startsWith(prefix) ? raw : `${prefix}${raw}`
+          const name = raw.startsWith(prefix) ? raw.slice(prefix.length) : raw
+          if (seen.has(cliModelId)) continue
+          seen.add(cliModelId)
           models.push({
             id: toId(provider, name),
-            cliModelId: `${provider}/${name}`,
+            cliModelId,
             name,
             headline: '',
             description: '',
@@ -75,11 +78,16 @@ function parseModelLines(raw: string, provider: string): ServerSelectableModel[]
       if (!name || seen.has(name)) continue
       // Must look like a model name (contains letter+digit or dash)
       if (!/[A-Za-z]/.test(name) || !/[\d.-]/.test(name)) continue
-      seen.add(name)
+      // Strip provider prefix if the line already includes it (e.g. "minimax/MiniMax-M2.7")
+      const prefix = `${provider}/`
+      const cliModelId = name.startsWith(prefix) ? name : `${prefix}${name}`
+      const displayName = name.startsWith(prefix) ? name.slice(prefix.length) : name
+      if (seen.has(cliModelId)) continue
+      seen.add(cliModelId)
       models.push({
-        id: toId(provider, name),
-        cliModelId: `${provider}/${name}`,
-        name,
+        id: toId(provider, displayName),
+        cliModelId,
+        name: displayName,
         headline: '',
         description: '',
         contextWindow: 'Large context',
