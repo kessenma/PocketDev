@@ -24,6 +24,7 @@ export type EventType =
   | 'task.question'
   | 'task.status_changed'
   | 'task.completed'
+  | 'task.session_id'
   | 'task.turn_started'
   | 'task.permission_request'
   | 'container.logs.chunk'

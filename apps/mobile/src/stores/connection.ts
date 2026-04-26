@@ -202,6 +202,11 @@ function handleWsMessage(message: WsMessage) {
       scripts.handleTaskStatusChange(taskId, status)
       break
     }
+    case 'task.session_id': {
+      const { taskId, sessionId } = message.payload as { taskId: string; sessionId: string }
+      tasks.updateTaskSessionId(taskId, sessionId)
+      break
+    }
     case 'task.completed': {
       const { taskId, sessionId } = message.payload as { taskId: string; exitCode: number; status: string; sessionId?: string | null }
       if (sessionId) tasks.updateTaskSessionId(taskId, sessionId)

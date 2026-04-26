@@ -145,7 +145,6 @@ export function ScrollTimeline({
                 // making the 2→3 transition feel vertical rather than diagonal.
                 // Stays clamped at 1 once scene 2 ends.
                 const r1 = ranges[1]
-                const r2 = ranges[2]
                 const doorPreviewStart = r1 ? r1.start + 0.82 * (r1.end - r1.start) : 0
                 const doorPreviewDuration = r1 ? r1.end - doorPreviewStart : 1
                 const doorPreviewProgress =

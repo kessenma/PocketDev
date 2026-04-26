@@ -5,7 +5,7 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
-import { Bug, Check, Copy, FileText, GalleryVerticalEnd, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal } from 'lucide-react-native'
+import { Bug, Check, Copy, FileText, GalleryVerticalEnd, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal, X } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useSetupStore } from '../../stores/setup'
 import { useTaskStore } from '../../stores/tasks'
@@ -45,6 +45,8 @@ type Props = {
   /** Called after a copy completes so parent can show its own feedback */
   onCopied?: () => void
 }
+
+const OPENCODE_FAMILY = new Set(['opencode', 'minimax', 'copilot'])
 
 const STATUS_COLORS: Record<string, string> = {
   pending: '#a3a3a3',
@@ -154,6 +156,20 @@ const QUICK_COMMANDS = [
   { label: '/init', cmd: '/init\n' },
 ]
 
+function QueuedFollowUpBanner({ message, onCancel, colors }: { message: string; onCancel: () => void; colors: any }) {
+  return (
+    <View style={[styles.queuedBanner, { borderTopColor: colors.border, backgroundColor: colors.backgroundSecondary }]}>
+      <View style={styles.queuedBannerContent}>
+        <Text style={[styles.queuedBannerLabel, { color: colors.textSecondary }]}>Queued follow-up:</Text>
+        <Text style={[styles.queuedBannerText, { color: colors.text }]} numberOfLines={2}>{message}</Text>
+      </View>
+      <TouchableOpacity onPress={onCancel} activeOpacity={0.7} style={styles.queuedBannerCancel}>
+        <X color={colors.textTertiary} size={14} strokeWidth={2.5} />
+      </TouchableOpacity>
+    </View>
+  )
+}
+
 function QuickCommandBar({ taskId, onSend, colors }: { taskId: string; onSend: (data: string) => void; colors: any }) {
   return (
     <View style={[styles.quickCmdBar, { borderTopColor: colors.border }]}>
@@ -220,6 +236,7 @@ export default function TaskDetailPane({
   const [claudeWizardKey, setClaudeWizardKey] = useState(0)
   const [copilotWizardKey, setCopilotWizardKey] = useState(0)
   const [openCodeWizardKey, setOpenCodeWizardKey] = useState(0)
+  const [queuedContinuation, setQueuedContinuation] = useState<string | null>(null)
 
   // Parent can open the copy menu by incrementing copyTrigger
   useEffect(() => {
@@ -435,8 +452,17 @@ export default function TaskDetailPane({
 
   const isRunning = task.status === 'running'
   const isTerminal = task.status === 'completed' || task.status === 'failed'
-  const canContinue = isTerminal && (task.agent_type === 'claude' || task.agent_type === 'codex' || task.agent_type === 'opencode' || task.agent_type === 'minimax' || task.agent_type === 'copilot') && !!task.session_id
+  const isOpencodeFamily = OPENCODE_FAMILY.has(task.agent_type)
+  const canContinue = isTerminal && (task.agent_type === 'claude' || task.agent_type === 'codex' || isOpencodeFamily) && !!task.session_id
   const isMultiTurn = (task.turn_count ?? 1) > 1
+
+  // Auto-send queued follow-up once the task completes and session is ready
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!queuedContinuation || !canContinue || isRunning) return
+    continueTask(task.id, queuedContinuation)
+    setQueuedContinuation(null)
+  }, [canContinue, isRunning, queuedContinuation])
   const statusColor = STATUS_COLORS[task.status ?? 'pending']
   const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '--'
 
@@ -462,8 +488,8 @@ export default function TaskDetailPane({
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      behavior={Platform.OS === 'ios' ? 'height' : undefined}
+      keyboardVerticalOffset={0}
     >
       {!hideStatusBar && (
         <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
@@ -566,15 +592,29 @@ export default function TaskDetailPane({
         </View>
       ) : null}
 
-      {/* Running: quick commands (Claude only) + steering input */}
+      {/* Running: Claude gets quick commands + steering; opencode-family gets follow-up queue */}
       {isRunning && task.agent_type === 'claude' ? (
         <QuickCommandBar taskId={task.id} onSend={(data) => sendInput(task.id, data)} colors={colors} />
       ) : null}
-      {isRunning ? (
+      {isRunning && task.agent_type === 'claude' ? (
         <BauhausChatInput
           placeholder="Steer the agent..."
           onSend={(text) => sendInput(task.id, text + '\n')}
         />
+      ) : null}
+      {isRunning && isOpencodeFamily ? (
+        queuedContinuation ? (
+          <QueuedFollowUpBanner
+            message={queuedContinuation}
+            onCancel={() => setQueuedContinuation(null)}
+            colors={colors}
+          />
+        ) : (
+          <BauhausChatInput
+            placeholder="Queue a follow-up..."
+            onSend={(text) => setQueuedContinuation(text)}
+          />
+        )
       ) : null}
 
       {/* Completed: continue input */}
@@ -936,5 +976,31 @@ const styles = StyleSheet.create({
   },
   progressLabel: {
     ...typeStyles.meta,
+  },
+  queuedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    gap: spacing[2],
+  },
+  queuedBannerContent: {
+    flex: 1,
+    gap: 2,
+  },
+  queuedBannerLabel: {
+    ...typeStyles.meta,
+    fontWeight: '600',
+  },
+  queuedBannerText: {
+    ...typeStyles.meta,
+  },
+  queuedBannerCancel: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })

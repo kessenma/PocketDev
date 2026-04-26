@@ -1,5 +1,5 @@
-import { palette } from '@pocketdev/shared/theme'
-import { architectureTheme } from '../../../shared/theme'
+import { palette, fontFamilyTokens } from '@pocketdev/shared/theme'
+import { architectureTheme, architectureTokens } from '../../../shared/theme'
 
 const blue = palette.bauhaus.blue
 const red = palette.bauhaus.red
@@ -64,6 +64,25 @@ export function PocketRevealScene({ progress: p, vpSize, isDesktopLayout }: Prop
 
   const pocketSlideY = pocketFade * (h * 0.8)
 
+  // Text sweeps in from left → holds at center → exits right, all within scene 01
+  const taglineIn     = mapP(p, 0.38, 0.58)
+  const taglineInEase = taglineIn < 0.5
+    ? 2 * taglineIn * taglineIn
+    : 1 - Math.pow(-2 * taglineIn + 2, 2) / 2
+  const taglineOut     = mapP(p, 0.70, 0.95)   // ease-in exit: accelerates right
+  const taglineOutEase = taglineOut * taglineOut
+
+  const taglineX = taglineOut > 0
+    ? w / 2 + w * 0.85 * taglineOutEase          // exits off-screen right
+    : mix(-w * 0.3, w / 2, taglineInEase)        // enters from off-screen left
+  const taglineOp = taglineOut > 0
+    ? 1 - taglineOut                              // fades during exit
+    : mapP(p, 0.35, 0.52)                         // fades in during entry
+  const taglineY    = h * 0.5 + settledR + 26
+  const taglineSize = isDesktopLayout ? 17 : 13
+  const textColor   = architectureTokens.colors.text
+  const displayFont = fontFamilyTokens.display
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -108,6 +127,22 @@ export function PocketRevealScene({ progress: p, vpSize, isDesktopLayout }: Prop
         fill={blue}
         opacity={circleAlpha}
       />
+
+      {/* Tagline — appears after ball settles, carried into scene 02 */}
+      <text
+        x={taglineX}
+        y={taglineY}
+        textAnchor="middle"
+        fontSize={taglineSize}
+        fontWeight="700"
+        fill={textColor}
+        fontFamily={displayFont}
+        letterSpacing="-0.03em"
+        opacity={taglineOp}
+      >
+        {'Built for developers on the '}
+        <tspan fontStyle="italic">go</tspan>
+      </text>
     </svg>
   )
 }

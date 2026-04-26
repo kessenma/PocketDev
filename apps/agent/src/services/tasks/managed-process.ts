@@ -355,6 +355,8 @@ export class ManagedProcess {
     } catch (err) {
       console.error(`[managed-process] Failed to save session_id for task ${this.taskId}:`, err)
     }
+    // Broadcast immediately so mobile can show the continue input as soon as session is known
+    broadcast(makeMessage('task.session_id', { taskId: this.taskId, sessionId }))
   }
 
   private recordCollectedToolUse(toolUse: CollectedToolUse) {

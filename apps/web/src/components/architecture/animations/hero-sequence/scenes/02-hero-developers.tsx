@@ -63,66 +63,84 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
   const hx = w * 0.5
   const hy = h * 0.5
 
-  // Circle visible early, fades out before train fully settles
-  const circleOp = Math.min(
-    clamp(progress / 0.08, 0, 1),
-    clamp((0.55 - progress) / 0.08, 0, 1),
-  )
+  // ── Phase boundaries ──────────────────────────────────────────
+  const ENTRY_END = 0.50  // train finishes driving in
+  const HOLD_END  = 0.65  // cinematic pause ends, exit begins
 
-  // ── Train drive-by ────────────────────────────────────────────
-  const scaleEnd = settledR / TRAIN_WINDOW_R
+  // ── Entry easing (0 → ENTRY_END) ──────────────────────────────
+  const entryT = clamp(progress / ENTRY_END, 0, 1)
+  const entryEased = entryT < 0.5
+    ? 2 * entryT * entryT
+    : 1 - Math.pow(-2 * entryT + 2, 2) / 2
+
+  // ── Exit easing (HOLD_END → 1.0), ease-in so train accelerates ─
+  const exitT = mapP(progress, HOLD_END, 1.0)
+  const exitEased = exitT * exitT
+
+  const scaleEnd   = settledR / TRAIN_WINDOW_R
   const scaleStart = isDesktopLayout ? 1.0 : 0.75
-  const rawT = clamp(progress / 0.75, 0, 1)
-  const eased = rawT < 0.5
-    ? 2 * rawT * rawT
-    : 1 - Math.pow(-2 * rawT + 2, 2) / 2
-  const currentScale = scaleStart + (scaleEnd - scaleStart) * eased
-  const svgW = 2400 * currentScale
-  const svgH = 200 * currentScale
+  const scaleExit  = scaleStart  // zooms back out to entry scale
+
   const trainLeft0 = -(2192 + w * 0.3) * scaleStart
   const trainLeft1 = w / 2 - TRAIN_WINDOW_CX * scaleEnd
-  const trainLeft = trainLeft0 + (trainLeft1 - trainLeft0) * eased
-  const trainTop = h / 2 - TRAIN_WINDOW_CY * currentScale
-  const trainOp = clamp((0.95 - progress) / 0.08, 0, 1)
+  // Exit: SVG left edge moves off-screen right, window zooms out
+  const trainLeft2 = w + 100
 
-  // ── Phone + VPS — appear after person is visible in train ─────
-  // Train finishes settling at rawT=1 (progress ≈ 0.75), elements build in after
-  const elemBuild = mapP(progress, 0.72, 0.90)
-  const elemFade  = mapP(progress, 0.93, 1.0)
+  let currentScale: number
+  let trainLeft: number
+
+  if (progress <= ENTRY_END) {
+    currentScale = scaleStart + (scaleEnd - scaleStart) * entryEased
+    trainLeft    = trainLeft0 + (trainLeft1 - trainLeft0) * entryEased
+  } else if (progress <= HOLD_END) {
+    currentScale = scaleEnd
+    trainLeft    = trainLeft1
+  } else {
+    currentScale = scaleEnd + (scaleExit - scaleEnd) * exitEased
+    trainLeft    = trainLeft1 + (trainLeft2 - trainLeft1) * exitEased
+  }
+
+  const svgW = 2400 * currentScale
+  const svgH = 200 * currentScale
+  const trainTop = h / 2 - TRAIN_WINDOW_CY * currentScale
+
+  // Hub circle fades in at start, fades out before train settles
+  const circleOp = Math.min(
+    clamp(progress / 0.08, 0, 1),
+    clamp((ENTRY_END - 0.06 - progress) / 0.08, 0, 1),
+  )
+
+  // ── Phone + VPS — build in during hold, fade out early in exit ──
+  const elemBuild = mapP(progress, ENTRY_END, HOLD_END)
+  // Start fading as soon as exit begins, gone by 0.88
+  const elemFade  = mapP(progress, HOLD_END + 0.04, 0.88)
   const elemOp    = elemBuild * (1 - elemFade)
   const arcOp     = mapP(elemBuild, 0.55, 0.95)
 
-  // Phone: below + right of the circle (person looking down at phone, side profile)
-  const phoneScale = isDesktopLayout ? 0.62 : 0.52
-  const phoneX     = isDesktopLayout ? hx + 85 : hx + 60
-  const phoneY     = isDesktopLayout ? hy + 100 : hy + 80
-  const phoneSlideY = (1 - elemBuild) * -20  // drops down into hands
+  // Phone: below + right of the circle
+  const phoneScale  = isDesktopLayout ? 0.62 : 0.52
+  const phoneX      = isDesktopLayout ? hx + 85 : hx + 60
+  const phoneY      = isDesktopLayout ? hy + 100 : hy + 80
+  const phoneSlideY = (1 - elemBuild) * -20
 
   // VPS: upper right, slides in from right
-  const termW    = isDesktopLayout ? 120 : 82
-  const termH    = isDesktopLayout ? 84 : 60
-  const vpsX     = isDesktopLayout ? w * 0.82 : w * 0.78
-  const vpsY     = isDesktopLayout ? h * 0.28 : h * 0.22
+  const termW     = isDesktopLayout ? 120 : 82
+  const termH     = isDesktopLayout ? 84 : 60
+  const vpsX      = isDesktopLayout ? w * 0.82 : w * 0.78
+  const vpsY      = isDesktopLayout ? h * 0.28 : h * 0.22
   const vpsSlideX = (1 - elemBuild) * 70
 
-  // Actual endpoint positions (used for arc)
   const phoneCX = phoneX
   const phoneCY = phoneY + phoneSlideY
   const vpsCX   = vpsX + vpsSlideX
   const vpsCY   = vpsY
 
-  const labelOp = mapP(elemBuild, 0.7, 1.0) * (1 - elemFade)
-  const labelY1 = h * 0.82
-  const labelY2 = labelY1 + (isDesktopLayout ? 22 : 17)
-
-  const subColor    = architectureTokens.colors.textSecondary
-  const textColor   = architectureTokens.colors.text
-  const monoFont    = `${fontFamilyTokens.mono}, ui-monospace, monospace`
-  const displayFont = fontFamilyTokens.display
+  const subColor = architectureTokens.colors.textSecondary
+  const monoFont = `${fontFamilyTokens.mono}, ui-monospace, monospace`
 
   return (
     <>
-      {/* Hub circle — sits behind train, fades before person is revealed */}
+      {/* Hub circle — fades out before train settles */}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox={`0 0 ${w} ${h}`}
@@ -133,7 +151,7 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
         <circle cx={hx} cy={hy} r={settledR} fill={blue} opacity={circleOp} />
       </svg>
 
-      {/* Train — in front of hub circle */}
+      {/* Train — exits via rightward motion + zoom-out, never fades */}
       <div
         className="absolute"
         style={{
@@ -141,7 +159,6 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
           top: trainTop,
           width: svgW,
           height: svgH,
-          opacity: trainOp,
           pointerEvents: 'none',
         }}
         aria-hidden="true"
@@ -175,17 +192,7 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
             color={blue} bend={0} opacity={arcOp} />
         </g>
 
-        <g opacity={labelOp}>
-          <text x={w / 2} y={labelY1} textAnchor="middle"
-            fontSize={isDesktopLayout ? 17 : 13} fontWeight="700"
-            fill={textColor} fontFamily={displayFont} letterSpacing="-0.03em">
-            Built for developers on the go
-          </text>
-          <text x={w / 2} y={labelY2} textAnchor="middle"
-            fontSize={isDesktopLayout ? 12 : 10} fill={subColor} fontFamily={monoFont}>
-            connect to any cheap Linux server as a control surface for your code and tools.
-          </text>
-        </g>
+
       </svg>
     </>
   )
