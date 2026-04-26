@@ -38,7 +38,7 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
       const cmd = [opencodePath, 'run', '--format', 'json']
       if (sessionId) cmd.push('-s', sessionId)
       if (model) cmd.push('-m', model)
-      cmd.push('-p', prompt)
+      cmd.push(prompt)   // positional: opencode run [message..]
       return cmd
     }
     case 'shell':

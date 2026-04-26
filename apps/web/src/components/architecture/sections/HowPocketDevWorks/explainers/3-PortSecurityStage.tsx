@@ -318,7 +318,7 @@ export function PortSecurityStage({
             />
             {/* Door face */}
             {sinA > 0.04 && <polygon points={doorEdgePoints} fill="rgba(255,255,255,0.07)" />}
-            <polygon points={doorFacePoints} fill={palette.bauhaus.black} />
+            <polygon points={doorFacePoints} fill={palette.bauhaus.red} />
             <polygon points={doorFacePoints} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />
             {(HINGE_X - freeX) > 12 && [-50, 0, 50].map((dy) => (
               <line key={dy} x1={freeX + 6} y1={dy} x2={HINGE_X - 6} y2={dy}

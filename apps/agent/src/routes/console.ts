@@ -1270,12 +1270,13 @@ systemctl restart pocketdev-agent
   })
   .post('/projects/select', async ({ request, body, set }) => {
     if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
-    const result = await selectProject(body.id)
-    if (!result.success) {
+    try {
+      await selectProject(body.id)
+      return { ok: true }
+    } catch (err) {
       set.status = 400
-      return { error: result.error ?? 'Failed to select project' }
+      return { error: err instanceof Error ? err.message : 'Failed to select project' }
     }
-    return { ok: true }
   }, {
     body: t.Object({ id: t.String() }),
   })

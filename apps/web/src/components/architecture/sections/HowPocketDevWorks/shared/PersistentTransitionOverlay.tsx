@@ -581,18 +581,7 @@ export function PersistentTransitionOverlay({
         </BauhausLaptop>
         </g>
       )}
-      {/* Phone — renders after laptop so it paints in front of it */}
-      {phonePose && (
-        <g opacity={phoneOverlayOpacity}>
-          <BauhausPhone cx={phonePose.cx} cy={phonePose.cy} scale={phonePose.scale}>
-            {/* Same credential shapes shown on phone at end of Connect scene */}
-            <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
-            <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
-            <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
-          </BauhausPhone>
-        </g>
-      )}
-      {/* Door — renders last so it paints on top of phone and laptop */}
+      {/* Door — renders before phone so phone always paints on top of it */}
       {doorOverlayVpY !== null && (
         <g transform={`translate(${doorOverlayVpX} ${doorOverlayVpY})`}>
           <g transform={`scale(${doorOverlayScale})`}>
@@ -603,7 +592,7 @@ export function PersistentTransitionOverlay({
             />
             <polygon
               points={`${FREE_X_D},${-DOOR_H / 2} ${HINGE_X_D},${-DOOR_H / 2} ${HINGE_X_D},${DOOR_H / 2} ${FREE_X_D},${DOOR_H / 2}`}
-              fill={palette.bauhaus.black}
+              fill={palette.bauhaus.red}
             />
             <polygon
               points={`${FREE_X_D},${-DOOR_H / 2} ${HINGE_X_D},${-DOOR_H / 2} ${HINGE_X_D},${DOOR_H / 2} ${FREE_X_D},${DOOR_H / 2}`}
@@ -632,6 +621,17 @@ export function PersistentTransitionOverlay({
               LOCK THE PORT
             </text>
           </g>
+        </g>
+      )}
+      {/* Phone — renders last so it always paints in front of the door */}
+      {phonePose && (
+        <g opacity={phoneOverlayOpacity}>
+          <BauhausPhone cx={phonePose.cx} cy={phonePose.cy} scale={phonePose.scale}>
+            {/* Same credential shapes shown on phone at end of Connect scene */}
+            <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
+            <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
+            <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
+          </BauhausPhone>
         </g>
       )}
     </svg>

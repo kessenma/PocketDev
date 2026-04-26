@@ -189,6 +189,11 @@ export class ManagedProcess {
 
     if (this.agentType === 'codex') {
       void this.startCodexAppServerTask()
+    } else {
+      // For non-interactive processes (opencode, shell, etc.), close stdin immediately
+      // so the process doesn't block waiting for input on an open pipe.
+      const s = this.proc.stdin
+      if (s && typeof s !== 'number') { try { s.end() } catch { /* ignore */ } }
     }
 
     this.proc.exited.then((exitCode) => {
