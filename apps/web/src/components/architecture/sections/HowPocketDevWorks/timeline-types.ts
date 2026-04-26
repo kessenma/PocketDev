@@ -16,6 +16,15 @@ export type SceneRenderProps = {
   hideBlueCircle?: boolean
   /** True when the persistent overlay is rendering the phone — scene should hide its own */
   hidePhone?: boolean
+  /** True when the overlay is rendering the door — scene 3 should hide its own */
+  hideDoor?: boolean
+  /**
+   * 0–1 preview progress driven by the previous scene's slide-out.
+   * Scenes can use this to start entrance animations before they are
+   * fully in view (e.g. PortSecurity door drops during the Connect→PortSecurity slide).
+   * Stays at 1 once the slide completes so the effect is permanent.
+   */
+  doorPreviewProgress?: number
 }
 
 export type SceneConfig = {

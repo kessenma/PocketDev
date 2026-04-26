@@ -9,7 +9,7 @@ import {
 import type { SceneConfig } from './timeline-types'
 import { buildTrackKeyframes, computeSceneRanges, sceneProgress } from './timeline-utils'
 import { ExplainerStage } from './explainers/ExplainerStage'
-import { PersistentTransitionOverlay, shouldHideLaptop, shouldHideBlueCircle, shouldHidePhone } from './shared/PersistentTransitionOverlay'
+import { PersistentTransitionOverlay, shouldHideLaptop, shouldHideBlueCircle, shouldHidePhone, shouldHideDoor } from './shared/PersistentTransitionOverlay'
 
 export function ScrollTimeline({
   scenes,
@@ -139,6 +139,19 @@ export function ScrollTimeline({
                 const progress = sceneProgress(railProgress, range)
                 const active = railProgress >= range.start && railProgress <= range.end
 
+                // Scene 3 (PortSecurity, index 2): preroll the door starting at the same moment
+                // scene 2's text begins sliding down (scene2 p=0.82), not at holdEnd.
+                // This way the door is ~94% dropped before the horizontal slide even starts,
+                // making the 2→3 transition feel vertical rather than diagonal.
+                // Stays clamped at 1 once scene 2 ends.
+                const r1 = ranges[1]
+                const doorPreviewStart = r1 ? r1.start + 0.82 * (r1.end - r1.start) : 0
+                const doorPreviewDuration = r1 ? r1.end - doorPreviewStart : 1
+                const doorPreviewProgress =
+                  i === 2 && r1 && doorPreviewDuration > 0
+                    ? Math.min(1, Math.max(0, (railProgress - doorPreviewStart) / doorPreviewDuration))
+                    : 0
+
                 const renderProps = {
                   progress,
                   active,
@@ -147,6 +160,8 @@ export function ScrollTimeline({
                   hideLaptop: shouldHideLaptop(i, railProgress, ranges),
                   hideBlueCircle: shouldHideBlueCircle(i, railProgress, ranges),
                   hidePhone: shouldHidePhone(i, railProgress, ranges),
+                  hideDoor: shouldHideDoor(i, railProgress, ranges),
+                  doorPreviewProgress,
                 }
 
                 if (scene.kind === 'explainer' && scene.explainer) {

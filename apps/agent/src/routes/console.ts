@@ -1143,6 +1143,18 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }),
   })
 
+  // ─── Force-refresh version cache (requires session) ───
+  // Called when the user opens the version history dropdown so they always
+  // see the latest available versions, bypassing the 6-hour agent cache.
+  .post('/version/refresh', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) {
+      return { error: 'Unauthorized' }
+    }
+    clearVersionCache()
+    const update = await checkForUpdate()
+    return { update }
+  })
+
   // ─── Agent update (requires session) ──────────────────
   //
   // Two paths:
@@ -1167,6 +1179,19 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     // timestamp is slightly optimistic, which we accept.
     setLastUpgradeAt(new Date().toISOString())
     clearVersionCache()
+
+    if (body?.beta) {
+      // Beta reinstall path: always run install.sh --beta regardless of current version.
+      Bun.spawn(
+        [
+          'systemd-run', '--quiet', '--no-block',
+          '--unit', `pocketdev-beta-${Date.now()}`,
+          '/bin/sh', '-c', 'curl -fsSL https://pocketdev.run/install.sh | bash -s -- --beta',
+        ],
+        { stdio: ['ignore', 'ignore', 'ignore'] },
+      )
+      return { ok: true, message: 'Beta reinstall started. The agent will restart shortly.' }
+    }
 
     if (targetVersion) {
       // Versioned rollback path: download a pinned bundle with a timeout so
@@ -1226,6 +1251,7 @@ systemctl restart pocketdev-agent
   }, {
     body: t.Optional(t.Object({
       version: t.Optional(t.String()),
+      beta: t.Optional(t.Boolean()),
     })),
   })
   // ─── Projects ──────────────────────────────────────────

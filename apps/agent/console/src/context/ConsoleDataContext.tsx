@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { checkHealth, fetchStatus, logout, triggerUpdate, type ConsoleStatus, type UpdateInfo } from '#/lib/api'
+import { checkHealth, fetchStatus, logout, refreshVersionInfo, reinstallBeta, triggerUpdate, type ConsoleStatus, type UpdateInfo } from '#/lib/api'
 import { toast } from 'sonner'
 
 interface ConsoleDataContextValue {
@@ -11,7 +11,9 @@ interface ConsoleDataContextValue {
   upgrading: boolean
   upgradeError: string | null
   refreshStatus: () => Promise<void>
+  refreshUpdateInfo: () => Promise<void>
   handleUpgrade: (targetVersion?: string) => Promise<void>
+  handleBetaReinstall: () => Promise<void>
   handleLogout: () => Promise<void>
   removeDevice: (id: string) => void
   renameDevice: (id: string, name: string) => void
@@ -116,6 +118,44 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const refreshUpdateInfo = useCallback(async () => {
+    const update = await refreshVersionInfo()
+    if (update) setUpdateInfo(update)
+  }, [])
+
+  const handleBetaReinstall = useCallback(async () => {
+    setUpgrading(true)
+    setUpgradeError(null)
+    try {
+      const pre = await checkHealth({ signal: AbortSignal.timeout(5_000) })
+      const baselineUptime = pre.uptime
+      await reinstallBeta()
+      toast.info('Beta reinstall started — the agent will restart shortly...')
+      let attempts = 0
+      upgradePollRef.current = setInterval(async () => {
+        attempts++
+        try {
+          const health = await checkHealth({ signal: AbortSignal.timeout(5_000) })
+          if (health.uptime < baselineUptime) {
+            clearInterval(upgradePollRef.current!)
+            upgradePollRef.current = null
+            toast.success(`Reinstalled beta v${health.version}`)
+            setTimeout(() => window.location.reload(), 1000)
+          }
+        } catch { /* agent restarting */ }
+        if (attempts >= 30) {
+          clearInterval(upgradePollRef.current!)
+          upgradePollRef.current = null
+          toast.info('Agent still coming back online — refreshing...')
+          setTimeout(() => window.location.reload(), 800)
+        }
+      }, 3000)
+    } catch (err) {
+      setUpgrading(false)
+      setUpgradeError(err instanceof Error ? err.message : 'Reinstall failed')
+    }
+  }, [])
+
   const handleLogout = useCallback(async () => {
     await logout()
     navigate('/login', { replace: true })
@@ -141,12 +181,14 @@ export function ConsoleDataProvider({ children }: { children: ReactNode }) {
     upgrading,
     upgradeError,
     refreshStatus,
+    refreshUpdateInfo,
     handleUpgrade,
+    handleBetaReinstall,
     handleLogout,
     removeDevice,
     renameDevice,
     updatePasscode,
-  }), [status, loading, agentVersion, updateInfo, upgrading, upgradeError, refreshStatus, handleUpgrade, handleLogout, removeDevice, renameDevice, updatePasscode])
+  }), [status, loading, agentVersion, updateInfo, upgrading, upgradeError, refreshStatus, refreshUpdateInfo, handleUpgrade, handleBetaReinstall, handleLogout, removeDevice, renameDevice, updatePasscode])
 
   return <ConsoleDataContext.Provider value={value}>{children}</ConsoleDataContext.Provider>
 }

@@ -5,7 +5,7 @@ export const connectScene: SceneConfig = {
   id: 'connect',
   kind: 'takeover',
   weight: 3,
-  holdRatio: 0.8,
+  holdRatio: 0.97,
   reducedMotionFullBleed: true,
   render: ({ progress, active, isDesktopLayout, hideLaptop, hideBlueCircle, hidePhone }) => (
     <div className="relative z-10 h-full w-full">

@@ -3,30 +3,30 @@ import type { JsonRecord } from './utils.ts'
 import { BaseTaskStreamAdapter } from './base-adapter.ts'
 
 /**
- * Adapter for `opencode run --format json` tasks.
+ * Adapter for `opencode run --format json` tasks (tmux/file mode).
  *
- * OpenCode emits JSONL events to stdout. We extract assistant text from known
- * event shapes in real-time (so raw logs show progress), then emit a single
- * `text` activity on exit so ActivityCards renders a ResultCard.
+ * OpenCode emits JSONL events to stdout. The file-mode poll loop in
+ * ManagedAgentProcess reads them and calls handleJsonMessage() per line.
+ * We extract assistant text from each event, buffer it, then emit a
+ * single `text` activity on finish via onProcessExit() (called by the
+ * provider's onFinish hook).
  *
- * Lines that are not parseable JSON are forwarded as-is — useful during
- * initial integration while the exact event schema is still being confirmed.
+ * Non-text events (tool calls, metadata) return false so the raw JSON
+ * line appears in the task log stream for debugging.
  */
 export class OpenCodeRunAdapter extends BaseTaskStreamAdapter {
   constructor(opts: AdapterOptions) {
     super(opts)
   }
 
-  handleJsonMessage(_message: JsonRecord): boolean {
-    return false
-  }
-
-  handleTextLine(line: string): void {
-    const text = extractAssistantText(line)
-    if (text !== null) {
-      this.appendCollectedText(text)
-    }
-    // Always forward the raw line so it appears in the task log stream
+  handleJsonMessage(message: JsonRecord): boolean {
+    const text = pickText(message)
+    if (!text) return false
+    const trimmed = text.trim()
+    if (!trimmed) return false
+    this.appendCollectedText(trimmed + '\n')
+    this.sink.emitOutput(trimmed)
+    return true
   }
 
   onProcessExit(exitCode: number): void {
@@ -41,41 +41,26 @@ export class OpenCodeRunAdapter extends BaseTaskStreamAdapter {
 }
 
 /**
- * Extract printable assistant text from an OpenCode JSON event line.
- * Returns null if no text content is found (e.g. tool events, metadata).
- * Returns the raw line if it is not valid JSON (defensive fallback).
+ * Extract printable assistant text from an OpenCode JSON event.
+ * Returns null for events that carry no user-visible text content.
  */
-function extractAssistantText(line: string): string | null {
-  const trimmed = line.trim()
-  if (!trimmed) return null
+function pickText(event: Record<string, unknown>): string | null {
+  const type = typeof event.type === 'string' ? event.type : ''
 
-  let event: Record<string, unknown>
-  try {
-    event = JSON.parse(trimmed) as Record<string, unknown>
-  } catch {
-    // Not JSON — treat the line itself as output text
-    return trimmed
-  }
-
-  const type = event.type as string | undefined
-
-  // Skip non-assistant event types we know produce no readable output
-  if (type && /^(session|tool|input|error|debug|system|metadata|start|end)\b/i.test(type)) {
+  // Skip event types that are structural / non-text
+  if (/^(session|tool|input|error|debug|system|metadata|start|end)\b/i.test(type)) {
     return null
   }
 
-  // Common text fields across different OpenCode event shapes
-  const text = pickText(event)
-  return text && text.trim() ? text.trim() : null
+  return searchFields(event)
 }
 
-function pickText(event: Record<string, unknown>): string | null {
-  // Direct string fields
+function searchFields(obj: Record<string, unknown>): string | null {
   for (const key of ['text', 'content', 'delta', 'message', 'output', 'response']) {
-    const val = event[key]
-    if (typeof val === 'string' && val) return val
-    if (typeof val === 'object' && val !== null) {
-      const nested = pickText(val as Record<string, unknown>)
+    const val = obj[key]
+    if (typeof val === 'string' && val.trim()) return val
+    if (val !== null && typeof val === 'object') {
+      const nested = searchFields(val as Record<string, unknown>)
       if (nested) return nested
     }
   }

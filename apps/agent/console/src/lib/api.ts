@@ -933,6 +933,18 @@ export async function updateDomain(domain: string): Promise<{ ok: boolean; url: 
   return res.json()
 }
 
+// ─── Version refresh ──────────────────────────────────
+
+export async function refreshVersionInfo(): Promise<UpdateInfo | null> {
+  const res = await fetch(`${BASE}/version/refresh`, {
+    method: 'POST',
+    credentials: 'same-origin',
+  })
+  if (!res.ok) return null
+  const data = await res.json() as { update: UpdateInfo | null }
+  return data.update
+}
+
 // ─── Agent update ─────────────────────────────────────
 
 export async function triggerUpdate(version?: string): Promise<{ ok: boolean; message: string }> {
@@ -940,6 +952,20 @@ export async function triggerUpdate(version?: string): Promise<{ ok: boolean; me
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(version ? { version } : {}),
+    credentials: 'same-origin',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Update failed' }))
+    throw new Error(data.error || 'Update failed')
+  }
+  return res.json()
+}
+
+export async function reinstallBeta(): Promise<{ ok: boolean; message: string }> {
+  const res = await fetch(`${BASE}/update`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ beta: true }),
     credentials: 'same-origin',
   })
   if (!res.ok) {

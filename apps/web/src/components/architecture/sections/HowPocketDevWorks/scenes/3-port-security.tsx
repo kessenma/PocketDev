@@ -7,14 +7,17 @@ export const portSecurityScene: SceneConfig = {
   weight: 8,
   holdRatio: 0.96,
   reducedMotionFullBleed: true,
-  render: ({ progress, active, isDesktopLayout, hideBlueCircle, hidePhone }) => (
+  render: ({ progress, active, isDesktopLayout, hideLaptop, hideBlueCircle, hidePhone, hideDoor, doorPreviewProgress }) => (
     <div className="relative z-10 h-full w-full">
       <PortSecurityStage
         progress={progress}
         active={active}
         isDesktopLayout={isDesktopLayout}
+        hideLaptop={hideLaptop}
         hideBlueCircle={hideBlueCircle}
         hidePhone={hidePhone}
+        hideDoor={hideDoor}
+        doorPreviewProgress={doorPreviewProgress ?? 0}
       />
     </div>
   ),

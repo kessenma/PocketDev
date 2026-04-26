@@ -1,6 +1,6 @@
 import { insertTask, getRecentTasks, getToolPath, getProject, getTask, insertTaskTurn, resetTaskForContinuation } from '../../db/index.ts'
 import { ManagedProcess } from './managed-process.ts'
-import { ManagedAgentProcess, claudeProviderConfig, copilotProviderConfig } from './managed-agent-process.ts'
+import { ManagedAgentProcess, claudeProviderConfig, copilotProviderConfig, opencodeProviderConfig } from './managed-agent-process.ts'
 import { getActiveProjectId } from '../system/projects.ts'
 
 /** Active processes keyed by task ID — only holds running processes, cleaned up on completion */
@@ -35,11 +35,6 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
       if (model) cmd.push('--model', model)
       return cmd
     }
-    case 'opencode': {
-      const opencodePath = getToolPath('opencode_cli') ?? 'opencode'
-      const modelFlag = model ? ['-m', model] : []
-      return [opencodePath, 'run', '--format', 'json', ...modelFlag, prompt]
-    }
     case 'shell':
       return ['sh', '-c', prompt]
     default:
@@ -73,6 +68,12 @@ export function startTask(
     console.log(`[task-manager] Starting copilot tmux task ${taskId}`)
     console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
     const proc = new ManagedAgentProcess({ taskId, prompt, cwd, mode, model, onComplete, provider: copilotProviderConfig() })
+    processes.set(taskId, proc)
+    void proc.start()
+  } else if (agentType === 'opencode') {
+    console.log(`[task-manager] Starting opencode tmux task ${taskId}`)
+    console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'none'} mode=${mode} agent=${agentType}`)
+    const proc = new ManagedAgentProcess({ taskId, prompt, cwd, mode, model, onComplete, provider: opencodeProviderConfig() })
     processes.set(taskId, proc)
     void proc.start()
   } else if (agentType === 'claude') {

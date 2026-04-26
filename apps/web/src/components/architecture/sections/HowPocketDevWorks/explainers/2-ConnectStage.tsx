@@ -123,6 +123,11 @@ export function ConnectTakeoverScene({
   // Arc direction for flying squares
   const arcMag = isDesktopLayout ? -18 : 12
 
+  // Text exit — both text blocks slide down off the bottom starting at p=0.82
+  // (just after credential shapes finish popping in at p=0.82). Gravity-style: accelerates.
+  const textExitRaw = mapProgress(p, 0.82, 1.0)
+  const textExitP = textExitRaw * textExitRaw  // easeInQuad — accelerates downward
+
   // Text positioning
   const titleCenterX = vpSize.w / 2
   const titleY = vpSize.h * (isDesktopLayout ? 0.12 : 0.08)
@@ -137,6 +142,10 @@ export function ConnectTakeoverScene({
   const subY = vpSize.h * (isDesktopLayout ? 0.88 : 0.80)
   const subX = isDesktopLayout ? vpSize.w * 0.06 : vpSize.w * 0.07
 
+  // Animated Y positions — slide off the bottom of the screen
+  const titleYAnim = mix(titleY, vpSize.h + titleSize * 3, textExitP)
+  const subYAnim   = mix(subY,   vpSize.h + subLH * 6,    textExitP)
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -148,10 +157,10 @@ export function ConnectTakeoverScene({
     >
       <rect width="100%" height="100%" fill={architectureTokens.colors.paper} />
 
-      {/* Title */}
+      {/* Title — slides down off screen at end of scene */}
       <text
         x={titleCenterX}
-        y={titleY}
+        y={titleYAnim}
         fill={architectureTokens.colors.text}
         fontFamily={architectureFonts.display}
         fontSize={titleSize}
@@ -162,10 +171,10 @@ export function ConnectTakeoverScene({
         Pair your phone
       </text>
 
-      {/* Subtitle */}
+      {/* Subtitle — slides down off screen at end of scene */}
       <SvgAutoWrapText
         x={subX}
-        y={subY}
+        y={subYAnim}
         font={`${subFontSize}px var(--font-sans), sans-serif`}
         maxWidth={vpSize.w * (isDesktopLayout ? 0.44 : 0.80)}
         lineHeight={subLH}
@@ -392,25 +401,6 @@ export function ConnectTakeoverScene({
           </BauhausPhone>
         </g>
 
-        {/* Labels */}
-        <text
-          x={laptopLocalCx}
-          y={laptopLocalCy + (isDesktopLayout ? 52 : 48)}
-          textAnchor="middle"
-          fontSize="10"
-          fill={architectureTokens.colors.textSecondary}
-        >
-          Server
-        </text>
-        <text
-          x={phoneLocalCx}
-          y={phoneLocalY + phoneH + 16}
-          textAnchor="middle"
-          fontSize="10"
-          fill={architectureTokens.colors.textSecondary}
-        >
-          Phone
-        </text>
       </g>
     </svg>
   )

@@ -41,6 +41,10 @@ function easeOut(t: number) {
   return 1 - (1 - t) * (1 - t)
 }
 
+function easeInOut(t: number) {
+  return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
+}
+
 // ---------------------------------------------------------------------------
 // ViewBox → viewport mapping for explainer stages
 // ---------------------------------------------------------------------------
@@ -110,7 +114,7 @@ function connectLaptopPose(vpW: number, vpH: number, isDesktop: boolean): Pose {
   const laptopScale = isDesktop ? 0.62 : 0.56
   return {
     cx: vpW / 2 + laptopLocalCx * animScale,
-    cy: vpH * 0.42 + laptopLocalCy * animScale,
+    cy: vpH * (isDesktop ? 0.42 : 0.40) + laptopLocalCy * animScale,
     scale: laptopScale * animScale,
   }
 }
@@ -329,8 +333,6 @@ function remoteAiCircleStartPose(vpW: number, vpH: number, isDesktop: boolean): 
 // Component
 // ---------------------------------------------------------------------------
 
-const LAPTOP_SCENE_INDICES = [0, 1] as const
-
 export function PersistentTransitionOverlay({
   railProgress,
   ranges,
@@ -379,7 +381,10 @@ export function PersistentTransitionOverlay({
     }
   }
 
-  // --- Slide 1→2: Phone + blue circle (Connect → PortSecurity) ---
+  // --- Slide 1→2: Phone + laptop crossfade (Connect → PortSecurity) ---
+  // Both scenes use identical positions — the overlay fades in over the scene laptops so there
+  // is no hard cut. Scenes keep their own laptops visible and scroll naturally; the overlay's
+  // laptop crossfades on top so the viewer sees a single stationary laptop.
   const inSlide1 = range1 && railProgress > range1.holdEnd && railProgress <= range1.end
   const slideP1 = inSlide1
     ? clamp((railProgress - range1.holdEnd) / (range1.end - range1.holdEnd), 0, 1)
@@ -388,6 +393,7 @@ export function PersistentTransitionOverlay({
 
   let phonePose: Pose | null = null
   let phoneOverlayOpacity = 1
+  let laptopOverlayOpacity = 1
 
   if (inSlide1) {
     const from = connectPhoneEndPose(vpSize.w, vpSize.h, isDesktopLayout)
@@ -397,7 +403,9 @@ export function PersistentTransitionOverlay({
       cy: mix(from.cy, to.cy, slideEased1),
       scale: mix(from.scale, to.scale, slideEased1),
     }
-    // Circle is rendered inside BauhausPhone children — no separate bridge needed
+    // Scenes hide their own laptops during this slide; overlay laptop stays solid at the
+    // fixed position so only one laptop is ever visible as the panels scroll by.
+    laptopPose = connectLaptopPose(vpSize.w, vpSize.h, isDesktopLayout)
   }
 
   // --- Slide 2→3: Phone fade-out + blue circle bridge (PortSecurity → Setup) ---
@@ -478,8 +486,41 @@ export function PersistentTransitionOverlay({
     circlePose = envInjectionCirclePose(vpSize.w, vpSize.h, isDesktopLayout, envSceneProgress)
   }
 
+  // --- Overlay door: falls purely vertically in viewport space (Connect → PortSecurity) ---
+  // The door is driven by the same preroll window as scene 2's text exit (p=0.82→1.0).
+  // By rendering it in the overlay (not inside the sliding panel) the drop is axis-aligned.
+  // Stops exactly at range1.end so scene 3 picks it up at the resting position.
+  const DOOR_W  = 120
+  const DOOR_H  = 210
+  const HINGE_X_D = DOOR_W / 2   // 60
+  const FREE_X_D  = -HINGE_X_D   // -60 (closed, cosA=1)
+
+  let doorOverlayVpY: number | null = null
+  let doorOverlayVpX = 0
+  let doorOverlayScale = 1
+  if (range1 && railProgress > range1.start) {
+    const doorPreviewStart = range1.start + 0.82 * (range1.end - range1.start)
+    const doorPreviewDur   = range1.end - doorPreviewStart
+    const doorPreviewP     = doorPreviewDur > 0
+      ? clamp((railProgress - doorPreviewStart) / doorPreviewDur, 0, 1)
+      : 0
+
+    if (doorPreviewP > 0 && railProgress <= range1.end) {
+      const laptopCx = isDesktopLayout ? -50 : 0
+      const laptopCy = isDesktopLayout ? 0 : -40
+      const s        = Math.min(vpSize.w, vpSize.h) / 320
+      const aCY      = vpSize.h * (isDesktopLayout ? 0.42 : 0.40)
+
+      doorOverlayScale = s
+      doorOverlayVpX   = vpSize.w / 2 + laptopCx * s
+      const vpYFinal   = aCY + laptopCy * s
+      const vpYStart   = (laptopCy - DOOR_H / 2 - 10) * s   // above viewport top
+      doorOverlayVpY   = mix(vpYStart, vpYFinal, easeInOut(doorPreviewP))
+    }
+  }
+
   // Nothing to render
-  if (!circlePose && !laptopPose && !phonePose) return null
+  if (!circlePose && !laptopPose && !phonePose && doorOverlayVpY === null) return null
 
   return (
     <svg
@@ -499,22 +540,9 @@ export function PersistentTransitionOverlay({
           opacity={envSceneActive ? 1 : 0.96}
         />
       )}
-      {/* Phone — bridged during slides. During slide 1→2 shows credential screen content. */}
-      {phonePose && (
-        <g opacity={phoneOverlayOpacity}>
-          <BauhausPhone cx={phonePose.cx} cy={phonePose.cy} scale={phonePose.scale}>
-            {inSlide1 ? (
-              /* Carry credential shapes (on dark screen) from Connect into PortSecurity */
-              <>
-                <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
-                <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
-                <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
-              </>
-            ) : <></>}
-          </BauhausPhone>
-        </g>
-      )}
+      {/* Laptop — renders before door so door paints on top of it */}
       {laptopPose && (
+        <g opacity={laptopOverlayOpacity}>
         <BauhausLaptop cx={laptopPose.cx} cy={laptopPose.cy} scale={laptopPose.scale}>
           {/* Traffic light dots */}
           <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
@@ -549,6 +577,7 @@ export function PersistentTransitionOverlay({
             SERVER CONTROL BOARD
           </text>
         </BauhausLaptop>
+        </g>
       )}
     </svg>
   )
@@ -563,18 +592,27 @@ export function shouldHideLaptop(
   railProgress: number,
   ranges: SceneRange[],
 ): boolean {
-  if (!LAPTOP_SCENE_INDICES.includes(sceneIndex as 0 | 1)) return false
-
   const range0 = ranges[0]
+  if (!range0) return false
 
-  // Scene 0 (ConsoleSetup): hide during slide-out
+  // Scene 0 (ConsoleSetup): hide during slide-out to Connect
   if (sceneIndex === 0) {
     return railProgress > range0.holdEnd && railProgress <= range0.end
   }
 
-  // Scene 1 (Connect): hide while scene 0 is sliding out
+  // Scene 1 (Connect): hide during 0→1 slide AND during 1→2 slide (overlay takes over)
   if (sceneIndex === 1) {
-    return railProgress > range0.holdEnd && railProgress <= range0.end
+    const range1 = ranges[1]
+    if (railProgress > range0.holdEnd && railProgress <= range0.end) return true
+    if (range1 && railProgress > range1.holdEnd && railProgress <= range1.end) return true
+  }
+
+  // Scene 2 (PortSecurity): hide laptop during the 1→2 slide so only the overlay laptop
+  // is visible as it scrolls in from the right
+  if (sceneIndex === 2) {
+    const range1 = ranges[1]
+    if (range1 && railProgress > range1.holdEnd && railProgress <= range1.end) return true
+    return false
   }
 
   return false
@@ -649,5 +687,22 @@ export function shouldHideBlueCircle(
     if (railProgress > range5.holdEnd && railProgress <= range5.end) return true
   }
 
+  return false
+}
+
+/**
+ * True when the overlay is rendering the door in viewport space — scene 3 should
+ * hide its own door so only one door is visible (the vertically-falling overlay one).
+ * Covers the slide window where the panel moves horizontally.
+ */
+export function shouldHideDoor(
+  sceneIndex: number,
+  railProgress: number,
+  ranges: SceneRange[],
+): boolean {
+  const range1 = ranges[1] // connect
+  if (sceneIndex === 2 && range1) {
+    if (railProgress > range1.holdEnd && railProgress <= range1.end) return true
+  }
   return false
 }

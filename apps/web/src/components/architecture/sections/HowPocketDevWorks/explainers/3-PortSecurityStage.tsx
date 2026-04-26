@@ -70,12 +70,18 @@ export function PortSecurityStage({
   isDesktopLayout,
   hideBlueCircle = false,
   hidePhone = false,
+  hideLaptop = false,
+  hideDoor = false,
+  doorPreviewProgress = 0,
 }: {
   progress: number
   active?: boolean
   isDesktopLayout: boolean
   hideBlueCircle?: boolean
   hidePhone?: boolean
+  hideLaptop?: boolean
+  hideDoor?: boolean
+  doorPreviewProgress?: number
 }) {
   const reduceMotion = useReducedMotion()
   const p = reduceMotion ? 1 : progress
@@ -146,9 +152,11 @@ export function PortSecurityStage({
   const doorTy = laptopLocalCy  // Desktop:  0,  Mobile: -40
 
   // ── Timeline ──────────────────────────────────────────────────────────────
-  // Door slides in from right during first 25% of progress
-  const doorSlideP  = easeInOut(mapP(p, 0.00, 0.25))
-  const doorFadeP   = mapP(p, 0.00, 0.18)
+  // Door drops in from above. Two drivers, whichever is further along wins:
+  //   1. doorPreviewProgress — driven by scene 2's slide-out (0→1, stays at 1)
+  //      so the door starts falling while scene 2's text is still exiting.
+  //   2. scene-local p — fallback when there was no preroll (e.g. reduced-motion or direct link)
+  const doorSlideP  = easeInOut(Math.max(clamp(doorPreviewProgress, 0, 1), mapP(p, 0.00, 0.25)))
   const labelsP     = mapP(p, 0.08, 0.22)
   const morphT      = easeInOut(mapP(p, 0.28, 0.52))  // shapes → key on phone
 
@@ -160,9 +168,10 @@ export function PortSecurityStage({
   const circleGrowP = mapP(p, 0.00, 0.18)
   const circleMoveP = mapP(p, 0.79, 0.84)
 
-  // ── Door slide-in ─────────────────────────────────────────────────────────
-  // Door starts off-screen to the right (doorTx + 300) and lands at doorTx
-  const doorGroupTx = mix(doorTx + 300, doorTx, doorSlideP)
+  // ── Door drop-in — falls from above the viewport to its resting position ───
+  // Start Y puts the door bottom just above the viewport top in local coords.
+  const doorStartY  = doorTy - animCenterY / scale - DOOR_H / 2 - 10
+  const doorGroupTy = mix(doorStartY, doorTy, doorSlideP)
 
   // ── Key wrapper transform — one continuous journey from phone to door ──────
   // Scale factor: match bauhaus key's bow-to-bit distance to phone-local scale
@@ -210,7 +219,8 @@ export function PortSecurityStage({
   // At closed: freeX = HINGE_X - DOOR_W = -60 (relative to doorGroupTx)
   const freeX      = HINGE_X - DOOR_W * cosA
   const yConv      = sinA * 10
-  const doorOpacity = doorFadeP * (1 - easeOutQuad(mapP(doorOpenP, 0.72, 1.0)))
+  // Door enters solid (opacity 1); only fades out when it swings open
+  const doorOpacity = 1 - easeOutQuad(mapP(doorOpenP, 0.72, 1.0))
   const doorFacePoints = [
     `${freeX.toFixed(2)},${(-DOOR_H / 2 + yConv).toFixed(2)}`,
     `${HINGE_X},${-DOOR_H / 2}`,
@@ -257,7 +267,8 @@ export function PortSecurityStage({
 
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>
 
-        {/* ── Laptop — always visible, sits behind door ──────────────────── */}
+        {/* ── Laptop — sits behind door ──────────────────────────────────────────── */}
+        <g opacity={hideLaptop ? 0 : 1}>
         <BauhausLaptop cx={laptopLocalCx} cy={laptopLocalCy} scale={laptopScale}>
           <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
           <circle cx={-63} cy={-112} r={3} fill={palette.bauhaus.yellow} />
@@ -281,6 +292,7 @@ export function PortSecurityStage({
           ))}
           <text x={0} y={-17} textAnchor="middle" fontFamily={architectureFonts.body} fontSize="5" letterSpacing="0.16em" fill="rgba(255,255,255,0.5)">SERVER CONTROL BOARD</text>
         </BauhausLaptop>
+        </g>
 
         {/* ── Big blue circle ─────────────────────────────────────────── */}
         {!hideBlueCircle && (() => {
@@ -294,18 +306,17 @@ export function PortSecurityStage({
             r={growR} fill={palette.bauhaus.blue} opacity={0.96} />
         })()}
 
-        {/* ── Door frame (hinge line) — translates with door group ─────── */}
-        {doorFadeP > 0 && (
-          <line
-            x1={doorGroupTx + HINGE_X} y1={doorTy + (-DOOR_H / 2 - 20)}
-            x2={doorGroupTx + HINGE_X} y2={doorTy + (DOOR_H / 2 + 20)}
-            stroke="rgba(255,255,255,0.14)" strokeWidth="4" opacity={doorFadeP}
-          />
-        )}
-
-        {/* ── Door group — slides in from right ─────────────────────── */}
-        {doorFadeP > 0 && (
-          <g transform={`translate(${doorGroupTx} ${doorTy})`} opacity={doorOpacity}>
+        {/* ── Door assembly — drops from above, hinge line travels with it ── */}
+        {/* Hidden during the Connect→PortSecurity slide; overlay owns the door then. */}
+        {doorSlideP > 0 && !hideDoor && (
+          <g transform={`translate(${doorTx} ${doorGroupTy})`} opacity={doorOpacity}>
+            {/* Hinge line (door frame) */}
+            <line
+              x1={HINGE_X} y1={-DOOR_H / 2 - 20}
+              x2={HINGE_X} y2={DOOR_H / 2 + 20}
+              stroke="rgba(255,255,255,0.14)" strokeWidth="4"
+            />
+            {/* Door face */}
             {sinA > 0.04 && <polygon points={doorEdgePoints} fill="rgba(255,255,255,0.07)" />}
             <polygon points={doorFacePoints} fill={palette.bauhaus.black} />
             <polygon points={doorFacePoints} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2" />

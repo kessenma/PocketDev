@@ -38,6 +38,7 @@ import {
   type PermissionDenial,
   type TaskStreamAdapter,
   type TaskStreamAdapterSink,
+  OpenCodeRunAdapter,
 } from './task-stream-adapters/index.ts'
 import { broadcast, makeMessage, isNoClientConnected } from '../terminal/ws.ts'
 import { getDevices } from '../../db/index.ts'
@@ -661,6 +662,43 @@ export function copilotProviderConfig(): TmuxProviderConfig {
       }
 
       return { type: 'continue' }
+    },
+  }
+}
+
+export function opencodeProviderConfig(): TmuxProviderConfig {
+  return {
+    pollIntervalMs: 500,
+    panePollEvery: 4,
+    startupTimeoutMs: 120_000,
+    tmuxWidth: 220,
+    tmuxHeight: 50,
+
+    async setup(ctx) {
+      const opencodePath = getToolPath('opencode_cli') ?? 'opencode'
+      const outputFile = `/tmp/pocketdev-opencode-${ctx.taskId}.jsonl`
+      const modelPart = ctx.model ? `-m ${shellEscape(ctx.model)} ` : ''
+      // Redirect JSON events to file; stderr goes to a separate log file so it
+      // doesn't corrupt the JSONL stream but is still captured for debugging.
+      const stderrFile = `/tmp/pocketdev-opencode-${ctx.taskId}.stderr`
+      const command = `${shellEscape(opencodePath)} run --format json ${modelPart}${shellEscape(ctx.prompt)} > ${shellEscape(outputFile)} 2> ${shellEscape(stderrFile)}`
+      return { command, outputFilePath: outputFile, tempFiles: [outputFile, stderrFile] }
+    },
+
+    createAdapter(taskId, sink, writeStdin) {
+      return new OpenCodeRunAdapter({ agentType: 'opencode', taskId, sink, writeStdin })
+    },
+
+    onPaneSnapshot(_snapshot, _ctx) {
+      // File mode: session exit is handled by poll() when tmux has-session fails.
+      return { type: 'continue' }
+    },
+
+    onFinish(ctx) {
+      // Reuse the adapter's onProcessExit to emit the accumulated text activity.
+      if (ctx.status !== 'killed') {
+        ctx.adapter?.onProcessExit?.(ctx.status === 'completed' ? 0 : 1)
+      }
     },
   }
 }

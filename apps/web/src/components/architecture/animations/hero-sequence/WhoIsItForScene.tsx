@@ -221,10 +221,9 @@ export function WhoIsItForScene({ progress, vpSize, isDesktopLayout }: Props) {
 
   return (
     <svg
+      xmlns="http://www.w3.org/2000/svg"
       viewBox={`0 0 ${w} ${h}`}
-      width={w}
-      height={h}
-      className="absolute inset-0"
+      className="absolute inset-0 block h-full w-full"
       style={{ pointerEvents: 'none' }}
       aria-hidden="true"
     >
@@ -297,11 +296,11 @@ export function WhoIsItForScene({ progress, vpSize, isDesktopLayout }: Props) {
         <text x={w / 2} y={labelY1} textAnchor="middle"
           fontSize={isDesktopLayout ? 17 : 13} fontWeight="700"
           fill={textColor} fontFamily={displayFont} letterSpacing="-0.03em">
-          Built for developers on the go
+          Built for developers on the go--
         </text>
         <text x={w / 2} y={labelY2} textAnchor="middle"
           fontSize={isDesktopLayout ? 12 : 10} fill={subColor} fontFamily={monoFont}>
-          connect to any cheap Linux server
+          --connect to any cheap Linux server as a control surface for your code and tools.
         </text>
       </g>
 
@@ -309,11 +308,11 @@ export function WhoIsItForScene({ progress, vpSize, isDesktopLayout }: Props) {
         <text x={w / 2} y={labelY1} textAnchor="middle"
           fontSize={isDesktopLayout ? 17 : 13} fontWeight="700"
           fill={textColor} fontFamily={displayFont} letterSpacing="-0.03em">
-          For Linux admins
+          Or for Linux admins
         </text>
         <text x={w / 2} y={labelY2} textAnchor="middle"
           fontSize={isDesktopLayout ? 12 : 10} fill={subColor} fontFamily={monoFont}>
-          fix a broken port from bed at 2am
+          who get pinged to fix a broken port @2am ad don't want to get out of bed. 
         </text>
       </g>
     </svg>

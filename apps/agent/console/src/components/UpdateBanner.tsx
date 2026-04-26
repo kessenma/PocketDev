@@ -5,7 +5,7 @@ import { useConsoleData } from '#/context/ConsoleDataContext'
 import { ArrowUpCircle, Check, ChevronDown, Loader2, TriangleAlert } from 'lucide-react'
 
 export function UpdateBanner() {
-  const { agentVersion: version, updateInfo: update, upgrading, upgradeError, handleUpgrade } = useConsoleData()
+  const { agentVersion: version, updateInfo: update, upgrading, upgradeError, handleUpgrade, handleBetaReinstall, refreshUpdateInfo } = useConsoleData()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -22,6 +22,7 @@ export function UpdateBanner() {
 
   useEffect(() => {
     if (!dropdownOpen) return
+    void refreshUpdateInfo()
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false)
@@ -29,7 +30,7 @@ export function UpdateBanner() {
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
-  }, [dropdownOpen])
+  }, [dropdownOpen, refreshUpdateInfo])
 
   if (!upgrading && (!update || (!update.updateAvailable && !hasVersionHistory && !hasBetas))) {
     return null
@@ -158,9 +159,18 @@ export function UpdateBanner() {
                     {/* Beta section */}
                     {hasBetas && (
                       <div className="border-t border-[var(--bauhaus-yellow)]/20">
-                        <div className="flex items-center gap-1.5 px-4 pb-1 pt-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--bauhaus-yellow)]/60">Beta Track</p>
-                          <TriangleAlert className="h-3 w-3 text-[var(--bauhaus-yellow)]/50" />
+                        <div className="flex items-center justify-between px-4 pb-1 pt-3">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--bauhaus-yellow)]/60">Beta Track</p>
+                            <TriangleAlert className="h-3 w-3 text-[var(--bauhaus-yellow)]/50" />
+                          </div>
+                          <button
+                            className="text-[10px] font-medium text-[var(--bauhaus-yellow)]/70 hover:text-[var(--bauhaus-yellow)] transition-colors disabled:opacity-40"
+                            onClick={() => { setDropdownOpen(false); void handleBetaReinstall() }}
+                            disabled={upgrading}
+                          >
+                            Reinstall Latest
+                          </button>
                         </div>
                         <div className="max-h-40 overflow-y-auto pb-1">
                           {update!.betas!.map((beta, i) => {
