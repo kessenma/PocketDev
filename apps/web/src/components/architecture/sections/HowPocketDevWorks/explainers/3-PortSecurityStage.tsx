@@ -73,6 +73,7 @@ export function PortSecurityStage({
   hideLaptop = false,
   hideDoor = false,
   doorPreviewProgress = 0,
+  assetsRevealP = 1,
 }: {
   progress: number
   active?: boolean
@@ -82,6 +83,7 @@ export function PortSecurityStage({
   hideLaptop?: boolean
   hideDoor?: boolean
   doorPreviewProgress?: number
+  assetsRevealP?: number
 }) {
   const reduceMotion = useReducedMotion()
   const p = reduceMotion ? 1 : progress
@@ -158,15 +160,15 @@ export function PortSecurityStage({
   //   2. scene-local p — fallback when there was no preroll (e.g. reduced-motion or direct link)
   const doorSlideP  = easeInOut(Math.max(clamp(doorPreviewProgress, 0, 1), mapP(p, 0.00, 0.25)))
   const labelsP     = mapP(p, 0.08, 0.22)
-  const morphT      = easeInOut(mapP(p, 0.28, 0.52))  // shapes → key on phone
+  const morphT      = easeInOut(mapP(p, 0.08, 0.20))  // shapes → key on phone, aligned with text reveal
 
-  const keyDepartP  = mapP(p, 0.62, 0.74)  // key slides from phone to door
-  const keyInsertP  = mapP(p, 0.74, 0.80)  // key slides into handle
-  const keyTurnP    = mapP(p, 0.79, 0.84)  // key foreshortens into lock
-  const doorOpenP   = mapP(p, 0.83, 0.95)
-  const consoleRevP = mapP(p, 0.85, 0.95)
+  const keyDepartP  = mapP(p, 0.40, 0.48)  // key slides from phone to door
+  const keyInsertP  = mapP(p, 0.48, 0.51)  // key slides into handle
+  const keyTurnP    = mapP(p, 0.51, 0.54)  // key foreshortens into lock
+  const doorOpenP   = mapP(p, 0.53, 0.60)
+  const consoleRevP = mapP(p, 0.54, 0.60)
   const circleGrowP = mapP(p, 0.00, 0.18)
-  const circleMoveP = mapP(p, 0.79, 0.84)
+  const circleMoveP = mapP(p, 0.51, 0.54)
 
   // ── Door drop-in — falls from above the viewport to its resting position ───
   // Start Y puts the door bottom just above the viewport top in local coords.
@@ -194,7 +196,7 @@ export function PortSecurityStage({
   const keyInsertTx = easeInOut(keyInsertP) * 12       // 12 anim-group units toward handle
   const keyTurnScaleX = 1 - easeInOut(keyTurnP)
   const keyTurnFadeOut = easeOutQuad(mapP(keyTurnP, 0.75, 1.0))
-  const morphedKeyOpacity = (hidePhone ? 0 : 1) * (1 - keyTurnFadeOut)
+  const morphedKeyOpacity = (hidePhone ? 0 : assetsRevealP) * (1 - keyTurnFadeOut)
 
   // Outer wrapper: phone position → door position
   const wrapTx = mix(phoneCx, TX_DOOR, keyDepartT) + keyInsertTx
@@ -260,15 +262,13 @@ export function PortSecurityStage({
         maxWidth={vpSize.w * (isDesktopLayout ? 0.38 : 0.42)} lineHeight={subLH}
         fill={architectureTokens.colors.textSecondary} fontFamily={architectureFonts.body}
         fontSize={subSz} opacity={labelsP}>
-        {isDesktopLayout
-          ? 'Optional. Leave port 4387 open, or flip the switch in mobile app settings to hide it at the firewall level — invisible to scanners. Signed wake requests let you back in.'
-          : 'Optional — leave port 4387 open, or enable port locking in mobile app settings to hide it from scanners.'}
+        {'Then optionally lock your server port (for security) and unlock it with the PocketDev mobile app when you need to access it.'}
       </SvgAutoWrapText>
 
       <g transform={`translate(${animCenterX} ${animCenterY}) scale(${scale})`}>
 
         {/* ── Laptop — sits behind door ──────────────────────────────────────────── */}
-        <g opacity={hideLaptop ? 0 : 1}>
+        <g opacity={hideLaptop ? 0 : assetsRevealP}>
         <BauhausLaptop cx={laptopLocalCx} cy={laptopLocalCy} scale={laptopScale}>
           <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
           <circle cx={-63} cy={-112} r={3} fill={palette.bauhaus.yellow} />
@@ -358,16 +358,15 @@ export function PortSecurityStage({
         )}
 
         {/* ── Phone body only (no children — key is a sibling group) ─── */}
-        <g opacity={hidePhone ? 0 : 1}>
+        <g opacity={hidePhone ? 0 : assetsRevealP}>
           <BauhausPhone cx={phoneCx} cy={phoneCy} scale={phoneScale}>
-            {/* Fallback shapes when morphLib hasn't loaded yet */}
-            {!morphLib && (
-              <g opacity={1 - morphT}>
-                <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
-                <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
-                <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
-              </g>
-            )}
+            {/* Always truthy so BauhausPhone doesn't flash its default UI when morphLib loads.
+                Opacity 0 once morphLib is ready — the morph key group takes over. */}
+            <g opacity={morphLib ? 0 : (1 - morphT)}>
+              <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
+              <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
+              <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
+            </g>
           </BauhausPhone>
         </g>
 

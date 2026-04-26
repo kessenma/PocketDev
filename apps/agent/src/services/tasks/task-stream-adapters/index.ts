@@ -15,6 +15,8 @@ export function createTaskStreamAdapter(opts: AdapterOptions): TaskStreamAdapter
     case 'codex':
       return new CodexTaskStreamAdapter(opts)
     case 'opencode':
+    case 'minimax':
+    case 'copilot':
       return new OpenCodeRunAdapter(opts)
     default:
       return null

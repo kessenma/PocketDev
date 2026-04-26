@@ -25,6 +25,12 @@ export type SceneRenderProps = {
    * Stays at 1 once the slide completes so the effect is permanent.
    */
   doorPreviewProgress?: number
+  /**
+   * 0–1 opacity for assets that fade in at scene entry while the overlay cross-fades out.
+   * Used by PortSecurity to smoothly reveal its laptop + phone instead of a hard pop.
+   * Defaults to 1 (fully visible) when not supplied.
+   */
+  assetsRevealP?: number
 }
 
 export type SceneConfig = {

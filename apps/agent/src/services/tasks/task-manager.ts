@@ -1,12 +1,14 @@
 import { insertTask, getRecentTasks, getToolPath, getProject, getTask, insertTaskTurn, resetTaskForContinuation } from '../../db/index.ts'
 import { ManagedProcess } from './managed-process.ts'
-import { ManagedAgentProcess, claudeProviderConfig, copilotProviderConfig, opencodeProviderConfig } from './managed-agent-process.ts'
+import { ManagedAgentProcess, claudeProviderConfig } from './managed-agent-process.ts'
 import { getActiveProjectId } from '../system/projects.ts'
 
 /** Active processes keyed by task ID — only holds running processes, cleaned up on completion */
 const processes = new Map<string, ManagedProcess | ManagedAgentProcess>()
 
 type TaskMode = 'default' | 'plan'
+
+const OPENCODE_FAMILY = new Set(['opencode', 'minimax', 'copilot'])
 
 /** Build the command array for a given agent type, using stored tool paths when available */
 export function buildCommand(agentType: string, prompt: string, model: string | null, mode: TaskMode, sessionId?: string): string[] {
@@ -29,10 +31,14 @@ export function buildCommand(agentType: string, prompt: string, model: string | 
       const codexPath = getToolPath('codex_cli') ?? 'codex'
       return [codexPath, 'app-server', '--listen', 'stdio://']
     }
+    case 'opencode':
+    case 'minimax':
     case 'copilot': {
-      const copilotPath = getToolPath('copilot_cli') ?? 'copilot'
-      const cmd = [copilotPath]
-      if (model) cmd.push('--model', model)
+      const opencodePath = getToolPath('opencode_cli') ?? 'opencode'
+      const cmd = [opencodePath, 'run', '--format', 'json']
+      if (sessionId) cmd.push('-s', sessionId)
+      if (model) cmd.push('-m', model)
+      cmd.push('-p', prompt)
       return cmd
     }
     case 'shell':
@@ -57,27 +63,15 @@ export function startTask(
   const cwd = workingDirectory ?? project?.absolutePath ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
   insertTask(taskId, prompt, agentType, mode, cwd, project?.id ?? null, project?.name ?? null, model, sessionId)
 
-  // Record the initial user turn (Claude has sessionId at start; Codex captures it later but still needs turn history)
-  if (sessionId || agentType === 'codex') {
+  // Record the initial user turn for multi-turn capable providers
+  if (sessionId || agentType === 'codex' || OPENCODE_FAMILY.has(agentType)) {
     insertTaskTurn(crypto.randomUUID(), taskId, 1, 'user', prompt)
   }
 
   const onComplete = () => { processes.delete(taskId) }
 
-  if (agentType === 'copilot') {
-    console.log(`[task-manager] Starting copilot tmux task ${taskId}`)
-    console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} agent=${agentType}`)
-    const proc = new ManagedAgentProcess({ taskId, prompt, cwd, mode, model, onComplete, provider: copilotProviderConfig() })
-    processes.set(taskId, proc)
-    void proc.start()
-  } else if (agentType === 'opencode') {
-    console.log(`[task-manager] Starting opencode tmux task ${taskId}`)
-    console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'none'} mode=${mode} agent=${agentType}`)
-    const proc = new ManagedAgentProcess({ taskId, prompt, cwd, mode, model, onComplete, provider: opencodeProviderConfig() })
-    processes.set(taskId, proc)
-    void proc.start()
-  } else if (agentType === 'claude') {
-    console.log(`[task-manager] Starting claude tmux task ${taskId}`)
+  if (agentType === 'claude') {
+    console.log(`[task-manager] Starting claude task ${taskId}`)
     console.log(`[task-manager]   cwd=${cwd} model=${model ?? 'default'} mode=${mode} sessionId=${sessionId ?? 'new'}`)
     const proc = new ManagedAgentProcess({ taskId, prompt, cwd, mode, model, sessionId, onComplete, provider: claudeProviderConfig() })
     processes.set(taskId, proc)
@@ -94,55 +88,56 @@ export function startTask(
   return taskId
 }
 
-/** Continue a completed Claude or Codex task with a follow-up message */
+/** Continue a completed task with a follow-up message. Supports Claude, Codex, and opencode-family providers. */
 export function continueTask(taskId: string, prompt: string, model: string | null = null): boolean {
   const task = getTask(taskId)
   if (!task) return false
   if (task.status !== 'completed' && task.status !== 'failed') return false
-  if ((task.agentType !== 'claude' && task.agentType !== 'codex') || !task.sessionId) return false
+  const agentType = task.agentType ?? ''
+  const sessionId = task.sessionId ?? ''
+  if (agentType !== 'claude' && agentType !== 'codex' && !OPENCODE_FAMILY.has(agentType)) return false
+  if (!sessionId) return false
 
   const newTurnCount = (task.turnCount ?? 1) + 1
   const turnModel = model ?? task.model
   const cwd = task.workingDirectory ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
 
-  // Record the user turn
   insertTaskTurn(crypto.randomUUID(), taskId, newTurnCount, 'user', prompt)
-
-  // Reset task status for the new turn
   resetTaskForContinuation(taskId, newTurnCount)
 
-  if (task.agentType === 'codex') {
-    console.log(`[task-manager] Continuing codex task ${taskId} (turn ${newTurnCount}) via stdio`)
-    const command = buildCommand('codex', prompt, turnModel, 'default')
-    const proc = new ManagedProcess({
-      taskId,
-      command,
-      cwd,
-      mode: 'default',
-      agentType: 'codex',
-      prompt,
-      model: turnModel,
-      sessionId: task.sessionId,
-      turnNumber: newTurnCount,
-      onComplete: () => { processes.delete(taskId) },
-    })
-    processes.set(taskId, proc)
-    proc.start()
-  } else {
-    console.log(`[task-manager] Continuing task ${taskId} (turn ${newTurnCount}) via tmux`)
+  if (agentType === 'claude') {
+    console.log(`[task-manager] Continuing claude task ${taskId} (turn ${newTurnCount})`)
     const proc = new ManagedAgentProcess({
       taskId,
       prompt,
       cwd,
       mode: 'default',
       model: turnModel,
-      sessionId: task.sessionId,
+      sessionId,
       turnNumber: newTurnCount,
       onComplete: () => { processes.delete(taskId) },
       provider: claudeProviderConfig(),
     })
     processes.set(taskId, proc)
     void proc.start()
+  } else {
+    // codex + opencode-family: all use ManagedProcess
+    console.log(`[task-manager] Continuing ${agentType} task ${taskId} (turn ${newTurnCount}) via stdio`)
+    const command = buildCommand(agentType, prompt, turnModel, 'default', sessionId)
+    const proc = new ManagedProcess({
+      taskId,
+      command,
+      cwd,
+      mode: 'default',
+      agentType,
+      prompt,
+      model: turnModel,
+      sessionId,
+      turnNumber: newTurnCount,
+      onComplete: () => { processes.delete(taskId) },
+    })
+    processes.set(taskId, proc)
+    proc.start()
   }
 
   return true

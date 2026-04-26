@@ -435,7 +435,7 @@ export default function TaskDetailPane({
 
   const isRunning = task.status === 'running'
   const isTerminal = task.status === 'completed' || task.status === 'failed'
-  const canContinue = isTerminal && (task.agent_type === 'claude' || task.agent_type === 'codex') && !!task.session_id
+  const canContinue = isTerminal && (task.agent_type === 'claude' || task.agent_type === 'codex' || task.agent_type === 'opencode' || task.agent_type === 'minimax' || task.agent_type === 'copilot') && !!task.session_id
   const isMultiTurn = (task.turn_count ?? 1) > 1
   const statusColor = STATUS_COLORS[task.status ?? 'pending']
   const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '--'

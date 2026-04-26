@@ -25,9 +25,10 @@ import { brandAssets } from '../../shared/brand-assets'
 import { BrandAssetIcon } from '../../shared/BrandAssetIcon'
 import { architectureTextStyles } from '../../shared/theme'
 import { BetaInlineView } from './BetaInlineView'
-import { PocketRevealScene } from './scenes/1-pocket-reveal'
-import { WhoIsItForScrollScene } from './scenes/2-who-is-it-for'
-import { TridentBuildScene } from './scenes/3-trident-build'
+import { PocketRevealScene } from './scenes/01-pocket-reveal'
+import { DevOnTheGoScene } from './scenes/02-hero-developers'
+import { LinuxAdminScene } from './scenes/03-hero-linux-admins'
+import { TridentBuildScene } from './scenes/04-trident-build'
 
 const PAPER = '#f7f1e3'
 const INSTALL_COMMAND = 'curl -fsSL https://pocketdev.run/install.sh | bash'
@@ -38,10 +39,12 @@ const INSTALL_COMMAND_LINES = [
 ]
 
 // Scene boundaries (global hero progress 0→1)
-const SCENE1_END   = 0.28  // pocket reveal
-const SCENE2_START = 0.28  // who is it for
-const SCENE2_END   = 0.72
-const SCENE3_START = 0.72  // trident build
+const SCENE1_END   = 0.22  // pocket reveal
+const SCENE2_START = 0.22  // developers on the go (extended)
+const SCENE2_END   = 0.58
+const SCENE3_START = 0.58  // linux admins
+const SCENE3_END   = 0.77
+const SCENE4_START = 0.77  // trident build
 
 export function HeroScrollSequence({
   onProgressChange,
@@ -93,12 +96,13 @@ export function HeroScrollSequence({
   const pillsY        = useTransform(scrollYProgress, [0.88, 0.93], [20, 0])
 
   // Per-scene opacities — scenes 1↔2 and 2↔3 cross-fade over a short window
-  const scene1Opacity = useTransform(scrollYProgress, [0.24, 0.30], [1, 0])
+  const scene1Opacity = useTransform(scrollYProgress, [0.18, 0.24], [1, 0])
 
   // Normalized 0→1 progress per scene
   const scene1Progress = Math.min(1, Math.max(0, progress / SCENE1_END))
   const scene2Progress = Math.min(1, Math.max(0, (progress - SCENE2_START) / (SCENE2_END - SCENE2_START)))
-  const scene3Progress = Math.min(1, Math.max(0, (progress - SCENE3_START) / (1.0 - SCENE3_START)))
+  const scene3Progress = Math.min(1, Math.max(0, (progress - SCENE3_START) / (SCENE3_END - SCENE3_START)))
+  const scene4Progress = Math.min(1, Math.max(0, (progress - SCENE4_START) / (1.0 - SCENE4_START)))
 
   const hideLaptop = progress >= 1.0
 
@@ -146,19 +150,28 @@ export function HeroScrollSequence({
             />
           </motion.div>
 
-          {/* Scene 2: Who is it for */}
+          {/* Scene 2: Developer on the go */}
           <motion.div className="absolute inset-0" style={{ opacity: 1 }}>
-            <WhoIsItForScrollScene
+            <DevOnTheGoScene
               progress={scene2Progress}
               vpSize={vpSize}
               isDesktopLayout={isDesktopLayout}
             />
           </motion.div>
 
-          {/* Scene 3: Circle settles, trident builds, laptop zooms */}
+          {/* Scene 3: Linux admins */}
+          <motion.div className="absolute inset-0" style={{ opacity: 1 }}>
+            <LinuxAdminScene
+              progress={scene3Progress}
+              vpSize={vpSize}
+              isDesktopLayout={isDesktopLayout}
+            />
+          </motion.div>
+
+          {/* Scene 4: Circle settles, trident builds, laptop zooms */}
           <motion.div className="absolute inset-0" style={{ opacity: 1 }}>
             <TridentBuildScene
-              progress={scene3Progress}
+              progress={scene4Progress}
               vpSize={vpSize}
               isDesktopLayout={isDesktopLayout}
               hideLaptop={hideLaptop}

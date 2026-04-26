@@ -381,19 +381,21 @@ export function PersistentTransitionOverlay({
     }
   }
 
-  // --- Slide 1→2: Phone + laptop crossfade (Connect → PortSecurity) ---
-  // Both scenes use identical positions — the overlay fades in over the scene laptops so there
-  // is no hard cut. Scenes keep their own laptops visible and scroll naturally; the overlay's
-  // laptop crossfades on top so the viewer sees a single stationary laptop.
-  const inSlide1 = range1 && railProgress > range1.holdEnd && railProgress <= range1.end
-  const slideP1 = inSlide1
+  // --- Slide 1→2: Phone + laptop (Connect → PortSecurity) ---
+  // Starts at the door preroll threshold (Connect p=0.82) and ends exactly at range1.end.
+  // The panel is fully centred at range1.end so the handoff to scene 3 is position-exact
+  // and no overlap extension is needed (which would cause z-order conflicts with the door).
+  const doorStart1 = range1 ? range1.start + 0.82 * (range1.end - range1.start) : Infinity
+  const inSlide1 = range1 && railProgress > doorStart1 && railProgress <= range1.end
+  // slideP1 only measures the horizontal panel portion (holdEnd→end) for position interpolation.
+  // During preroll, slideP1=0 which is fine since both poses are identical.
+  const slideP1 = inSlide1 && range1 && range1.end > range1.holdEnd
     ? clamp((railProgress - range1.holdEnd) / (range1.end - range1.holdEnd), 0, 1)
     : 0
   const slideEased1 = easeOut(slideP1)
 
   let phonePose: Pose | null = null
   let phoneOverlayOpacity = 1
-  let laptopOverlayOpacity = 1
 
   if (inSlide1) {
     const from = connectPhoneEndPose(vpSize.w, vpSize.h, isDesktopLayout)
@@ -540,9 +542,9 @@ export function PersistentTransitionOverlay({
           opacity={envSceneActive ? 1 : 0.96}
         />
       )}
-      {/* Laptop — renders before door so door paints on top of it */}
+      {/* Laptop — renders before phone and door so they paint on top of it */}
       {laptopPose && (
-        <g opacity={laptopOverlayOpacity}>
+        <g>
         <BauhausLaptop cx={laptopPose.cx} cy={laptopPose.cy} scale={laptopPose.scale}>
           {/* Traffic light dots */}
           <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
@@ -579,6 +581,59 @@ export function PersistentTransitionOverlay({
         </BauhausLaptop>
         </g>
       )}
+      {/* Phone — renders after laptop so it paints in front of it */}
+      {phonePose && (
+        <g opacity={phoneOverlayOpacity}>
+          <BauhausPhone cx={phonePose.cx} cy={phonePose.cy} scale={phonePose.scale}>
+            {/* Same credential shapes shown on phone at end of Connect scene */}
+            <circle cx={-12} cy={2} r={6} fill={palette.bauhaus.blue} />
+            <polygon points="0,-7 5.5,3.5 -5.5,3.5" fill={palette.bauhaus.yellow} />
+            <rect x={6} y={-6} width={12} height={12} rx={1.5} fill={palette.bauhaus.red} />
+          </BauhausPhone>
+        </g>
+      )}
+      {/* Door — renders last so it paints on top of phone and laptop */}
+      {doorOverlayVpY !== null && (
+        <g transform={`translate(${doorOverlayVpX} ${doorOverlayVpY})`}>
+          <g transform={`scale(${doorOverlayScale})`}>
+            <line
+              x1={HINGE_X_D} y1={-DOOR_H / 2 - 20}
+              x2={HINGE_X_D} y2={DOOR_H / 2 + 20}
+              stroke="rgba(255,255,255,0.14)" strokeWidth="4"
+            />
+            <polygon
+              points={`${FREE_X_D},${-DOOR_H / 2} ${HINGE_X_D},${-DOOR_H / 2} ${HINGE_X_D},${DOOR_H / 2} ${FREE_X_D},${DOOR_H / 2}`}
+              fill={palette.bauhaus.black}
+            />
+            <polygon
+              points={`${FREE_X_D},${-DOOR_H / 2} ${HINGE_X_D},${-DOOR_H / 2} ${HINGE_X_D},${DOOR_H / 2} ${FREE_X_D},${DOOR_H / 2}`}
+              fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2"
+            />
+            {[-50, 0, 50].map((dy) => (
+              <line key={dy} x1={FREE_X_D + 6} y1={dy} x2={HINGE_X_D - 6} y2={dy}
+                stroke="rgba(255,255,255,0.06)" strokeWidth="0.8" />
+            ))}
+            {[0.25, 0.75].map((frac, i) => (
+              <circle key={i} cx={HINGE_X_D} cy={-DOOR_H / 2 + DOOR_H * frac} r={3.5}
+                fill="rgba(255,255,255,0.20)" />
+            ))}
+            <circle cx={FREE_X_D + (HINGE_X_D - FREE_X_D) * 0.14} cy={4} r={4.5}
+              fill="rgba(255,255,255,0.22)" />
+            <text
+              x={0}
+              y={-18}
+              textAnchor="middle"
+              fontFamily={architectureFonts.mono}
+              fontSize="7"
+              fontWeight="600"
+              letterSpacing="0.12em"
+              fill="rgba(255,255,255,0.75)"
+            >
+              LOCK THE PORT
+            </text>
+          </g>
+        </g>
+      )}
     </svg>
   )
 }
@@ -593,25 +648,26 @@ export function shouldHideLaptop(
   ranges: SceneRange[],
 ): boolean {
   const range0 = ranges[0]
+  const range1 = ranges[1]
   if (!range0) return false
+
+  // Shared threshold: overlay takes over at the same moment the door preroll starts
+  const doorStart1 = range1 ? range1.start + 0.82 * (range1.end - range1.start) : Infinity
 
   // Scene 0 (ConsoleSetup): hide during slide-out to Connect
   if (sceneIndex === 0) {
     return railProgress > range0.holdEnd && railProgress <= range0.end
   }
 
-  // Scene 1 (Connect): hide during 0→1 slide AND during 1→2 slide (overlay takes over)
+  // Scene 1 (Connect): hide during 0→1 slide AND from door preroll through 1→2 slide end
   if (sceneIndex === 1) {
-    const range1 = ranges[1]
     if (railProgress > range0.holdEnd && railProgress <= range0.end) return true
-    if (range1 && railProgress > range1.holdEnd && railProgress <= range1.end) return true
+    if (range1 && railProgress > doorStart1 && railProgress <= range1.end) return true
   }
 
-  // Scene 2 (PortSecurity): hide laptop during the 1→2 slide so only the overlay laptop
-  // is visible as it scrolls in from the right
+  // Scene 2 (PortSecurity): hide from door preroll through 1→2 slide end
   if (sceneIndex === 2) {
-    const range1 = ranges[1]
-    if (range1 && railProgress > range1.holdEnd && railProgress <= range1.end) return true
+    if (range1 && railProgress > doorStart1 && railProgress <= range1.end) return true
     return false
   }
 
@@ -626,9 +682,11 @@ export function shouldHidePhone(
 ): boolean {
   const range1 = ranges[1] // connect
   const range2 = ranges[2] // port-security
-  // Slide 1→2 (Connect → PortSecurity): overlay bridges phone; both scenes hide their own
+  // Shared threshold: same moment the door preroll starts (Connect p=0.82)
+  const doorStart1 = range1 ? range1.start + 0.82 * (range1.end - range1.start) : Infinity
+  // Extended window: from door preroll through end of 1→2 slide
   if (range1 && (sceneIndex === 1 || sceneIndex === 2)) {
-    if (railProgress > range1.holdEnd && railProgress <= range1.end) return true
+    if (railProgress > doorStart1 && railProgress <= range1.end) return true
   }
   // Slide 2→3 (PortSecurity → Setup): overlay fades phone out; scene 2 hides its own
   if (range2 && sceneIndex === 2) {

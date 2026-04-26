@@ -1,68 +1,95 @@
 import type { AdapterOptions } from './types.ts'
-import type { JsonRecord } from './utils.ts'
+import { asRecord, truncate } from './utils.ts'
+import { createToolUseActivity } from './tool-classifier.ts'
 import { BaseTaskStreamAdapter } from './base-adapter.ts'
 
 /**
- * Adapter for `opencode run --format json` tasks (tmux/file mode).
+ * Adapter for `opencode run --format json` tasks (stdio mode).
  *
- * OpenCode emits JSONL events to stdout. The file-mode poll loop in
- * ManagedAgentProcess reads them and calls handleJsonMessage() per line.
- * We extract assistant text from each event, buffer it, then emit a
- * single `text` activity on finish via onProcessExit() (called by the
- * provider's onFinish hook).
+ * OpenCode emits JSONL events to stdout. ManagedProcess feeds each parsed
+ * line to handleJsonMessage(). We emit structured TaskActivity objects for
+ * tool calls and text responses as they arrive, giving real-time activity
+ * cards in the mobile UI.
  *
- * Non-text events (tool calls, metadata) return false so the raw JSON
- * line appears in the task log stream for debugging.
+ * Recognized event types:
+ *   text      → emits a text activity per chunk (each chunk as a separate card)
+ *   tool_use  → emits tool_use + tool_result activity pair
+ *   others    → return false (appear in raw log stream for debugging)
+ *
+ * sessionID is captured from any event and forwarded to the DB via updateSessionId(),
+ * enabling follow-up continuation via `opencode run -s <sessionId>`.
  */
 export class OpenCodeRunAdapter extends BaseTaskStreamAdapter {
+  private sessionIdCaptured = false
+  private textActivityCount = 0
+
   constructor(opts: AdapterOptions) {
     super(opts)
   }
 
-  handleJsonMessage(message: JsonRecord): boolean {
-    const text = pickText(message)
-    if (!text) return false
-    const trimmed = text.trim()
-    if (!trimmed) return false
-    this.appendCollectedText(trimmed + '\n')
-    this.sink.emitOutput(trimmed)
-    return true
+  handleJsonMessage(message: Record<string, unknown>): boolean {
+    // Capture session ID from the first event that carries it
+    if (!this.sessionIdCaptured && typeof message.sessionID === 'string' && message.sessionID) {
+      this.sink.updateSessionId(message.sessionID)
+      this.sessionIdCaptured = true
+    }
+
+    const type = typeof message.type === 'string' ? message.type : ''
+    const part = asRecord(message.part)
+
+    if (type === 'text') {
+      const text = typeof part.text === 'string' ? part.text.trim() : ''
+      if (text) {
+        this.appendCollectedText(text)
+        // Emit each chunk as its own text activity so the mobile shows streaming cards
+        this.sink.emitActivity({ type: 'text', provider: 'opencode', content: text })
+        this.textActivityCount++
+      }
+      return true
+    }
+
+    if (type === 'tool_use') {
+      const state = asRecord(part.state)
+      const input = asRecord(state.input)
+      const tool = String(part.tool ?? '')
+      const callID = String(part.callID ?? '')
+
+      if (!tool) return false
+
+      const toolActivity = createToolUseActivity({
+        provider: 'opencode',
+        tool,
+        toolCallId: callID,
+        input,
+      })
+      this.sink.emitActivity(toolActivity)
+      this.pushToolUse({ name: tool, id: callID, input })
+
+      const output = String(state.output ?? '')
+      const isError = state.status === 'error' || state.status === 'failed'
+      this.sink.emitActivity({
+        type: 'tool_result',
+        provider: 'opencode',
+        toolName: tool,
+        toolCallId: callID,
+        isError,
+        preview: truncate(output, 300),
+      })
+      return true
+    }
+
+    // step_start, step_finish, and other structural events — show in raw logs
+    return false
   }
 
   onProcessExit(exitCode: number): void {
+    // If no text activities were emitted during the run (e.g. pure tool task), emit the collected text now
     const text = this.collectedText.trim()
-    if (text) {
-      this.sink.emitActivity({ type: 'text', content: text })
+    if (text && this.textActivityCount === 0) {
+      this.sink.emitActivity({ type: 'text', provider: 'opencode', content: text })
     }
     if (exitCode !== 0) {
       this.sink.emitOutput(`[opencode] Exited with code ${exitCode}`)
     }
   }
-}
-
-/**
- * Extract printable assistant text from an OpenCode JSON event.
- * Returns null for events that carry no user-visible text content.
- */
-function pickText(event: Record<string, unknown>): string | null {
-  const type = typeof event.type === 'string' ? event.type : ''
-
-  // Skip event types that are structural / non-text
-  if (/^(session|tool|input|error|debug|system|metadata|start|end)\b/i.test(type)) {
-    return null
-  }
-
-  return searchFields(event)
-}
-
-function searchFields(obj: Record<string, unknown>): string | null {
-  for (const key of ['text', 'content', 'delta', 'message', 'output', 'response']) {
-    const val = obj[key]
-    if (typeof val === 'string' && val.trim()) return val
-    if (val !== null && typeof val === 'object') {
-      const nested = searchFields(val as Record<string, unknown>)
-      if (nested) return nested
-    }
-  }
-  return null
 }

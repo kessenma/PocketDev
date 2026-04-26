@@ -145,12 +145,17 @@ export function ScrollTimeline({
                 // making the 2→3 transition feel vertical rather than diagonal.
                 // Stays clamped at 1 once scene 2 ends.
                 const r1 = ranges[1]
+                const r2 = ranges[2]
                 const doorPreviewStart = r1 ? r1.start + 0.82 * (r1.end - r1.start) : 0
                 const doorPreviewDuration = r1 ? r1.end - doorPreviewStart : 1
                 const doorPreviewProgress =
                   i === 2 && r1 && doorPreviewDuration > 0
                     ? Math.min(1, Math.max(0, (railProgress - doorPreviewStart) / doorPreviewDuration))
                     : 0
+
+                // PortSecurity (i=2): overlay ends exactly at r1.end when the panel is centred,
+                // so scene assets can appear at full opacity immediately — no ramp needed.
+                const assetsRevealP = 1
 
                 const renderProps = {
                   progress,
@@ -162,6 +167,7 @@ export function ScrollTimeline({
                   hidePhone: shouldHidePhone(i, railProgress, ranges),
                   hideDoor: shouldHideDoor(i, railProgress, ranges),
                   doorPreviewProgress,
+                  assetsRevealP,
                 }
 
                 if (scene.kind === 'explainer' && scene.explainer) {
@@ -181,10 +187,16 @@ export function ScrollTimeline({
                   )
                 }
 
+                // Port-security panel (i=2): hide during preroll/slide so the cream background
+                // doesn't flash in from the right. The overlay owns all visible elements then.
+                // Panel snaps to visible at active=true (range2.start = r1.end) when centred.
+                const hideDuringTransition = i === 2 && doorPreviewProgress > 0 && !active
+
                 return (
                   <div
                     key={scene.id}
                     className={`relative flex h-full w-screen shrink-0 items-center justify-center overflow-hidden ${scene.panelClassName ?? ''}`}
+                    style={hideDuringTransition ? { opacity: 0 } : undefined}
                   >
                     {scene.render(renderProps)}
                   </div>
