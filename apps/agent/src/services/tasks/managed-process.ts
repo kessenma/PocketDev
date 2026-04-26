@@ -99,6 +99,7 @@ export class ManagedProcess {
   private readonly prompt: string | null
   private readonly model: string | null
   private readonly sessionId: string | null
+  private capturedSessionId: string | null = null
   private readonly onComplete?: () => void
   private readonly questionResponders = new Map<string, (answer: string) => void | Promise<void>>()
   private readonly questionDetails = new Map<string, TaskQuestion>()
@@ -222,7 +223,7 @@ export class ManagedProcess {
         }
       }
 
-      broadcast(makeMessage('task.completed', { taskId: this.taskId, exitCode: finalExitCode, status }))
+      broadcast(makeMessage('task.completed', { taskId: this.taskId, exitCode: finalExitCode, status, sessionId: this.capturedSessionId }))
 
       if (status !== 'killed') {
         const shortPrompt = (this.prompt ?? '').slice(0, 80)
@@ -343,6 +344,7 @@ export class ManagedProcess {
   }
 
   private persistSessionId(sessionId: string) {
+    this.capturedSessionId = sessionId
     try {
       getDb()
         .update(schema.tasks)

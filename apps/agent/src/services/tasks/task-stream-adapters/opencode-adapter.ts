@@ -21,7 +21,6 @@ import { BaseTaskStreamAdapter } from './base-adapter.ts'
  */
 export class OpenCodeRunAdapter extends BaseTaskStreamAdapter {
   private sessionIdCaptured = false
-  private textActivityCount = 0
 
   constructor(opts: AdapterOptions) {
     super(opts)
@@ -41,9 +40,8 @@ export class OpenCodeRunAdapter extends BaseTaskStreamAdapter {
       const text = typeof part.text === 'string' ? part.text.trim() : ''
       if (text) {
         this.appendCollectedText(text)
-        // Emit each chunk as its own text activity so the mobile shows streaming cards
-        this.sink.emitActivity({ type: 'text', provider: 'opencode', content: text })
-        this.textActivityCount++
+        // Accumulate chunks — emit a single result card at onProcessExit to avoid
+        // duplicate result cards when text appears both before and after tool calls
       }
       return true
     }
@@ -83,9 +81,9 @@ export class OpenCodeRunAdapter extends BaseTaskStreamAdapter {
   }
 
   onProcessExit(exitCode: number): void {
-    // If no text activities were emitted during the run (e.g. pure tool task), emit the collected text now
+    // Emit the full accumulated text as a single result card at the end
     const text = this.collectedText.trim()
-    if (text && this.textActivityCount === 0) {
+    if (text) {
       this.sink.emitActivity({ type: 'text', provider: 'opencode', content: text })
     }
     if (exitCode !== 0) {

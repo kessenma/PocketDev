@@ -202,6 +202,11 @@ function handleWsMessage(message: WsMessage) {
       scripts.handleTaskStatusChange(taskId, status)
       break
     }
+    case 'task.completed': {
+      const { taskId, sessionId } = message.payload as { taskId: string; exitCode: number; status: string; sessionId?: string | null }
+      if (sessionId) tasks.updateTaskSessionId(taskId, sessionId)
+      break
+    }
     case 'task.activity': {
       const { taskId, activity } = message.payload as { taskId: string; activity: import('@pocketdev/shared/types').TaskActivity }
       tasks.appendActivity(taskId, activity)

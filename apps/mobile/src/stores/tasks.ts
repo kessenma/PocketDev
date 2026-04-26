@@ -77,6 +77,7 @@ interface TaskState {
   appendLog: (taskId: string, line: string) => void
   appendActivity: (taskId: string, activity: TaskActivity) => void
   updateTaskStatus: (taskId: string, status: TaskStatus) => void
+  updateTaskSessionId: (taskId: string, sessionId: string) => void
   addPermissionRequest: (taskId: string, denials: PermissionDenial[]) => void
   clearPermissions: (taskId: string) => void
   addQuestion: (taskId: string, question: TaskQuestion) => void
@@ -330,6 +331,18 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       setTimeout(() => {
         void get().refreshFromServer().catch(() => {})
       }, 0)
+      return state
+    })
+  },
+
+  updateTaskSessionId: (taskId: string, sessionId: string) => {
+    set((state) => {
+      const tasks = new Map(state.tasks)
+      const task = tasks.get(taskId)
+      if (task && !task.session_id) {
+        tasks.set(taskId, { ...task, session_id: sessionId })
+        return { tasks }
+      }
       return state
     })
   },
