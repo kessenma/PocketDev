@@ -6,6 +6,7 @@ initExecutorch({ resourceFetcher: BareResourceFetcher })
 import React, { useEffect } from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext'
 import { ToastProvider } from './src/hooks/useToast'
 import TaskDatabaseProvider from './src/db/TaskDatabaseProvider'
@@ -90,6 +91,7 @@ function AppInner() {
 export default function App() {
   return (
     <GestureHandlerRootView style={styles.root}>
+      <KeyboardProvider>
       <ThemeProvider>
         <TaskDatabaseProvider>
           <OfflineDatabaseProvider>
@@ -99,6 +101,7 @@ export default function App() {
           </OfflineDatabaseProvider>
         </TaskDatabaseProvider>
       </ThemeProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   )
 }

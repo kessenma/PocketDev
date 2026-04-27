@@ -62,6 +62,48 @@ function CrawlingBug({ xs, ys, duration, delay = 0, color, size = 9, reverse = f
   )
 }
 
+// Center of the head circle in the SVG's 150×150 coordinate space (x≈72, y≈28.6)
+const BED_HEAD_SVG_X = 72
+const BED_HEAD_SVG_Y = 28.6
+
+function BedLineDrawing({ progress, pinX, pinY, scale, color }: {
+  progress: number
+  pinX: number  // screen x to align with the SVG head center
+  pinY: number  // screen y to align with the SVG head center
+  scale: number
+  color: string
+}) {
+  // Head circle removed — the scene's blue circle stands in for it
+  const paths = [
+    "m23.5 56.8-0.1-44.8c0-5.4 3.2-9.1 9.2-9.1h81.5c4.7 0 8.7 1.2 8.7 8.5l0.1 42.2c-2.2-1.7-3.5-2.6-9.5-3-7.1-0.4-16.9-0.2-21.7-2.2-2.3-0.9-4.1-3.5-5.4-5.1",
+    "m24.9 56.7c2.9-2.1 4.7-2.7 12-3.3 7.1-0.6 12.2-0.7 13.9-1.4 2.1-0.6 3.9-5.5 7.3-8.6 1.6-1.5 5.4-3.2 7.7-2.7 2.1 0.8-3.6 2.3-8 2.7-5.6 0.5-7.3 1.4-10.2 2-4.3 1-1.6-1.3-1.1-5.7 0.4-4.6-1.3-7.9-0.3-16.9 0.7-5.7-0.1-8.3-1.2-11.5-0.8-2.2 0.3-1.4 1.7-1 6.4 1.6 10.2 1.1 18.6 0.5 7.4-0.6 13.8-0.3 21.7 0.2 6.4 0.3 9.1-0.6 11-1.1 2.6-0.7 1.3 0.7 0.3 4.8-0.8 3.8 0.7 8.1 0.3 15.8-0.3 5.8-1.2 7.8 0.4 12.3 1.1 3.3 0.1 2.2-3 1.5-2.4-0.7-7.3-1.2-10.3-1l-0.2 0.2",
+    "m66.8 40.5c2.8-0.3 9.8-0.7 13.8 0.2 1.9 0.4 4.1 1.3 5.2 2.3",
+    "m24.4 63.1c-0.2-1.5 0.3-3.5 0.7-4.7 1.8-2.6 5.4-2 14.6-2.9 9.1-0.9 18.2-4.1 28-6.1 4.1-0.8 14.7-1.8 22.9 0 3.8 0.8 6.5 1.8 10.7 2.4 9.1 1 17.7-0.2 20.2 2.6 1.8 1.7 1.7 4 1.7 6l0.1 77.5c0 5.7-3 9.5-8.8 9.5h-81.9c-5.2 0-9.6-0.5-9.7-8.5v-75.4c0-4.5 1.5-6.1 2.2-6.8",
+    "m63.7 64.5c2.9-1 5.9-1.9 11.4-1.9 11.3 0 17 3.8 24.8 7.9 6.4 3.5 14.6 8.1 27.2 9.1-1.3-7.1-1.3-15.5-2.2-19.2-0.8-3.2-2.5-5.8-5-6.6",
+  ]
+  const n = paths.length
+  const p = {
+    fill: 'none' as const, stroke: color,
+    strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+    strokeMiterlimit: 10, strokeWidth: 0.8,
+  }
+  // Anchor the SVG head-center to (pinX, pinY) on screen
+  const tx = pinX - BED_HEAD_SVG_X * scale
+  const ty = pinY - BED_HEAD_SVG_Y * scale
+  return (
+    <g transform={`translate(${tx}, ${ty}) scale(${scale})`}>
+      {paths.map((d, i) => {
+        const segStart = (i / n) * 0.35
+        const segEnd   = segStart + 0.65
+        const t = clamp((progress - segStart) / (segEnd - segStart), 0, 1)
+        return (
+          <path key={i} d={d} {...p} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - t} />
+        )
+      })}
+    </g>
+  )
+}
+
 function DashedArc({ x1, y1, x2, y2, color, bend = 0.25, opacity = 1 }: {
   x1: number; y1: number; x2: number; y2: number
   color: string; bend?: number; opacity?: number
@@ -136,6 +178,9 @@ export function LinuxAdminScene({ progress, vpSize, isDesktopLayout }: Props) {
   const btRY       = btY + btSlideY
   const faceRX     = faceX + faceSlideX
 
+  const bedDrawP = mapP(progress, 0.08, 0.78)
+  const bedScale = isDesktopLayout ? 6.0 : 4.0
+
   const labelY1 = h * 0.82
   const labelY2 = labelY1 + (isDesktopLayout ? 22 : 17)
 
@@ -155,6 +200,8 @@ export function LinuxAdminScene({ progress, vpSize, isDesktopLayout }: Props) {
       <circle cx={hx} cy={hy} r={settledR} fill={blue} opacity={circleOp} />
 
       <g opacity={sceneOp}>
+        <BedLineDrawing progress={bedDrawP} pinX={hx} pinY={hy} scale={bedScale} color={black} />
+
         <BauhausPhone cx={phoneX} cy={phoneY} scale={phoneScale} />
 
         <g transform={`translate(0, ${btSlideY})`} opacity={elemBuild}>
@@ -200,11 +247,11 @@ export function LinuxAdminScene({ progress, vpSize, isDesktopLayout }: Props) {
         <text x={w / 2} y={labelY1} textAnchor="middle"
           fontSize={isDesktopLayout ? 17 : 13} fontWeight="700"
           fill={textColor} fontFamily={displayFont} letterSpacing="-0.03em">
-          Or for Linux admins
+           So they can stay in bed--
         </text>
         <text x={w / 2} y={labelY2} textAnchor="middle"
           fontSize={isDesktopLayout ? 12 : 10} fill={subColor} fontFamily={monoFont}>
-          who get pinged to fix a broken port at 2am and don't want to get out of bed.
+          when pinged at 2am to fix the broken server
         </text>
       </g>
     </svg>

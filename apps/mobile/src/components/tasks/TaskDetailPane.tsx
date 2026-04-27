@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
@@ -488,8 +489,7 @@ export default function TaskDetailPane({
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}
-      behavior={Platform.OS === 'ios' ? 'height' : undefined}
-      keyboardVerticalOffset={0}
+      behavior="padding"
     >
       {!hideStatusBar && (
         <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>

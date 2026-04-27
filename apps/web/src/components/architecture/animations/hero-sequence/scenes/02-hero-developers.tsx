@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion'
 import { palette, fontFamilyTokens } from '@pocketdev/shared/theme'
 import { BauhausPhone } from '#/components/architecture/sections/HowPocketDevWorks/shared/BauhausPhone'
-import { architectureTokens } from '#/components/architecture/shared/theme'
 import { TrainSideSvg, TRAIN_WINDOW_CX, TRAIN_WINDOW_CY, TRAIN_WINDOW_R } from './TrainSideSvg'
 
 const { blue, red, yellow, black } = palette.bauhaus
@@ -135,8 +134,14 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
   const vpsCX   = vpsX + vpsSlideX
   const vpsCY   = vpsY
 
-  const subColor = architectureTokens.colors.textSecondary
   const monoFont = `${fontFamilyTokens.mono}, ui-monospace, monospace`
+
+  // Scene headline — slides in from left alongside phone + VPS
+  const textSlideX = (1 - elemBuild) * -25
+  const textX = isDesktopLayout ? w * 0.36 : w * 0.10
+  const textY = isDesktopLayout ? h * 0.26 : h * 0.27
+  const textFs = 16
+  const textLh = textFs + 6
 
   return (
     <>
@@ -181,15 +186,27 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
 
           <g transform={`translate(${vpsSlideX}, 0)`} opacity={elemBuild}>
             <VpsTerminal cx={vpsX} cy={vpsY} w={termW} h={termH} />
-            <text x={vpsX} y={vpsY + termH / 2 + 14} textAnchor="middle"
-              fontSize={isDesktopLayout ? 9 : 8} fill={subColor} fontFamily={monoFont}>
-              vps
-            </text>
           </g>
 
           {/* Direct straight line: phone → vps */}
           <DashedArc x1={phoneCX} y1={phoneCY} x2={vpsCX} y2={vpsCY}
             color={blue} bend={0} opacity={arcOp} />
+
+          {/* Scene headline */}
+          <g transform={`translate(${textSlideX}, 0)`} opacity={elemBuild}>
+            <text x={textX} y={textY} textAnchor="start" fontSize={textFs}
+              fill={black} fontFamily={monoFont} fontWeight="500">
+              To connect to linux
+            </text>
+            <text x={textX} y={textY + textLh} textAnchor="start" fontSize={textFs}
+              fill={black} fontFamily={monoFont} fontWeight="500">
+              servers securely with a
+            </text>
+            <text x={textX} y={textY + textLh * 2} textAnchor="start" fontSize={textFs}
+              fill={black} fontFamily={monoFont} fontWeight="500">
+              mobile-focused UX
+            </text>
+          </g>
         </g>
 
 
