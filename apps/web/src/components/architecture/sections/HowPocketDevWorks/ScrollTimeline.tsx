@@ -10,6 +10,7 @@ import type { SceneConfig } from './timeline-types'
 import { buildTrackKeyframes, computeSceneRanges, sceneProgress } from './timeline-utils'
 import { ExplainerStage } from './explainers/ExplainerStage'
 import { PersistentTransitionOverlay, shouldHideLaptop, shouldHideBlueCircle, shouldHidePhone, shouldHideDoor } from './shared/PersistentTransitionOverlay'
+import { palette } from '@pocketdev/shared/theme'
 
 export function ScrollTimeline({
   scenes,
@@ -39,8 +40,6 @@ export function ScrollTimeline({
   const [railProgress, setRailProgress] = useState(0)
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
   const [vpSize, setVpSize] = useState({ w: 1280, h: 800 })
-  const [stickyActive, setStickyActive] = useState(false)
-
   useEffect(() => {
     if (typeof window === 'undefined') return
     const mediaQuery = window.matchMedia('(min-width: 1024px)')
@@ -56,25 +55,6 @@ export function ScrollTimeline({
     sync()
     window.addEventListener('resize', sync)
     return () => window.removeEventListener('resize', sync)
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const syncSticky = () => {
-      const section = sectionRef.current
-      if (!section) return
-      const rect = section.getBoundingClientRect()
-      setStickyActive(rect.top <= 0)
-    }
-
-    syncSticky()
-    window.addEventListener('scroll', syncSticky, { passive: true })
-    window.addEventListener('resize', syncSticky)
-    return () => {
-      window.removeEventListener('scroll', syncSticky)
-      window.removeEventListener('resize', syncSticky)
-    }
   }, [])
 
   const ranges = useMemo(() => computeSceneRanges(scenes), [scenes])
@@ -98,14 +78,14 @@ export function ScrollTimeline({
       {/* Section header lives outside the scroll-tracked section so it doesn't
           consume scroll budget — railProgress=0 now aligns with the sticky
           animation track actually entering the viewport. */}
-      <div className="px-6 pt-16 pb-0">
+      <div className="px-6 pt-16 pb-0" style={{ backgroundColor: palette.bauhaus.cream }}>
         {headerContent}
       </div>
 
       <section
         ref={setSectionNode}
         className="relative"
-        style={{ height: reduceMotion ? 'auto' : sectionHeight }}
+        style={{ height: reduceMotion ? 'auto' : sectionHeight, backgroundColor: palette.bauhaus.cream }}
       >
         {reduceMotion ? (
           <ReducedMotionLayout
@@ -117,7 +97,7 @@ export function ScrollTimeline({
         ) : (
           <div
             className="sticky top-0 h-screen overflow-hidden"
-            style={{ opacity: stickyActive ? 1 : 0 }}
+            style={{ opacity: 1, backgroundColor: palette.bauhaus.cream }}
           >
           {/* Persistent asset overlay — sits above the sliding track so shared
               elements (laptop, circle) stay visually fixed during panel slides */}

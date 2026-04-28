@@ -18,8 +18,8 @@ function px(value: number) {
 
 export const architectureTheme = {
   ...lightTheme,
-  canvas: '#f7f1e3',
-  background: '#f7f1e3',
+  canvas: palette.bauhaus.cream,
+  background: palette.bauhaus.cream,
   surface: 'rgba(255,255,255,0)',
   panel: 'rgba(255,255,255,0)',
   panelAlt: '#efe5cb',

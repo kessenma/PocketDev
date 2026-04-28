@@ -196,15 +196,15 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
           <g transform={`translate(${textSlideX}, 0)`} opacity={elemBuild}>
             <text x={textX} y={textY} textAnchor="start" fontSize={textFs}
               fill={black} fontFamily={monoFont} fontWeight="500">
-              To connect to linux
+              So you can build
             </text>
             <text x={textX} y={textY + textLh} textAnchor="start" fontSize={textFs}
               fill={black} fontFamily={monoFont} fontWeight="500">
-              servers securely with a
+              wherever and whenever
             </text>
             <text x={textX} y={textY + textLh * 2} textAnchor="start" fontSize={textFs}
               fill={black} fontFamily={monoFont} fontWeight="500">
-              mobile-focused UX
+              ideas come
             </text>
           </g>
         </g>

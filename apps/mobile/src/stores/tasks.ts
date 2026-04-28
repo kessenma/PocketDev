@@ -312,14 +312,19 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       if (task) {
         tasks.set(taskId, { ...task, status })
 
-        // On completion, cache logs to local DB after a short delay
+        // On completion, cache logs + activities to local DB after a short delay so they
+        // rehydrate correctly on next open (activities saved as stream='activity' rows).
         const isTerminal = status === 'completed' || status === 'failed' || status === 'killed'
         if (isTerminal && _db) {
           const logs = state.taskLogs.get(taskId)
-          if (logs && logs.length > 0) {
+          const acts = state.taskActivities.get(taskId)
+          const hasData = (logs && logs.length > 0) || (acts && acts.length > 0)
+          if (hasData) {
             const db = _db
+            const logRows = (logs ?? []).map((line) => ({ stream: 'stdout', line }))
+            const activityRows = (acts ?? []).map((a) => ({ stream: 'activity', line: JSON.stringify(a) }))
             setTimeout(() => {
-              void saveTaskLogs(db, taskId, logs.map((line) => ({ stream: 'stdout', line }))).catch(() => {})
+              void saveTaskLogs(db, taskId, [...logRows, ...activityRows]).catch(() => {})
               void updateCachedTaskStatus(db, taskId, status).catch(() => {})
             }, 500)
           }

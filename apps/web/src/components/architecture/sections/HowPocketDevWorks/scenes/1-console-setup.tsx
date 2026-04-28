@@ -17,10 +17,9 @@ export const consoleSetupScene: SceneConfig = {
     viewBox: '0 0 420 320',
     preserveAspectRatio: 'xMidYMid meet',
   },
-  render: ({ progress, active, hideLaptop }) => (
+  render: ({ progress, hideLaptop }) => (
     <ConsoleSetupStage
       progress={progress}
-      active={active}
       hideLaptop={hideLaptop}
     />
   ),

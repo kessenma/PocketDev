@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller'
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { KeyboardStickyView } from 'react-native-keyboard-controller'
 import Clipboard from '@react-native-clipboard/clipboard'
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
@@ -8,6 +8,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
 import { Bug, Check, Copy, FileText, GalleryVerticalEnd, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal, X } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
+import { useConnectionStore } from '../../stores/connection'
 import { useSetupStore } from '../../stores/setup'
 import { useTaskStore } from '../../stores/tasks'
 import { useToast } from '../../hooks/useToast'
@@ -23,10 +24,13 @@ import { GroupedItemRow } from './ActivityCards'
 import TaskDebugSheet from './TaskDebugSheet'
 import TaskConversation from './TaskConversation'
 import TaskInteractionSheet from './TaskInteractionSheet'
+import AISuggestions from './AISuggestions'
 import { extractLatestTodos, getToolUseDetail, groupActivitiesIntoCards, parseCodexRawLogToActivity } from './task-stream-utils'
 import { buildMarkdownStyle } from '../../theme/markdown'
 import type { GroupedStreamItem } from './task-stream-utils'
 import { inferTaskDebugSelection, type TaskDebugSelection } from './task-debug-utils'
+import { useOnDeviceAIStore } from '../../stores/on-device-ai'
+import { fetchFileTree } from '../../services/api'
 import { typeStyles } from '../../theme/typography'
 
 type Props = {
@@ -220,6 +224,14 @@ export default function TaskDetailPane({
   const setupReport = useSetupStore((s) => s.report)
   const { toast } = useToast()
 
+  const server = useConnectionStore((s) => s.server)
+  const aiModelStatus = useOnDeviceAIStore((s) => s.modelStatus)
+  const aiSuggest = useOnDeviceAIStore((s) => s.suggest)
+  const aiLoadModel = useOnDeviceAIStore((s) => s.loadModel)
+  const aiBuildIndex = useOnDeviceAIStore((s) => s.buildIndex)
+  const aiHydrate = useOnDeviceAIStore((s) => s.hydrate)
+  const aiClearSuggestions = useOnDeviceAIStore((s) => s.clearSuggestions)
+
   const flashListRef = useRef<FlashListRef<GroupedStreamItem>>(null)
   const [autoScroll, setAutoScroll] = useState(true)
   const [showRawLogsInternal, setShowRawLogsInternal] = useState(false)
@@ -238,6 +250,36 @@ export default function TaskDetailPane({
   const [copilotWizardKey, setCopilotWizardKey] = useState(0)
   const [openCodeWizardKey, setOpenCodeWizardKey] = useState(0)
   const [queuedContinuation, setQueuedContinuation] = useState<string | null>(null)
+  const [showFilesSheet, setShowFilesSheet] = useState(false)
+  const [aiFilesSearching, setAiFilesSearching] = useState(false)
+  const [aiFilesRefining, setAiFilesRefining] = useState(false)
+  const [aiFilesNoResults, setAiFilesNoResults] = useState(false)
+  const [filesSearchText, setFilesSearchText] = useState('')
+  const [filesDraft, setFilesDraft] = useState('')
+  const [activePhraseChip, setActivePhraseChip] = useState<string | null>(null)
+
+  useEffect(() => {
+    console.log('[TaskDetail/AI] calling aiHydrate()')
+    aiHydrate()
+  }, [aiHydrate])
+  useEffect(() => {
+    console.log('[TaskDetail/AI] modelStatus changed →', aiModelStatus)
+    if (aiModelStatus === 'downloaded') {
+      console.log('[TaskDetail/AI] model downloaded, calling aiLoadModel()')
+      aiLoadModel()
+    }
+  }, [aiModelStatus, aiLoadModel])
+  useEffect(() => {
+    console.log('[TaskDetail/AI] index effect — modelStatus:', aiModelStatus, 'server:', !!server)
+    if (aiModelStatus !== 'ready' || !server) return
+    console.log('[TaskDetail/AI] fetching file tree for index...')
+    fetchFileTree(server.ip, server.port, '.', 6)
+      .then((res) => {
+        console.log('[TaskDetail/AI] file tree fetched →', res.tree.length, 'entries, base:', res.base)
+        aiBuildIndex(res.base || '.', res.tree, server)
+      })
+      .catch((e) => console.error('[TaskDetail/AI] fetchFileTree failed:', e))
+  }, [aiModelStatus, server, aiBuildIndex])
 
   // Parent can open the copy menu by incrementing copyTrigger
   useEffect(() => {
@@ -391,6 +433,40 @@ export default function TaskDetailPane({
     return () => clearTimeout(t)
   }, [inferredDebugSelection, task?.status, showDebugSheet, showCodexWizard, showClaudeWizard])
 
+  async function handleFindFiles(draft: string) {
+    const taskContext = task ? extractUserRequest(task.prompt) : ''
+    const searchText = [taskContext, draft].filter(Boolean).join(' ').trim()
+    if (!searchText) return
+    aiClearSuggestions()
+    setFilesSearchText(searchText)
+    setFilesDraft(draft.trim())
+    setActivePhraseChip(null)
+    setAiFilesNoResults(false)
+    setShowFilesSheet(true)
+    setAiFilesSearching(true)
+    try {
+      await aiSuggest(searchText)
+      const { suggestions, restSuggestions } = useOnDeviceAIStore.getState()
+      setAiFilesNoResults(suggestions.length === 0 && restSuggestions.length === 0)
+    } finally {
+      setAiFilesSearching(false)
+    }
+  }
+
+  async function handlePhraseSearch(phrase: string) {
+    setActivePhraseChip(phrase)
+    setAiFilesRefining(true)
+    setAiFilesNoResults(false)
+    aiClearSuggestions()
+    try {
+      await aiSuggest(phrase)
+      const { suggestions, restSuggestions } = useOnDeviceAIStore.getState()
+      setAiFilesNoResults(suggestions.length === 0 && restSuggestions.length === 0)
+    } finally {
+      setAiFilesRefining(false)
+    }
+  }
+
   function handleOpenDebugSheet() {
     setDebugSelection(inferredDebugSelection)
     setShowDebugSheet(true)
@@ -456,6 +532,7 @@ export default function TaskDetailPane({
   const isOpencodeFamily = OPENCODE_FAMILY.has(task.agent_type)
   const canContinue = isTerminal && (task.agent_type === 'claude' || task.agent_type === 'codex' || isOpencodeFamily) && !!task.session_id
   const isMultiTurn = (task.turn_count ?? 1) > 1
+  const findFilesHandler = handleFindFiles
 
   // Auto-send queued follow-up once the task completes and session is ready
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -487,10 +564,7 @@ export default function TaskDetailPane({
   }, [activities, logs])
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}
-      behavior="padding"
-    >
+    <View style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}>
       {!hideStatusBar && (
         <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
           <View style={styles.statusMeta}>
@@ -592,40 +666,48 @@ export default function TaskDetailPane({
         </View>
       ) : null}
 
-      {/* Running: Claude gets quick commands + steering; opencode-family gets follow-up queue */}
-      {isRunning && task.agent_type === 'claude' ? (
-        <QuickCommandBar taskId={task.id} onSend={(data) => sendInput(task.id, data)} colors={colors} />
-      ) : null}
-      {isRunning && task.agent_type === 'claude' ? (
-        <BauhausChatInput
-          placeholder="Steer the agent..."
-          onSend={(text) => sendInput(task.id, text + '\n')}
-        />
-      ) : null}
-      {isRunning && isOpencodeFamily ? (
-        queuedContinuation ? (
-          <QueuedFollowUpBanner
-            message={queuedContinuation}
-            onCancel={() => setQueuedContinuation(null)}
-            colors={colors}
-          />
-        ) : (
-          <BauhausChatInput
-            placeholder="Queue a follow-up..."
-            onSend={(text) => setQueuedContinuation(text)}
-          />
-        )
-      ) : null}
-
-      {/* Completed: continue input */}
-      {canContinue && !isRunning ? (
-        <BauhausChatInput
-          placeholder="Send a follow-up..."
-          onSend={(text) => continueTask(task.id, text)}
-        />
-      ) : null}
-
       {taskId ? <TaskInteractionSheet taskId={taskId} /> : null}
+
+      <KeyboardStickyView offset={{ closed: 0, opened: 0 }}>
+        {/* Running: Claude gets quick commands + steering; opencode-family gets follow-up queue */}
+        {isRunning && task.agent_type === 'claude' ? (
+          <QuickCommandBar taskId={task.id} onSend={(data) => sendInput(task.id, data)} colors={colors} />
+        ) : null}
+        {isRunning && task.agent_type === 'claude' ? (
+          <BauhausChatInput
+            placeholder="Steer the agent..."
+            onSend={(text) => sendInput(task.id, text + '\n')}
+            onFindFiles={findFilesHandler}
+            findFilesActive={aiFilesSearching}
+          />
+        ) : null}
+        {isRunning && isOpencodeFamily ? (
+          queuedContinuation ? (
+            <QueuedFollowUpBanner
+              message={queuedContinuation}
+              onCancel={() => setQueuedContinuation(null)}
+              colors={colors}
+            />
+          ) : (
+            <BauhausChatInput
+              placeholder="Queue a follow-up..."
+              onSend={(text) => setQueuedContinuation(text)}
+              onFindFiles={findFilesHandler}
+              findFilesActive={aiFilesSearching}
+            />
+          )
+        ) : null}
+
+        {/* Completed: continue input */}
+        {canContinue && !isRunning ? (
+          <BauhausChatInput
+            placeholder="Send a follow-up..."
+            onSend={(text) => continueTask(task.id, text)}
+            onFindFiles={findFilesHandler}
+            findFilesActive={aiFilesSearching}
+          />
+        ) : null}
+      </KeyboardStickyView>
       {showDebugSheet && (
         <TaskDebugSheet
           selection={debugSelection}
@@ -668,6 +750,63 @@ export default function TaskDetailPane({
         />
       )}
 
+      {/* Related files sheet */}
+      <Modal visible={showFilesSheet} transparent animationType="slide" onRequestClose={() => setShowFilesSheet(false)}>
+        <Pressable style={styles.filesSheetBackdrop} onPress={() => setShowFilesSheet(false)}>
+          <Pressable style={[styles.filesSheet, { backgroundColor: colors.panel, borderColor: colors.border }]}>
+            <View style={[styles.filesSheetHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filesSheetTitle, { color: colors.text }]}>Related Files</Text>
+              <TouchableOpacity onPress={() => setShowFilesSheet(false)} activeOpacity={0.7} style={styles.filesSheetClose}>
+                <X color={colors.textSecondary} size={20} strokeWidth={2.25} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.filesSheetContent}>
+              {/* Broad search results */}
+              {(aiFilesSearching || aiFilesRefining) ? (
+                <ActivityIndicator style={styles.filesSheetLoading} color={colors.primary} />
+              ) : aiFilesNoResults ? (
+                <Text style={[styles.filesSheetEmpty, { color: colors.textSecondary }]}>
+                  No related files found.
+                </Text>
+              ) : (
+                <AISuggestions />
+              )}
+
+              {/* Phrase chips for focused search */}
+              {filesSearchText.length > 0 ? (
+                <View style={[styles.phraseSection, { borderTopColor: colors.border }]}>
+                  <Text style={[styles.phraseSectionLabel, { color: colors.textSecondary }]}>
+                    Focus search on a phrase:
+                  </Text>
+                  <View style={styles.phraseRow}>
+                    {filesDraft ? (() => {
+                      const active = filesDraft === activePhraseChip
+                      return (
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={() => handlePhraseSearch(filesDraft)}
+                          style={[
+                            styles.phraseChip,
+                            {
+                              borderColor: active ? colors.primary : colors.border,
+                              backgroundColor: active ? colors.primary + '18' : colors.panelAlt,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.phraseChipText, { color: active ? colors.primary : colors.text }]}>
+                            {filesDraft}
+                          </Text>
+                        </TouchableOpacity>
+                      )
+                    })() : null}
+                  </View>
+                </View>
+              ) : null}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Copy option menu */}
       <Modal visible={showCopyMenu} transparent animationType="fade" onRequestClose={() => setShowCopyMenu(false)}>
         <Pressable style={styles.copyMenuBackdrop} onPress={() => setShowCopyMenu(false)}>
@@ -690,7 +829,7 @@ export default function TaskDetailPane({
           </View>
         </Pressable>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   )
 }
 
@@ -1002,5 +1141,68 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // ── Related Files Sheet ──
+  filesSheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  filesSheet: {
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    borderWidth: 2,
+    borderBottomWidth: 0,
+    maxHeight: '70%',
+  },
+  filesSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  filesSheetTitle: {
+    ...typeStyles.bodyStrong,
+  },
+  filesSheetClose: {
+    padding: spacing[1],
+  },
+  filesSheetLoading: {
+    padding: spacing[8],
+  },
+  filesSheetContent: {
+    padding: spacing[3],
+  },
+  filesSheetEmpty: {
+    ...typeStyles.bodySmall,
+    textAlign: 'center',
+    paddingVertical: spacing[4],
+  },
+  phraseSection: {
+    marginTop: spacing[3],
+    paddingTop: spacing[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing[2],
+  },
+  phraseSectionLabel: {
+    ...typeStyles.meta,
+    fontWeight: '600',
+  },
+  phraseRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+  },
+  phraseChip: {
+    borderWidth: 1,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1],
+  },
+  phraseChipText: {
+    ...typeStyles.meta,
+    fontWeight: '600',
   },
 })

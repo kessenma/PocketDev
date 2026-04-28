@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { buttonVariants } from '#/components/ui/button'
 import { HeroScrollSequence } from '#/components/architecture/animations/hero-sequence'
-import { HeroLaptopOverlay } from '#/components/architecture/animations/hero-sequence/HeroLaptopOverlay'
 import {
+  DocsCalloutSection,
   HowPocketDevWorksSection,
   RepoHistoryTransitionSection,
+  TridentDiagramSection,
 } from '#/components/architecture/sections'
+import { GrowsToAgentOverlay } from '#/components/architecture/sections/GrowsToAgentOverlay'
+import { HeroToConsoleOverlay } from '#/components/architecture/sections/HeroToConsoleOverlay'
 import { Footer } from '#/components/landing/Footer'
 import { architectureTokens } from '#/components/architecture/shared/theme'
 
@@ -20,9 +22,33 @@ export const Route = createFileRoute('/architecture')({
   component: ArchitecturePage,
 })
 
+const PRE_TRAVEL = 1.0  // circle completes full journey during RepoHistory exit
+
 function ArchitecturePage() {
   const howItWorksRef = useRef<HTMLDivElement>(null)
   const [heroProgress, setHeroProgress] = useState(0)
+  const [howItWorksRailProgress, setHowItWorksRailProgress] = useState(0)
+  const [repoHistoryProgress, setRepoHistoryProgress] = useState(0)
+  const [tridentProgress, setTridentProgress] = useState(0)
+  const [badgePosition, setBadgePosition] = useState({ x: 0, y: 0 })
+  const [vpSize, setVpSize] = useState({ w: 1280, h: 800 })
+
+  useEffect(() => {
+    const sync = () => setVpSize({ w: window.innerWidth, h: window.innerHeight })
+    sync()
+    window.addEventListener('resize', sync)
+    return () => window.removeEventListener('resize', sync)
+  }, [])
+
+  const isDesktopLayout = vpSize.w >= 1024
+  const agentX = isDesktopLayout ? vpSize.w * 0.32 : vpSize.w * 0.4
+  const agentY = isDesktopLayout ? vpSize.h * 0.48 : vpSize.h * 0.52
+  // With PRE_TRAVEL = 1.0 the circle arrives at agentX/agentY during exit,
+  // so TridentBuildScene starts with the circle already settled.
+  // badgePosition.y goes negative after the section scrolls off the top of the viewport —
+  // check !== 0 (uninitialized) rather than > 0 so seedY is still passed correctly.
+  const seedX = badgePosition.x !== 0 ? badgePosition.x + (agentX - badgePosition.x) * PRE_TRAVEL : undefined
+  const seedY = badgePosition.y !== 0 ? badgePosition.y + (agentY - badgePosition.y) * PRE_TRAVEL : undefined
 
   return (
     <div
@@ -38,38 +64,32 @@ function ArchitecturePage() {
     >
       <ClientOnly>
         <HeroScrollSequence onProgressChange={setHeroProgress} />
-        <HeroLaptopOverlay heroProgress={heroProgress} howItWorksRef={howItWorksRef} />
-        <HowPocketDevWorksSection sectionRef={howItWorksRef} />
-        <RepoHistoryTransitionSection />
+        <HowPocketDevWorksSection
+          sectionRef={howItWorksRef}
+          onRailProgress={setHowItWorksRailProgress}
+        />
+        <RepoHistoryTransitionSection
+          onTransitionProgress={setRepoHistoryProgress}
+          onGrowsBadgePosition={(x, y) => setBadgePosition({ x, y })}
+        />
+        <TridentDiagramSection
+          onProgress={setTridentProgress}
+          seedX={seedX}
+          seedY={seedY}
+        />
+        <GrowsToAgentOverlay
+          repoHistoryProgress={repoHistoryProgress}
+          tridentProgress={tridentProgress}
+          badgeX={badgePosition.x}
+          badgeY={badgePosition.y}
+        />
+        <HeroToConsoleOverlay
+          heroProgress={heroProgress}
+          railProgress={howItWorksRailProgress}
+        />
       </ClientOnly>
 
-      <div className="flex flex-col items-center gap-6 px-6 py-20 text-center">
-        <p className="text-sm uppercase tracking-widest text-neutral-500" style={{ fontFamily: 'var(--font-mono), monospace' }}>
-          Want the full picture?
-        </p>
-        <h2
-          className="text-3xl font-bold tracking-tight sm:text-4xl"
-          style={{ fontFamily: 'var(--font-display), var(--font-heading), sans-serif', letterSpacing: '-0.03em' }}
-        >
-          Read the docs
-        </h2>
-        <p className="max-w-md text-base text-neutral-500">
-          Deep-dives on the wire protocol, security model, agent endpoints, and more.
-        </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <a
-            href="https://docs.pocketdev.run/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ variant: 'default', size: 'lg' })}
-          >
-            Learn more in the docs
-          </a>
-          <a href="/" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
-            Back to home
-          </a>
-        </div>
-      </div>
+      <DocsCalloutSection />
 
       <Footer />
     </div>

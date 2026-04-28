@@ -1,10 +1,8 @@
 import { motion } from 'framer-motion'
 import { palette, fontFamilyTokens } from '@pocketdev/shared/theme'
-import { BauhausPhone } from '#/components/architecture/sections/HowPocketDevWorks/shared/BauhausPhone'
-import { BauhausFace } from '#/components/architecture/sections/HowPocketDevWorks/shared/BauhausFace'
 import { architectureTokens } from '#/components/architecture/shared/theme'
 
-const { blue, red, yellow, black } = palette.bauhaus
+const { blue, red, black } = palette.bauhaus
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(max, Math.max(min, v))
@@ -104,20 +102,6 @@ function BedLineDrawing({ progress, pinX, pinY, scale, color }: {
   )
 }
 
-function DashedArc({ x1, y1, x2, y2, color, bend = 0.25, opacity = 1 }: {
-  x1: number; y1: number; x2: number; y2: number
-  color: string; bend?: number; opacity?: number
-}) {
-  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2
-  const dx = x2 - x1, dy = y2 - y1
-  const d = `M ${x1} ${y1} Q ${mx - dy * bend} ${my + dx * bend} ${x2} ${y2}`
-  return (
-    <g opacity={opacity}>
-      <path d={d} fill="none" stroke={color} strokeWidth="1.5" strokeDasharray="5 3" opacity={0.7} />
-      <path d={d} fill="none" stroke={color} strokeWidth="0.8" strokeDasharray="5 3" opacity={0.35} />
-    </g>
-  )
-}
 
 function BrokenTerminal({ cx, cy, w, h }: { cx: number; cy: number; w: number; h: number }) {
   const x = cx - w / 2, y = cy - h / 2
@@ -141,42 +125,30 @@ function BrokenTerminal({ cx, cy, w, h }: { cx: number; cy: number; w: number; h
 type Props = {
   /** Normalized 0→1, maps to global hero progress 0.50→0.72 */
   progress: number
+  heroProgress: number
   vpSize: { w: number; h: number }
   isDesktopLayout: boolean
 }
 
-export function LinuxAdminScene({ progress, vpSize, isDesktopLayout }: Props) {
+export function LinuxAdminScene({ progress, heroProgress, vpSize, isDesktopLayout }: Props) {
   const { w, h } = vpSize
   const settledR = isDesktopLayout ? 54 : 46
   const hx = w * 0.5
   const hy = h * 0.5
 
-  const circleOp = Math.min(
-    clamp(progress / 0.08, 0, 1),
-    clamp((1 - progress) / 0.08, 0, 1),
-  )
+  const circleOp = heroProgress >= 0.77 ? 0 : clamp(progress / 0.08, 0, 1)
 
   const elemBuild = mapP(progress, 0.0, 0.55)
   const sceneOp   = mapP(progress, 0.0, 0.25)
   const bugOp     = mapP(progress, 0.2, 0.55)
-  const arcOp     = mapP(elemBuild, 0.4, 0.85)
   const labelOp   = mapP(progress, 0.35, 0.65)
 
-  const phoneScale = isDesktopLayout ? 0.75 : 0.58
-  const phoneX     = isDesktopLayout ? w * 0.16 : w * 0.22
-  const phoneY     = isDesktopLayout ? h * 0.52 : h * 0.65
   const termW      = isDesktopLayout ? 130 : 88
   const termH      = isDesktopLayout ? 90 : 64
   const btX        = isDesktopLayout ? w * 0.63 : w * 0.68
   const btY        = isDesktopLayout ? h * 0.28 : h * 0.26
-  const faceScale  = isDesktopLayout ? 1.8 : 1.2
-  const faceX      = isDesktopLayout ? w * 0.82 : w * 0.76
-  const faceY      = isDesktopLayout ? h * 0.60 : h * 0.68
 
   const btSlideY   = (1 - elemBuild) * -120
-  const faceSlideX = (1 - elemBuild) * 150
-  const btRY       = btY + btSlideY
-  const faceRX     = faceX + faceSlideX
 
   const bedDrawP = mapP(progress, 0.08, 0.78)
   const bedScale = isDesktopLayout ? 6.0 : 4.0
@@ -197,12 +169,11 @@ export function LinuxAdminScene({ progress, vpSize, isDesktopLayout }: Props) {
       style={{ pointerEvents: 'none' }}
       aria-hidden="true"
     >
+      <rect x={0} y={0} width={w} height={h} fill={palette.bauhaus.cream} opacity={sceneOp} />
       <circle cx={hx} cy={hy} r={settledR} fill={blue} opacity={circleOp} />
 
       <g opacity={sceneOp}>
         <BedLineDrawing progress={bedDrawP} pinX={hx} pinY={hy} scale={bedScale} color={black} />
-
-        <BauhausPhone cx={phoneX} cy={phoneY} scale={phoneScale} />
 
         <g transform={`translate(0, ${btSlideY})`} opacity={elemBuild}>
           <BrokenTerminal cx={btX} cy={btY} w={termW} h={termH} />
@@ -225,33 +196,17 @@ export function LinuxAdminScene({ progress, vpSize, isDesktopLayout }: Props) {
           />
         </g>
 
-        <motion.g
-          transform={`translate(${faceSlideX}, 0)`}
-          opacity={elemBuild}
-          animate={{ y: [0, -3, 0] }}
-          transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <BauhausFace cx={faceX} cy={faceY} scale={faceScale} fillColor={black} />
-          <text x={faceX} y={faceY + faceScale * 22 + 10} textAnchor="middle"
-            fontSize={isDesktopLayout ? 9 : 8} fill={subColor} fontFamily={monoFont}>
-            claude
-          </text>
-        </motion.g>
-
-        <DashedArc x1={phoneX} y1={phoneY} x2={hx} y2={hy} color={blue} bend={-0.25} opacity={arcOp} />
-        <DashedArc x1={hx} y1={hy} x2={btX} y2={btRY} color={yellow} bend={0.3} opacity={arcOp} />
-        <DashedArc x1={hx} y1={hy} x2={faceRX} y2={faceY} color={yellow} bend={-0.25} opacity={arcOp} />
       </g>
 
       <g opacity={labelOp}>
         <text x={w / 2} y={labelY1} textAnchor="middle"
           fontSize={isDesktopLayout ? 17 : 13} fontWeight="700"
           fill={textColor} fontFamily={displayFont} letterSpacing="-0.03em">
-           So they can stay in bed--
+           And when you get pinged at 2am--
         </text>
         <text x={w / 2} y={labelY2} textAnchor="middle"
           fontSize={isDesktopLayout ? 12 : 10} fill={subColor} fontFamily={monoFont}>
-          when pinged at 2am to fix the broken server
+          You can ssh into the prod server and fix the issue with your AI of choice.
         </text>
       </g>
     </svg>

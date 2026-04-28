@@ -18,6 +18,7 @@ import {
   SiGithubcopilot,
   SiGithubcopilotHex,
 } from '@icons-pack/react-simple-icons'
+import { palette } from '@pocketdev/shared/theme'
 import { CopyButton } from '@pocketdev/shared/components'
 import { PocketHeroSvg } from '../PocketHeroSvg'
 import { ArchitectureHeroAnimation } from '../ArchitectureHeroAnimation'
@@ -28,9 +29,8 @@ import { BetaInlineView } from './BetaInlineView'
 import { PocketRevealScene } from './scenes/01-pocket-reveal'
 import { DevOnTheGoScene } from './scenes/02-hero-developers'
 import { LinuxAdminScene } from './scenes/03-hero-linux-admins'
-import { TridentBuildScene } from './scenes/04-trident-build'
 
-const PAPER = '#f7f1e3'
+const PAPER = palette.bauhaus.cream
 const INSTALL_COMMAND = 'curl -fsSL https://pocketdev.run/install.sh | bash'
 const INSTALL_COMMAND_LINES = [
   'curl -fsSL',
@@ -44,7 +44,6 @@ const SCENE2_START = 0.22  // developers on the go (extended)
 const SCENE2_END   = 0.58
 const SCENE3_START = 0.58  // linux admins
 const SCENE3_END   = 0.77
-const SCENE4_START = 0.77  // trident build
 
 export function HeroScrollSequence({
   onProgressChange,
@@ -102,9 +101,6 @@ export function HeroScrollSequence({
   const scene1Progress = Math.min(1, Math.max(0, progress / SCENE1_END))
   const scene2Progress = Math.min(1, Math.max(0, (progress - SCENE2_START) / (SCENE2_END - SCENE2_START)))
   const scene3Progress = Math.min(1, Math.max(0, (progress - SCENE3_START) / (SCENE3_END - SCENE3_START)))
-  const scene4Progress = Math.min(1, Math.max(0, (progress - SCENE4_START) / (1.0 - SCENE4_START)))
-
-  const hideLaptop = progress >= 1.0
 
   if (reduceMotion) {
     return (
@@ -121,7 +117,7 @@ export function HeroScrollSequence({
   const spring = { type: 'spring', stiffness: 220, damping: 26 } as const
 
   return (
-    <section ref={sectionRef} className="relative" style={{ height: '600vh' }}>
+    <section ref={sectionRef} className="relative" style={{ height: '600vh', backgroundColor: PAPER }}>
       <div className="sticky top-0 h-screen overflow-hidden" style={{ backgroundColor: PAPER }}>
 
         {/* Header — pushed up when betaOpen */}
@@ -163,20 +159,12 @@ export function HeroScrollSequence({
           <motion.div className="absolute inset-0" style={{ opacity: 1 }}>
             <LinuxAdminScene
               progress={scene3Progress}
+              heroProgress={progress}
               vpSize={vpSize}
               isDesktopLayout={isDesktopLayout}
             />
           </motion.div>
 
-          {/* Scene 4: Circle settles, trident builds, laptop zooms */}
-          <motion.div className="absolute inset-0" style={{ opacity: 1 }}>
-            <TridentBuildScene
-              progress={scene4Progress}
-              vpSize={vpSize}
-              isDesktopLayout={isDesktopLayout}
-              hideLaptop={hideLaptop}
-            />
-          </motion.div>
 
         </motion.div>
 

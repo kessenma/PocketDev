@@ -4,9 +4,11 @@ import { computeSceneRanges } from './timeline-utils'
 
 export function HowPocketDevWorksSection({
   onLowerPageTakeoverChange,
+  onRailProgress: onRailProgressRaw,
   sectionRef: externalSectionRef,
 }: {
   onLowerPageTakeoverChange?: (progress: number) => void
+  onRailProgress?: (progress: number) => void
   sectionRef?: React.RefObject<HTMLElement | null>
 }) {
   const ranges = computeSceneRanges(howItWorksScenes)
@@ -19,6 +21,7 @@ export function HowPocketDevWorksSection({
       sectionHeight="1275vh"
       externalSectionRef={externalSectionRef}
       onRailProgress={(p) => {
+        onRailProgressRaw?.(p)
         if (!remoteAiRange) return
         const takeoverStart = remoteAiRange.start + (remoteAiRange.end - remoteAiRange.start) * 0.3
         const takeoverEnd = remoteAiRange.end

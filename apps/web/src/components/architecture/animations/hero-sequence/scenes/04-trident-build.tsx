@@ -80,9 +80,12 @@ type Props = {
   vpSize: { w: number; h: number }
   isDesktopLayout: boolean
   hideLaptop?: boolean
+  /** Starting viewport position for the circle — defaults to viewport center */
+  seedX?: number
+  seedY?: number
 }
 
-export function TridentBuildScene({ progress: p, vpSize, isDesktopLayout, hideLaptop }: Props) {
+export function TridentBuildScene({ progress: p, vpSize, isDesktopLayout, hideLaptop, seedX, seedY }: Props) {
   const reduceMotion = useReducedMotion()
   const { w, h } = vpSize
 
@@ -90,16 +93,13 @@ export function TridentBuildScene({ progress: p, vpSize, isDesktopLayout, hideLa
   const settledR = isDesktopLayout ? 54 : 46
 
   // Sub-progress (all local to 0→1):
-  // global 0.72→0.86 = local 0.000→0.500
   const circleSettle = mapP(p, 0.000, 0.500)
-  // global 0.76→0.94 = local 0.143→0.786
-  const diagramBuild = mapP(p, 0.143, 0.786)
-  // global 0.94→1.0  = local 0.786→1.000
+  const diagramBuild = mapP(p, 0.000, 0.786)
   const laptopZoom   = mapP(p, 0.786, 1.000)
 
-  // Circle: starts at viewport center (where scene 2 left it), settles to layout
-  const circleX = mix(w / 2, layout.circleSettled.x, circleSettle)
-  const circleY = mix(h * 0.5, layout.circleSettled.y, circleSettle)
+  // Circle: starts at seed position (badge location) or viewport center, settles to layout
+  const circleX = mix(seedX ?? w / 2, layout.circleSettled.x, circleSettle)
+  const circleY = mix(seedY ?? h * 0.5, layout.circleSettled.y, circleSettle)
 
   // Staggered diagram reveals
   const bundlesDraw = mapP(diagramBuild, 0.05, 0.60)

@@ -47,8 +47,9 @@ export function ExplainerStage({
           ...architectureTextStyles.surface,
           minHeight: stageMinHeight,
           height: stageHeight,
-          background:
-            'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 34%)',
+          background: stageBorderless
+            ? 'none'
+            : 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 34%)',
         }}
       >
         <svg

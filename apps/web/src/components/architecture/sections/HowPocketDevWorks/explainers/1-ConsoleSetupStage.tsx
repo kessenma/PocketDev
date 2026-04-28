@@ -48,19 +48,15 @@ const INSTALL_STEPS = [
 
 export function ConsoleSetupStage({
   progress,
-  active = false,
   hideLaptop = false,
 }: {
   progress: number
-  active?: boolean
   hideLaptop?: boolean
 }) {
   const reduceMotion = useReducedMotion()
   const p = reduceMotion ? 1 : progress
 
   // --- Timeline segments ---
-  // Everything must complete by p≈0.82 (holdRatio) so the overlay can take over during slide
-  const zoomP = easeOut(mapProgress(p, 0.0, 0.10))
   const sshP = mapProgress(p, 0.08, 0.18)
   const curlP = mapProgress(p, 0.18, 0.24)
   const installP = mapProgress(p, 0.24, 0.36)
@@ -69,12 +65,10 @@ export function ConsoleSetupStage({
   const formFillP = mapProgress(p, 0.50, 0.62)
   const tapP = mapProgress(p, 0.62, 0.68)
   const dashboardP = mapProgress(p, 0.68, 0.82)
-  // --- Laptop zoom ---
-  // viewBox is 420x320. Laptop origin (hinge) needs to be far enough down
-  // that screen top (origin - 125*scale) stays in bounds.
-  const laptopScale = mix(0.7, 1.42, zoomP)
+  // --- Laptop — fixed position, no zoom ---
+  const laptopScale = 1.0
   const laptopCx = 210
-  const laptopCy = mix(170, 200, zoomP)
+  const laptopCy = 185
 
   // --- Blue circle — "agent born" after Create Account tap ---
   // Appears at button center during tap, flies RIGHT and outside the laptop
@@ -128,7 +122,7 @@ export function ConsoleSetupStage({
 
   return (
     <>
-      <g opacity={hideLaptop || !active ? 0 : 1}>
+      <g opacity={hideLaptop ? 0 : 1}>
       <BauhausLaptop cx={laptopCx} cy={laptopCy} scale={laptopScale}>
       {/* Traffic light dots — terminal flavor */}
       <circle cx={-74} cy={-112} r={3} fill={palette.bauhaus.red} />
