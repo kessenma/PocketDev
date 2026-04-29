@@ -10,7 +10,12 @@ export function UpdateBanner() {
   const [refreshing, setRefreshing] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const otherVersions = update?.versions.filter((v) => v.version !== version) ?? []
+  // Normalize: old agent API returns string[], new returns {version, publishedAt}[]
+  const versions = (update?.versions ?? []).map((v) =>
+    typeof v === 'string' ? { version: v, publishedAt: '' } : v
+  )
+
+  const otherVersions = versions.filter((v) => v.version !== version)
   const hasVersionHistory = otherVersions.length > 0
   const hasBetas = (update?.betas?.length ?? 0) > 0
   const showVersionPicker = hasVersionHistory || hasBetas
@@ -19,7 +24,7 @@ export function UpdateBanner() {
   const stableSwitchAvailable = runningBeta && !!update?.updateAvailable
 
   // The latest stable version is first in the array
-  const latestStable = update?.versions[0]?.version
+  const latestStable = versions[0]?.version
 
   useEffect(() => {
     if (!dropdownOpen) return
@@ -39,8 +44,8 @@ export function UpdateBanner() {
 
   function versionLabel(v: string) {
     if (!update) return 'Install'
-    const parsed = update.versions.findIndex((e) => e.version === v)
-    const currentParsed = update.versions.findIndex((e) => e.version === version)
+    const parsed = versions.findIndex((e) => e.version === v)
+    const currentParsed = versions.findIndex((e) => e.version === version)
     if (v === version) return 'Current'
     if (currentParsed === -1) return 'Switch'
     if (parsed < currentParsed) return 'Rollback'
@@ -141,13 +146,13 @@ export function UpdateBanner() {
                     </div>
 
                     {/* Stable versions */}
-                    {update && update.versions.length > 0 && (
+                    {versions.length > 0 && (
                       <div>
                         <div className="px-4 pb-1 pt-3">
                           <p className="text-[10px] font-semibold uppercase tracking-widest text-foreground/40">Stable Releases</p>
                         </div>
                         <div className="max-h-48 overflow-y-auto pb-1">
-                          {update.versions.map((entry) => {
+                          {versions.map((entry) => {
                             const v = entry.version
                             const label = versionLabel(v)
                             const isCurrent = v === version
@@ -164,7 +169,9 @@ export function UpdateBanner() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <span className="block font-mono text-sm">v{v}</span>
-                                  <span className="text-[10px] text-foreground/40">{formatDate(entry.publishedAt)}</span>
+                                  {entry.publishedAt && (
+                                    <span className="text-[10px] text-foreground/40">{formatDate(entry.publishedAt)}</span>
+                                  )}
                                 </div>
                                 {isLatest && !isCurrent && (
                                   <span className="text-[10px] text-foreground/40">(latest)</span>
