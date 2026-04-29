@@ -56,23 +56,6 @@ echo "  → Agent version: $AGENT_VERSION"
 
 cp "$AGENT_DIR/dist/index.js" "$STAGING_DIR/pocketdev-agent/index.js"
 
-# Stage native PTY module alongside the bundle.
-# @homebridge/node-pty-prebuilt-multiarch is marked --external in bun build so
-# the bundled index.js references it at runtime. The prebuilt .node binary
-# must be present next to index.js on the target server.
-PTY_SRC="$AGENT_DIR/node_modules/@homebridge/node-pty-prebuilt-multiarch"
-if [ -d "$PTY_SRC" ]; then
-  mkdir -p "$STAGING_DIR/pocketdev-agent/node_modules/@homebridge"
-  # -L dereferences pnpm's relative symlink so the actual prebuilds/*/*.node
-  # binaries land in the tarball — otherwise the symlink resolves to a path
-  # that doesn't exist on the install target.
-  cp -rL "$PTY_SRC" \
-         "$STAGING_DIR/pocketdev-agent/node_modules/@homebridge/node-pty-prebuilt-multiarch"
-  echo "  → Staged @homebridge/node-pty-prebuilt-multiarch native module"
-else
-  echo "  ⚠ @homebridge/node-pty-prebuilt-multiarch not found in node_modules — run pnpm install first"
-fi
-
 # Copy Drizzle migrations
 cp -r "$AGENT_DIR/drizzle" "$STAGING_DIR/pocketdev-agent/drizzle"
 

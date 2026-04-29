@@ -1,13 +1,17 @@
 /**
  * ClaudePtyRunner
  *
- * Thin node-pty wrapper for the Claude task process.
- * Provides a real PTY with direct ANSI escape sequence support, replacing the
- * tmux send-keys mechanism for Claude tasks.
+ * Thin Bun.spawn(terminal:…) wrapper for the Claude task process. Provides a
+ * real PTY with direct ANSI escape sequence support, replacing the tmux
+ * send-keys mechanism for Claude tasks.
+ *
+ * Uses Bun's built-in PTY API (added in Bun 1.3.5) — no native module deps,
+ * no ABI mismatch. node-pty itself is broken under Bun: the master fd dies
+ * within ~20ms of spawn, taking the child shell with it.
  *
  * Responsibilities:
- *   - Spawn a bash script inside a real PTY via node-pty-prebuilt-multiarch
- *   - Write bytes (text, ANSI sequences) to the PTY via pty.write()
+ *   - Spawn a bash script inside a real PTY via Bun.spawn { terminal }
+ *   - Write bytes (text, ANSI sequences) to the PTY
  *   - Stream raw PTY output via the onData callback
  *   - Fire onExit when the process ends
  *   - Kill the process on demand
@@ -15,8 +19,6 @@
  * Does NOT own: output buffering, TUI detection, hooks polling,
  * question tracking, or any broadcast logic — those stay in ManagedAgentProcess.
  */
-
-import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
 
 export interface ClaudePtyOptions {
   cols: number
@@ -36,51 +38,64 @@ export const ANSI = {
   ESC: '\x1b',
 } as const
 
+// Bun.spawn returns a Subprocess with a `terminal` field when the terminal
+// option is set. Bun's types don't fully describe this yet, so we narrow here.
+interface BunTerminal {
+  write(data: string | Uint8Array): void
+  resize(cols: number, rows: number): void
+  close(): void
+}
+interface BunSubprocessWithTerminal {
+  terminal: BunTerminal
+  exited: Promise<number>
+  kill(signal?: number | string): void
+}
+
 export class ClaudePtyRunner {
-  private pty: IPty | null = null
+  private proc: BunSubprocessWithTerminal | null = null
   private _exited = false
 
-  /**
-   * Spawn the given bash script inside a real PTY.
-   * The dynamic import keeps @homebridge/node-pty-prebuilt-multiarch external in
-   * the bun bundle (requires --external @homebridge/node-pty-prebuilt-multiarch
-   * in bun build). The homebridge fork ships abi137 (Node 24) prebuilts; the
-   * upstream oznu fork stops at abi108 and won't load under Bun 1.3+.
-   */
+  /** Spawn the given bash script inside a real PTY. */
   async spawn(scriptPath: string, opts: ClaudePtyOptions): Promise<void> {
+    const decoder = new TextDecoder()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodePty = (await import('@homebridge/node-pty-prebuilt-multiarch')) as any
-    // node-pty may export spawn as default or as named export depending on version
-    const spawnFn = nodePty.spawn ?? nodePty.default?.spawn
-    if (typeof spawnFn !== 'function') {
-      throw new Error('[claude-pty] @homebridge/node-pty-prebuilt-multiarch did not export a spawn function')
-    }
-
-    this.pty = spawnFn('bash', [scriptPath], {
-      name: 'xterm-256color',
-      cols: opts.cols,
-      rows: opts.rows,
+    const proc = Bun.spawn(['bash', scriptPath], {
       cwd: opts.cwd,
       env: opts.env,
-    }) as IPty
+      terminal: {
+        cols: opts.cols,
+        rows: opts.rows,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data(_t: unknown, chunk: any) {
+          const text = typeof chunk === 'string'
+            ? chunk
+            : decoder.decode(chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk))
+          opts.onData(text)
+        },
+      },
+    } as Parameters<typeof Bun.spawn>[1]) as unknown as BunSubprocessWithTerminal
 
-    this.pty.onData(opts.onData)
-    this.pty.onExit(({ exitCode }: { exitCode: number }) => {
+    this.proc = proc
+
+    proc.exited.then((code: number) => {
       this._exited = true
-      opts.onExit(exitCode ?? 0)
+      opts.onExit(code ?? 0)
+    }).catch(() => {
+      this._exited = true
+      opts.onExit(1)
     })
   }
 
   /** Send literal text followed by a carriage return (Enter). */
   writeLine(text: string): void {
-    if (this._exited || !this.pty) return
-    this.pty.write(text + ANSI.ENTER)
+    if (this._exited || !this.proc) return
+    this.proc.terminal.write(text + ANSI.ENTER)
   }
 
   /** Send raw bytes — use for ANSI escape sequences and control characters. */
   writeRaw(bytes: string): void {
-    if (this._exited || !this.pty) return
-    this.pty.write(bytes)
+    if (this._exited || !this.proc) return
+    this.proc.terminal.write(bytes)
   }
 
   /**
@@ -89,22 +104,22 @@ export class ClaudePtyRunner {
    * optionIndex is 0-based: answer "1" → 0 Down presses, answer "2" → 1 Down press, etc.
    */
   sendMenuSelection(optionIndex: number): void {
-    if (this._exited || !this.pty) return
+    if (this._exited || !this.proc) return
     for (let i = 0; i < optionIndex; i++) {
-      this.pty.write(ANSI.DOWN)
+      this.proc.terminal.write(ANSI.DOWN)
     }
-    this.pty.write(ANSI.ENTER)
+    this.proc.terminal.write(ANSI.ENTER)
   }
 
   resize(cols: number, rows: number): void {
-    if (this._exited || !this.pty) return
-    try { this.pty.resize(cols, rows) } catch { /* ignore */ }
+    if (this._exited || !this.proc) return
+    try { this.proc.terminal.resize(cols, rows) } catch { /* ignore */ }
   }
 
   kill(): void {
     if (this._exited) return
     this._exited = true
-    try { this.pty?.kill() } catch { /* already dead */ }
+    try { this.proc?.kill() } catch { /* already dead */ }
   }
 
   get exited(): boolean {

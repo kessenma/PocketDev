@@ -926,7 +926,7 @@ export class ManagedAgentProcess {
         console.log(`[managed-agent] Started PTY process for task ${this.taskId}`)
         this.broadcastOutput(`[system] Session started — ${permTag}`)
       } catch (err) {
-        this.broadcastOutput('[error] Failed to start PTY process — is node-pty-prebuilt-multiarch installed?')
+        this.broadcastOutput('[error] Failed to start PTY process via Bun.spawn(terminal:) — requires Bun 1.3.5+')
         console.error(`[managed-agent] PTY spawn failed for task ${this.taskId}:`, err)
         this.cleanup()
         this.finish('failed')
