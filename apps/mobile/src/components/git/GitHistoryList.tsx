@@ -22,7 +22,6 @@ export default function GitHistoryList({ commits }: Props) {
     <GitCard>
       <GitCardHeader>
         <GitCardTitle>Recent Commits</GitCardTitle>
-        <GitCardDescription>Short, scan-friendly history for quick phone review.</GitCardDescription>
       </GitCardHeader>
 
       <GitCardContent>

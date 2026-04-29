@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as Repack from '@callstack/repack';
 import { ReanimatedPlugin } from '@callstack/repack-plugin-reanimated';
+import { NormalModuleReplacementPlugin } from '@rspack/core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,9 +53,6 @@ export default Repack.defineRspackConfig({
     rules: [
       {
         test: /\.[cm]?[jt]sx?$/,
-        exclude: [
-          /node_modules\/lucide-react-native\/dist\/esm\/icons\/infinity\.js$/,
-        ],
         type: 'javascript/auto',
         use: {
           loader: '@callstack/repack/babel-swc-loader',
@@ -70,5 +68,11 @@ export default Repack.defineRspackConfig({
     new ReanimatedPlugin({
       unstable_disableTransform: true,
     }),
+    // lucide-react-native 1.x ships an Infinity icon as `const Infinity = ...`
+    // which Hermes rejects (shadows a global). Replace the module with a safe shim.
+    new NormalModuleReplacementPlugin(
+      /lucide-react-native[/\\]dist[/\\]esm[/\\]icons[/\\]infinity\.mjs$/,
+      path.resolve(__dirname, 'src/vendor-shims/lucide-infinity.js'),
+    ),
   ],
 });

@@ -20,7 +20,6 @@ import { useProjectsStore } from '../../../stores/projects'
 import CodeViewer from '../../files/CodeViewer'
 import FileExplorerSheet from '../../files/FileExplorerSheet'
 import { pathToName } from '../../files/model'
-import ServerWebBrowserSheet from '../../browser/ServerWebBrowserSheet'
 import CodeScreenHeader from '../navigation/CodeScreenHeader'
 import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import EnvVarsTab from '../env-vars/EnvVarsTab'
@@ -68,12 +67,7 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
   const toggleWrapLines = useFilesStore((state) => state.toggleWrapLines)
   const toggleContextPath = useFilesStore((state) => state.toggleContextPath)
   const clearContextPaths = useFilesStore((state) => state.clearContextPaths)
-  const previewVisible = usePreviewStore((state) => state.visible)
-  const previewProxiedUrl = usePreviewStore((state) => state.proxiedUrl)
   const openPreview = usePreviewStore((state) => state.openPreview)
-  const closePreview = usePreviewStore((state) => state.closePreview)
-  const markPreviewLoaded = usePreviewStore((state) => state.markLoaded)
-  const markPreviewFailed = usePreviewStore((state) => state.markFailed)
   const [explorerExpanded, setExplorerExpanded] = useState(false)
   const [activeView, setActiveView] = useState<BrowseView>('browser')
 
@@ -177,16 +171,6 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
     </View>
   ) : null
 
-  const previewSheet = previewProxiedUrl && previewVisible ? (
-    <ServerWebBrowserSheet
-      title={activeProject?.name ?? 'Preview'}
-      initialUrl={previewProxiedUrl}
-      onDismiss={closePreview}
-      onLoadSuccess={markPreviewLoaded}
-      onLoadFailure={markPreviewFailed}
-      errorHint="Start the dev server on the paired machine and make sure it is serving localhost:3000."
-    />
-  ) : null
 
   const viewerSection = (
     <CodeViewer
@@ -384,7 +368,6 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
       </View>
 
       {explorerExpanded && <FileExplorerSheet onDismiss={() => setExplorerExpanded(false)} />}
-      {previewSheet}
     </>
   )
 }

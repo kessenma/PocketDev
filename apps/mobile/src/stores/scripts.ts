@@ -24,7 +24,7 @@ interface ScriptsState {
 
   fetchScripts: () => Promise<void>
   runScript: (packagePath: string, scriptName: string) => void
-  runCommand: (packagePath: string, label: string, command: string) => void
+  runCommand: (packagePath: string, label: string, command: string, useRootCwd?: boolean) => void
   stopScript: (key: string) => void
   dismissScript: (key: string) => void
   selectPackage: (index: number) => void
@@ -41,8 +41,9 @@ const PORT_PATTERNS = [
 ]
 
 function detectPort(line: string): number | null {
+  const stripped = line.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
   for (const pattern of PORT_PATTERNS) {
-    const match = line.match(pattern)
+    const match = stripped.match(pattern)
     if (match) {
       const port = Number(match[1])
       if (port > 0 && port < 65536) return port
@@ -103,12 +104,12 @@ export const useScriptsStore = create<ScriptsState>((set, get) => ({
     set({ runningScripts: next })
   },
 
-  runCommand: (packagePath: string, label: string, command: string) => {
+  runCommand: (packagePath: string, label: string, command: string, useRootCwd?: boolean) => {
     const { runningScripts } = get()
     const rootPath = useFilesStore.getState().rootPath
     if (!rootPath) return
 
-    const cwd = packagePath === '.' ? rootPath : `${rootPath}/${packagePath}`
+    const cwd = (packagePath === '.' || useRootCwd) ? rootPath : `${rootPath}/${packagePath}`
     useTaskStore.getState().startTask(command, 'shell', cwd)
 
     const key = scriptKey(packagePath, label)

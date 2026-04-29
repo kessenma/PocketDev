@@ -19,8 +19,8 @@ function getBodyFontFamily() {
 
 export function getMonoFontFamily() {
   return Platform.select({
-    ios: 'Menlo',
-    android: 'monospace',
+    ios: 'GeistMono',
+    android: 'GeistMono',
     default: fontFamilyTokens.mono,
   })
 }
@@ -80,5 +80,12 @@ export const typeStyles = {
     fontFamily: getMonoFontFamily(),
     fontSize: 13,
     lineHeight: 20,
+  } satisfies TextStyle,
+  monoLabel: {
+    fontFamily: getMonoFontFamily(),
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   } satisfies TextStyle,
 } as const

@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   stashButtonText: {
-    ...typeStyles.sectionTitle,
+    ...typeStyles.monoLabel,
   },
   stashRow: {
     borderRadius: borderRadius.lg,
@@ -192,6 +192,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   actionButtonText: {
-    ...typeStyles.sectionTitle,
+    ...typeStyles.monoLabel,
   },
 })

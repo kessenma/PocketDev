@@ -31,6 +31,11 @@ export default function RunningScriptsSheet({ onDismiss }: Props) {
     sheetRef.current?.present()
   }, [])
 
+  async function handlePreview(url: string) {
+    void openPreview(url)
+    sheetRef.current?.dismiss()
+  }
+
   const entries = Array.from(runningScripts.entries()).filter(
     ([, s]) => s.status === 'starting' || s.status === 'running',
   )
@@ -68,7 +73,7 @@ export default function RunningScriptsSheet({ onDismiss }: Props) {
               script={script}
               lastLines={getLastLines(taskLogs, script.taskId, 3)}
               onStop={stopScript}
-              onPreview={openPreview}
+              onPreview={handlePreview}
             />
           ))}
         </ScrollView>

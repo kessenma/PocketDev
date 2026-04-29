@@ -11,22 +11,16 @@
 		13B07FBC1A68108700A75B9A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		249DBA7F80174DE289FB1FA2 /* Stardom-Regular.woff in Resources */ = {isa = PBXBuildFile; fileRef = 4187FDB1A5B5420CB6A41868 /* Stardom-Regular.woff */; };
-		255B803B3B06420082347D0D /* Wagon-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D1EC55D71A2E4A9383B73624 /* Wagon-Bold.ttf */; };
-		29FCBE4AA77948C389EF4381 /* durer-webfont.woff2 in Resources */ = {isa = PBXBuildFile; fileRef = F95B3F9B8D4C4E2FBB857D60 /* durer-webfont.woff2 */; };
 		2B2EE212DD694D70A4A0BA28 /* Britney-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 328E2C9BA3A9415FAC535C83 /* Britney-Variable.ttf */; };
 		2F7E8D52D5ADDB542114DADA /* APNsDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43785ABADA529FC94AEAE66E /* APNsDiagnostics.swift */; };
 		34473C10288149F9931DCF6A /* Stardom-Regular.woff2 in Resources */ = {isa = PBXBuildFile; fileRef = D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */; };
 		43843C6C0A3D4EEB84FAA56E /* Geist-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 144A5103BF9F43CFB122C9C2 /* Geist-VariableFont_wght.ttf */; };
-		4475FD285BDB45CB8B2757BC /* Wagon-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D640F6C7D5084852A22B0C94 /* Wagon-ExtraLight.ttf */; };
 		4843F800C5BF4F8CBA5727B7 /* GeistMono-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5890320FA4FE471A9D8FEEE3 /* GeistMono-VariableFont_wght.ttf */; };
-		644F167631F54A1485951C6C /* durer-webfont.woff in Resources */ = {isa = PBXBuildFile; fileRef = 80B707CD3CB04025A48DEDAC /* durer-webfont.woff */; };
-		7535B1DDBC63444AAEAD7B40 /* Wagon-ExtraLightItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = AF183DAFF16D4D08A8234817 /* Wagon-ExtraLightItalic.ttf */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		8BFA167299424B5C88BDC487 /* fonts.css in Resources */ = {isa = PBXBuildFile; fileRef = CFF5172DCB9B42CAA7167185 /* fonts.css */; };
 		AA9A98A402804DB8BC70B196 /* Stardom-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F0993BD833A3416CA6746F85 /* Stardom-Regular.ttf */; };
 		CE4A0578CB21FFB8AAA9EECD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		D56BCF8989881C0910DF6E6A /* APNsDiagnostics.m in Sources */ = {isa = PBXBuildFile; fileRef = 5E6A328BC4176242AC156ADB /* APNsDiagnostics.m */; };
-		FC8F128F2F28426B89D1B569 /* Durer.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8F6F8C3242B14396BAB16591 /* Durer.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,18 +38,12 @@
 		5890320FA4FE471A9D8FEEE3 /* GeistMono-VariableFont_wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "GeistMono-VariableFont_wght.ttf"; path = "../../../packages/shared/assets/fonts/GeistMono-VariableFont_wght.ttf"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-Mobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Mobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E6A328BC4176242AC156ADB /* APNsDiagnostics.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = APNsDiagnostics.m; path = Mobile/APNsDiagnostics.m; sourceTree = "<group>"; };
-		80B707CD3CB04025A48DEDAC /* durer-webfont.woff */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "durer-webfont.woff"; path = "../../../packages/shared/assets/fonts/durer-webfont.woff"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Mobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8A0682A22F8E059C00ACCB38 /* Mobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = Mobile.entitlements; path = Mobile/Mobile.entitlements; sourceTree = "<group>"; };
-		8F6F8C3242B14396BAB16591 /* Durer.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Durer.ttf; path = ../../../packages/shared/assets/fonts/Durer.ttf; sourceTree = "<group>"; };
-		AF183DAFF16D4D08A8234817 /* Wagon-ExtraLightItalic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Wagon-ExtraLightItalic.ttf"; path = "../../../packages/shared/assets/fonts/Wagon-ExtraLightItalic.ttf"; sourceTree = "<group>"; };
 		CFF5172DCB9B42CAA7167185 /* fonts.css */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = fonts.css; path = ../../../packages/shared/assets/fonts/fonts.css; sourceTree = "<group>"; };
-		D1EC55D71A2E4A9383B73624 /* Wagon-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Wagon-Bold.ttf"; path = "../../../packages/shared/assets/fonts/Wagon-Bold.ttf"; sourceTree = "<group>"; };
-		D640F6C7D5084852A22B0C94 /* Wagon-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Wagon-ExtraLight.ttf"; path = "../../../packages/shared/assets/fonts/Wagon-ExtraLight.ttf"; sourceTree = "<group>"; };
 		D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Stardom-Regular.woff2"; path = "../../../packages/shared/assets/fonts/Stardom-Regular.woff2"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F0993BD833A3416CA6746F85 /* Stardom-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Stardom-Regular.ttf"; path = "../../../packages/shared/assets/fonts/Stardom-Regular.ttf"; sourceTree = "<group>"; };
-		F95B3F9B8D4C4E2FBB857D60 /* durer-webfont.woff2 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "durer-webfont.woff2"; path = "../../../packages/shared/assets/fonts/durer-webfont.woff2"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,18 +116,12 @@
 			isa = PBXGroup;
 			children = (
 				144A5103BF9F43CFB122C9C2 /* Geist-VariableFont_wght.ttf */,
-				D640F6C7D5084852A22B0C94 /* Wagon-ExtraLight.ttf */,
 				5890320FA4FE471A9D8FEEE3 /* GeistMono-VariableFont_wght.ttf */,
 				328E2C9BA3A9415FAC535C83 /* Britney-Variable.ttf */,
 				F0993BD833A3416CA6746F85 /* Stardom-Regular.ttf */,
-				AF183DAFF16D4D08A8234817 /* Wagon-ExtraLightItalic.ttf */,
-				D1EC55D71A2E4A9383B73624 /* Wagon-Bold.ttf */,
-				8F6F8C3242B14396BAB16591 /* Durer.ttf */,
 				4187FDB1A5B5420CB6A41868 /* Stardom-Regular.woff */,
 				D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */,
-				80B707CD3CB04025A48DEDAC /* durer-webfont.woff */,
 				CFF5172DCB9B42CAA7167185 /* fonts.css */,
-				F95B3F9B8D4C4E2FBB857D60 /* durer-webfont.woff2 */,
 			);
 			name = Resources;
 			path = "";
@@ -218,18 +200,12 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				CE4A0578CB21FFB8AAA9EECD /* PrivacyInfo.xcprivacy in Resources */,
 				43843C6C0A3D4EEB84FAA56E /* Geist-VariableFont_wght.ttf in Resources */,
-				4475FD285BDB45CB8B2757BC /* Wagon-ExtraLight.ttf in Resources */,
 				4843F800C5BF4F8CBA5727B7 /* GeistMono-VariableFont_wght.ttf in Resources */,
 				2B2EE212DD694D70A4A0BA28 /* Britney-Variable.ttf in Resources */,
 				AA9A98A402804DB8BC70B196 /* Stardom-Regular.ttf in Resources */,
-				7535B1DDBC63444AAEAD7B40 /* Wagon-ExtraLightItalic.ttf in Resources */,
-				255B803B3B06420082347D0D /* Wagon-Bold.ttf in Resources */,
-				FC8F128F2F28426B89D1B569 /* Durer.ttf in Resources */,
 				249DBA7F80174DE289FB1FA2 /* Stardom-Regular.woff in Resources */,
 				34473C10288149F9931DCF6A /* Stardom-Regular.woff2 in Resources */,
-				644F167631F54A1485951C6C /* durer-webfont.woff in Resources */,
 				8BFA167299424B5C88BDC487 /* fonts.css in Resources */,
-				29FCBE4AA77948C389EF4381 /* durer-webfont.woff2 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -331,7 +307,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Mobile/Mobile.entitlements;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = RHPLRY9X9P;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Mobile/Info.plist;
@@ -340,7 +316,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.12;
+				MARKETING_VERSION = 1.0.13;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -363,7 +339,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Mobile/Mobile.entitlements;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = RHPLRY9X9P;
 				INFOPLIST_FILE = Mobile/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -371,7 +347,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.12;
+				MARKETING_VERSION = 1.0.13;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",

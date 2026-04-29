@@ -12,8 +12,10 @@ import { useFilesStore } from '../../stores/files'
 import { useGitStore } from '../../stores/git'
 import { useProjectsStore } from '../../stores/projects'
 import { useScriptsStore } from '../../stores/scripts'
+import { usePreviewStore } from '../../stores/preview'
 import AdaptiveShell from '../layout/AdaptiveShell'
 import RunningScriptsSheet from '../scripts/RunningScriptsSheet'
+import ServerWebBrowserSheet from '../browser/ServerWebBrowserSheet'
 import SwipeablePager from '../shared/SwipeablePager'
 import CodeBrowseTab from './code-browse/CodeBrowseTab'
 import GitTab from './git/GitTab'
@@ -34,6 +36,11 @@ export default function CodeScreenShell({ navigation }: Props) {
   const refreshGit = useGitStore((state) => state.refresh)
   const refreshProjects = useProjectsStore((state) => state.refresh)
   const [showRunningScripts, setShowRunningScripts] = useState(false)
+  const previewVisible = usePreviewStore((s) => s.visible)
+  const previewProxiedUrl = usePreviewStore((s) => s.proxiedUrl)
+  const closePreview = usePreviewStore((s) => s.closePreview)
+  const markPreviewLoaded = usePreviewStore((s) => s.markLoaded)
+  const markPreviewFailed = usePreviewStore((s) => s.markFailed)
   const scrollY = React.useRef(new Animated.Value(0)).current
   const runningCount = useScriptsStore((s) => {
     let count = 0
@@ -102,6 +109,17 @@ export default function CodeScreenShell({ navigation }: Props) {
       ) : null}
 
       {showRunningScripts && <RunningScriptsSheet onDismiss={() => setShowRunningScripts(false)} />}
+
+      {previewVisible && previewProxiedUrl ? (
+        <ServerWebBrowserSheet
+          title="Preview"
+          initialUrl={previewProxiedUrl}
+          onDismiss={closePreview}
+          onLoadSuccess={markPreviewLoaded}
+          onLoadFailure={markPreviewFailed}
+          errorHint="Make sure the dev server is running on the paired machine."
+        />
+      ) : null}
     </>
   )
 }

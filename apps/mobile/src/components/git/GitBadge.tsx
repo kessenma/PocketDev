@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   text: {
-    ...typeStyles.sectionTitle,
+    ...typeStyles.monoLabel,
   },
 })

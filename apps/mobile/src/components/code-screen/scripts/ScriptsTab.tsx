@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { Ghost, Terminal, Wrench } from 'lucide-react-native'
+import { SportShoe, Terminal, Wrench } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { usePreviewStore } from '../../../stores/preview'
@@ -8,8 +8,8 @@ import { useScriptsStore } from '../../../stores/scripts'
 import { useTaskStore } from '../../../stores/tasks'
 import PackageSelector from '../../scripts/PackageSelector'
 import ScriptCard from '../../scripts/ScriptCard'
-import { CATEGORY_LABELS, categorizeScripts, getSuggestedActions, groupByCategory } from '../../scripts/model'
-import type { CategorizedScript, ScriptCategory } from '../../scripts/model'
+import { CATEGORY_LABELS, categorizeScripts, getSuggestedActions, getWorkspaceInstallActions, groupByCategory } from '../../scripts/model'
+import type { CategorizedScript, MonorepoContext, ScriptCategory } from '../../scripts/model'
 import CodeScreenHeader from '../navigation/CodeScreenHeader'
 import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
@@ -20,7 +20,7 @@ type ScriptsView = 'scripts' | 'suggested' | 'running'
 const VIEW_OPTIONS: readonly CodeSubTabOption<ScriptsView>[] = [
   { value: 'scripts', label: 'Scripts', icon: Terminal },
   { value: 'suggested', label: 'Suggested', icon: Wrench },
-  { value: 'running', label: 'Running', icon: Ghost },
+  { value: 'running', label: 'Running', icon: SportShoe },
 ]
 
 export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
@@ -57,10 +57,21 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
     return groupByCategory(categorizeScripts(selectedPkg.scripts))
   }, [selectedPkg])
 
+  const isMonorepo = packages.length > 1
+
   const suggestedActions = useMemo(() => {
     if (!selectedPkg) return []
-    return getSuggestedActions(selectedPkg.packageManager)
-  }, [selectedPkg])
+    if (isMonorepo && selectedPkg.path === '.') {
+      const rootActions = getSuggestedActions(selectedPkg.packageManager)
+      const workspacePkgs = packages.filter((p) => p.path !== '.')
+      return [...rootActions, ...getWorkspaceInstallActions(selectedPkg.packageManager, workspacePkgs)]
+    }
+    const monorepo: MonorepoContext | undefined =
+      isMonorepo && selectedPkg.path !== '.'
+        ? { packageName: selectedPkg.name, packagePath: selectedPkg.path }
+        : undefined
+    return getSuggestedActions(selectedPkg.packageManager, monorepo)
+  }, [selectedPkg, isMonorepo, packages])
 
   const runningEntries = useMemo(
     () => Array.from(runningScripts.entries()),
@@ -148,7 +159,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
                     status={running?.status ?? null}
                     detectedPort={running?.detectedPort ?? null}
                     outputLines={getOutputLines(running?.taskId)}
-                    onRun={() => runCommand(selectedPkg!.path, action.id, action.resolvedCommand)}
+                    onRun={() => runCommand(selectedPkg!.path, action.id, action.resolvedCommand, action.useRootCwd)}
                     onStop={() => stopScript(key)}
                     onDismiss={() => dismissScript(key)}
                     onPreview={(port) => openPreview(`http://localhost:${port}`)}
