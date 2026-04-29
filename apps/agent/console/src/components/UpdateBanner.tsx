@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { useConsoleData } from '#/context/ConsoleDataContext'
-import { ArrowUpCircle, Check, ChevronDown, Loader2, TriangleAlert } from 'lucide-react'
+import { ArrowUpCircle, Check, ChevronDown, Loader2, RefreshCw, TriangleAlert } from 'lucide-react'
 
 export function UpdateBanner() {
   const { agentVersion: version, updateInfo: update, upgrading, upgradeError, handleUpgrade, handleBetaReinstall, refreshUpdateInfo } = useConsoleData()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const otherVersions = update?.versions.filter((v) => v !== version) ?? []
+  const otherVersions = update?.versions.filter((v) => v.version !== version) ?? []
   const hasVersionHistory = otherVersions.length > 0
   const hasBetas = (update?.betas?.length ?? 0) > 0
   const showVersionPicker = hasVersionHistory || hasBetas
@@ -18,7 +19,7 @@ export function UpdateBanner() {
   const stableSwitchAvailable = runningBeta && !!update?.updateAvailable
 
   // The latest stable version is first in the array
-  const latestStable = update?.versions[0]
+  const latestStable = update?.versions[0]?.version
 
   useEffect(() => {
     if (!dropdownOpen) return
@@ -38,8 +39,8 @@ export function UpdateBanner() {
 
   function versionLabel(v: string) {
     if (!update) return 'Install'
-    const parsed = update.versions.indexOf(v)
-    const currentParsed = update.versions.indexOf(version)
+    const parsed = update.versions.findIndex((e) => e.version === v)
+    const currentParsed = update.versions.findIndex((e) => e.version === version)
     if (v === version) return 'Current'
     if (currentParsed === -1) return 'Switch'
     if (parsed < currentParsed) return 'Rollback'
@@ -49,6 +50,16 @@ export function UpdateBanner() {
   function handleVersionSelect(targetVersion: string) {
     setDropdownOpen(false)
     void handleUpgrade(targetVersion)
+  }
+
+  async function handleHardRefresh() {
+    setRefreshing(true)
+    await refreshUpdateInfo()
+    setRefreshing(false)
+  }
+
+  function formatDate(iso: string) {
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
   return (
@@ -114,9 +125,19 @@ export function UpdateBanner() {
                 {dropdownOpen && (
                   <div className="absolute right-0 top-full z-[200] mt-1.5 w-72 rounded-xl border border-border bg-card shadow-xl">
                     {/* Currently installed header */}
-                    <div className="border-b border-border px-4 py-3">
-                      <p className="text-xs text-foreground/50">Currently installed</p>
-                      <p className="font-mono text-sm font-semibold text-foreground">{version}</p>
+                    <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                      <div>
+                        <p className="text-xs text-foreground/50">Currently installed</p>
+                        <p className="font-mono text-sm font-semibold text-foreground">{version}</p>
+                      </div>
+                      <button
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-foreground/40 transition-colors hover:bg-secondary/60 hover:text-foreground disabled:opacity-30"
+                        onClick={handleHardRefresh}
+                        disabled={refreshing}
+                        title="Force refresh version list"
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                      </button>
                     </div>
 
                     {/* Stable versions */}
@@ -126,7 +147,8 @@ export function UpdateBanner() {
                           <p className="text-[10px] font-semibold uppercase tracking-widest text-foreground/40">Stable Releases</p>
                         </div>
                         <div className="max-h-48 overflow-y-auto pb-1">
-                          {update.versions.map((v) => {
+                          {update.versions.map((entry) => {
+                            const v = entry.version
                             const label = versionLabel(v)
                             const isCurrent = v === version
                             const isLatest = v === latestStable
@@ -140,7 +162,10 @@ export function UpdateBanner() {
                                 <div className="flex h-4 w-4 shrink-0 items-center justify-center">
                                   {isCurrent && <Check className="h-3.5 w-3.5 text-[var(--bauhaus-yellow)]" />}
                                 </div>
-                                <span className="flex-1 font-mono text-sm">v{v}</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="block font-mono text-sm">v{v}</span>
+                                  <span className="text-[10px] text-foreground/40">{formatDate(entry.publishedAt)}</span>
+                                </div>
                                 {isLatest && !isCurrent && (
                                   <span className="text-[10px] text-foreground/40">(latest)</span>
                                 )}
@@ -188,9 +213,7 @@ export function UpdateBanner() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <span className="block truncate font-mono text-sm">{beta.version}</span>
-                                  <span className="text-[10px] text-foreground/40">
-                                    {new Date(beta.publishedAt).toLocaleDateString()}
-                                  </span>
+                                  <span className="text-[10px] text-foreground/40">{formatDate(beta.publishedAt)}</span>
                                 </div>
                                 {!isCurrent && (
                                   <span className="text-xs font-medium text-[var(--bauhaus-yellow)]">

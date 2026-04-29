@@ -18,6 +18,7 @@ interface GithubRelease {
 
 interface StableEntry {
   version: string
+  publishedAt: string
   assetApiUrl: string   // https://api.github.com/repos/.../releases/assets/{id}
   pinnedApiUrl: string
 }
@@ -80,6 +81,7 @@ async function fetchFromGitHub(): Promise<CacheData> {
     .slice(0, 10)
     .map((r) => ({
       version: r.tag_name.replace(/^v/, ''),
+      publishedAt: r.published_at,
       assetApiUrl: extractBundleApiUrl(r) ?? '',
       pinnedApiUrl: extractPinnedApiUrl(r) ?? '',
     }))
@@ -114,8 +116,8 @@ async function fetchFromGitHub(): Promise<CacheData> {
   return { latest, stableVersions, betas, fetchedAt: Date.now() }
 }
 
-async function getCache(): Promise<CacheData | null> {
-  if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) return cache
+async function getCache(force = false): Promise<CacheData | null> {
+  if (!force && cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) return cache
   try {
     cache = await fetchFromGitHub()
     return cache
@@ -155,8 +157,9 @@ async function proxyAsset(assetApiUrl: string, filename: string): Promise<Respon
   })
 }
 
-export async function handleVersionCheck(): Promise<Response> {
-  const result = await getCache()
+export async function handleVersionCheck(request?: Request): Promise<Response> {
+  const force = request ? new URL(request.url).searchParams.has('force') : false
+  const result = await getCache(force)
   if (!result) {
     return new Response(JSON.stringify({ error: 'Version info unavailable — GitHub API unreachable' }), {
       status: 503,
@@ -166,13 +169,13 @@ export async function handleVersionCheck(): Promise<Response> {
   return Response.json(
     {
       version: result.latest.version,
-      versions: result.stableVersions.map((r) => r.version),
+      versions: result.stableVersions.map((r) => ({ version: r.version, publishedAt: r.publishedAt })),
       betas: result.betas.length
         ? result.betas.map((b) => ({ version: b.version, publishedAt: b.publishedAt }))
         : undefined,
       changelog_url: 'https://pocketdev.run/changelog',
     },
-    { headers: { 'Cache-Control': 'public, max-age=300' } },
+    { headers: { 'Cache-Control': force ? 'no-store' : 'public, max-age=300' } },
   )
 }
 

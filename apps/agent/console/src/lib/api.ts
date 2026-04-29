@@ -46,12 +46,17 @@ export interface BetaInfo {
   publishedAt: string
 }
 
+export interface StableVersionInfo {
+  version: string
+  publishedAt: string
+}
+
 export interface UpdateInfo {
   current: string
   latest: string
   updateAvailable: boolean
   changelogUrl: string
-  versions: string[]
+  versions: StableVersionInfo[]
   betas?: BetaInfo[]
 }
 

@@ -1151,7 +1151,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       return { error: 'Unauthorized' }
     }
     clearVersionCache()
-    const update = await checkForUpdate()
+    const update = await checkForUpdate(true)
     return { update }
   })
 

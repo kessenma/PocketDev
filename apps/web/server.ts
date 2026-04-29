@@ -57,7 +57,7 @@ async function start() {
 
       // Agent version check
       if (url.pathname === '/agent/version') {
-        return await handleVersionCheck()
+        return await handleVersionCheck(req)
       }
 
       // Serve agent bundle (latest, pinned version, or nightly)

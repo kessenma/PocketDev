@@ -12,12 +12,17 @@ interface BetaInfo {
   publishedAt: string
 }
 
+export interface StableVersionInfo {
+  version: string
+  publishedAt: string
+}
+
 export interface VersionCheckResult {
   current: string
   latest: string
   updateAvailable: boolean
   changelogUrl: string
-  versions: string[]
+  versions: StableVersionInfo[]
   betas?: BetaInfo[]
 }
 
@@ -67,20 +72,21 @@ function isNewer(a: string, b: string): boolean {
   return false
 }
 
-export async function checkForUpdate(): Promise<VersionCheckResult | null> {
+export async function checkForUpdate(force = false): Promise<VersionCheckResult | null> {
   const now = Date.now()
 
-  if (cachedCheck && now - cachedCheck.checkedAt < CACHE_TTL_MS) {
+  if (!force && cachedCheck && now - cachedCheck.checkedAt < CACHE_TTL_MS) {
     return cachedCheck.result
   }
 
   try {
-    const res = await fetch(UPDATE_CHECK_URL, { signal: AbortSignal.timeout(10_000) })
+    const url = force ? `${UPDATE_CHECK_URL}?force=1` : UPDATE_CHECK_URL
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
     if (!res.ok) return cachedCheck?.result ?? null
 
     const data = (await res.json()) as {
       version: string
-      versions: string[]
+      versions: StableVersionInfo[]
       changelog_url: string
       betas?: BetaInfo[]
     }
