@@ -5,7 +5,7 @@
   "scripts": {
     "kill": "node ../../scripts/kill-agent-port.js",
     "dev": "bun --watch src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun --external node-pty-prebuilt-multiarch",
+    "build": "bun build src/index.ts --outdir dist --target bun --external node-pty",
     "test": "bun test",
     "check-types": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
@@ -22,6 +22,6 @@
     "@simplewebauthn/server": "^13.2.2",
     "drizzle-orm": "^0.45.1",
     "elysia": "^1.4.28",
-    "node-pty-prebuilt-multiarch": "^0.10.0"
+    "node-pty": "^1.1.0"
   }
 }

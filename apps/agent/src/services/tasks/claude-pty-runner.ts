@@ -16,7 +16,7 @@
  * question tracking, or any broadcast logic — those stay in ManagedAgentProcess.
  */
 
-import type { IPty } from 'node-pty-prebuilt-multiarch'
+import type { IPty } from 'node-pty'
 
 export interface ClaudePtyOptions {
   cols: number
@@ -42,16 +42,16 @@ export class ClaudePtyRunner {
 
   /**
    * Spawn the given bash script inside a real PTY.
-   * The dynamic import keeps node-pty-prebuilt-multiarch external in the bun bundle
-   * (requires --external node-pty-prebuilt-multiarch in bun build).
+   * The dynamic import keeps node-pty external in the bun bundle
+   * (requires --external node-pty in bun build).
    */
   async spawn(scriptPath: string, opts: ClaudePtyOptions): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodePty = (await import('node-pty-prebuilt-multiarch')) as any
+    const nodePty = (await import('node-pty')) as any
     // node-pty may export spawn as default or as named export depending on version
     const spawnFn = nodePty.spawn ?? nodePty.default?.spawn
     if (typeof spawnFn !== 'function') {
-      throw new Error('[claude-pty] node-pty-prebuilt-multiarch did not export a spawn function')
+      throw new Error('[claude-pty] node-pty did not export a spawn function')
     }
 
     this.pty = spawnFn('bash', [scriptPath], {
