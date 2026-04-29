@@ -48,7 +48,7 @@ export function LoginPage() {
 
     try {
       await login(email, password)
-      navigate('/console', { replace: true })
+      navigate('/console/tasks', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -157,7 +157,7 @@ export function LoginPage() {
                       or
                     </span>
                   </div>
-                  <PasskeyButton onSuccess={() => navigate('/console', { replace: true })} />
+                  <PasskeyButton onSuccess={() => navigate('/console/tasks', { replace: true })} />
                 </>
               )}
             </CardContent>
