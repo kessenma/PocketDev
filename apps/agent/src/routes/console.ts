@@ -1174,14 +1174,10 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
 
     const targetVersion = body?.version
 
-    // Record the attempt up-front — the agent is about to be killed, so we
-    // can't write this timestamp afterwards. If the upgrade fails the
-    // timestamp is slightly optimistic, which we accept.
-    setLastUpgradeAt(new Date().toISOString())
-    clearVersionCache()
-
     if (body?.beta) {
       // Beta reinstall path: always run install.sh --beta regardless of current version.
+      setLastUpgradeAt(new Date().toISOString())
+      clearVersionCache()
       Bun.spawn(
         [
           'systemd-run', '--quiet', '--no-block',
@@ -1214,6 +1210,10 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
           return { error: 'Downloaded file is not a valid tarball' }
         }
 
+        // Download and validation succeeded — commit to the upgrade now.
+        setLastUpgradeAt(new Date().toISOString())
+        clearVersionCache()
+
         const installDir = process.cwd()
         const rollbackScript = `#!/bin/sh
 sleep 1
@@ -1238,6 +1238,9 @@ systemctl restart pocketdev-agent
     // Latest-version path: delegate to install.sh. systemd-run puts it in its
     // own transient unit, outside our cgroup, so install.sh's `systemctl stop
     // pocketdev-agent` doesn't kill the installer mid-run.
+    // Record upfront — install.sh will kill this process, so we can't do it after.
+    setLastUpgradeAt(new Date().toISOString())
+    clearVersionCache()
     Bun.spawn(
       [
         'systemd-run', '--quiet', '--no-block',
