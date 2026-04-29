@@ -56,7 +56,8 @@ export interface UpdateInfo {
   latest: string
   updateAvailable: boolean
   changelogUrl: string
-  versions: StableVersionInfo[]
+  versions: string[]
+  stableVersions?: StableVersionInfo[]
   betas?: BetaInfo[]
 }
 

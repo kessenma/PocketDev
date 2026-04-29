@@ -169,7 +169,8 @@ export async function handleVersionCheck(request?: Request): Promise<Response> {
   return Response.json(
     {
       version: result.latest.version,
-      versions: result.stableVersions.map((r) => ({ version: r.version, publishedAt: r.publishedAt })),
+      versions: result.stableVersions.map((r) => r.version),
+      stableVersions: result.stableVersions.map((r) => ({ version: r.version, publishedAt: r.publishedAt })),
       betas: result.betas.length
         ? result.betas.map((b) => ({ version: b.version, publishedAt: b.publishedAt }))
         : undefined,

@@ -10,10 +10,9 @@ export function UpdateBanner() {
   const [refreshing, setRefreshing] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Normalize: old agent API returns string[], new returns {version, publishedAt}[]
-  const versions = (update?.versions ?? []).map((v) =>
-    typeof v === 'string' ? { version: v, publishedAt: '' } : v
-  )
+  // Prefer stableVersions (with dates, new agents) over versions (strings, old agents)
+  const versions = update?.stableVersions
+    ?? (update?.versions ?? []).map((v) => ({ version: v, publishedAt: '' }))
 
   const otherVersions = versions.filter((v) => v.version !== version)
   const hasVersionHistory = otherVersions.length > 0

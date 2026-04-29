@@ -22,7 +22,8 @@ export interface VersionCheckResult {
   latest: string
   updateAvailable: boolean
   changelogUrl: string
-  versions: StableVersionInfo[]
+  versions: string[]
+  stableVersions?: StableVersionInfo[]
   betas?: BetaInfo[]
 }
 
@@ -86,7 +87,8 @@ export async function checkForUpdate(force = false): Promise<VersionCheckResult 
 
     const data = (await res.json()) as {
       version: string
-      versions: StableVersionInfo[]
+      versions: string[]
+      stableVersions?: StableVersionInfo[]
       changelog_url: string
       betas?: BetaInfo[]
     }
@@ -98,6 +100,7 @@ export async function checkForUpdate(force = false): Promise<VersionCheckResult 
       updateAvailable: current === 'dev' || current === 'unknown' || isNewer(current, data.version),
       changelogUrl: data.changelog_url,
       versions: data.versions,
+      stableVersions: data.stableVersions,
       betas: data.betas,
     }
 
