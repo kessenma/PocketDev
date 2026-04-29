@@ -1190,49 +1190,41 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     if (targetVersion) {
-      // Versioned rollback path: download a pinned bundle with a timeout so
-      // we never hang the HTTP response on a slow network.
+      // Versioned path: do the download + extract + restart in a detached
+      // systemd transient unit, exactly like the latest-version branch below.
+      // Holding the HTTP response open during the fetch (the previous shape)
+      // surfaced "signal timed out" to the user whenever GitHub's S3 redirect
+      // was slower than the AbortSignal deadline.
+      if (!/^[0-9A-Za-z.\-]+$/.test(targetVersion)) {
+        set.status = 400
+        return { error: 'Invalid version string' }
+      }
+
+      setLastUpgradeAt(new Date().toISOString())
+      clearVersionCache()
+
+      const ts = Date.now()
+      const tmpFile = `/tmp/pocketdev-update-${ts}.tar.gz`
+      const scriptPath = `/tmp/pocketdev-version-${ts}.sh`
+      const installDir = process.cwd()
       const bundleUrl = `https://pocketdev.run/agent/bundle/${targetVersion}`
-      try {
-        const res = await fetch(bundleUrl, { signal: AbortSignal.timeout(15_000) })
-        if (!res.ok) {
-          set.status = 502
-          return { error: `Failed to download bundle: ${res.status} ${res.statusText}` }
-        }
 
-        const tmpFile = `/tmp/pocketdev-update-${Date.now()}.tar.gz`
-        await Bun.write(tmpFile, res)
-
-        const validateProc = Bun.spawn(['tar', '-tzf', tmpFile], { stdout: 'pipe', stderr: 'pipe' })
-        if ((await validateProc.exited) !== 0) {
-          Bun.spawn(['rm', '-f', tmpFile])
-          set.status = 502
-          return { error: 'Downloaded file is not a valid tarball' }
-        }
-
-        // Download and validation succeeded — commit to the upgrade now.
-        setLastUpgradeAt(new Date().toISOString())
-        clearVersionCache()
-
-        const installDir = process.cwd()
-        const rollbackScript = `#!/bin/sh
+      const installScript = `#!/bin/sh
+set -e
 sleep 1
+curl -fSL -o ${tmpFile} '${bundleUrl}'
+tar -tzf ${tmpFile} >/dev/null
 tar -xzf ${tmpFile} -C ${installDir} --strip-components=1
-rm -f ${tmpFile}
+rm -f ${tmpFile} ${scriptPath}
 systemctl restart pocketdev-agent
 `
-        const scriptPath = `/tmp/pocketdev-rollback-${Date.now()}.sh`
-        await Bun.write(scriptPath, rollbackScript)
-        Bun.spawn(
-          ['systemd-run', '--quiet', '--no-block', '--unit', `pocketdev-rollback-${Date.now()}`, '/bin/sh', scriptPath],
-          { stdio: ['ignore', 'ignore', 'ignore'] },
-        )
+      await Bun.write(scriptPath, installScript)
+      Bun.spawn(
+        ['systemd-run', '--quiet', '--no-block', '--unit', `pocketdev-version-${ts}`, '/bin/sh', scriptPath],
+        { stdio: ['ignore', 'ignore', 'ignore'] },
+      )
 
-        return { ok: true, message: `Rolling back to v${targetVersion}. The agent will restart shortly.` }
-      } catch (err) {
-        set.status = 500
-        return { error: err instanceof Error ? err.message : 'Rollback failed' }
-      }
+      return { ok: true, message: `Installing v${targetVersion}. The agent will restart shortly.` }
     }
 
     // Latest-version path: delegate to install.sh. systemd-run puts it in its

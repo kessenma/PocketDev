@@ -76,8 +76,16 @@ async function fetchFromGitHub(): Promise<CacheData> {
 
   const allData: GithubRelease[] = await allRes.json()
 
-  const stableVersions: StableEntry[] = allData
-    .filter((r) => !r.prerelease)
+  // GitHub returns releases by `created_at`, which can diverge from `published_at`
+  // when several workflow runs publish in parallel. Always sort by published_at
+  // so the newest release is index 0 regardless of tag-creation order.
+  const byPublishedDesc = (a: GithubRelease, b: GithubRelease) =>
+    Date.parse(b.published_at) - Date.parse(a.published_at)
+
+  const stables = allData.filter((r) => !r.prerelease).sort(byPublishedDesc)
+  const prereleases = allData.filter((r) => r.prerelease).sort(byPublishedDesc)
+
+  const stableVersions: StableEntry[] = stables
     .slice(0, 10)
     .map((r) => ({
       version: r.tag_name.replace(/^v/, ''),
@@ -87,7 +95,7 @@ async function fetchFromGitHub(): Promise<CacheData> {
     }))
     .filter((r) => r.assetApiUrl)
 
-  const effectiveLatest = allData.find((r) => !r.prerelease) ?? allData.find((r) => r.prerelease)
+  const effectiveLatest = stables[0] ?? prereleases[0]
   const latestApiUrl = effectiveLatest ? extractBundleApiUrl(effectiveLatest) : null
   if (!latestApiUrl || !effectiveLatest) {
     throw new Error('No releases found — publish at least one GitHub Release first')
@@ -95,14 +103,15 @@ async function fetchFromGitHub(): Promise<CacheData> {
 
   const latest: StableEntry = {
     version: effectiveLatest.tag_name.replace(/^v/, ''),
+    publishedAt: effectiveLatest.published_at,
     assetApiUrl: latestApiUrl,
     pinnedApiUrl: extractPinnedApiUrl(effectiveLatest) ?? latestApiUrl,
   }
 
   // Individual beta releases have tags like `nightly-0.2.0-beta.abc1234`.
   // `nightly-latest` is a rolling alias — exclude it so we don't double-count.
-  const betas: BetaInfo[] = allData
-    .filter((r) => r.prerelease && r.tag_name.startsWith('nightly-') && r.tag_name !== 'nightly-latest')
+  const betas: BetaInfo[] = prereleases
+    .filter((r) => r.tag_name.startsWith('nightly-') && r.tag_name !== 'nightly-latest')
     .slice(0, 10)
     .map((r) => {
       const pinnedAsset = r.assets.find((a) => a.name.endsWith('.tar.gz') && a.name !== 'agent-bundle.tar.gz')
