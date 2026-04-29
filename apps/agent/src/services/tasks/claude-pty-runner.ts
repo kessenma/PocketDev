@@ -16,7 +16,7 @@
  * question tracking, or any broadcast logic — those stay in ManagedAgentProcess.
  */
 
-import type { IPty } from 'node-pty-prebuilt-multiarch'
+import type { IPty } from '@homebridge/node-pty-prebuilt-multiarch'
 
 export interface ClaudePtyOptions {
   cols: number
@@ -42,16 +42,18 @@ export class ClaudePtyRunner {
 
   /**
    * Spawn the given bash script inside a real PTY.
-   * The dynamic import keeps node-pty-prebuilt-multiarch external in the bun bundle
-   * (requires --external node-pty-prebuilt-multiarch in bun build).
+   * The dynamic import keeps @homebridge/node-pty-prebuilt-multiarch external in
+   * the bun bundle (requires --external @homebridge/node-pty-prebuilt-multiarch
+   * in bun build). The homebridge fork ships abi137 (Node 24) prebuilts; the
+   * upstream oznu fork stops at abi108 and won't load under Bun 1.3+.
    */
   async spawn(scriptPath: string, opts: ClaudePtyOptions): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodePty = (await import('node-pty-prebuilt-multiarch')) as any
+    const nodePty = (await import('@homebridge/node-pty-prebuilt-multiarch')) as any
     // node-pty may export spawn as default or as named export depending on version
     const spawnFn = nodePty.spawn ?? nodePty.default?.spawn
     if (typeof spawnFn !== 'function') {
-      throw new Error('[claude-pty] node-pty-prebuilt-multiarch did not export a spawn function')
+      throw new Error('[claude-pty] @homebridge/node-pty-prebuilt-multiarch did not export a spawn function')
     }
 
     this.pty = spawnFn('bash', [scriptPath], {
