@@ -112,6 +112,7 @@ export class ManagedProcess {
   private nextRpcId = 1
   private codexExpectedStatus: TaskStatus | null = null
   private codexExpectedExitCode: number | undefined
+  private _killedByUser = false
 
   constructor(opts: ManagedProcessOptions) {
     this.taskId = opts.taskId
@@ -203,7 +204,7 @@ export class ManagedProcess {
       this.questionDetails.clear()
       this.rejectPendingRpcResponses(new Error(`Task ${this.taskId} exited before the RPC conversation completed`))
 
-      const status: TaskStatus = this.codexExpectedStatus ?? (exitCode === 0 ? 'completed' : 'failed')
+      const status: TaskStatus = this.codexExpectedStatus ?? (this._killedByUser ? 'killed' : exitCode === 0 ? 'completed' : 'failed')
       const finalExitCode = this.codexExpectedExitCode ?? exitCode
 
       this.adapter?.onProcessExit?.(finalExitCode)
@@ -252,6 +253,7 @@ export class ManagedProcess {
   kill() {
     if (!this.proc || this._status !== 'running') return
 
+    this._killedByUser = true
     this.proc.kill('SIGTERM')
     this.killTimer = setTimeout(() => {
       if (this._status === 'running' && this.proc) {

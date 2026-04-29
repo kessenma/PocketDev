@@ -48,6 +48,7 @@ export const fontFamilyTokens = {
   // React Native uses PostScript names, not CSS aliases
   displayNative: 'Stardom-Regular',
   bodyNative: 'Geist',
+  monoNative: 'GeistMono',
 } as const
 
 export const semanticTypography = {

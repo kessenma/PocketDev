@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SportShoe, Terminal, Wrench } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
@@ -8,8 +8,9 @@ import { useScriptsStore } from '../../../stores/scripts'
 import { useTaskStore } from '../../../stores/tasks'
 import PackageSelector from '../../scripts/PackageSelector'
 import ScriptCard from '../../scripts/ScriptCard'
-import { CATEGORY_LABELS, categorizeScripts, getSuggestedActions, getWorkspaceInstallActions, groupByCategory } from '../../scripts/model'
+import { CATEGORY_LABELS, categorizeScripts, getGroupedSuggestedActions, getSuggestedActions, groupByCategory } from '../../scripts/model'
 import type { CategorizedScript, MonorepoContext, ScriptCategory } from '../../scripts/model'
+import SuggestedGroupAccordion from '../../scripts/SuggestedGroupAccordion'
 import CodeScreenHeader from '../navigation/CodeScreenHeader'
 import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
@@ -58,25 +59,59 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
   }, [selectedPkg])
 
   const isMonorepo = packages.length > 1
+  const isMonorepoRoot = isMonorepo && (selectedPkg?.path === '.')
+
+  const suggestedGroups = useMemo(() => {
+    if (!selectedPkg || !isMonorepoRoot) return []
+    const workspacePkgs = packages.filter((p) => p.path !== '.')
+    return getGroupedSuggestedActions(selectedPkg.packageManager, workspacePkgs)
+  }, [selectedPkg, isMonorepoRoot, packages])
 
   const suggestedActions = useMemo(() => {
-    if (!selectedPkg) return []
-    if (isMonorepo && selectedPkg.path === '.') {
-      const rootActions = getSuggestedActions(selectedPkg.packageManager)
-      const workspacePkgs = packages.filter((p) => p.path !== '.')
-      return [...rootActions, ...getWorkspaceInstallActions(selectedPkg.packageManager, workspacePkgs)]
-    }
+    if (!selectedPkg || isMonorepoRoot) return []
     const monorepo: MonorepoContext | undefined =
       isMonorepo && selectedPkg.path !== '.'
         ? { packageName: selectedPkg.name, packagePath: selectedPkg.path }
         : undefined
     return getSuggestedActions(selectedPkg.packageManager, monorepo)
-  }, [selectedPkg, isMonorepo, packages])
+  }, [selectedPkg, isMonorepo, isMonorepoRoot])
 
   const runningEntries = useMemo(
     () => Array.from(runningScripts.entries()),
     [runningScripts],
   )
+
+  const scrollY = useRef(new Animated.Value(0)).current
+
+  const pkgHeaderHeight = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [48, 0],
+    extrapolate: 'clamp',
+  })
+
+  const pkgHeaderOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  })
+
+  const controlCompact = scrollY.interpolate({
+    inputRange: [60, 120],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  })
+
+  const headerPadV = scrollY.interpolate({
+    inputRange: [60, 120],
+    outputRange: [spacing[3], spacing[1]],
+    extrapolate: 'clamp',
+  })
+
+  const headerGap = scrollY.interpolate({
+    inputRange: [60, 120],
+    outputRange: [spacing[2], 0],
+    extrapolate: 'clamp',
+  })
 
   const sectionBody = (() => {
     if (isLoading && packages.length === 0) {
@@ -112,7 +147,10 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        onScroll={onScroll}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false, listener: onScroll as any },
+        )}
         scrollEventThrottle={16}
       >
         {activeView === 'scripts' ? (
@@ -146,7 +184,19 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
         ) : null}
 
         {activeView === 'suggested' ? (
-          suggestedActions.length > 0 ? (
+          isMonorepoRoot ? (
+            <View style={styles.scriptList}>
+              {suggestedGroups.map((group) => (
+                <SuggestedGroupAccordion
+                  key={group.id}
+                  group={group}
+                  runningScripts={runningScripts}
+                  onRun={(target) => runCommand(target.packagePath, target.id, target.command, target.useRootCwd)}
+                  onStop={stopScript}
+                />
+              ))}
+            </View>
+          ) : suggestedActions.length > 0 ? (
             <View style={styles.scriptList}>
               {suggestedActions.map((action) => {
                 const key = `${selectedPkg!.path}:${action.id}`
@@ -210,7 +260,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
 
   return (
     <View style={styles.container}>
-      <CodeScreenHeader>
+      <CodeScreenHeader style={{ paddingTop: headerPadV, paddingBottom: headerPadV, gap: headerGap }}>
         {packages.length > 0 ? (
           <PackageSelector
             packages={packages}
@@ -220,15 +270,15 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
         ) : null}
 
         {selectedPkg ? (
-          <View style={[styles.pkgHeader, { borderBottomColor: colors.border }]}>
+          <Animated.View style={[styles.pkgHeader, { borderBottomColor: colors.border, height: pkgHeaderHeight, opacity: pkgHeaderOpacity, overflow: 'hidden' }]}>
             <Text style={[styles.pkgName, { color: colors.text }]}>{selectedPkg.name}</Text>
             <Text style={[styles.pkgMeta, { color: colors.textTertiary }]}>
               {selectedPkg.packageManager} · {Object.keys(selectedPkg.scripts).length} scripts
             </Text>
-          </View>
+          </Animated.View>
         ) : null}
 
-        <CodeSubTabNavigator value={activeView} options={VIEW_OPTIONS} onChange={setActiveView} />
+        <CodeSubTabNavigator value={activeView} options={VIEW_OPTIONS} onChange={setActiveView} compact={controlCompact} />
       </CodeScreenHeader>
 
       <View style={styles.content}>{sectionBody}</View>

@@ -159,7 +159,7 @@ export default function PromptFilterSheet({ prompt, onDismiss, onSearch }: Props
   }
 
   return (
-    <TrueSheet ref={sheetRef} detents={['auto', 1]} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={onDismiss}>
+    <TrueSheet ref={sheetRef} detents={[0.5, 1]} backgroundColor={colors.panel} cornerRadius={24} onDidDismiss={onDismiss}>
       <View>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>

@@ -2,92 +2,108 @@
 
 ## Overview
 
-PocketDev runs AI agent CLIs in two different ways depending on whether they are interactive TUI tools or structured stdio tools:
+PocketDev runs AI agent CLIs in three ways depending on the provider:
 
 | Transport | Agents | Class |
 |---|---|---|
-| **node-pty** | Claude, Copilot, Minimax | `ManagedAgentProcess` |
+| **node-pty** | Claude | `ManagedAgentProcess` |
+| **tmux** | Copilot, Opencode/Minimax | `ManagedAgentProcess` |
 | **Bun.spawn stdio** | Codex, Shell | `ManagedProcess` |
 
-This document covers the node-pty path in detail. For the Bun.spawn path see [task-system.md](./task-system.md).
+This document covers `ManagedAgentProcess` in detail. For the Bun.spawn path see [task-system.md](./task-system.md).
 
-## Why node-pty for TUI Agents
+## Why node-pty for Claude
 
-Claude Code, GitHub Copilot CLI, and opencode (Minimax) are interactive terminal applications — they render TUI menus, detect terminal capabilities, and behave differently depending on whether they have a real PTY. Running them with piped stdin/stdout breaks their TUI rendering. node-pty gives them a full PTY so they behave exactly as they do when run interactively in a terminal.
+Claude Code is an interactive terminal application — it renders TUI menus, detects terminal capabilities, and behaves differently depending on whether it has a real PTY. Running it with piped stdin/stdout breaks TUI rendering. node-pty gives it a full PTY so it behaves exactly as it does when run interactively in a terminal.
+
+`node-pty-prebuilt-multiarch` is a required dependency (not optional) in `apps/agent/package.json`. If it fails to load, the task fails immediately with a clear error rather than silently falling back to another transport.
+
+## Why tmux for Copilot and Opencode
+
+Copilot and Opencode also need a PTY, but their output is consumed differently:
+- **Copilot**: pane capture polling reads the visible TUI for completion detection
+- **Opencode**: redirects structured JSON to a file (`--format json > outputFile`) and exits; tmux provides the PTY but output is read from the file, not the pane
 
 ## ManagedAgentProcess
 
-**Source**: `apps/agent/src/services/tasks/managed-agent-process/`
+**Source**: `apps/agent/src/services/tasks/managed-agent-process.ts`
 
-### Key components
+### Key components (all in one file)
 
-| File | Purpose |
+| Export / Function | Purpose |
 |---|---|
-| `managed-agent-process.ts` | Main class: PTY lifecycle, debounced snapshots, hooks polling |
-| `pty-runner.ts` | Thin node-pty wrapper (`PtyRunner`) |
-| `types.ts` | `AgentProviderConfig`, `SetupCtx`, `SetupResult`, `PaneCtx`, `PaneAction`, `FinishCtx` |
-| `claude-provider.ts` | `claudeProviderConfig()` |
-| `copilot-provider.ts` | `copilotProviderConfig()` |
-| `minimax-provider.ts` | `minimaxProviderConfig()` |
-| `utils.ts` | `normalizePane`, `shellEscape`, `exec`, `newUUID` |
-| `hook-events.ts` | `parseHookEvent`, `extractToolDetail`, `extractToolResultPreview` |
-| `pane-activity.ts` | `parsePaneLineToActivity`, `isPaneChromeOnly`, `spinnerKey` |
-| `tui-prompt.ts` | `parseTuiPrompt` — parses `❯ 1. Yes  2. No` menus |
+| `ManagedAgentProcess` | Main class: process lifecycle, debounced snapshots, hooks polling |
+| `ClaudePtyRunner` | Thin node-pty wrapper (`claude-pty-runner.ts`) |
+| `TmuxProviderConfig` | Provider interface: `setup`, `onPaneSnapshot`, `onFinish`, `createAdapter` |
+| `claudeProviderConfig()` | Claude provider: PTY, hooks file, session management |
+| `copilotProviderConfig()` | Copilot provider: tmux pane mode |
+| `opencodeProviderConfig()` | Opencode/Minimax provider: tmux file mode |
+| `normalizePane()` | Strips ANSI, collapses whitespace for TUI snapshot comparison |
+| `parseTuiPrompt()` | Parses `❯ 1. Yes  2. No` menus |
+| `parseHookEvent()` | Parses Claude hook JSONL events |
+| `parsePaneLineToActivity()` | Converts visible TUI lines to `TaskActivity` |
 
-### Execution flow
+### Claude execution flow (node-pty path)
 
 ```
 ManagedAgentProcess.start()
   │
-  ├── provider.setup(ctx)
-  │     └── writes bash script to /tmp/pocketdev-run-{taskId}.sh
-  │         returns { command: scriptPath, hooksFilePath?, tempFiles? }
+  ├── claudeProviderConfig().setup(ctx)
+  │     ├── writes bash script to /tmp/pocketdev-run-{taskId}.sh
+  │     ├── writes hooks settings to /tmp/pocketdev-hooks-{taskId}.json
+  │     ├── creates empty /tmp/pocketdev-events-{taskId}.jsonl
+  │     └── returns { command: scriptPath, hooksFilePath, usePty: true, tempFiles }
   │
-  ├── PtyRunner.spawn(scriptPath, { cols, rows, cwd, env })
+  ├── ClaudePtyRunner.spawn(scriptPath, { cols: 220, rows: 50, cwd, env })
   │     └── node-pty forks a PTY process running the bash script
+  │         (if spawn throws → task fails immediately, no tmux fallback)
   │
-  ├── onData handler fires on each PTY chunk
-  │     ├── sets receivedFirstData = true
-  │     ├── if forwardRawOutput: strip ANSI, emit lines to broadcastOutput
-  │     └── append to ptyBuffer; schedule debounce (150ms)
+  ├── onPtyData handler fires on each PTY chunk
+  │     ├── marks promptSent = true on first byte
+  │     ├── updates lastPtyDataMs (liveness for startup timeout)
+  │     ├── appends to ptyBuffer (capped at 50 KB)
+  │     └── schedules 150ms debounce → processPtySnapshot()
   │
-  ├── debounce fires → processPtySnapshot()
+  ├── processPtySnapshot() (debounced)
   │     ├── normalizePane(ptyBuffer) → cleaned snapshot string
+  │     ├── pollHooksFile() — reads new JSONL from hooksFilePath
   │     └── provider.onPaneSnapshot(snapshot, ctx) → PaneAction
   │           ├── 'continue' — nothing to do
   │           ├── 'complete' — call finish(status)
-  │           ├── 'send' — PtyRunner.writeLine(keys)
+  │           ├── 'send' — ClaudePtyRunner.writeLine(keys)
   │           └── 'question' — register question, broadcast task.question
   │
-  ├── poll() fires every pollIntervalMs
-  │     ├── pollHooksFile() — read new JSONL lines from hooksFilePath (Claude only)
+  ├── poll() fires every 250ms (PTY path: hooks file only, no pane capture)
+  │     ├── pollHooksFile() — reads new JSONL lines from hooksFilePath
   │     │     └── each line → parseHookEvent → hook actions (Stop → finish)
-  │     └── startup timeout check: if !receivedFirstData after startupTimeoutMs → fail
+  │     └── startup timeout: if lastPtyDataMs === 0 after startupTimeoutMs → fail
   │
-  └── onExit handler fires when PTY process exits
+  └── onPtyExit handler fires when PTY process exits
+        ├── cancels debounced snapshot
+        ├── pollHooksFile() one final time (catches Stop written just before exit)
         └── finish(exitCode === 0 ? 'completed' : 'failed')
 ```
 
-### AgentProviderConfig interface
+### TmuxProviderConfig interface
 
 ```typescript
-interface AgentProviderConfig {
+interface TmuxProviderConfig {
   pollIntervalMs: number       // ms between poll() calls
-  startupTimeoutMs: number     // fail if no PTY data received within this time
-  ptyWidth: number
-  ptyHeight: number
-  forwardRawOutput?: boolean   // emit ANSI-stripped PTY lines in real-time
+  panePollEvery: number        // poll ticks between tmux pane captures
+  startupTimeoutMs: number     // fail if no data within this time
+  tmuxWidth: number
+  tmuxHeight: number
 
-  // Write a bash script, return its path + optional hooks config
+  // Build the launch command/script; set usePty: true for node-pty path
   setup(ctx: SetupCtx): Promise<SetupResult>
 
   // Optional: parse structured JSON output into TaskActivity events
   createAdapter?(taskId: string, sink: TaskStreamAdapterSink, writeStdin: (d: string) => void): TaskStreamAdapter
 
-  // Called on each debounced PTY snapshot
+  // Called on each debounced PTY snapshot (or tmux pane capture)
   onPaneSnapshot(snapshot: string, ctx: PaneCtx): Promise<PaneAction> | PaneAction
 
-  // Called after the PTY exits
+  // Called after the process finishes — plan creation, turn recording, etc.
   onFinish?(ctx: FinishCtx, taskId: string): void
 }
 ```
@@ -106,13 +122,15 @@ interface SetupCtx {
 }
 
 interface SetupResult {
-  command: string         // absolute path to the bash script to run
-  hooksFilePath?: string  // JSONL file to poll for hook events (Claude only)
-  tempFiles?: string[]    // deleted 5s after finish
+  command: string           // absolute path to the bash script to run
+  outputFilePath?: string   // if set, poll this file for JSONL output (tmux file mode)
+  hooksFilePath?: string    // if set, poll this file for Claude hook events
+  usePty?: boolean          // if true, spawn via node-pty instead of tmux
+  tempFiles?: string[]      // deleted 5s after finish
 }
 ```
 
-`setup()` always writes a bash script rather than returning a raw command string. This ensures `process.stdout.isTTY` is true inside the script (node-pty provides a real PTY), which is required for interactive TUI rendering.
+`setup()` always writes a bash script rather than returning a raw command string. This ensures `process.stdout.isTTY` is true inside the script, which is required for interactive TUI rendering.
 
 ### PaneCtx
 
@@ -120,25 +138,27 @@ interface SetupResult {
 interface PaneCtx {
   taskId: string
   prompt: string
-  promptSent: boolean        // true after the prompt has been delivered to the PTY
-  lastChangeMs: number       // ms since last PTY data
+  promptSent: boolean        // true after the prompt has been delivered
+  lastChangeMs: number       // ms since last PTY/pane data
   registerQuestion(q, onAnswer): void
   broadcastOutput(line: string): void
-  sendLine(text: string): void      // writes text + newline to PTY
-  sendRaw(bytes: string): void      // writes raw bytes to PTY (ANSI sequences, control chars)
+  sendLine(text: string): void      // writes text + newline to PTY or tmux
+  sendRaw(bytes: string): void      // writes raw bytes (ANSI sequences, control chars)
   sendMenuSelection(n: number): void // Down × n, then Enter
 }
 ```
 
 ## Claude Provider
 
-**Source**: `managed-agent-process/claude-provider.ts`
+**Source**: `managed-agent-process.ts` — `claudeProviderConfig()`
 
 Claude is the most instrumented provider. Its setup writes three files:
 
 1. **Bash script** (`/tmp/pocketdev-run-{taskId}.sh`) — sets PATH, cds to working dir, runs `claude --permission-mode <mode> --settings <hooksSettings> [--resume|--session-id] [--model] -p <prompt>`
 2. **Hooks settings** (`/tmp/pocketdev-hooks-{taskId}.json`) — registers `PreToolUse`, `PostToolUse`, and `Stop` hooks that append JSONL to the hooks file
 3. **Hooks file** (`/tmp/pocketdev-events-{taskId}.jsonl`) — created empty; appended to by hook commands
+
+Returns `usePty: true` → spawned via `ClaudePtyRunner` (node-pty). If node-pty throws, the task fails immediately.
 
 ### Hooks file polling
 
@@ -166,26 +186,24 @@ The `Stop` hook is the primary completion signal — it fires as soon as Claude 
 
 ## Copilot Provider
 
-**Source**: `managed-agent-process/copilot-provider.ts`
+**Source**: `managed-agent-process.ts` — `copilotProviderConfig()`
 
-Copilot (`gh copilot`) is an interactive TUI. Its `setup()` writes a bash script that runs `gh copilot suggest` or similar. `forwardRawOutput: true` means every ANSI-stripped PTY line is emitted to mobile in real-time.
+Copilot (`gh copilot`) is an interactive TUI. Its `setup()` does not set `usePty: true`, so it runs inside a tmux session. `onPaneSnapshot` polls the visible pane content.
 
 Completion is detected by the pane snapshot: when the ready pattern is visible and the pane has been stable for 10s, `onPaneSnapshot` returns `{ type: 'complete', status: 'completed' }`.
 
 A trust dialog prompt is auto-accepted by sending a Down arrow + Enter if detected in the snapshot.
 
-## Minimax Provider
+## Opencode / Minimax Provider
 
-**Source**: `managed-agent-process/minimax-provider.ts`
+**Source**: `managed-agent-process.ts` — `opencodeProviderConfig()`
 
-Minimax uses `opencode` as the backing CLI. Its `setup()` writes a script running:
+Opencode uses tmux (file mode). Its `setup()` runs:
 ```bash
-opencode run -m <model> --prompt <prompt>
+opencode run --format json [-m <model>] <prompt> > /tmp/pocketdev-opencode-{taskId}.jsonl
 ```
 
-`forwardRawOutput: true` streams output to mobile. `onPaneSnapshot` always returns `{ type: 'continue' }` — completion is handled by `onPtyExit` (the process exits naturally when done).
-
-No structured adapter; no turn recording.
+Output is redirected to a JSONL file polled by the file-mode handler; stderr goes to a separate file. `onPaneSnapshot` always returns `{ type: 'continue' }` — completion is signalled by tmux session exit. The `OpenCodeRunAdapter` normalises events into `TaskActivity` objects.
 
 ## Bun.spawn Agents (Codex, Shell)
 
@@ -193,32 +211,14 @@ Codex and Shell do not need PTY support — Codex uses a clean JSON-RPC protocol
 
 See [task-system.md — ManagedProcess](./task-system.md#managedprocess) for details.
 
-## forwardRawOutput
-
-When `forwardRawOutput: true`, the `onPtyData` handler does extra work before buffering for the debounce:
-
-```
-chunk arrives from PTY
-  │
-  ├── append to forwardRawBuffer
-  ├── split on '\n'
-  ├── for each complete line:
-  │     stripped = normalizePane(line)   // strip ANSI, collapse whitespace
-  │     if stripped: insertTaskLog + broadcastOutput
-  └── keep partial last line in forwardRawBuffer
-```
-
-This gives mobile near-real-time TUI output for providers that don't have structured JSON hooks.
-
 ## Startup Timeout
 
-The poll loop checks `receivedFirstData` on every tick. If it remains false after `startupTimeoutMs` milliseconds:
+### Claude (node-pty path)
+The poll loop checks `lastPtyDataMs` on every tick. If it remains zero after `startupTimeoutMs` milliseconds, the task is marked failed with `[error] Agent startup timed out`.
 
-1. Call `kill()` on the PTY
-2. Set status to `failed`
-3. Broadcast `[error] Agent startup timed out`
-
-This replaces the old tmux `has-session` polling approach with a simpler first-byte check.
+### Copilot / Opencode (tmux path)
+- **File mode**: fail if no bytes written to the output file within `startupTimeoutMs`
+- **Pane mode**: fail if `promptSent` is still false after `startupTimeoutMs`
 
 ## Temp File Cleanup
 

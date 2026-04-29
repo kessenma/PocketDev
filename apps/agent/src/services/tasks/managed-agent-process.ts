@@ -905,8 +905,6 @@ export class ManagedAgentProcess {
     this.hooksFilePath = setupResult.hooksFilePath ?? null
     this.tempFiles = setupResult.tempFiles ?? []
 
-    // Try PTY path for Claude — falls back to tmux if node-pty is not available
-    // (node-pty-prebuilt-multiarch is an optional dependency; may not compile on all systems)
     let useTmux = !setupResult.usePty
     if (setupResult.usePty) {
       this.ptyRunner = new ClaudePtyRunner()
@@ -928,15 +926,16 @@ export class ManagedAgentProcess {
         console.log(`[managed-agent] Started PTY process for task ${this.taskId}`)
         this.broadcastOutput(`[system] Session started — ${permTag}`)
       } catch (err) {
-        // node-pty unavailable (optional dep not compiled) — fall through to tmux
-        console.warn(`[managed-agent] PTY unavailable for task ${this.taskId}, falling back to tmux:`, err)
-        this.ptyRunner = null
-        useTmux = true
+        this.broadcastOutput('[error] Failed to start PTY process — is node-pty-prebuilt-multiarch installed?')
+        console.error(`[managed-agent] PTY spawn failed for task ${this.taskId}:`, err)
+        this.cleanup()
+        this.finish('failed')
+        return
       }
     }
 
     if (useTmux) {
-      // ── Tmux path: Copilot always, Claude fallback when node-pty not available ─
+      // ── Tmux path: Copilot and Opencode (usePty not set) ───────────────────────
       const { exitCode } = await exec(
         `tmux new-session -d -s ${this.tmuxSession} -x ${this.provider.tmuxWidth} -y ${this.provider.tmuxHeight} ${shellEscape(setupResult.command)}`,
       )
@@ -947,9 +946,8 @@ export class ManagedAgentProcess {
         return
       }
 
-      const permTag = this.outputFilePath ? `permission-mode: ${this.mode}` : `model: ${this.model ?? 'default'}`
       console.log(`[managed-agent] Started tmux session ${this.tmuxSession} for task ${this.taskId}`)
-      this.broadcastOutput(`[system] Session started — ${permTag}`)
+      this.broadcastOutput(`[system] Session started — model: ${this.model ?? 'default'}`)
     }
 
     this.schedulePoll()

@@ -5,7 +5,7 @@
 | File | Lines | Purpose |
 |---|---|---|
 | `task-manager.ts` | ~144 | Entry point — routes start/continue/kill to the correct process class |
-| `managed-agent-process.ts` | ~1146 | tmux-based process manager for Claude + Copilot |
+| `managed-agent-process.ts` | ~1146 | Process manager: node-pty for Claude, tmux for Copilot/Opencode |
 | `managed-process.ts` | ~552 | stdio-based process manager for Codex + Shell |
 | `task-stream-adapters.ts` | ~1057 | Protocol parsers: ClaudeTaskStreamAdapter + CodexTaskStreamAdapter |
 | `plan-manager.ts` | ~194 | Plan lifecycle: propose, accept, deny, step updates |
@@ -21,37 +21,43 @@
 
 ## ManagedAgentProcess
 
-tmux-based. Claude uses FILE mode + PANE mode; Copilot uses PANE mode only.
+Provider-agnostic. Claude uses **node-pty** (PTY path); Copilot and Opencode use **tmux**.
 
 **TmuxProviderConfig interface:**
 - `pollIntervalMs` — ms between poll iterations
-- `panePollEvery` — poll ticks between pane captures
+- `panePollEvery` — poll ticks between tmux pane captures (tmux path only)
 - `startupTimeoutMs` — time before aborting if provider never signals ready
-- `tmuxWidth / tmuxHeight` — PTY dimensions
-- `setup(ctx)` — launches the CLI inside tmux; returns `SetupResult`
+- `tmuxWidth / tmuxHeight` — PTY/tmux dimensions
+- `setup(ctx)` — builds the launch script; return `usePty: true` for node-pty path
 - `createAdapter?(ctx)` — returns a `TaskStreamAdapter` for structured output parsing
-- `onPaneSnapshot(snapshot, ctx)` — called on each pane capture; returns `PaneAction`
+- `onPaneSnapshot(snapshot, ctx)` — called on each debounced PTY snapshot or tmux pane capture; returns `PaneAction`
 - `onFinish?(ctx, taskId)` — called when process exits; used to create plans, insert assistant turns
 
-**FILE MODE** (Claude):
-- `setup()` returns `outputFilePath` + `hooksFilePath`
-- Poll loop reads new JSONL bytes from `/tmp/pocketdev-events-{taskId}.jsonl`
-- Feeds each line to `ClaudeTaskStreamAdapter`
+**PTY MODE — node-pty** (Claude):
+- `setup()` returns `hooksFilePath` + `usePty: true`
+- `ClaudePtyRunner` spawns a real PTY via `node-pty-prebuilt-multiarch` (required dep)
+- If node-pty throws → task fails immediately (no tmux fallback)
+- PTY output buffered with 150ms debounce → `processPtySnapshot()` calls `onPaneSnapshot`
+- Poll loop (250ms) reads hooks file for structured events; `onPtyExit` drains hooks file on process exit
+- `onPaneSnapshot()` returns a `PaneAction`:
+  - `continue` — nothing to do
+  - `complete` — provider signalled done; call `finish('completed')`
+  - `send(text)` — write to PTY via `ClaudePtyRunner.writeLine()`
+  - `question(...)` — register a question with the client
+
+**TMUX FILE MODE** (Opencode/Minimax):
+- `setup()` returns `outputFilePath` (redirected JSONL) — no `usePty`
+- tmux session hosts the CLI; output read from file, not pane
 - tmux session exit detected → calls `finish()`
 
-**PANE MODE** (Claude + Copilot):
-- `setup()` may or may not return `outputFilePath`; pane always captured
+**TMUX PANE MODE** (Copilot):
+- `setup()` returns neither `outputFilePath` nor `usePty`
 - `tmux capture-pane -p` polled every `panePollEvery` ticks
-- `onPaneSnapshot()` returns a `PaneAction`:
-  - `continue` — nothing to do this tick
-  - `complete` — provider signalled done; call `finish('completed')`
-  - `send(text)` — send text to pane via `tmux send-keys -l`
-  - `question(prompt, type, options, onAnswer)` — register a question with the client
+- `onPaneSnapshot()` drives all state transitions
 
 **Claude specifics:**
-- 220×50 tmux, 250ms poll, pane polled every 3 ticks (750ms), 120s idle timeout, 60s startup timeout
-- Ready signal: `Claude Code v\d+\.\d+` in pane
-- Prompt sent as single literal keystroke sequence via `tmux send-keys -l`
+- 220×50 PTY, 250ms poll, 120s idle timeout, 60s startup timeout
+- Prompt passed via `-p` at spawn time (bypasses home screen)
 - TUI menu questions detected via `parseTuiPrompt` (parses `❯ 1. Yes  2. No` patterns)
 - Hooks file: `PreToolUse`, `PostToolUse`, `Stop` — each appends a JSONL line; `Stop` fires `finish('completed')`
 - `onFinish`: inserts assistant turn via `insertTaskTurn`, calls `createClaudePlan` if `mode === 'plan'`
@@ -163,7 +169,7 @@ CONTEXT_LIMIT_PATTERN = /context window.*(?:full|limit|approaching|at \d{2,3}%)|
 Fires at most once per task (guarded by `contextLimitWarned` flag). On match:
 1. Broadcasts `task.output`: `[claude] Context window approaching limit`
 2. Emits `task.question` (yes/no): "Claude's context window is nearly full. Run /compact to summarise and free space?"
-3. If user answers `"yes"`, sends `/compact\n` to the tmux session via `tmux send-keys`
+3. If user answers `"yes"`, sends `/compact\n` to the Claude PTY via `ClaudePtyRunner.writeLine()`
 
 ## WebSocket Commands (ws.ts)
 
@@ -171,7 +177,7 @@ Fires at most once per task (guarded by `contextLimitWarned` flag). On match:
 |---|---|---|
 | `task.start` | `startTask()` | |
 | `task.kill` | `killTask()` | |
-| `task.input` | `proc.sendInput()` | Claude: tmux send-keys; Codex: stdin write |
+| `task.input` | `proc.sendInput()` | Claude: PTY write; Copilot: tmux send-keys; Codex: stdin write |
 | `task.answer` | `proc.answerQuestion()` | |
 | `task.continue` | `continueTask()` | Claude/Codex only (requires `sessionId`) |
 | `task.list` | `getTaskList()` | |

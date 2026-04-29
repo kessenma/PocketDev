@@ -338,13 +338,6 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             No closely related files found for this prompt.
           </Text>
         ) : null}
-        {showFilterSheet && (
-          <PromptFilterSheet
-            prompt={prompt}
-            onDismiss={() => setShowFilterSheet(false)}
-            onSearch={(phrase) => handleFindRelatedFiles(phrase)}
-          />
-        )}
 
         {/* ── File Context Picker ── */}
         <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
@@ -548,6 +541,13 @@ export default function NewTaskForm({ onSubmitted }: Props) {
               : 'Start Task'}
         </BauhausButton>
       </View>
+      {showFilterSheet && (
+        <PromptFilterSheet
+          prompt={prompt}
+          onDismiss={() => setShowFilterSheet(false)}
+          onSearch={(phrase) => handleFindRelatedFiles(phrase)}
+        />
+      )}
       {/* ── Model Selector Sheet ── */}
       <Modal
         visible={showModelSheet}

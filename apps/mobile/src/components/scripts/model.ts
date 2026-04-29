@@ -148,27 +148,85 @@ function getWorkspaceActions(pm: string, name: string, path: string): ResolvedAc
   ]
 }
 
-export function getWorkspaceInstallActions(
+export interface ActionTarget {
+  id: string
+  label: string
+  packagePath: string
+  command: string
+  useRootCwd: boolean
+}
+
+export interface ActionGroup {
+  id: string
+  label: string
+  targets: ActionTarget[]
+}
+
+function workspaceCmd(
+  action: 'install' | 'clean-install' | 'outdated' | 'audit',
+  pm: string,
+  name: string,
+  path: string,
+): string {
+  const ref = pm === 'npm' ? path : name
+  const map: Record<string, Record<string, string>> = {
+    install:        { pnpm: `pnpm --filter ${ref} install`,        bun: `bun install --filter ${ref}`,      npm: `npm install --workspace=${ref}`,        yarn: `yarn workspace ${ref} install` },
+    'clean-install':{ pnpm: `pnpm --filter ${ref} install`,        bun: `bun install --filter ${ref}`,      npm: `npm install --workspace=${ref}`,        yarn: `yarn workspace ${ref} install` },
+    outdated:       { pnpm: `pnpm --filter ${ref} outdated`,       bun: `bun outdated --filter ${ref}`,     npm: `npm outdated --workspace=${ref}`,       yarn: `yarn workspace ${ref} outdated` },
+    audit:          { pnpm: `pnpm --filter ${ref} audit`,          bun: `bun audit`,                        npm: `npm audit --workspace=${ref}`,          yarn: `yarn workspace ${ref} audit` },
+  }
+  return map[action]?.[pm] ?? `${pm} ${action}`
+}
+
+export function getGroupedSuggestedActions(
   pm: string,
   workspacePackages: Array<{ name: string; path: string }>,
-): ResolvedAction[] {
-  return workspacePackages.map(({ name, path }) => {
-    const ref = pm === 'npm' ? path : name
-    const cmd = ({
-      pnpm: `pnpm --filter ${ref} install`,
-      bun: `bun install --filter ${ref}`,
-      npm: `npm install --workspace=${ref}`,
-      yarn: `yarn workspace ${ref} install`,
-    } as Record<string, string>)[pm] ?? `${pm} install`
-    return {
-      id: `install:${path}`,
-      label: `Install (${path})`,
-      description: `Install dependencies for ${name}`,
-      command: () => cmd,
-      resolvedCommand: cmd,
+): ActionGroup[] {
+  const wsTargets = (action: 'install' | 'clean-install' | 'outdated' | 'audit'): ActionTarget[] =>
+    workspacePackages.map(({ name, path }) => ({
+      id: `${action}:${path}`,
+      label: path,
+      packagePath: '.',
+      command: action === 'clean-install'
+        ? `rm -rf ${path}/node_modules && ${workspaceCmd('install', pm, name, path)}`
+        : workspaceCmd(action, pm, name, path),
       useRootCwd: false,
-    }
-  })
+    }))
+
+  return [
+    {
+      id: 'install',
+      label: 'Install',
+      targets: [
+        { id: 'install:root', label: 'Root', packagePath: '.', command: `${pm} install`, useRootCwd: false },
+        ...wsTargets('install'),
+      ],
+    },
+    {
+      id: 'clean-install',
+      label: 'Clean Install',
+      targets: [
+        { id: 'clean-install:root', label: 'Root', packagePath: '.', command: `rm -rf node_modules && ${pm} install`, useRootCwd: false },
+        ...wsTargets('clean-install'),
+      ],
+    },
+    {
+      id: 'outdated',
+      label: 'Outdated',
+      targets: [
+        { id: 'outdated:root', label: 'Root', packagePath: '.', command: `${pm} outdated`, useRootCwd: false },
+        ...wsTargets('outdated'),
+      ],
+    },
+    {
+      id: 'audit',
+      label: 'Audit',
+      targets: [
+        { id: 'audit:root', label: 'Root', packagePath: '.', command: pm === 'pnpm' ? 'pnpm audit' : pm === 'yarn' ? 'yarn audit' : `${pm} audit`, useRootCwd: false },
+        ...wsTargets('audit'),
+      ],
+    },
+  ]
 }
 
 export function getSuggestedActions(packageManager: string, monorepo?: MonorepoContext): ResolvedAction[] {

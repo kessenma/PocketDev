@@ -260,7 +260,6 @@ export default function ProjectsScreen() {
 
   const listHeader = (
     <View style={styles.header}>
-      <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Repositories</Text>
       <Text style={[styles.title, { color: colors.text }]}>Pick what to work on</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Local repos are ready to open. GitHub repos stay metadata-only until you clone them.
