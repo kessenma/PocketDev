@@ -1331,6 +1331,28 @@ export class ManagedAgentProcess {
     const normalized = normalizePane(this.ptyBuffer)
     if (!normalized) return
 
+    // Emit pane diff lines as task output — mirrors tmux pollPane so the user
+    // sees Claude's actual response in the mobile app, not just framing messages.
+    if (normalized !== this.previousPane) {
+      const previous = this.previousPane
+      this.previousPane = normalized
+      const diff = this.extractPaneDiff(previous, normalized)
+      if (diff) {
+        for (const line of diff.split('\n')) {
+          if (isPaneChromeOnly(line)) continue
+          const key = spinnerKey(line)
+          if (this.seenPaneLineKeys.has(key)) continue
+          this.seenPaneLineKeys.add(key)
+
+          insertTaskLog(this.taskId, 'stdout', line)
+          this.broadcastOutput(line)
+
+          const activity = parsePaneLineToActivity(line)
+          if (activity) this.broadcastActivity(activity)
+        }
+      }
+    }
+
     // Also poll hooks file on each snapshot cycle (structured events)
     await this.pollHooksFile()
     if (this.finished) return
