@@ -62,8 +62,11 @@ cp "$AGENT_DIR/dist/index.js" "$STAGING_DIR/pocketdev-agent/index.js"
 # must be present next to index.js on the target server.
 if [ -d "$AGENT_DIR/node_modules/node-pty-prebuilt-multiarch" ]; then
   mkdir -p "$STAGING_DIR/pocketdev-agent/node_modules"
-  cp -r "$AGENT_DIR/node_modules/node-pty-prebuilt-multiarch" \
-        "$STAGING_DIR/pocketdev-agent/node_modules/node-pty-prebuilt-multiarch"
+  # -L dereferences pnpm's relative symlink so the actual prebuilds/*/*.node
+  # binaries land in the tarball — otherwise the symlink resolves to a path
+  # that doesn't exist on the install target.
+  cp -rL "$AGENT_DIR/node_modules/node-pty-prebuilt-multiarch" \
+         "$STAGING_DIR/pocketdev-agent/node_modules/node-pty-prebuilt-multiarch"
   echo "  → Staged node-pty-prebuilt-multiarch native module"
 else
   echo "  ⚠ node-pty-prebuilt-multiarch not found in node_modules — run pnpm install first"
