@@ -825,21 +825,6 @@ export async function fetchLockStatus(): Promise<LockStatus> {
   return res.json()
 }
 
-export async function setFirewallEnabled(enabled: boolean): Promise<void> {
-  const res = await post('/lock/enable', { enabled })
-  if (!res.ok) throw new Error('Failed to set firewall enabled')
-}
-
-export async function consoleLockPort(): Promise<void> {
-  const res = await post('/lock/lock', {})
-  if (!res.ok) throw new Error('Failed to lock port')
-}
-
-export async function consoleUnlockPort(): Promise<void> {
-  const res = await post('/lock/unlock', {})
-  if (!res.ok) throw new Error('Failed to unlock port')
-}
-
 export interface RepoSummary {
   repoName: string
   repoPath: string

@@ -11,6 +11,7 @@
  */
 
 import { getConfig, setConfig } from '../../db/index.ts'
+import { startWakeServer } from './wake-server.ts'
 
 const CHAIN = 'POCKETDEV'
 const BLOCKED_PORT = Number(process.env.POCKETDEV_PORT ?? 4387)
@@ -88,10 +89,13 @@ export async function setFirewallEnabled(enabled: boolean): Promise<void> {
   firewallEnabled = enabled
   setConfig('firewall_lock_enabled', enabled ? '1' : '0')
 
-  if (enabled && !firewallAvailable) {
-    // Try to initialize now that it's been turned on
-    await initFirewall()
-  } else if (!enabled && locked) {
+  if (enabled) {
+    // Initialize the iptables chain if we haven't already, then make sure the
+    // wake server is bound. Without this, enabling the firewall at runtime
+    // leaves port 4388 unbound and locking the port becomes a one-way trip.
+    if (!firewallAvailable) await initFirewall()
+    startWakeServer()
+  } else if (locked) {
     // Unlock before disabling so the port isn't left blocked
     await unlockPort()
   }

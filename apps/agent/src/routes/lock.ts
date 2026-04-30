@@ -9,7 +9,14 @@
 
 import { Elysia } from 'elysia'
 import { authenticateRequest } from '../services/auth/auth.ts'
-import { lockPort, unlockPort, isLocked, isFirewallEnabled, isFirewallAvailable } from '../services/system/firewall.ts'
+import {
+  lockPort,
+  unlockPort,
+  isLocked,
+  isFirewallEnabled,
+  isFirewallAvailable,
+  setFirewallEnabled,
+} from '../services/system/firewall.ts'
 import { broadcast, makeMessage, getConnectedClientCount, closeAllClients } from '../services/terminal/ws.ts'
 
 const WAKE_PORT = Number(process.env.POCKETDEV_WAKE_PORT ?? 4388)
@@ -31,6 +38,17 @@ export const lockRoutes = new Elysia({ prefix: '/lock' })
   .post('/lock', async ({ request, set }) => {
     const deviceId = await authenticateRequest(request.headers.get('authorization'))
     if (!deviceId) { set.status = 401; return { error: 'Unauthorized' } }
+
+    if (!isFirewallAvailable()) {
+      set.status = 400
+      return { error: 'iptables unavailable — network-level locking requires root and iptables on the server.' }
+    }
+
+    // Mobile is the only locker now (console UI is gone), so a lock request
+    // is also an opt-in. Auto-enable + start the wake server so unlock works.
+    if (!isFirewallEnabled()) {
+      await setFirewallEnabled(true)
+    }
 
     // Notify all clients before disconnecting them
     broadcast(makeMessage('server.locked', {}))

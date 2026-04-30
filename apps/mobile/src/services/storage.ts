@@ -18,6 +18,7 @@ const KEYS = {
   SERVER_PORT: 'server.port',
   SERVER_ID: 'server.id',
   SERVER_SECURE: 'server.secure',
+  SERVER_LOCKED: 'server.locked',
   RECENT_PROMPTS: 'recent.prompts',
   NEW_TASK_DRAFT: 'newTask.draft',
   WORKSPACE_NAV_EXPANDED: 'workspace.navExpanded',
@@ -96,6 +97,18 @@ export function clearServer() {
   getStorage().remove(KEYS.DEVICE_ID)
   getStorage().remove(KEYS.SERVER_ID)
   getStorage().remove(KEYS.SERVER_SECURE)
+  getStorage().remove(KEYS.SERVER_LOCKED)
+}
+
+// --- Server lock state ---
+
+export function getServerLocked(): boolean {
+  return getStorage().getBoolean(KEYS.SERVER_LOCKED) ?? false
+}
+
+export function setServerLocked(locked: boolean) {
+  if (locked) getStorage().set(KEYS.SERVER_LOCKED, true)
+  else getStorage().remove(KEYS.SERVER_LOCKED)
 }
 
 // --- Recent Prompts ---

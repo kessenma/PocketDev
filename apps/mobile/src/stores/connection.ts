@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { ConnectionStatus } from '../services/websocket'
 import { PocketDevWebSocket } from '../services/websocket'
 import { buildWsUrl, unpairFromServer, setSecureMode, fetchLockStatus, wakeServer, registerPushToken } from '../services/api'
-import { getServer, clearAll, getPushNotificationsEnabled, type StoredServer } from '../services/storage'
+import { getServer, clearAll, getPushNotificationsEnabled, getServerLocked, setServerLocked as persistServerLocked, type StoredServer } from '../services/storage'
 import { getApnsToken } from '../services/push-notifications'
 import type { WsMessage } from '@pocketdev/shared/types'
 import { useTaskStore } from './tasks'
@@ -34,7 +34,7 @@ interface ConnectionState {
   loadFromStorage: () => void
   getConnectionLogText: () => string
   setServerLocked: (locked: boolean) => void
-  wakeAndConnect: () => Promise<void>
+  wakeAndConnect: () => Promise<boolean>
 }
 
 const _initialServer = getServer()
@@ -53,36 +53,45 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   server: _initialServer,
   ws: null,
   connectionLog: [],
-  serverLocked: false,
+  serverLocked: getServerLocked(),
 
-  setServerLocked: (locked: boolean) => set({ serverLocked: locked }),
+  setServerLocked: (locked: boolean) => {
+    persistServerLocked(locked)
+    set({ serverLocked: locked })
+  },
 
   wakeAndConnect: async () => {
     const { server } = get()
-    if (!server) return
+    if (!server) return false
     pushLog(set, get, 'wakeAndConnect()', `ip=${server.ip}`)
     try {
       const status = await fetchLockStatus(server.ip, server.port).catch(() => null)
       const wakePort = status?.wakePort ?? 4388
       const ok = await wakeServer(server.ip, wakePort)
       if (ok) {
+        persistServerLocked(false)
         set({ serverLocked: false })
         pushLog(set, get, 'wake_ok', `wakePort=${wakePort}`)
         // Brief pause so iptables rule clears before we attempt the WS connection
         await new Promise(r => setTimeout(r, 1500))
         get().connect()
-      } else {
-        pushLog(set, get, 'wake_failed')
+        return true
       }
+      pushLog(set, get, 'wake_failed')
+      return false
     } catch (err) {
       pushLog(set, get, 'wake_error', String(err))
+      return false
     }
   },
 
   loadFromStorage: () => {
     const server = get().server
-    console.log('[connection] loadFromStorage:', server ? { ip: server.ip, port: server.port, deviceId: server.deviceId } : 'no server stored')
-    if (server) {
+    const locked = get().serverLocked
+    console.log('[connection] loadFromStorage:', server ? { ip: server.ip, port: server.port, deviceId: server.deviceId, locked } : 'no server stored')
+    // If the server is intentionally locked, skip auto-connect — RootNavigator
+    // routes us to ConnectScreen where the user can tap the lock to unlock.
+    if (server && !locked) {
       get().connect()
     }
   },
@@ -269,6 +278,10 @@ function handleWsMessage(message: WsMessage) {
     const store = useConnectionStore.getState()
     store.setServerLocked(true)
     store.ws?.suppressReconnect()
+    // Route to ConnectScreen — locks are intentional, so skip ServerDisconnected
+    if (navigationRef.isReady()) {
+      navigationRef.reset({ index: 0, routes: [{ name: 'Connect' }] })
+    }
   } else if (t === 'server.unlocked') {
     useConnectionStore.getState().setServerLocked(false)
   }

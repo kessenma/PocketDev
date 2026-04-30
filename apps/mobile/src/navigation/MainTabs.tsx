@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { Text, View, StyleSheet } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
@@ -14,6 +14,7 @@ import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import WorkspaceNavigation from '../components/navigation/WorkspaceNavigation'
 import RunningScriptsSheet from '../components/scripts/RunningScriptsSheet'
 import ServerDisconnected from '../components/shared/ServerDisconnected'
+import { navigationRef } from './ref'
 import { renderTabIcon } from './tab-icons'
 import { typeStyles } from '../theme/typography'
 
@@ -59,9 +60,19 @@ export default function MainTabs() {
   })
   const [scriptsSheetVisible, setScriptsSheetVisible] = useState(false)
   const connectionStatus = useConnectionStore((s) => s.status)
-  const showDisconnected = connectionStatus === 'error' || connectionStatus === 'disconnected'
+  const serverLocked = useConnectionStore((s) => s.serverLocked)
+  const isDisconnected = connectionStatus === 'error' || connectionStatus === 'disconnected'
 
-  if (showDisconnected) {
+  // Intentional locks bypass the ServerDisconnected screen — punt to the
+  // ConnectScreen where the user can tap the lock icon to unlock + reconnect.
+  useEffect(() => {
+    if (serverLocked && navigationRef.isReady()) {
+      navigationRef.reset({ index: 0, routes: [{ name: 'Connect' }] })
+    }
+  }, [serverLocked])
+
+  if (serverLocked) return null
+  if (isDisconnected) {
     return <ServerDisconnected />
   }
 

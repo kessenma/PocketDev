@@ -52,10 +52,11 @@ function SlideDownTitle({ children }: { children: string }) {
 export default function RootNavigator() {
   const { colors } = useTheme()
   const server = useConnectionStore((s) => s.server)
+  const serverLocked = useConnectionStore((s) => s.serverLocked)
 
   return (
     <Stack.Navigator
-      initialRouteName={server ? 'Main' : 'Connect'}
+      initialRouteName={server && !serverLocked ? 'Main' : 'Connect'}
       screenOptions={{
         headerStyle: { backgroundColor: colors.panel },
         headerTintColor: colors.text,

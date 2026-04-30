@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   View,
   Text,
@@ -23,8 +23,9 @@ import SplitViewLayout from '../components/layout/SplitViewLayout'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
 import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
 import QRScanner, { type QRScanResult } from '../components/QRScanner'
-import { ArrowRight, Link, ScanLine, Server, Unplug } from 'lucide-react-native'
+import { ArrowRight, Link, Lock, ScanLine, Server, Unplug } from 'lucide-react-native'
 import PairingAnimation from '../components/animations/PairingAnimation'
+import UnlockAnimation from '../components/animations/UnlockAnimation'
 import type { PrerequisitesReport } from '@pocketdev/shared/types'
 
 type Props = {
@@ -38,12 +39,16 @@ export default function ConnectScreen({ navigation }: Props) {
   const unpair = useConnectionStore((s) => s.unpair)
   const connect = useConnectionStore((s) => s.connect)
   const existingServer = useConnectionStore((s) => s.server)
+  const serverLocked = useConnectionStore((s) => s.serverLocked)
+  const wakeAndConnect = useConnectionStore((s) => s.wakeAndConnect)
+  const connectionStatus = useConnectionStore((s) => s.status)
 
   const [connectionInput, setConnectionInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scannerVisible, setScannerVisible] = useState(false)
   const [showPairing, setShowPairing] = useState(false)
+  const [showUnlocking, setShowUnlocking] = useState(false)
   const [postPairSetupReady, setPostPairSetupReady] = useState(false)
 
   const handlePairingComplete = useCallback(() => {
@@ -68,6 +73,39 @@ export default function ConnectScreen({ navigation }: Props) {
       return false
     }
   }, [])
+
+  const handleUnlock = useCallback(async () => {
+    if (!existingServer || showUnlocking) return
+    setError(null)
+    setShowUnlocking(true)
+    const ok = await wakeAndConnect()
+    if (!ok) {
+      setShowUnlocking(false)
+      setError('Could not reach the server\'s wake port. The server may be offline.')
+      return
+    }
+    // wakeAndConnect kicked off WS reconnect — the effect below dismisses the
+    // animation once `status === 'connected'`. If reconnect stalls past 8s,
+    // we drop the overlay and let the user see whatever ServerDisconnected
+    // would normally show.
+  }, [existingServer, showUnlocking, wakeAndConnect])
+
+  // Once the wake succeeds and WS reconnects, fade out the unlock overlay and
+  // route into the main app. Time out after 8s so a stalled reconnect doesn't
+  // strand the user on the overlay forever.
+  useEffect(() => {
+    if (!showUnlocking) return
+    if (connectionStatus === 'connected') {
+      setShowUnlocking(false)
+      navigation.replace('Main', { screen: 'Settings' })
+      return
+    }
+    const timeout = setTimeout(() => {
+      setShowUnlocking(false)
+      setError('Reconnect timed out. Try again.')
+    }, 8000)
+    return () => clearTimeout(timeout)
+  }, [connectionStatus, showUnlocking, navigation])
 
   const reconnectToExistingServer = useCallback(async () => {
     if (!existingServer || loading) return
@@ -146,27 +184,35 @@ export default function ConnectScreen({ navigation }: Props) {
           <View style={[styles.existingConnection, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(37,99,235,0.08)', borderColor: isDark ? 'rgba(96,165,250,0.26)' : 'rgba(37,99,235,0.16)' }]}>
             <TouchableOpacity
               style={styles.existingConnectionInfo}
-              onPress={reconnectToExistingServer}
-              disabled={loading}
+              onPress={serverLocked ? handleUnlock : reconnectToExistingServer}
+              disabled={loading || showUnlocking}
               activeOpacity={0.7}
             >
               <Server color={colors.primary} size={16} strokeWidth={2.25} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.existingConnectionLabel, { color: colors.textSecondary }]}>Reconnect workspace</Text>
+                <Text style={[styles.existingConnectionLabel, { color: colors.textSecondary }]}>
+                  {serverLocked ? 'Unlock workspace' : 'Reconnect workspace'}
+                </Text>
                 <Text style={[styles.existingConnectionHost, { color: colors.text }]}>
                   {existingServer.ip}:{existingServer.port}
                 </Text>
               </View>
-              <ArrowRight color={colors.primary} size={16} strokeWidth={2.25} />
+              {serverLocked ? (
+                <Lock color={colors.error} size={18} strokeWidth={2.5} />
+              ) : (
+                <ArrowRight color={colors.primary} size={16} strokeWidth={2.25} />
+              )}
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.unpairButton, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(220,38,38,0.1)', borderColor: isDark ? 'rgba(239,68,68,0.3)' : 'rgba(220,38,38,0.2)' }]}
-              onPress={unpair}
-              activeOpacity={0.7}
-            >
-              <Unplug color={colors.error} size={16} strokeWidth={2.25} />
-              <Text style={[styles.unpairButtonText, { color: colors.error }]}>Unpair</Text>
-            </TouchableOpacity>
+            {!serverLocked && (
+              <TouchableOpacity
+                style={[styles.unpairButton, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(220,38,38,0.1)', borderColor: isDark ? 'rgba(239,68,68,0.3)' : 'rgba(220,38,38,0.2)' }]}
+                onPress={unpair}
+                activeOpacity={0.7}
+              >
+                <Unplug color={colors.error} size={16} strokeWidth={2.25} />
+                <Text style={[styles.unpairButtonText, { color: colors.error }]}>Unpair</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -307,6 +353,21 @@ export default function ConnectScreen({ navigation }: Props) {
         onClose={() => setScannerVisible(false)}
       />
       {showPairing && <PairingAnimation onComplete={handlePairingComplete} />}
+      {showUnlocking && (
+        <View
+          pointerEvents="auto"
+          style={[
+            styles.unlockingOverlay,
+            { backgroundColor: isDark ? 'rgba(15,15,18,0.78)' : 'rgba(244,244,247,0.86)' },
+          ]}
+        >
+          <UnlockAnimation />
+          <Text style={[styles.unlockingLabel, { color: colors.text }]}>UNLOCKING WORKSPACE</Text>
+          <Text style={[styles.unlockingHint, { color: colors.textSecondary }]}>
+            Waking the server on its secondary port…
+          </Text>
+        </View>
+      )}
     </AnimatedGradientBackground>
   )
 }
@@ -496,6 +557,23 @@ const styles = StyleSheet.create({
   unpairButtonText: {
     ...typographyScale.sm,
     fontWeight: '600',
+  },
+  unlockingOverlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[3],
+  },
+  unlockingLabel: {
+    ...typographyScale.xs,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    marginTop: spacing[3],
+  },
+  unlockingHint: {
+    ...typographyScale.sm,
+    textAlign: 'center',
+    paddingHorizontal: spacing[6],
   },
 })
 

@@ -33,7 +33,6 @@ export default function SettingsScreen({ navigation }: Props) {
   const status = useConnectionStore((s) => s.status)
   const unpair = useConnectionStore((s) => s.unpair)
   const serverLocked = useConnectionStore((s) => s.serverLocked)
-  const wakeAndConnect = useConnectionStore((s) => s.wakeAndConnect)
   const setServerLocked = useConnectionStore((s) => s.setServerLocked)
   const refreshServer = useServerActionsStore((s) => s.refresh)
   const [consoleOpen, setConsoleOpen] = useState(false)
@@ -61,14 +60,18 @@ export default function SettingsScreen({ navigation }: Props) {
     try {
       await lockServer(server.ip, server.port)
       setServerLocked(true)
-    } catch { /* ignore — WS server.locked event will also update state */ }
-    finally { setLockLoading(false) }
-  }
-
-  async function handleWake() {
-    setLockLoading(true)
-    try { await wakeAndConnect() }
-    finally { setLockLoading(false) }
+      // Bounce back to Connect — locked servers live there now, with a Lock
+      // icon on the existing-server tile that re-runs wakeAndConnect on tap.
+      navigation.getParent()?.reset({
+        index: 0,
+        routes: [{ name: 'Connect' }],
+      })
+    } catch (err) {
+      Alert.alert(
+        'Failed to lock port',
+        err instanceof Error ? err.message : 'The server rejected the lock request.',
+      )
+    } finally { setLockLoading(false) }
   }
 
   const consoleUrl = server
@@ -186,11 +189,7 @@ export default function SettingsScreen({ navigation }: Props) {
               color={serverLocked ? '#ef4444' : '#22c55e'}
             />
           </View>
-          {serverLocked ? (
-            <BauhausButton onPress={handleWake} loading={lockLoading}>
-              Wake &amp; Unlock Server
-            </BauhausButton>
-          ) : (
+          {!serverLocked && (
             <BauhausButton variant="danger" onPress={handleLock} loading={lockLoading}>
               Lock Server Port
             </BauhausButton>

@@ -56,8 +56,8 @@ import { getTaskList, getProcess, buildCommand, killTask } from '../services/tas
 import { updateTaskStatus } from '../db/index.ts'
 import { getGitSummary } from '../services/git/git.ts'
 import { getDetailedCommits, detectNewCommits, syncGitHistory } from '../services/git/git-history-sync.ts'
-import { getWsDebugInfo, getConnectedClientCount, closeAllClients, broadcast, makeMessage } from '../services/terminal/ws.ts'
-import { lockPort, unlockPort, isLocked, isFirewallEnabled, isFirewallAvailable, setFirewallEnabled } from '../services/system/firewall.ts'
+import { getWsDebugInfo, getConnectedClientCount } from '../services/terminal/ws.ts'
+import { isLocked, isFirewallEnabled, isFirewallAvailable } from '../services/system/firewall.ts'
 import { createBrowserSession } from '../services/preview/proxy.ts'
 import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/system/version.ts'
 import { disableManagedSwap, enableManagedSwap, getSwapMetrics, getSwapStatus } from '../services/system/swap.ts'
@@ -552,30 +552,9 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
   })
 
-  .post('/lock/enable', async ({ request, set }) => {
-    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
-    const body = await request.json().catch(() => null) as Record<string, unknown> | null
-    const enabled = typeof body?.enabled === 'boolean' ? body.enabled : true
-    await setFirewallEnabled(enabled)
-    return { firewallEnabled: isFirewallEnabled() }
-  })
-
-  .post('/lock/lock', async ({ request, set }) => {
-    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
-    broadcast(makeMessage('server.locked', {}))
-    setTimeout(async () => {
-      closeAllClients()
-      await lockPort()
-    }, 200)
-    return { locked: true }
-  })
-
-  .post('/lock/unlock', async ({ request, set }) => {
-    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
-    await unlockPort()
-    broadcast(makeMessage('server.unlocked', {}))
-    return { locked: false }
-  })
+  // Lock/unlock actions are mobile-only — locking from the console kills the
+  // very session controlling it. Status (above) stays so the console can
+  // surface locked/unlocked state in diagnostics.
 
   .get('/debug/codex-auth', ({ request, set }) => {
     if (!requireConsoleSession(request, set)) {

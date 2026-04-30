@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
 import { StatusBadge } from '#/components/ui/status-badge'
 import type { StatusBadgeColor } from '#/components/ui/status-badge'
-import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
 import type { NetworkDebugInfo } from '#/lib/api'
 import { useLockStatus } from '#/context/LockStatusContext'
 import { DomainSettings } from '#/components/DomainSettings'
-import { Wifi, WifiOff, Shield, Radio, Lock, Unlock } from 'lucide-react'
+import { Wifi, WifiOff, Shield, Radio } from 'lucide-react'
 
 interface Props {
   networkInfo: NetworkDebugInfo | null
@@ -63,7 +62,7 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
   const clientCount = networkInfo?.websocket.connectedClients.length ?? 0
   const eventCount = networkInfo?.websocket.recentEvents.length ?? 0
 
-  const { lockStatus, lockLoading, toggleFirewall, lockPort, unlockPort } = useLockStatus()
+  const { lockStatus } = useLockStatus()
 
   const connectDisconnectPairs = useMemo(() => {
     if (!networkInfo) return { connects: 0, disconnects: 0, authRejected: 0, stalesClosed: 0 }
@@ -239,53 +238,9 @@ export function NetworkDiagnosticsTab({ networkInfo }: Props) {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={lockLoading}
-                onClick={toggleFirewall}
-                className={cn(
-                  'rounded-[0.9rem] border text-xs',
-                  lockStatus.firewallEnabled
-                    ? 'border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/10'
-                    : 'border-border/40 text-foreground/60 hover:bg-foreground/8',
-                )}
-              >
-                {lockStatus.firewallEnabled ? 'Disable Network Lock' : 'Enable Network Lock'}
-              </Button>
-              {lockStatus.firewallEnabled && (
-                lockStatus.locked ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={lockLoading}
-                    onClick={unlockPort}
-                    className="rounded-[0.9rem] border border-green-500/30 text-xs text-green-400 hover:bg-green-500/10"
-                  >
-                    <Unlock className="mr-1.5 h-3 w-3" />
-                    Unlock Port
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={lockLoading}
-                    onClick={lockPort}
-                    className="rounded-[0.9rem] border border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
-                  >
-                    <Lock className="mr-1.5 h-3 w-3" />
-                    Lock Port Now
-                  </Button>
-                )
-              )}
-            </div>
-
-            {!lockStatus.firewallEnabled && (
-              <p className="text-xs text-foreground/35">
-                Enable to allow iptables-level port blocking. The mobile app can lock/unlock the port remotely via the wake server on port {lockStatus.wakePort}.
-              </p>
-            )}
+            <p className="text-xs text-foreground/35">
+              Manage locking from the PocketDev mobile app — open Settings → Security → Lock Server Port.
+            </p>
           </div>
         ) : (
           <p className="mt-3 text-xs text-foreground/40">Loading security status…</p>

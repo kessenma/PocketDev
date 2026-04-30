@@ -39,9 +39,13 @@ setInterval(() => {
   }
 }, 5 * 60_000)
 
+let started = false
+
 export function startWakeServer(): void {
+  if (started) return
   if (!isFirewallEnabled()) return
 
+  started = true
   Bun.serve({
     port: WAKE_PORT,
     hostname: '0.0.0.0',
