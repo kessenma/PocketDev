@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { SportShoe, Terminal, Wrench } from 'lucide-react-native'
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { History, SportShoe, Terminal, Wrench } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { usePreviewStore } from '../../../stores/preview'
@@ -15,6 +15,7 @@ import CodeScreenHeader from '../navigation/CodeScreenHeader'
 import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
 import { typeStyles } from '../../../theme/typography'
+import ScriptHistorySheet from './ScriptHistorySheet'
 
 type ScriptsView = 'scripts' | 'suggested' | 'running'
 
@@ -40,6 +41,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
   const openPreview = usePreviewStore((s) => s.openPreview)
   const taskLogs = useTaskStore((s) => s.taskLogs)
   const [activeView, setActiveView] = useState<ScriptsView>('scripts')
+  const [historyVisible, setHistoryVisible] = useState(false)
   const emptyLines: string[] = []
 
   function getOutputLines(taskId: string | undefined): string[] {
@@ -191,7 +193,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
                   key={group.id}
                   group={group}
                   runningScripts={runningScripts}
-                  onRun={(target) => runCommand(target.packagePath, target.id, target.command, target.useRootCwd)}
+                  onRun={(target) => runCommand(target.packagePath, target.id, target.command, target.useRootCwd, target.label)}
                   onStop={stopScript}
                 />
               ))}
@@ -209,7 +211,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
                     status={running?.status ?? null}
                     detectedPort={running?.detectedPort ?? null}
                     outputLines={getOutputLines(running?.taskId)}
-                    onRun={() => runCommand(selectedPkg!.path, action.id, action.resolvedCommand, action.useRootCwd)}
+                    onRun={() => runCommand(selectedPkg!.path, action.id, action.resolvedCommand, action.useRootCwd, action.label)}
                     onStop={() => stopScript(key)}
                     onDismiss={() => dismissScript(key)}
                     onPreview={(port) => openPreview(`http://localhost:${port}`)}
@@ -278,10 +280,17 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
           </Animated.View>
         ) : null}
 
-        <CodeSubTabNavigator value={activeView} options={VIEW_OPTIONS} onChange={setActiveView} compact={controlCompact} />
+        <View style={styles.subNavRow}>
+          <CodeSubTabNavigator value={activeView} options={VIEW_OPTIONS} onChange={setActiveView} compact={controlCompact} />
+          <TouchableOpacity onPress={() => setHistoryVisible(true)} style={styles.historyButton} activeOpacity={0.7}>
+            <History color={colors.textSecondary} size={20} strokeWidth={2.2} />
+          </TouchableOpacity>
+        </View>
       </CodeScreenHeader>
 
       <View style={styles.content}>{sectionBody}</View>
+
+      {historyVisible && <ScriptHistorySheet onDismiss={() => setHistoryVisible(false)} />}
     </View>
   )
 }
@@ -343,5 +352,17 @@ const styles = StyleSheet.create({
   },
   scriptList: {
     gap: spacing[2],
+  },
+  subNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  historyButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })

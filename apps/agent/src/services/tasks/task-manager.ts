@@ -55,13 +55,14 @@ export function startTask(
   workingDirectory: string | null,
   model: string | null = null,
   mode: TaskMode = 'default',
+  scriptName: string | null = null,
 ): string {
   const taskId = crypto.randomUUID()
   const sessionId = agentType === 'claude' ? crypto.randomUUID() : null
   const projectId = getActiveProjectId()
   const project = projectId ? getProject(projectId) : undefined
   const cwd = workingDirectory ?? project?.absolutePath ?? process.env.POCKETDEV_PROJECT_DIR ?? process.env.HOME ?? '/'
-  insertTask(taskId, prompt, agentType, mode, cwd, project?.id ?? null, project?.name ?? null, model, sessionId)
+  insertTask(taskId, prompt, agentType, mode, cwd, project?.id ?? null, project?.name ?? null, model, sessionId, scriptName)
 
   // Record the initial user turn for multi-turn capable providers
   if (sessionId || agentType === 'codex' || OPENCODE_FAMILY.has(agentType)) {

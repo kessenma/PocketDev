@@ -17,6 +17,7 @@ export const tasks = sqliteTable('tasks', {
   startedAt: text('started_at'),
   completedAt: text('completed_at'),
   exitCode: integer('exit_code'),
+  scriptName: text('script_name'),
 })
 
 export const taskTurns = sqliteTable('task_turns', {

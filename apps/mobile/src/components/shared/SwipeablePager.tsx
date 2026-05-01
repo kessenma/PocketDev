@@ -10,7 +10,6 @@ import ReanimatedLib, {
 } from 'react-native-reanimated'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
-import { typeStyles } from '../../theme/typography'
 import PagerIndicator, { type PageMeta } from './PagerIndicator'
 
 type Props = {
@@ -49,18 +48,6 @@ export default function SwipeablePager({ pages, children, scrollY, onPageChange 
     outputRange: [60, 40],
     extrapolate: 'clamp',
   }) ?? 60
-
-  // Per-page title collapse animations
-  const titleOpacity = scrollY?.interpolate({
-    inputRange: [0, 50],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  }) ?? 1
-  const titleHeight = scrollY?.interpolate({
-    inputRange: [0, 70],
-    outputRange: [40, 0],
-    extrapolate: 'clamp',
-  }) ?? 40
 
   const handleIndicatorPress = useCallback(
     (index: number) => {
@@ -109,22 +96,6 @@ export default function SwipeablePager({ pages, children, scrollY, onPageChange 
         >
           {children.map((child, i) => (
             <View key={pages[i]?.label ?? i} style={[styles.page, { width: pageWidth }]}>
-              {/* Non-sticky per-page title — collapses on scroll */}
-              <Animated.View
-                style={{
-                  height: titleHeight,
-                  opacity: titleOpacity,
-                  overflow: 'hidden',
-                  justifyContent: 'center',
-                  marginBottom: spacing[2],
-                }}
-              >
-                <Animated.Text
-                  style={[typeStyles.sectionTitle, { color: colors.textSecondary }]}
-                >
-                  {pages[i]?.title ?? ''}
-                </Animated.Text>
-              </Animated.View>
               {child}
             </View>
           ))}

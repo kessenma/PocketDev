@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   created_at TEXT NOT NULL,
   started_at TEXT,
   completed_at TEXT,
-  exit_code INTEGER
+  exit_code INTEGER,
+  script_name TEXT
 );
 
 CREATE TABLE IF NOT EXISTS task_turns (

@@ -130,6 +130,14 @@ export function getDb() {
           }
           return true
         }],
+        [1777540573383, '0010_handy_energizer', () => {
+          const cols = sqlite.query('PRAGMA table_info(tasks)').all() as { name: string }[]
+          if (!cols.some((c) => c.name === 'script_name')) {
+            sqlite.exec('ALTER TABLE tasks ADD COLUMN script_name text;')
+            console.log('[db] Recovered missing script_name column from partial 0010 migration')
+          }
+          return cols.some((c) => c.name === 'script_name')
+        }],
       ]
 
       // Clear any bogus stamps (far-future, legacy_bootstrap, etc.)
@@ -400,6 +408,7 @@ export function insertTask(
   projectName: string | null,
   model: string | null,
   sessionId: string | null = null,
+  scriptName: string | null = null,
 ) {
   getDb().insert(schema.tasks).values({
     id,
@@ -411,6 +420,7 @@ export function insertTask(
     projectId,
     projectName,
     sessionId,
+    scriptName,
   }).run()
 }
 

@@ -75,9 +75,9 @@ export default function TasksScreen({ navigation }: Props) {
 
   const taskList = React.useMemo(
     () =>
-      Array.from(tasks.values()).sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      ),
+      Array.from(tasks.values())
+        .filter((t) => t.agent_type !== 'shell')
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
     [tasks],
   )
 

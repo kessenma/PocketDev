@@ -24,6 +24,7 @@ export interface Task {
   created_at: string
   started_at: string | null
   completed_at: string | null
+  script_name?: string | null
 }
 
 export interface TaskTurn {

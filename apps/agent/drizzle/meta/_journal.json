@@ -71,6 +71,13 @@
       "when": 1776120399881,
       "tag": "0009_graceful_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1777540573383,
+      "tag": "0010_handy_energizer",
+      "breakpoints": true
     }
   ]
 }

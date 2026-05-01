@@ -24,7 +24,7 @@ interface ScriptsState {
 
   fetchScripts: () => Promise<void>
   runScript: (packagePath: string, scriptName: string) => void
-  runCommand: (packagePath: string, label: string, command: string, useRootCwd?: boolean) => void
+  runCommand: (packagePath: string, label: string, command: string, useRootCwd?: boolean, scriptName?: string) => void
   stopScript: (key: string) => void
   dismissScript: (key: string) => void
   selectPackage: (index: number) => void
@@ -90,7 +90,7 @@ export const useScriptsStore = create<ScriptsState>((set, get) => ({
     const cwd = packagePath === '.' ? rootPath : `${rootPath}/${packagePath}`
     const command = `${pkg.packageManager} run ${scriptName}`
 
-    useTaskStore.getState().startTask(command, 'shell', cwd)
+    useTaskStore.getState().startTask(command, 'shell', cwd, null, 'default', scriptName)
 
     const key = scriptKey(packagePath, scriptName)
     const next = new Map(runningScripts)
@@ -104,13 +104,13 @@ export const useScriptsStore = create<ScriptsState>((set, get) => ({
     set({ runningScripts: next })
   },
 
-  runCommand: (packagePath: string, label: string, command: string, useRootCwd?: boolean) => {
+  runCommand: (packagePath: string, label: string, command: string, useRootCwd?: boolean, scriptName?: string) => {
     const { runningScripts } = get()
     const rootPath = useFilesStore.getState().rootPath
     if (!rootPath) return
 
     const cwd = (packagePath === '.' || useRootCwd) ? rootPath : `${rootPath}/${packagePath}`
-    useTaskStore.getState().startTask(command, 'shell', cwd)
+    useTaskStore.getState().startTask(command, 'shell', cwd, null, 'default', scriptName ?? label)
 
     const key = scriptKey(packagePath, label)
     const next = new Map(runningScripts)

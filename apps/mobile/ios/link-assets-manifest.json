@@ -6,20 +6,8 @@
       "sha1": "9647ae5d06714dd81f4456838dfc5024d5ec9d48"
     },
     {
-      "path": "../../packages/shared/assets/fonts/durer-webfont.woff",
-      "sha1": "182d0c624b1cde04bbed497008664550d9026e71"
-    },
-    {
-      "path": "../../packages/shared/assets/fonts/durer-webfont.woff2",
-      "sha1": "60a1670cc387372fb31d0837d4acf0c00a832e41"
-    },
-    {
-      "path": "../../packages/shared/assets/fonts/Durer.ttf",
-      "sha1": "6dd8df2c037909ef3fe281435651e382c0c1f1e4"
-    },
-    {
       "path": "../../packages/shared/assets/fonts/fonts.css",
-      "sha1": "4e38620a47c6f0a137bb7a2561ce7df46baf380d"
+      "sha1": "9d0fa3477d459f7be21817c9635c889436711e86"
     },
     {
       "path": "../../packages/shared/assets/fonts/Geist-VariableFont_wght.ttf",
@@ -28,6 +16,18 @@
     {
       "path": "../../packages/shared/assets/fonts/GeistMono-VariableFont_wght.ttf",
       "sha1": "826f70d8436f5dc7c58585b24cbfddafffcedaf4"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/IvyOraDisplay-Light.ttf",
+      "sha1": "b1085abc1347b27cbb348be3f8e685aa4682cd1f"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/IvyOraDisplay-Light.woff",
+      "sha1": "f3829c6f8817e0dfe9c1632667dcd116921b5596"
+    },
+    {
+      "path": "../../packages/shared/assets/fonts/IvyOraDisplay-Light.woff2",
+      "sha1": "772f6d2b1bc29c739be18afbc6b5fccf5e0a2990"
     },
     {
       "path": "../../packages/shared/assets/fonts/Stardom-Regular.ttf",
@@ -40,18 +40,6 @@
     {
       "path": "../../packages/shared/assets/fonts/Stardom-Regular.woff2",
       "sha1": "9ed21d240fd6b2f353e1d93e2407f3c8cfb8e95b"
-    },
-    {
-      "path": "../../packages/shared/assets/fonts/Wagon-Bold.ttf",
-      "sha1": "b27418d309280edd355bc8987ab527d3989f103f"
-    },
-    {
-      "path": "../../packages/shared/assets/fonts/Wagon-ExtraLight.ttf",
-      "sha1": "805dddb5675267645847f1ae2fa47eef00b9343e"
-    },
-    {
-      "path": "../../packages/shared/assets/fonts/Wagon-ExtraLightItalic.ttf",
-      "sha1": "6ad918ac384fde7c39bff79d64c89c2f78c45f77"
     }
   ]
 }

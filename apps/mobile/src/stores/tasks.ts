@@ -36,6 +36,7 @@ function normalizeTask(raw: any): Task {
     created_at: raw.created_at ?? raw.createdAt ?? new Date().toISOString(),
     started_at: raw.started_at ?? raw.startedAt ?? null,
     completed_at: raw.completed_at ?? raw.completedAt ?? null,
+    script_name: raw.script_name ?? raw.scriptName ?? null,
   }
 }
 
@@ -70,6 +71,7 @@ interface TaskState {
     workingDirectory?: string | null,
     model?: string | null,
     mode?: TaskMode,
+    scriptName?: string | null,
   ) => void
   continueTask: (taskId: string, prompt: string, model?: string | null) => void
   killTask: (id: string) => void
@@ -260,11 +262,11 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     })
   },
 
-  startTask: (prompt: string, agentType: AgentType, workingDirectory = null, model = null, mode = 'default') => {
+  startTask: (prompt: string, agentType: AgentType, workingDirectory = null, model = null, mode = 'default', scriptName = null) => {
     const ws = useConnectionStore.getState().ws
     if (!ws) return
 
-    ws.send('task.start', { prompt, agentType, workingDirectory, model, mode })
+    ws.send('task.start', { prompt, agentType, workingDirectory, model, mode, scriptName })
     setTimeout(() => {
       void get().refreshFromServer().catch(() => {})
     }, 500)

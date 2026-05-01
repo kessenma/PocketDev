@@ -8,8 +8,8 @@ export async function upsertTasks(db: DB, tasks: Task[]): Promise<void> {
   for (const task of tasks) {
     await db.execute(
       `INSERT OR REPLACE INTO tasks
-        (id, prompt, agent_type, mode, model, status, project_id, project_name, working_directory, session_id, turn_count, created_at, started_at, completed_at, exit_code)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, prompt, agent_type, mode, model, status, project_id, project_name, working_directory, session_id, turn_count, created_at, started_at, completed_at, exit_code, script_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         task.id,
         task.prompt,
@@ -26,6 +26,7 @@ export async function upsertTasks(db: DB, tasks: Task[]): Promise<void> {
         task.started_at ?? null,
         task.completed_at ?? null,
         null, // exit_code not on the Task type from server list
+        task.script_name ?? null,
       ],
     )
   }
@@ -80,6 +81,7 @@ function rowToTask(row: any): Task {
     created_at: row.created_at,
     started_at: row.started_at ?? null,
     completed_at: row.completed_at ?? null,
+    script_name: row.script_name ?? null,
   }
 }
 

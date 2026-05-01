@@ -1,10 +1,10 @@
 /* pd-display — change src here to swap the heading/display font project-wide */
 @font-face {
   font-family: 'pd-display';
-  src: url('./Stardom-Regular.woff2') format('woff2'),
-       url('./Stardom-Regular.woff') format('woff'),
-       url('./Stardom-Regular.ttf') format('truetype');
-  font-weight: 400;
+  src: url('./IvyOraDisplay-Light.woff2') format('woff2'),
+       url('./IvyOraDisplay-Light.woff') format('woff'),
+       url('./IvyOraDisplay-Light.ttf') format('truetype');
+  font-weight: 300;
   font-style: normal;
 }
 

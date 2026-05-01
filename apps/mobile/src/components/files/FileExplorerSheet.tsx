@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react'
+import React, { useCallback, useRef, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native'
 import { TrueSheet } from '@lodev09/react-native-true-sheet'
 import { FlashList } from '@shopify/flash-list'
@@ -28,9 +29,19 @@ type EntryItem = {
   kind: 'file' | 'directory'
 }
 
+// Fixed chrome height: paddingTop(12) + header(~46) + gap(12) + searchBar(44) + gap(12) + paddingBottom(16)
+const CHROME_HEIGHT = 142
+
 export default function FileExplorerSheet({ onDismiss }: Props) {
   const { colors } = useTheme()
+  const { height: windowHeight } = useWindowDimensions()
   const sheetRef = useRef<TrueSheet>(null)
+  const [listHeight, setListHeight] = useState(Math.max(windowHeight * 0.6 - CHROME_HEIGHT, 200))
+
+  const updateListHeight = useCallback((position: number) => {
+    setListHeight(Math.max(windowHeight - position - CHROME_HEIGHT, 200))
+  }, [windowHeight])
+
   const currentPath = useFilesStore((state) => state.currentPath)
   const currentEntries = useFilesStore((state) => state.currentEntries)
   const rootLabel = useFilesStore((state) => state.rootLabel)
@@ -158,6 +169,8 @@ export default function FileExplorerSheet({ onDismiss }: Props) {
       backgroundColor={colors.background}
       cornerRadius={24}
       onDidDismiss={onDismiss}
+      onDidPresent={({ nativeEvent }) => updateListHeight(nativeEvent.position)}
+      onDetentChange={({ nativeEvent }) => updateListHeight(nativeEvent.position)}
     >
       <View style={styles.inner}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -234,7 +247,7 @@ export default function FileExplorerSheet({ onDismiss }: Props) {
           </View>
         ) : null}
 
-        <View style={[styles.listContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.listContainer, { backgroundColor: colors.surface, borderColor: colors.border, height: listHeight }]}>
           <FlashList
             data={items}
             renderItem={renderEntry}
@@ -316,7 +329,6 @@ function colorForExtension(extension: string, colors: SemanticTheme, defaultColo
 
 const styles = StyleSheet.create({
   inner: {
-    flex: 1,
     gap: spacing[3],
     paddingHorizontal: spacing[4],
     paddingTop: spacing[3],
@@ -382,7 +394,6 @@ const styles = StyleSheet.create({
     ...typeStyles.bodySmall,
   },
   listContainer: {
-    flex: 1,
     borderWidth: 1,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',

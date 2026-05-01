@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FlashList } from '@shopify/flash-list'
 import {
   ActivityIndicator,
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -76,6 +77,38 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
       if (event.type === 'branch_switched') clearOfflineMode()
     })
   }, [clearOfflineMode])
+
+  const scrollY = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    scrollY.setValue(0)
+  }, [activeView, scrollY])
+
+  const controlCompact = scrollY.interpolate({
+    inputRange: [60, 120],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  })
+
+  const headerPadV = scrollY.interpolate({
+    inputRange: [60, 120],
+    outputRange: [spacing[3], spacing[1]],
+    extrapolate: 'clamp',
+  })
+
+  const headerGap = scrollY.interpolate({
+    inputRange: [60, 120],
+    outputRange: [spacing[2], 0],
+    extrapolate: 'clamp',
+  })
+
+  const handleScroll = useMemo(
+    () => Animated.event(
+      [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+      { useNativeDriver: false, listener: onScroll as any },
+    ),
+    [scrollY, onScroll],
+  )
 
   const hasSearchResults = searchQuery.trim().length > 0
   const items = hasSearchResults
@@ -291,7 +324,7 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
               keyExtractor={(item) => item.id}
               getItemType={(item) => item.kind}
               ListEmptyComponent={browserEmptyState}
-              onScroll={onScroll}
+              onScroll={handleScroll}
               scrollEventThrottle={16}
               contentContainerStyle={styles.browserListContent}
               style={styles.browserList}
@@ -302,13 +335,13 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
     </View>
   )
 
-  const envSection = <EnvVarsTab onScroll={onScroll} />
+  const envSection = <EnvVarsTab onScroll={handleScroll} />
 
   const contextSection = (
     <ScrollView
       contentContainerStyle={styles.contextContent}
       showsVerticalScrollIndicator={false}
-      onScroll={onScroll}
+      onScroll={handleScroll}
       scrollEventThrottle={16}
     >
       <View style={[styles.contextTray, { backgroundColor: colors.backgroundSecondary }]}>
@@ -358,8 +391,8 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
   return (
     <>
       <View style={styles.container}>
-        <CodeScreenHeader>
-          <CodeSubTabNavigator value={activeView} options={VIEW_OPTIONS} onChange={setActiveView} />
+        <CodeScreenHeader style={{ paddingTop: headerPadV, paddingBottom: headerPadV, gap: headerGap }}>
+          <CodeSubTabNavigator value={activeView} options={VIEW_OPTIONS} onChange={setActiveView} compact={controlCompact} />
         </CodeScreenHeader>
 
         {activeView === 'browser' ? browserSection : null}
