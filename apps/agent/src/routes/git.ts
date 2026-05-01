@@ -168,6 +168,12 @@ export const gitRoutes = new Elysia({ prefix: '/git' })
     try {
       console.log('[git] POST /git/pull')
       const summary = await pullCurrent()
+      const projectId = getActiveProjectId()
+      if (projectId) {
+        syncGitHistory(projectId, 50, 'external').catch((e) =>
+          console.warn('[git] Post-pull history sync failed:', e),
+        )
+      }
       return { ok: true, summary }
     } catch (error) {
       return handleError(error, set)
