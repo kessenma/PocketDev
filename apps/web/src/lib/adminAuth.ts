@@ -10,12 +10,15 @@ import {
   verifyRegistrationResponse,
 } from '@simplewebauthn/server'
 import type { AuthenticatorTransport } from '@simplewebauthn/server'
+import QRCode from 'qrcode'
 import { db } from '@pocketdev/db'
-import { adminPasskeys } from '@pocketdev/db/schema'
+import { adminPasskeys, adminTotp } from '@pocketdev/db/schema'
 import { eq } from 'drizzle-orm'
+import { generateTotpSecret, encryptSecret, verifyTotpCodeRaw } from './totp'
 
 const SESSION_COOKIE = 'admin_session'
 const CHALLENGE_COOKIE = 'admin_webauthn_challenge'
+const TOTP_SETUP_COOKIE = 'admin_totp_setup'
 const RP_NAME = 'PocketDev Admin'
 // Stable user ID for the single admin account — "pocketdev" in bytes
 const ADMIN_USER_ID = new Uint8Array([0x70, 0x6f, 0x63, 0x6b, 0x65, 0x74, 0x64, 0x65, 0x76])
@@ -267,3 +270,48 @@ export const verifyPasskeyAuth = createServerFn({ method: 'POST' })
     deleteCookie(CHALLENGE_COOKIE, { path: '/' })
     return { success: true }
   })
+
+// ── TOTP ──────────────────────────────────────────────────────────────────────
+
+export const getTotpStatus = createServerFn().handler(async () => {
+  const cookie = getCookie(SESSION_COOKIE)
+  if (!cookie || !(await isSessionValid(cookie))) throw redirect({ to: '/admin/login' })
+
+  const row = await db.select({ createdAt: adminTotp.createdAt }).from(adminTotp).limit(1).then((r) => r[0] ?? null)
+  return { configured: row !== null, createdAt: row?.createdAt.toISOString() ?? null }
+})
+
+export const getTotpSetupData = createServerFn({ method: 'POST' }).handler(async () => {
+  const cookie = getCookie(SESSION_COOKIE)
+  if (!cookie || !(await isSessionValid(cookie))) throw redirect({ to: '/admin/login' })
+
+  const { secret, otpauthUri } = generateTotpSecret()
+  const qrCodeDataUrl = await QRCode.toDataURL(otpauthUri, { width: 256, margin: 2 })
+  setCookie(TOTP_SETUP_COOKIE, secret, sessionCookieOpts(300))
+  return { qrCodeDataUrl, manualKey: secret }
+})
+
+export const verifyAndSaveTotpSetup = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ code: z.string() }))
+  .handler(async ({ data }) => {
+    const cookie = getCookie(SESSION_COOKIE)
+    if (!cookie || !(await isSessionValid(cookie))) throw redirect({ to: '/admin/login' })
+
+    const secret = getCookie(TOTP_SETUP_COOKIE)
+    if (!secret) return { success: false, error: 'Setup session expired — start again' }
+
+    if (!verifyTotpCodeRaw(secret, data.code)) return { success: false, error: 'Invalid code' }
+
+    const enc = encryptSecret(secret)
+    await db.delete(adminTotp)
+    await db.insert(adminTotp).values({ encryptedSecret: enc.encrypted, encryptionIv: enc.iv, encryptionTag: enc.tag })
+    deleteCookie(TOTP_SETUP_COOKIE, { path: '/' })
+    return { success: true }
+  })
+
+export const removeTotpFn = createServerFn({ method: 'POST' }).handler(async () => {
+  const cookie = getCookie(SESSION_COOKIE)
+  if (!cookie || !(await isSessionValid(cookie))) throw redirect({ to: '/admin/login' })
+  await db.delete(adminTotp)
+  return { success: true }
+})

@@ -3,9 +3,11 @@ import { checkAdminSession, logoutFn } from '#/lib/adminAuth'
 
 export const Route = createFileRoute('/admin')({
   beforeLoad: async ({ location }) => {
-    // Skip auth check for the login page itself
     if (location.pathname === '/admin/login') return
-    const authed = await checkAdminSession()
+    let authed = false
+    try {
+      authed = await checkAdminSession()
+    } catch {}
     if (!authed) {
       throw redirect({ to: '/admin/login', search: { redirect: location.href } })
     }

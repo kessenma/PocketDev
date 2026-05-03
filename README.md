@@ -111,7 +111,7 @@ Contributions welcome. A few areas where community help would be valuable:
 - Agent installation improvements (systemd service, auto-update)
 - Additional AI provider support
 
-Please open an issue before starting large feature work.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, PR guidelines, and areas where help is most needed.
 
 ---
 
