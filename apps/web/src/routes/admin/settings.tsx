@@ -10,6 +10,8 @@ import {
   getTotpSetupData,
   verifyAndSaveTotpSetup,
   removeTotpFn,
+  getAdminConfig,
+  setSecureLoginRequired,
 } from '#/lib/adminAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Badge } from '#/components/ui/badge'
@@ -17,27 +19,35 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 
 export const Route = createFileRoute('/admin/settings')({
-  loader: () => Promise.all([listPasskeys(), getTotpStatus()]),
+  loader: () => Promise.all([listPasskeys(), getTotpStatus(), getAdminConfig()]),
   component: SettingsPage,
 })
 
 type Passkey = Awaited<ReturnType<typeof listPasskeys>>[number]
 type TotpStatus = Awaited<ReturnType<typeof getTotpStatus>>
+type AdminConfig = Awaited<ReturnType<typeof getAdminConfig>>
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
 }
 
 function SettingsPage() {
-  const [passkeys, totpStatus] = Route.useLoaderData()
+  const [passkeys, totpStatus, adminConfig] = Route.useLoaderData()
   const [passkeyList, setPasskeyList] = useState(passkeys)
   const [totp, setTotp] = useState<TotpStatus>(totpStatus)
+  const [config, setConfig] = useState<AdminConfig>(adminConfig)
 
   return (
     <div className="p-6 space-y-6 max-w-xl mx-auto">
       <h1 className="text-xl font-semibold">Settings</h1>
       <PasskeysCard passkeys={passkeyList} onUpdate={setPasskeyList} />
       <AuthenticatorCard totp={totp} onUpdate={setTotp} />
+      <SecureLoginCard
+        config={config}
+        onUpdate={setConfig}
+        hasPasskey={passkeyList.length > 0}
+        hasTotp={totp.configured}
+      />
     </div>
   )
 }
@@ -291,6 +301,72 @@ function AuthenticatorCard({ totp, onUpdate }: { totp: TotpStatus; onUpdate: (t:
         ) : null}
 
         {error && <p className="text-sm text-destructive">{error}</p>}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ── Secure Login ──────────────────────────────────────────────────────────────
+
+function SecureLoginCard({
+  config,
+  onUpdate,
+  hasPasskey,
+  hasTotp,
+}: {
+  config: AdminConfig
+  onUpdate: (c: AdminConfig) => void
+  hasPasskey: boolean
+  hasTotp: boolean
+}) {
+  const [loading, setLoading] = useState(false)
+  const canEnable = hasPasskey && hasTotp
+  const enabled = config.requireSecureLogin
+
+  async function handleToggle() {
+    setLoading(true)
+    try {
+      await setSecureLoginRequired({ data: { enabled: !enabled } })
+      onUpdate({ requireSecureLogin: !enabled })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium text-muted-foreground">Login security</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Require passkey + authenticator to login</p>
+            <p className="text-xs text-muted-foreground">
+              {enabled
+                ? 'Password login is disabled. You must use a passkey and authenticator code.'
+                : canEnable
+                  ? 'Once enabled, the password form is hidden and both a passkey and authenticator code are required.'
+                  : 'Set up a passkey and authenticator app above before enabling this.'}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant={enabled ? 'destructive' : 'outline'}
+            disabled={loading || (!canEnable && !enabled)}
+            onClick={handleToggle}
+            className="shrink-0"
+          >
+            {loading ? '…' : enabled ? 'Disable' : 'Enable'}
+          </Button>
+        </div>
+
+        {enabled && (
+          <div className="rounded-md border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">Emergency access</p>
+            <p>If you lose your passkey or authenticator, set <code className="font-mono">ADMIN_EMERGENCY_CODE</code> in your Coolify environment variables and use the "Emergency access" link on the login page.</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

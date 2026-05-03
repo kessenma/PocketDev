@@ -12,13 +12,14 @@ import {
 import type { AuthenticatorTransport } from '@simplewebauthn/server'
 import QRCode from 'qrcode'
 import { db } from '@pocketdev/db'
-import { adminPasskeys, adminTotp } from '@pocketdev/db/schema'
+import { adminPasskeys, adminTotp, adminConfig } from '@pocketdev/db/schema'
 import { eq } from 'drizzle-orm'
 import { generateTotpSecret, encryptSecret, verifyTotpCodeRaw } from './totp'
 
 const SESSION_COOKIE = 'admin_session'
 const CHALLENGE_COOKIE = 'admin_webauthn_challenge'
 const TOTP_SETUP_COOKIE = 'admin_totp_setup'
+const PREAUTH_COOKIE = 'admin_preauth'
 const RP_NAME = 'PocketDev Admin'
 // Stable user ID for the single admin account — "pocketdev" in bytes
 const ADMIN_USER_ID = new Uint8Array([0x70, 0x6f, 0x63, 0x6b, 0x65, 0x74, 0x64, 0x65, 0x76])
@@ -265,10 +266,20 @@ export const verifyPasskeyAuth = createServerFn({ method: 'POST' })
       .set({ counter: verification.authenticationInfo.newCounter, lastUsedAt: new Date() })
       .where(eq(adminPasskeys.id, passkey.id))
 
+    deleteCookie(CHALLENGE_COOKIE, { path: '/' })
+
+    const config = await getSecureLoginConfig()
+    const totpRow = await db.select().from(adminTotp).limit(1).then((r) => r[0] ?? null)
+
+    if (config.requireSecureLogin && totpRow) {
+      // Passkey verified — require TOTP before granting full session
+      setCookie(PREAUTH_COOKIE, 'ok', sessionCookieOpts(300))
+      return { success: true, requiresTotp: true }
+    }
+
     const token = await computeSessionToken()
     setCookie(SESSION_COOKIE, token, sessionCookieOpts(60 * 60 * 24 * 30))
-    deleteCookie(CHALLENGE_COOKIE, { path: '/' })
-    return { success: true }
+    return { success: true, requiresTotp: false }
   })
 
 // ── TOTP ──────────────────────────────────────────────────────────────────────
@@ -315,3 +326,83 @@ export const removeTotpFn = createServerFn({ method: 'POST' }).handler(async () 
   await db.delete(adminTotp)
   return { success: true }
 })
+
+// ── Admin config ───────────────────────────────────────────────────────────────
+
+async function getSecureLoginConfig(): Promise<{ requireSecureLogin: boolean }> {
+  const row = await db.select().from(adminConfig).limit(1).then((r) => r[0] ?? null)
+  return { requireSecureLogin: row?.requireSecureLogin ?? false }
+}
+
+export const getAdminConfig = createServerFn().handler(async () => {
+  const cookie = getCookie(SESSION_COOKIE)
+  if (!cookie || !(await isSessionValid(cookie))) throw redirect({ to: '/admin/login' })
+  return getSecureLoginConfig()
+})
+
+export const setSecureLoginRequired = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ enabled: z.boolean() }))
+  .handler(async ({ data }) => {
+    const cookie = getCookie(SESSION_COOKIE)
+    if (!cookie || !(await isSessionValid(cookie))) throw redirect({ to: '/admin/login' })
+
+    const existing = await db.select().from(adminConfig).limit(1).then((r) => r[0] ?? null)
+    if (existing) {
+      await db.update(adminConfig).set({ requireSecureLogin: data.enabled, updatedAt: new Date() })
+    } else {
+      await db.insert(adminConfig).values({ requireSecureLogin: data.enabled })
+    }
+    return { success: true }
+  })
+
+// ── Secure login flow ──────────────────────────────────────────────────────────
+
+export const getLoginMode = createServerFn().handler(async () => {
+  const [config, passkeyCount, totpRow] = await Promise.all([
+    getSecureLoginConfig(),
+    db.select({ id: adminPasskeys.id }).from(adminPasskeys).then((r) => r.length),
+    db.select({ id: adminTotp.id }).from(adminTotp).limit(1).then((r) => r[0] ?? null),
+  ])
+  return {
+    requireSecureLogin: config.requireSecureLogin && passkeyCount > 0 && totpRow !== null,
+    passkeyCount,
+  }
+})
+
+export const verifyTotpForLogin = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ code: z.string() }))
+  .handler(async ({ data }) => {
+    const preauth = getCookie(PREAUTH_COOKIE)
+    if (!preauth) return { success: false, error: 'Session expired — start again' }
+
+    const totpRow = await db.select().from(adminTotp).limit(1).then((r) => r[0] ?? null)
+    if (!totpRow) return { success: false, error: 'No authenticator configured' }
+
+    const { verifyTotpCode } = await import('./totp')
+    if (!verifyTotpCode(totpRow.encryptedSecret, totpRow.encryptionIv, totpRow.encryptionTag, data.code)) {
+      return { success: false, error: 'Invalid code' }
+    }
+
+    await db.update(adminTotp).set({ lastUsedAt: new Date() })
+    deleteCookie(PREAUTH_COOKIE, { path: '/' })
+    const token = await computeSessionToken()
+    setCookie(SESSION_COOKIE, token, sessionCookieOpts(60 * 60 * 24 * 30))
+    return { success: true }
+  })
+
+export const verifyEmergencyAccess = createServerFn({ method: 'POST' })
+  .inputValidator(z.object({ code: z.string() }))
+  .handler(async ({ data }) => {
+    const emergencyCode = process.env.ADMIN_EMERGENCY_CODE
+    if (!emergencyCode) return { success: false, error: 'Emergency access not configured' }
+
+    const a = Buffer.from(data.code)
+    const b = Buffer.from(emergencyCode)
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      return { success: false, error: 'Invalid emergency code' }
+    }
+
+    const token = await computeSessionToken()
+    setCookie(SESSION_COOKIE, token, sessionCookieOpts(60 * 60 * 24 * 30))
+    return { success: true }
+  })

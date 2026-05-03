@@ -43,6 +43,13 @@
       "when": 1777805014561,
       "tag": "0005_melted_marvel_zombies",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777806382406,
+      "tag": "0006_freezing_doctor_strange",
+      "breakpoints": true
     }
   ]
 }
