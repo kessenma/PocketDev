@@ -46,7 +46,8 @@ export const fontFamilyTokens = {
   body: 'pd-sans',
   mono: 'pd-mono',
   // React Native uses PostScript names, not CSS aliases
-  displayNative: 'IvyOraDisplay-LightItalic',
+  displayNative: 'AncizarSerif',
+  displayItalicNative: 'AncizarSerif-Italic',
   bodyNative: 'Geist',
   monoNative: 'GeistMono',
 } as const

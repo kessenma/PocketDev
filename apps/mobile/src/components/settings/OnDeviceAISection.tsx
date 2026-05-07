@@ -6,7 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { useOnDeviceAIStore } from '../../stores/on-device-ai'
 import { MODEL_NAME, MODEL_SIZE_MB } from '../../services/embedding'
 import { BauhausPanel } from '../shared/BauhausPanel'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import BauhausBadge from '../shared/BauhausBadge'
 import { typeStyles } from '../../theme/typography'
 
@@ -59,13 +59,13 @@ export default function OnDeviceAISection() {
       </View>
 
       {isReady ? (
-        <BauhausButton variant="danger" onPress={deleteModel}>
+        <Button variant="danger" onPress={deleteModel}>
           Remove Model
-        </BauhausButton>
+        </Button>
       ) : !isDownloading ? (
-        <BauhausButton onPress={downloadModel}>
+        <Button onPress={downloadModel}>
           Download Model
-        </BauhausButton>
+        </Button>
       ) : null}
     </BauhausPanel>
   )

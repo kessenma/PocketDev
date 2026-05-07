@@ -159,7 +159,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function DockerWizardSheet({ onDismiss, onComplete }: Props) {
+export default function DockerWizardModal({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)

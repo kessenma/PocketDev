@@ -5,85 +5,62 @@ import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
-import { ChevronLeft, X, Check, RotateCcw } from 'lucide-react-native'
+import { ChevronLeft, X, Check } from 'lucide-react-native'
+import WizardStepper from './rust-wizard/WizardStepper'
+import DetectStep from './rust-wizard/DetectStep'
+import InstallRustupStep from './rust-wizard/InstallRustupStep'
+import VerifyStep from './rust-wizard/VerifyStep'
+import type { RustSetupStatus, RustWizardStep, RustWizardStepStatus } from '@pocketdev/shared/types'
+import RustSetupAnimation from '../animations/RustSetupAnimation'
 import SetupWizardScreen from './SetupWizardScreen'
-import WizardStepper from './claude-wizard/WizardStepper'
-import DetectStep from './claude-wizard/DetectStep'
-import InstallStep from './claude-wizard/InstallStep'
-import AuthenticateStep from './claude-wizard/AuthenticateStep'
-import VerifyStep from './claude-wizard/VerifyStep'
-import type { ClaudeSetupStatus, ClaudeWizardStep, ClaudeWizardStepStatus } from '@pocketdev/shared/types'
-import ClaudeSetupAnimation from '../animations/ClaudeSetupAnimation'
 import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
   onComplete: () => void
-  entryMode?: 'full' | 'auth_repair'
 }
 
 // ─── State machine ──────────────────────────────────────
 
-const ALL_STEPS: ClaudeWizardStep[] = ['detect', 'install', 'authenticate', 'verify']
+const ALL_STEPS: RustWizardStep[] = ['detect', 'install-rustup', 'verify']
 
 interface WizardState {
-  currentStep: ClaudeWizardStep
-  stepStatuses: Record<ClaudeWizardStep, ClaudeWizardStepStatus>
-  claudeStatus: ClaudeSetupStatus | null
+  currentStep: RustWizardStep
+  stepStatuses: Record<RustWizardStep, RustWizardStepStatus>
+  rustStatus: RustSetupStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; claudeStatus: ClaudeSetupStatus }
-  | { type: 'STEP_COMPLETE'; step: ClaudeWizardStep }
-  | { type: 'STEP_FAILED'; step: ClaudeWizardStep; error: string }
+  | { type: 'DETECTION_COMPLETE'; rustStatus: RustSetupStatus }
+  | { type: 'STEP_COMPLETE'; step: RustWizardStep }
+  | { type: 'STEP_FAILED'; step: RustWizardStep; error: string }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
-  | { type: 'FORCE_REINSTALL' }
 
-function getInitialStateForMode(entryMode: Props['entryMode'] = 'full'): WizardState {
-  const stepStatuses = {} as Record<ClaudeWizardStep, ClaudeWizardStepStatus>
+function getInitialState(): WizardState {
+  const stepStatuses = {} as Record<RustWizardStep, RustWizardStepStatus>
   for (const step of ALL_STEPS) {
-    stepStatuses[step] = 'pending'
+    stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
   }
-
-  if (entryMode === 'auth_repair') {
-    stepStatuses.detect = 'skipped'
-    stepStatuses.install = 'skipped'
-    stepStatuses.authenticate = 'active'
-    stepStatuses.verify = 'pending'
-    return {
-      currentStep: 'authenticate',
-      stepStatuses,
-      claudeStatus: null,
-      error: null,
-      allConfigured: false,
-    }
-  }
-
-  stepStatuses.detect = 'active'
   return {
     currentStep: 'detect',
     stepStatuses,
-    claudeStatus: null,
+    rustStatus: null,
     error: null,
     allConfigured: false,
   }
 }
 
-function getInitialState(): WizardState {
-  return getInitialStateForMode('full')
-}
-
-function findNextActiveStep(statuses: Record<ClaudeWizardStep, ClaudeWizardStepStatus>, afterIndex: number): ClaudeWizardStep | null {
+function findNextActiveStep(statuses: Record<RustWizardStep, RustWizardStepStatus>, afterIndex: number): RustWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<ClaudeWizardStep, ClaudeWizardStepStatus>, beforeIndex: number): ClaudeWizardStep | null {
+function findPrevActiveStep(statuses: Record<RustWizardStep, RustWizardStepStatus>, beforeIndex: number): RustWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) { // skip detect (index 0)
     const s = statuses[ALL_STEPS[i]]
     if (s === 'completed' || s === 'active') return ALL_STEPS[i]
@@ -94,25 +71,24 @@ function findPrevActiveStep(statuses: Record<ClaudeWizardStep, ClaudeWizardStepS
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const cs = action.claudeStatus
+      const rs = action.rustStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
 
-      // Skip logic
-      if (cs.installed) newStatuses['install'] = 'skipped'
-      if (cs.authenticated) {
-        newStatuses['authenticate'] = 'skipped'
+      // Skip install if Rust is already installed with cargo
+      if (rs.installed && rs.cargo_installed) {
+        newStatuses['install-rustup'] = 'skipped'
         newStatuses['verify'] = 'skipped'
       }
 
-      // Check if everything is already configured
+      // If everything is configured, go to all-done
       const allSkipped = ALL_STEPS.slice(1).every((s) => newStatuses[s] === 'skipped')
       if (allSkipped) {
         return {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          claudeStatus: cs,
+          rustStatus: rs,
           allConfigured: true,
         }
       }
@@ -125,7 +101,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: firstPending ?? 'detect',
         stepStatuses: newStatuses,
-        claudeStatus: cs,
+        rustStatus: rs,
       }
     }
 
@@ -173,15 +149,6 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, stepStatuses: newStatuses, error: null }
     }
 
-    case 'FORCE_REINSTALL': {
-      const newStatuses = { ...state.stepStatuses }
-      newStatuses['install'] = 'active'
-      // Re-pend authenticate/verify if they were skipped
-      if (newStatuses['authenticate'] === 'skipped') newStatuses['authenticate'] = 'pending'
-      if (newStatuses['verify'] === 'skipped') newStatuses['verify'] = 'pending'
-      return { ...state, currentStep: 'install', stepStatuses: newStatuses, error: null, allConfigured: false }
-    }
-
     default:
       return state
   }
@@ -189,26 +156,30 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
+export default function RustWizardModal({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)
-  const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
+  const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
   const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
-    markToolPending('claude_cli')
+    markToolPending('rust')
     fetchPrerequisites()
     onComplete()
   }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
-    markToolPending('claude_cli')
+    markToolPending('rust')
     fetchPrerequisites()
     onDismiss()
   }, [markToolPending, fetchPrerequisites, onDismiss])
 
-  const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
+  const currentIndex = ALL_STEPS.indexOf(state.currentStep)
+  const hasPrevStep = currentIndex > 1 && ALL_STEPS.slice(1, currentIndex).some(
+    (s) => state.stepStatuses[s] === 'completed' || state.stepStatuses[s] === 'active',
+  )
+  const canGoBack = hasPrevStep && !state.allConfigured
 
   function renderStep() {
     if (state.allConfigured) {
@@ -218,27 +189,24 @@ export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = '
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
           <Image
-            source={isDark ? Assets.claudeWhite : Assets.claudeBlack}
+            source={isDark ? Assets.rustWhite : Assets.rustBlack}
             style={styles.completedLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Claude is ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Rust is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your paired workspace is connected and ready to run Claude.
+            Rust{state.rustStatus?.version ? ` ${state.rustStatus.version}` : ''} with Cargo{state.rustStatus?.cargo_version ? ` ${state.rustStatus.cargo_version}` : ''} are installed on your server.
           </Text>
-          {state.claudeStatus?.version && (
+          {state.rustStatus?.version && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              v{state.claudeStatus.version}
+              rustc v{state.rustStatus.version}
             </Text>
           )}
-          <TouchableOpacity
-            style={styles.reinstallButton}
-            onPress={() => dispatch({ type: 'FORCE_REINSTALL' })}
-            activeOpacity={0.7}
-          >
-            <RotateCcw color={colors.textTertiary} size={14} strokeWidth={2.25} />
-            <Text style={[styles.reinstallText, { color: colors.textTertiary }]}>Reinstall</Text>
-          </TouchableOpacity>
+          {state.rustStatus?.path && (
+            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
+              {state.rustStatus.path}
+            </Text>
+          )}
         </View>
       )
     }
@@ -246,10 +214,8 @@ export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = '
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
-      case 'install':
-        return <InstallStep dispatch={dispatch} />
-      case 'authenticate':
-        return <AuthenticateStep dispatch={dispatch} />
+      case 'install-rustup':
+        return <InstallRustupStep dispatch={dispatch} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
@@ -268,7 +234,7 @@ export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = '
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Claude</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Rust Setup</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>
@@ -297,7 +263,7 @@ export default function ClaudeWizardSheet({ onDismiss, onComplete, entryMode = '
 
         {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
         {state.allConfigured && !animationDone && (
-          <ClaudeSetupAnimation onComplete={onAnimationComplete} />
+          <RustSetupAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )
@@ -354,17 +320,6 @@ const styles = StyleSheet.create({
   },
   completedDetail: {
     ...typeStyles.mono,
-  },
-  reinstallButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1],
-    marginTop: spacing[2],
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-  reinstallText: {
-    ...typeStyles.meta,
   },
   footer: {
     paddingHorizontal: spacing[6],

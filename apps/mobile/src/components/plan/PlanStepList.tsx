@@ -6,7 +6,7 @@ import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import { buildMarkdownStyle } from '../../theme/markdown'
 import PlanBadge from './PlanBadge'
-import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { PlanStep, PlanStepKind } from './model'
 
 type Props = {
@@ -25,13 +25,13 @@ export default function PlanStepList({ steps }: Props) {
   const { colors } = useTheme()
 
   return (
-    <PlanCard>
-      <PlanCardHeader>
-        <PlanCardTitle>Steps</PlanCardTitle>
-        <PlanCardDescription>{steps.length} steps in this plan</PlanCardDescription>
-      </PlanCardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Steps</CardTitle>
+        <CardDescription>{steps.length} steps in this plan</CardDescription>
+      </CardHeader>
 
-      <PlanCardContent>
+      <CardContent>
         {steps.map((step, index) => (
           <View
             key={step.id}
@@ -53,8 +53,8 @@ export default function PlanStepList({ steps }: Props) {
             />
           </View>
         ))}
-      </PlanCardContent>
-    </PlanCard>
+      </CardContent>
+    </Card>
   )
 }
 

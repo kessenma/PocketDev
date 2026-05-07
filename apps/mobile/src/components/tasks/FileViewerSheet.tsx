@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
@@ -9,7 +9,7 @@ import { useConnectionStore } from '../../stores/connection'
 import { useTheme } from '../../contexts/ThemeContext'
 import CodeViewer from '../files/CodeViewer'
 import { inferLanguage, type FileNode } from '../files/model'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import { typeStyles } from '../../theme/typography'
 
 type LineHighlightRange = { start: number; end: number }
@@ -33,17 +33,13 @@ function computeHighlights(content: string, metadata: Record<string, unknown> | 
 
 export default function FileViewerSheet({ filePath, activity, onDismiss }: Props) {
   const { colors } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
+  const sheetRef = useRef<SheetHandle>(null)
   const server = useConnectionStore((s) => s.server)
   const [content, setContent] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [wrapLines, setWrapLines] = useState(false)
   const [currentHighlightIndex, setCurrentHighlightIndex] = useState(0)
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
 
   useEffect(() => {
     if (!server) {
@@ -92,7 +88,7 @@ export default function FileViewerSheet({ filePath, activity, onDismiss }: Props
   }
 
   return (
-    <TrueSheet ref={sheetRef} detents={[1]} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={onDismiss}>
+    <Sheet ref={sheetRef} detents={[1]} onDismiss={onDismiss}>
       {error ? (
         <View style={styles.errorState}>
           <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} style={styles.closeButton}>
@@ -118,20 +114,20 @@ export default function FileViewerSheet({ filePath, activity, onDismiss }: Props
           </View>
           {lineHighlights.length > 1 && (
             <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.panel }]}>
-              <BauhausButton compact variant="secondary" onPress={handlePrev}>
+              <Button size="sm" variant="secondary" onPress={handlePrev}>
                 ↑ Prev
-              </BauhausButton>
+              </Button>
               <Text style={[styles.counter, { color: colors.textSecondary }]}>
                 {currentHighlightIndex + 1} of {lineHighlights.length}
               </Text>
-              <BauhausButton compact variant="secondary" onPress={handleNext}>
+              <Button size="sm" variant="secondary" onPress={handleNext}>
                 ↓ Next
-              </BauhausButton>
+              </Button>
             </View>
           )}
         </>
       )}
-    </TrueSheet>
+    </Sheet>
   )
 }
 

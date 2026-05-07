@@ -4,7 +4,7 @@ import { spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import PlanBadge from './PlanBadge'
-import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { PlanStatus } from './model'
 
 type Props = {
@@ -27,18 +27,18 @@ export default function PlanSummaryCard({ title, description, agentName, status,
   const { colors } = useTheme()
 
   return (
-    <PlanCard>
-      <PlanCardHeader>
+    <Card>
+      <CardHeader>
         <View style={styles.headerRow}>
           <View style={styles.titleBlock}>
-            <PlanCardTitle>{title}</PlanCardTitle>
-            <PlanCardDescription>{description}</PlanCardDescription>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
           </View>
           <PlanBadge variant={STATUS_VARIANT[status]}>{status}</PlanBadge>
         </View>
-      </PlanCardHeader>
+      </CardHeader>
 
-      <PlanCardContent>
+      <CardContent>
         <View style={styles.metricRow}>
           <View style={styles.metricCell}>
             <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>Agent</Text>
@@ -55,8 +55,8 @@ export default function PlanSummaryCard({ title, description, agentName, status,
             </Text>
           </View>
         </View>
-      </PlanCardContent>
-    </PlanCard>
+      </CardContent>
+    </Card>
   )
 }
 

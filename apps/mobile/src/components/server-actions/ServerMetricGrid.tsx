@@ -3,13 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
-import {
-  ServerCard,
-  ServerCardContent,
-  ServerCardDescription,
-  ServerCardHeader,
-  ServerCardTitle,
-} from './ServerCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { ServerMetric } from './model'
 
 type Props = {
@@ -27,15 +21,15 @@ export default function ServerMetricGrid({ metrics }: Props) {
   const { colors } = useTheme()
 
   return (
-    <ServerCard>
-      <ServerCardHeader>
-        <ServerCardTitle>System snapshot</ServerCardTitle>
-        <ServerCardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>System snapshot</CardTitle>
+        <CardDescription>
           Prototype cards for quick checks before digging into logs or shell commands.
-        </ServerCardDescription>
-      </ServerCardHeader>
+        </CardDescription>
+      </CardHeader>
 
-      <ServerCardContent style={styles.grid}>
+      <CardContent style={styles.grid}>
         {metrics.map((metric) => (
           <View
             key={metric.id}
@@ -58,8 +52,8 @@ export default function ServerMetricGrid({ metrics }: Props) {
             </Text>
           </View>
         ))}
-      </ServerCardContent>
-    </ServerCard>
+      </CardContent>
+    </Card>
   )
 }
 

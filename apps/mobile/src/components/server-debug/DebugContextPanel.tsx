@@ -6,7 +6,7 @@ import { useContainerStore } from '../../stores/containers'
 import { useServerActionsStore } from '../../stores/server-actions'
 import { BauhausPanel } from '../shared/BauhausPanel'
 import BauhausBadge from '../shared/BauhausBadge'
-import BauhausButton from '../shared/BauhausButton'
+
 import { typeStyles } from '../../theme/typography'
 import { RefreshCw } from 'lucide-react-native'
 import ModelSelector from '../model-selector/ModelSelector'

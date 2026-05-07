@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useRef } from 'react'
 import {
   ActivityIndicator,
   ScrollView,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { X, Cpu } from 'lucide-react-native'
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
@@ -127,7 +127,7 @@ type Props = {
 
 export default function PromptFilterSheet({ prompt, onDismiss, onSearch }: Props) {
   const { colors } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
+  const sheetRef = useRef<SheetHandle>(null)
   const suggestions = useOnDeviceAIStore((s) => s.suggestions)
   const restSuggestions = useOnDeviceAIStore((s) => s.restSuggestions)
   const clearSuggestions = useOnDeviceAIStore((s) => s.clearSuggestions)
@@ -143,10 +143,6 @@ export default function PromptFilterSheet({ prompt, onDismiss, onSearch }: Props
     [suggestions, restSuggestions],
   )
 
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
-
   async function handlePhrasePress(phrase: string) {
     setActivePhrase(phrase)
     setSearching(true)
@@ -159,7 +155,7 @@ export default function PromptFilterSheet({ prompt, onDismiss, onSearch }: Props
   }
 
   return (
-    <TrueSheet ref={sheetRef} detents={[0.5, 1]} backgroundColor={colors.panel} cornerRadius={24} onDidDismiss={onDismiss}>
+    <Sheet ref={sheetRef} detents={[0.5, 1]} backgroundColor={colors.panel} onDismiss={onDismiss}>
       <View>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -249,7 +245,7 @@ export default function PromptFilterSheet({ prompt, onDismiss, onSearch }: Props
           ) : null}
         </ScrollView>
       </View>
-    </TrueSheet>
+    </Sheet>
   )
 }
 

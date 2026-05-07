@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
-import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { PlanQuestion } from './model'
 
 type Props = {
@@ -19,17 +19,17 @@ export default function PlanQuestionList({ questions, onAnswer }: Props) {
   const pending = questions.filter((q) => q.required && !q.answer.trim()).length
 
   return (
-    <PlanCard>
-      <PlanCardHeader>
-        <PlanCardTitle>Questions</PlanCardTitle>
-        <PlanCardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Questions</CardTitle>
+        <CardDescription>
           {pending > 0
             ? `${pending} required question${pending > 1 ? 's' : ''} need${pending === 1 ? 's' : ''} an answer before you can accept.`
             : 'All required questions answered.'}
-        </PlanCardDescription>
-      </PlanCardHeader>
+        </CardDescription>
+      </CardHeader>
 
-      <PlanCardContent>
+      <CardContent>
         {questions.map((q) => {
           const unanswered = q.required && !q.answer.trim()
 
@@ -65,8 +65,8 @@ export default function PlanQuestionList({ questions, onAnswer }: Props) {
             </View>
           )
         })}
-      </PlanCardContent>
-    </PlanCard>
+      </CardContent>
+    </Card>
   )
 }
 

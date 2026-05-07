@@ -21,7 +21,7 @@ interface Props {
   onFixCommand: (command: string) => void
 }
 
-export default function AiInspectSheet({
+export default function AiInspectModal({
   failedCommand,
   failedOutput,
   onDismiss,

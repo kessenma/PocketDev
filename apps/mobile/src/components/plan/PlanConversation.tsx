@@ -4,7 +4,7 @@ import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
-import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { PlanMessage } from './model'
 
 type Props = {
@@ -24,13 +24,13 @@ export default function PlanConversation({ messages, onSend }: Props) {
   }
 
   return (
-    <PlanCard style={styles.card}>
-      <PlanCardHeader>
-        <PlanCardTitle>Conversation</PlanCardTitle>
-        <PlanCardDescription>Discuss the plan with the agent before accepting or denying.</PlanCardDescription>
-      </PlanCardHeader>
+    <Card style={styles.card}>
+      <CardHeader>
+        <CardTitle>Conversation</CardTitle>
+        <CardDescription>Discuss the plan with the agent before accepting or denying.</CardDescription>
+      </CardHeader>
 
-      <PlanCardContent>
+      <CardContent>
         <View style={styles.thread}>
           {messages.map((msg) => {
             const isAgent = msg.role === 'agent'
@@ -108,8 +108,8 @@ export default function PlanConversation({ messages, onSend }: Props) {
             <Text style={[styles.sendText, { color: colors.primaryText }]}>Send</Text>
           </TouchableOpacity>
         </View>
-      </PlanCardContent>
-    </PlanCard>
+      </CardContent>
+    </Card>
   )
 }
 

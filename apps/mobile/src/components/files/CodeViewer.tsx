@@ -5,7 +5,7 @@ import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
-import { FileCard, FileCardContent, FileCardDescription, FileCardHeader, FileCardTitle } from './FileCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import FileBreadcrumbs from './FileBreadcrumbs'
 import FileViewerToolbar from './FileViewerToolbar'
 import type { CodeLanguage, FileNode } from './model'
@@ -110,12 +110,12 @@ export default function CodeViewer({
         </View>
       ) : null}
       <View style={styles.headerCopy}>
-        <FileCardTitle>Code Viewer</FileCardTitle>
-        <FileCardDescription>
+        <CardTitle>Code Viewer</CardTitle>
+        <CardDescription>
           {file
             ? highlightLabel ?? 'Read-only source preview from the paired server.'
             : 'Select a file from the browser to preview it.'}
-        </FileCardDescription>
+        </CardDescription>
       </View>
       {file ? <FileBreadcrumbs path={file.path} /> : null}
     </>
@@ -140,13 +140,13 @@ export default function CodeViewer({
   }
 
   return (
-    <FileCard style={styles.card}>
-      <FileCardHeader>{header}</FileCardHeader>
+    <Card style={styles.card}>
+      <CardHeader>{header}</CardHeader>
 
-      <FileCardContent style={styles.content}>
+      <CardContent style={styles.content}>
         {preview}
-      </FileCardContent>
-    </FileCard>
+      </CardContent>
+    </Card>
   )
 }
 

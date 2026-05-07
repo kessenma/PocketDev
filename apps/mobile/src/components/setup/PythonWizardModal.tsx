@@ -6,12 +6,15 @@ import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
-import WizardStepper from './go-wizard/WizardStepper'
-import DetectStep from './go-wizard/DetectStep'
-import InstallGoStep from './go-wizard/InstallGoStep'
-import VerifyStep from './go-wizard/VerifyStep'
-import type { GoSetupStatus, GoWizardStep, GoWizardStepStatus } from '@pocketdev/shared/types'
-import GoSetupAnimation from '../animations/GoSetupAnimation'
+import WizardStepper from './python-wizard/WizardStepper'
+import DetectStep from './python-wizard/DetectStep'
+import AddPpaStep from './python-wizard/AddPpaStep'
+import InstallPythonStep from './python-wizard/InstallPythonStep'
+import InstallVenvStep from './python-wizard/InstallVenvStep'
+import InstallPipStep from './python-wizard/InstallPipStep'
+import VerifyStep from './python-wizard/VerifyStep'
+import type { PythonSetupStatus, PythonWizardStep, PythonWizardStepStatus } from '@pocketdev/shared/types'
+import PythonSetupAnimation from '../animations/PythonSetupAnimation'
 import SetupWizardScreen from './SetupWizardScreen'
 import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
@@ -22,45 +25,47 @@ interface Props {
 
 // ─── State machine ──────────────────────────────────────
 
-const ALL_STEPS: GoWizardStep[] = ['detect', 'install', 'verify']
+const ALL_STEPS: PythonWizardStep[] = [
+  'detect', 'add-ppa', 'install', 'install-venv', 'install-pip', 'verify',
+]
 
 interface WizardState {
-  currentStep: GoWizardStep
-  stepStatuses: Record<GoWizardStep, GoWizardStepStatus>
-  goStatus: GoSetupStatus | null
+  currentStep: PythonWizardStep
+  stepStatuses: Record<PythonWizardStep, PythonWizardStepStatus>
+  pythonStatus: PythonSetupStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; goStatus: GoSetupStatus }
-  | { type: 'STEP_COMPLETE'; step: GoWizardStep }
-  | { type: 'STEP_FAILED'; step: GoWizardStep; error: string }
+  | { type: 'DETECTION_COMPLETE'; pythonStatus: PythonSetupStatus }
+  | { type: 'STEP_COMPLETE'; step: PythonWizardStep }
+  | { type: 'STEP_FAILED'; step: PythonWizardStep; error: string }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
 
 function getInitialState(): WizardState {
-  const stepStatuses = {} as Record<GoWizardStep, GoWizardStepStatus>
+  const stepStatuses = {} as Record<PythonWizardStep, PythonWizardStepStatus>
   for (const step of ALL_STEPS) {
     stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
   }
   return {
     currentStep: 'detect',
     stepStatuses,
-    goStatus: null,
+    pythonStatus: null,
     error: null,
     allConfigured: false,
   }
 }
 
-function findNextActiveStep(statuses: Record<GoWizardStep, GoWizardStepStatus>, afterIndex: number): GoWizardStep | null {
+function findNextActiveStep(statuses: Record<PythonWizardStep, PythonWizardStepStatus>, afterIndex: number): PythonWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<GoWizardStep, GoWizardStepStatus>, beforeIndex: number): GoWizardStep | null {
+function findPrevActiveStep(statuses: Record<PythonWizardStep, PythonWizardStepStatus>, beforeIndex: number): PythonWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) { // skip detect (index 0)
     const s = statuses[ALL_STEPS[i]]
     if (s === 'completed' || s === 'active') return ALL_STEPS[i]
@@ -71,14 +76,19 @@ function findPrevActiveStep(statuses: Record<GoWizardStep, GoWizardStepStatus>, 
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const gs = action.goStatus
+      const ps = action.pythonStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
 
-      // Skip install if Go is already installed
-      if (gs.installed) {
+      // Skip logic based on what's already installed
+      if (ps.ppa_added) newStatuses['add-ppa'] = 'skipped'
+      if (ps.installed) {
+        // Python is already installed — skip PPA and install
+        newStatuses['add-ppa'] = 'skipped'
         newStatuses['install'] = 'skipped'
       }
+      if (ps.venv_available) newStatuses['install-venv'] = 'skipped'
+      if (ps.pip_installed) newStatuses['install-pip'] = 'skipped'
 
       // If everything is configured, go to all-done
       const allSkipped = ALL_STEPS.slice(1).every((s) => newStatuses[s] === 'skipped')
@@ -87,7 +97,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          goStatus: gs,
+          pythonStatus: ps,
           allConfigured: true,
         }
       }
@@ -100,7 +110,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: firstPending ?? 'detect',
         stepStatuses: newStatuses,
-        goStatus: gs,
+        pythonStatus: ps,
       }
     }
 
@@ -155,7 +165,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function GoWizardSheet({ onDismiss, onComplete }: Props) {
+export default function PythonWizardModal({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)
@@ -163,13 +173,13 @@ export default function GoWizardSheet({ onDismiss, onComplete }: Props) {
   const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
-    markToolPending('go')
+    markToolPending('python')
     fetchPrerequisites()
     onComplete()
   }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
-    markToolPending('go')
+    markToolPending('python')
     fetchPrerequisites()
     onDismiss()
   }, [markToolPending, fetchPrerequisites, onDismiss])
@@ -188,27 +198,22 @@ export default function GoWizardSheet({ onDismiss, onComplete }: Props) {
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
           <Image
-            source={isDark ? Assets.goWhite : Assets.goBlack}
+            source={isDark ? Assets.pythonWhite : Assets.pythonBlack}
             style={styles.completedLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Go is ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Python is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Go{state.goStatus?.version ? ` ${state.goStatus.version}` : ''} is installed on your server.
+            Python{state.pythonStatus?.version ? ` ${state.pythonStatus.version}` : ''} with pip and venv are installed on your server.
           </Text>
-          {state.goStatus?.version && (
+          {state.pythonStatus?.version && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              v{state.goStatus.version}
+              v{state.pythonStatus.version}
             </Text>
           )}
-          {state.goStatus?.path && (
+          {state.pythonStatus?.path && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              {state.goStatus.path}
-            </Text>
-          )}
-          {state.goStatus?.gopath && (
-            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              GOPATH: {state.goStatus.gopath}
+              {state.pythonStatus.path}
             </Text>
           )}
         </View>
@@ -218,8 +223,14 @@ export default function GoWizardSheet({ onDismiss, onComplete }: Props) {
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
+      case 'add-ppa':
+        return <AddPpaStep dispatch={dispatch} />
       case 'install':
-        return <InstallGoStep dispatch={dispatch} />
+        return <InstallPythonStep dispatch={dispatch} />
+      case 'install-venv':
+        return <InstallVenvStep dispatch={dispatch} pythonBin={state.pythonStatus?.binary ?? 'python3'} />
+      case 'install-pip':
+        return <InstallPipStep dispatch={dispatch} pythonBin={state.pythonStatus?.binary ?? 'python3'} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
@@ -238,7 +249,7 @@ export default function GoWizardSheet({ onDismiss, onComplete }: Props) {
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Go Setup</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Python Setup</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>
@@ -267,7 +278,7 @@ export default function GoWizardSheet({ onDismiss, onComplete }: Props) {
 
         {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
         {state.allConfigured && !animationDone && (
-          <GoSetupAnimation onComplete={onAnimationComplete} />
+          <PythonSetupAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )

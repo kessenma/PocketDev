@@ -33,7 +33,7 @@ const ERROR_PATTERNS = [
   /no such file or directory/im,
 ]
 
-export default function InstallSheet({ tool, command, onDismiss, onAiInspect }: Props) {
+export default function InstallModal({ tool, command, onDismiss, onAiInspect }: Props) {
   const { colors } = useTheme()
   const ws = useConnectionStore((s) => s.ws)
   const report = useSetupStore((s) => s.report)

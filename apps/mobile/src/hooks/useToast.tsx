@@ -14,10 +14,10 @@ import {
   Platform,
 } from 'react-native'
 import Animated, {
+  Easing,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
   runOnJS,
 } from 'react-native-reanimated'
@@ -134,22 +134,21 @@ function ToastItem({
   const accentColor = ACCENT_COLORS[variant]
 
   useEffect(() => {
-    entrance.value = withSpring(1, { damping: 14, stiffness: 180 })
+    entrance.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) })
   }, [entrance])
 
   const handleDismiss = useCallback(() => {
-    entrance.value = withTiming(0, { duration: 200 }, () => {
+    entrance.value = withTiming(0, { duration: 180, easing: Easing.in(Easing.cubic) }, () => {
       runOnJS(onDismiss)()
     })
   }, [entrance, onDismiss])
 
   const animStyle = useAnimatedStyle(() => {
-    const scale = interpolate(entrance.value, [0, 1], [0.88, 1])
-    const opacity = interpolate(entrance.value, [0, 0.5], [0, 1], 'clamp')
-    const translateY = interpolate(entrance.value, [0, 1], [-20, 0])
+    const opacity = interpolate(entrance.value, [0, 0.35], [0, 1], 'clamp')
+    const translateY = interpolate(entrance.value, [0, 1], [-56, 0])
     return {
       opacity,
-      transform: [{ scale }, { translateY }],
+      transform: [{ translateY }],
     }
   })
 

@@ -40,6 +40,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
   const selectPackage = useScriptsStore((s) => s.selectPackage)
   const openPreview = usePreviewStore((s) => s.openPreview)
   const taskLogs = useTaskStore((s) => s.taskLogs)
+  const sendInput = useTaskStore((s) => s.sendInput)
   const [activeView, setActiveView] = useState<ScriptsView>('scripts')
   const [historyVisible, setHistoryVisible] = useState(false)
   const emptyLines: string[] = []
@@ -177,6 +178,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
                       onStop={() => stopScript(key)}
                       onDismiss={() => dismissScript(key)}
                       onPreview={(port) => openPreview(`http://localhost:${port}`)}
+                      onSendInput={running?.taskId ? (text) => sendInput(running.taskId!, text) : undefined}
                     />
                   )
                 })}
@@ -215,6 +217,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
                     onStop={() => stopScript(key)}
                     onDismiss={() => dismissScript(key)}
                     onPreview={(port) => openPreview(`http://localhost:${port}`)}
+                    onSendInput={running?.taskId ? (text) => sendInput(running.taskId!, text) : undefined}
                   />
                 )
               })}
@@ -244,6 +247,7 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
                   onStop={() => stopScript(key)}
                   onDismiss={() => dismissScript(key)}
                   onPreview={(port) => openPreview(`http://localhost:${port}`)}
+                  onSendInput={entry.taskId ? (text) => sendInput(entry.taskId!, text) : undefined}
                 />
               ))}
             </View>

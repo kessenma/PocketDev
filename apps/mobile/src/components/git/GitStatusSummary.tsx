@@ -5,7 +5,7 @@ import { typeStyles } from '../../theme/typography'
 import type { GitStashEntry } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import BauhausTooltip from '../shared/BauhausTooltip'
-import { GitCard, GitCardContent, GitCardHeader, GitCardTitle } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitFileChange } from './model'
 
 type Props = {
@@ -68,12 +68,12 @@ export default function GitStatusSummary({ changes, stashes, headFilesChanged, t
   ]
 
   return (
-    <GitCard>
-      <GitCardHeader>
-        <GitCardTitle>Status</GitCardTitle>
-      </GitCardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Status</CardTitle>
+      </CardHeader>
 
-      <GitCardContent>
+      <CardContent>
         <View style={styles.grid}>
           {metrics.map((metric) => (
             <View key={metric.label} style={styles.tileWrapper}>
@@ -87,8 +87,8 @@ export default function GitStatusSummary({ changes, stashes, headFilesChanged, t
             </View>
           ))}
         </View>
-      </GitCardContent>
-    </GitCard>
+      </CardContent>
+    </Card>
   )
 }
 

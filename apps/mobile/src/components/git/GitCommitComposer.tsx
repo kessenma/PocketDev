@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
-import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 
 type Props = {
   value: string
@@ -17,13 +17,13 @@ export default function GitCommitComposer({ value, canCommit, isCommitting, onCh
   const { colors } = useTheme()
 
   return (
-    <GitCard>
-      <GitCardHeader>
-        <GitCardTitle>Commit</GitCardTitle>
-        <GitCardDescription>Draft the message you want to send once server-side git execution is wired in.</GitCardDescription>
-      </GitCardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Commit</CardTitle>
+        <CardDescription>Draft the message you want to send once server-side git execution is wired in.</CardDescription>
+      </CardHeader>
 
-      <GitCardContent>
+      <CardContent>
         <TextInput
           multiline
           value={value}
@@ -59,8 +59,8 @@ export default function GitCommitComposer({ value, canCommit, isCommitting, onCh
             )}
           </TouchableOpacity>
         </View>
-      </GitCardContent>
-    </GitCard>
+      </CardContent>
+    </Card>
   )
 }
 

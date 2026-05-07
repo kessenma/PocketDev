@@ -3,13 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
-import {
-  ServerCard,
-  ServerCardContent,
-  ServerCardDescription,
-  ServerCardHeader,
-  ServerCardTitle,
-} from './ServerCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { ServerErrorEntry } from './model'
 
 type Props = {
@@ -26,15 +20,15 @@ export default function ServerErrorList({ errors }: Props) {
   const { colors } = useTheme()
 
   return (
-    <ServerCard>
-      <ServerCardHeader>
-        <ServerCardTitle>Recent server errors</ServerCardTitle>
-        <ServerCardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Recent server errors</CardTitle>
+        <CardDescription>
           Shape the mobile debugging flow around the failures you actually need to inspect first.
-        </ServerCardDescription>
-      </ServerCardHeader>
+        </CardDescription>
+      </CardHeader>
 
-      <ServerCardContent>
+      <CardContent>
         {errors.map((error) => (
           <View
             key={error.id}
@@ -63,8 +57,8 @@ export default function ServerErrorList({ errors }: Props) {
             </Text>
           </View>
         ))}
-      </ServerCardContent>
-    </ServerCard>
+      </CardContent>
+    </Card>
   )
 }
 

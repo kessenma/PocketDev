@@ -11,7 +11,7 @@ import { MorphCardTarget, morphCollapse } from 'react-native-morph-card'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import TaskDetailPane from '../components/tasks/TaskDetailPane'
 import BauhausBadge from '../components/shared/BauhausBadge'
-import BauhausButton from '../components/shared/BauhausButton'
+import { Button } from '../components/ui/Button'
 import { useTaskStore } from '../stores/tasks'
 import { typeStyles } from '../theme/typography'
 import { Assets } from '../../assets'
@@ -173,9 +173,9 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
                 }
               </TouchableOpacity>
               {isRunning && (
-                <BauhausButton variant="danger" compact onPress={() => killTask(task!.id)}>
+                <Button variant="danger" size="sm" onPress={() => killTask(task!.id)}>
                   Kill
-                </BauhausButton>
+                </Button>
               )}
             </View>
           </View>

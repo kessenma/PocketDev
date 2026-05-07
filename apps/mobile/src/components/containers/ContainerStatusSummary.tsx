@@ -3,13 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import type { ContainerSummary } from './model'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
-import {
-  ContainerCard,
-  ContainerCardContent,
-  ContainerCardDescription,
-  ContainerCardHeader,
-  ContainerCardTitle,
-} from './ContainerCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import { typeStyles } from '../../theme/typography'
 
 type Props = {
@@ -43,13 +37,13 @@ export default function ContainerStatusSummary({ containers }: Props) {
   ]
 
   return (
-    <ContainerCard>
-      <ContainerCardHeader>
-        <ContainerCardTitle>Status</ContainerCardTitle>
-        <ContainerCardDescription>Quick Docker ps -a scan across running and failed containers.</ContainerCardDescription>
-      </ContainerCardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Status</CardTitle>
+        <CardDescription>Quick Docker ps -a scan across running and failed containers.</CardDescription>
+      </CardHeader>
 
-      <ContainerCardContent>
+      <CardContent>
         <View style={styles.grid}>
           {metrics.map((metric) => (
             <View
@@ -62,8 +56,8 @@ export default function ContainerStatusSummary({ containers }: Props) {
             </View>
           ))}
         </View>
-      </ContainerCardContent>
-    </ContainerCard>
+      </CardContent>
+    </Card>
   )
 }
 

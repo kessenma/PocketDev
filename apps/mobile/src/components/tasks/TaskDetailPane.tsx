@@ -13,12 +13,12 @@ import { useSetupStore } from '../../stores/setup'
 import { useTaskStore } from '../../stores/tasks'
 import { useToast } from '../../hooks/useToast'
 import BauhausBadge from '../shared/BauhausBadge'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import BauhausChatInput from '../shared/BauhausChatInput'
-import ClaudeWizardSheet from '../setup/ClaudeWizardSheet'
-import CodexWizardSheet from '../setup/CodexWizardSheet'
-import CopilotWizardSheet from '../setup/CopilotWizardSheet'
-import OpenCodeWizardSheet from '../setup/OpenCodeWizardSheet'
+import ClaudeWizardModal from '../setup/ClaudeWizardModal'
+import CodexWizardModal from '../setup/CodexWizardModal'
+import CopilotWizardModal from '../setup/CopilotWizardModal'
+import OpenCodeWizardModal from '../setup/OpenCodeWizardModal'
 import { type StreamItem } from './TaskStreamer'
 import { GroupedItemRow } from './ActivityCards'
 import TaskDebugSheet from './TaskDebugSheet'
@@ -134,8 +134,8 @@ function DetailHeader({
             </View>
           ))}
           <View style={styles.permissionActions}>
-            <BauhausButton
-              compact
+            <Button
+              size="sm"
               onPress={() => {
                 if (!task) return
                 clearPermissions(task.id)
@@ -143,10 +143,10 @@ function DetailHeader({
               }}
             >
               Re-run with Auto-Approve
-            </BauhausButton>
-            <BauhausButton compact variant="quiet" onPress={() => { if (taskId) clearPermissions(taskId) }}>
+            </Button>
+            <Button size="sm" variant="quiet" onPress={() => { if (taskId) clearPermissions(taskId) }}>
               Dismiss
-            </BauhausButton>
+            </Button>
           </View>
         </View>
       )}
@@ -599,9 +599,9 @@ export default function TaskDetailPane({
               }
             </TouchableOpacity>
             {isRunning ? (
-              <BauhausButton variant="danger" compact onPress={() => killTask(task.id)}>
+              <Button variant="danger" size="sm" onPress={() => killTask(task.id)}>
                 Kill
-              </BauhausButton>
+              </Button>
             ) : null}
           </View>
         </View>
@@ -660,9 +660,9 @@ export default function TaskDetailPane({
 
       {!autoScroll ? (
         <View style={styles.scrollButton}>
-          <BauhausButton compact onPress={handleScrollToBottom}>
+          <Button size="sm" onPress={handleScrollToBottom}>
             Scroll To Bottom
-          </BauhausButton>
+          </Button>
         </View>
       ) : null}
 
@@ -718,7 +718,7 @@ export default function TaskDetailPane({
         />
       )}
       {showCodexWizard && (
-        <CodexWizardSheet
+        <CodexWizardModal
           key={`codex-auth-repair-${codexWizardKey}`}
           entryMode="auth_repair"
           onDismiss={() => setShowCodexWizard(false)}
@@ -726,7 +726,7 @@ export default function TaskDetailPane({
         />
       )}
       {showClaudeWizard && (
-        <ClaudeWizardSheet
+        <ClaudeWizardModal
           key={`claude-auth-repair-${claudeWizardKey}`}
           entryMode="auth_repair"
           onDismiss={() => setShowClaudeWizard(false)}
@@ -734,7 +734,7 @@ export default function TaskDetailPane({
         />
       )}
       {showCopilotWizard && (
-        <CopilotWizardSheet
+        <CopilotWizardModal
           key={`copilot-auth-repair-${copilotWizardKey}`}
           entryMode="auth_repair"
           onDismiss={() => setShowCopilotWizard(false)}
@@ -742,7 +742,7 @@ export default function TaskDetailPane({
         />
       )}
       {showOpenCodeWizard && (
-        <OpenCodeWizardSheet
+        <OpenCodeWizardModal
           key={`opencode-auth-repair-${openCodeWizardKey}`}
           entryMode="auth_repair"
           onDismiss={() => setShowOpenCodeWizard(false)}

@@ -4,20 +4,20 @@ import { useTheme } from '../contexts/ThemeContext'
 import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../stores/setup'
 import SetupChecklist from '../components/setup/SetupChecklist'
-import InstallSheet from '../components/setup/InstallSheet'
-import AiInspectSheet from '../components/setup/AiInspectSheet'
-import GitWizardSheet from '../components/setup/GitWizardSheet'
-import ClaudeWizardSheet from '../components/setup/ClaudeWizardSheet'
-import CopilotWizardSheet from '../components/setup/CopilotWizardSheet'
-import CodexWizardSheet from '../components/setup/CodexWizardSheet'
-import OpenCodeWizardSheet from '../components/setup/OpenCodeWizardSheet'
-import PythonWizardSheet from '../components/setup/PythonWizardSheet'
-import RustWizardSheet from '../components/setup/RustWizardSheet'
-import GoWizardSheet from '../components/setup/GoWizardSheet'
-import TypeScriptWizardSheet from '../components/setup/TypeScriptWizardSheet'
-import PackageManagerWizardSheet from '../components/setup/PackageManagerWizardSheet'
-import DockerWizardSheet from '../components/setup/DockerWizardSheet'
-import MinimaxWizardSheet from '../components/setup/MinimaxWizardSheet'
+import InstallModal from '../components/setup/InstallModal'
+import AiInspectModal from '../components/setup/AiInspectModal'
+import GitWizardModal from '../components/setup/GitWizardModal'
+import ClaudeWizardModal from '../components/setup/ClaudeWizardModal'
+import CopilotWizardModal from '../components/setup/CopilotWizardModal'
+import CodexWizardModal from '../components/setup/CodexWizardModal'
+import OpenCodeWizardModal from '../components/setup/OpenCodeWizardModal'
+import PythonWizardModal from '../components/setup/PythonWizardModal'
+import RustWizardModal from '../components/setup/RustWizardModal'
+import GoWizardModal from '../components/setup/GoWizardModal'
+import TypeScriptWizardModal from '../components/setup/TypeScriptWizardModal'
+import PackageManagerWizardModal from '../components/setup/PackageManagerWizardModal'
+import DockerWizardModal from '../components/setup/DockerWizardModal'
+import MinimaxWizardModal from '../components/setup/MinimaxWizardModal'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { RootStackParamList } from '../navigation/types'
 import type { ToolCheck } from '@pocketdev/shared/types'
@@ -501,7 +501,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
         </View>
 
         {showInstall && (
-          <InstallSheet
+          <InstallModal
             tool={installTool}
             command={installCommand}
             onDismiss={() => setShowInstall(false)}
@@ -510,7 +510,7 @@ export default function ServerSetupScreen({ navigation }: Props) {
         )}
 
         {showInspect && (
-          <AiInspectSheet
+          <AiInspectModal
             failedCommand={inspectCommand}
             failedOutput={inspectOutput}
             onDismiss={() => setShowInspect(false)}
@@ -519,84 +519,84 @@ export default function ServerSetupScreen({ navigation }: Props) {
         )}
 
         {showGitWizard && (
-          <GitWizardSheet
+          <GitWizardModal
             onDismiss={() => setShowGitWizard(false)}
             onComplete={handleGitWizardComplete}
           />
         )}
 
         {showClaudeWizard && (
-          <ClaudeWizardSheet
+          <ClaudeWizardModal
             onDismiss={() => setShowClaudeWizard(false)}
             onComplete={handleClaudeWizardComplete}
           />
         )}
 
         {showCodexWizard && (
-          <CodexWizardSheet
+          <CodexWizardModal
             onDismiss={() => setShowCodexWizard(false)}
             onComplete={handleCodexWizardComplete}
           />
         )}
 
         {showCopilotWizard && (
-          <CopilotWizardSheet
+          <CopilotWizardModal
             onDismiss={() => setShowCopilotWizard(false)}
             onComplete={handleCopilotWizardComplete}
           />
         )}
 
         {showOpenCodeWizard && (
-          <OpenCodeWizardSheet
+          <OpenCodeWizardModal
             onDismiss={() => setShowOpenCodeWizard(false)}
             onComplete={handleOpenCodeWizardComplete}
           />
         )}
 
         {showPkgWizard && (
-          <PackageManagerWizardSheet
+          <PackageManagerWizardModal
             onDismiss={() => setShowPkgWizard(false)}
             onComplete={handlePkgWizardComplete}
           />
         )}
 
         {showPythonWizard && (
-          <PythonWizardSheet
+          <PythonWizardModal
             onDismiss={() => setShowPythonWizard(false)}
             onComplete={handlePythonWizardComplete}
           />
         )}
 
         {showRustWizard && (
-          <RustWizardSheet
+          <RustWizardModal
             onDismiss={() => setShowRustWizard(false)}
             onComplete={handleRustWizardComplete}
           />
         )}
 
         {showGoWizard && (
-          <GoWizardSheet
+          <GoWizardModal
             onDismiss={() => setShowGoWizard(false)}
             onComplete={handleGoWizardComplete}
           />
         )}
 
         {showTypeScriptWizard && (
-          <TypeScriptWizardSheet
+          <TypeScriptWizardModal
             onDismiss={() => setShowTypeScriptWizard(false)}
             onComplete={handleTypeScriptWizardComplete}
           />
         )}
 
         {showDockerWizard && (
-          <DockerWizardSheet
+          <DockerWizardModal
             onDismiss={() => setShowDockerWizard(false)}
             onComplete={handleDockerWizardComplete}
           />
         )}
 
         {showMinimaxWizard && (
-          <MinimaxWizardSheet
+          <MinimaxWizardModal
             onDismiss={() => setShowMinimaxWizard(false)}
             onComplete={handleMinimaxWizardComplete}
           />

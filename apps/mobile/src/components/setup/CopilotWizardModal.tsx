@@ -163,7 +163,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-export default function CopilotWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
+export default function CopilotWizardModal({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)

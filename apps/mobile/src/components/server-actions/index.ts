@@ -3,13 +3,6 @@
  * and backend wiring notes. This module is mobile/client-side only today and
  * still needs to be wired into the server-side app.
  */
-export {
-  ServerCard,
-  ServerCardContent,
-  ServerCardDescription,
-  ServerCardHeader,
-  ServerCardTitle,
-} from './ServerCard'
 export { default as ServerErrorList } from './ServerErrorList'
 export { default as ServerHealthHero } from './ServerHealthHero'
 export { default as ServerMetricGrid } from './ServerMetricGrid'

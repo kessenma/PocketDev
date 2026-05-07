@@ -8,83 +8,60 @@ import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check, RotateCcw } from 'lucide-react-native'
 import SetupWizardScreen from './SetupWizardScreen'
 import type {
-  OpenCodeSetupStatus,
-  OpenCodeWizardStep,
-  OpenCodeWizardStepStatus,
+  MinimaxSetupStatus,
+  MinimaxWizardStep,
+  MinimaxWizardStepStatus,
 } from '@pocketdev/shared/types'
-import WizardStepper from './opencode-wizard/WizardStepper'
-import DetectStep from './opencode-wizard/DetectStep'
-import ReviewStep from './opencode-wizard/ReviewStep'
-import InstallStep from './opencode-wizard/InstallStep'
-import VerifyStep from './opencode-wizard/VerifyStep'
-import OpencodeSetupAnimation from '../animations/OpencodeSetupAnimation'
+import WizardStepper from './minimax-wizard/WizardStepper'
+import DetectStep from './minimax-wizard/DetectStep'
+import ReviewStep from './minimax-wizard/ReviewStep'
+import ConfigureStep from './minimax-wizard/ConfigureStep'
+import VerifyStep from './minimax-wizard/VerifyStep'
+import MinimaxSetupAnimation from '../animations/MinimaxSetupAnimation'
 import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
   onComplete: () => void
-  entryMode?: 'full' | 'auth_repair'
 }
 
-const ALL_STEPS: OpenCodeWizardStep[] = ['detect', 'review', 'install', 'verify']
+const ALL_STEPS: MinimaxWizardStep[] = ['detect', 'review', 'configure', 'verify']
 
 interface WizardState {
-  currentStep: OpenCodeWizardStep
-  stepStatuses: Record<OpenCodeWizardStep, OpenCodeWizardStepStatus>
-  openCodeStatus: OpenCodeSetupStatus | null
+  currentStep: MinimaxWizardStep
+  stepStatuses: Record<MinimaxWizardStep, MinimaxWizardStepStatus>
+  minimaxStatus: MinimaxSetupStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; openCodeStatus: OpenCodeSetupStatus }
-  | { type: 'STEP_COMPLETE'; step: OpenCodeWizardStep; openCodeStatus?: OpenCodeSetupStatus | null }
-  | { type: 'STEP_FAILED'; step: OpenCodeWizardStep; error: string }
+  | { type: 'DETECTION_COMPLETE'; minimaxStatus: MinimaxSetupStatus }
+  | { type: 'STEP_COMPLETE'; step: MinimaxWizardStep; minimaxStatus?: MinimaxSetupStatus | null }
+  | { type: 'STEP_FAILED'; step: MinimaxWizardStep; error: string }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
   | { type: 'FORCE_REINSTALL' }
 
-function getInitialStateForMode(entryMode: 'full' | 'auth_repair' = 'full'): WizardState {
-  const stepStatuses = {} as Record<OpenCodeWizardStep, OpenCodeWizardStepStatus>
+function getInitialState(): WizardState {
+  const stepStatuses = {} as Record<MinimaxWizardStep, MinimaxWizardStepStatus>
   for (const step of ALL_STEPS) {
-    stepStatuses[step] = 'pending'
+    stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
   }
-
-  if (entryMode === 'auth_repair') {
-    stepStatuses.detect = 'skipped'
-    stepStatuses.review = 'skipped'
-    stepStatuses.install = 'skipped'
-    stepStatuses.verify = 'active'
-    return {
-      currentStep: 'verify',
-      stepStatuses,
-      openCodeStatus: null,
-      error: null,
-      allConfigured: false,
-    }
-  }
-
-  stepStatuses.detect = 'active'
-  return {
-    currentStep: 'detect',
-    stepStatuses,
-    openCodeStatus: null,
-    error: null,
-    allConfigured: false,
-  }
+  return { currentStep: 'detect', stepStatuses, minimaxStatus: null, error: null, allConfigured: false }
 }
 
-function findNextPending(statuses: Record<OpenCodeWizardStep, OpenCodeWizardStepStatus>, afterIndex: number): OpenCodeWizardStep | null {
+function findNextPending(statuses: Record<MinimaxWizardStep, MinimaxWizardStepStatus>, afterIndex: number): MinimaxWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevious(statuses: Record<OpenCodeWizardStep, OpenCodeWizardStepStatus>, beforeIndex: number): OpenCodeWizardStep | null {
+function findPrevious(statuses: Record<MinimaxWizardStep, MinimaxWizardStepStatus>, beforeIndex: number): MinimaxWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) {
-    const status = statuses[ALL_STEPS[i]]
-    if (status === 'completed' || status === 'active') return ALL_STEPS[i]
+    const s = statuses[ALL_STEPS[i]]
+    if (s === 'completed' || s === 'active') return ALL_STEPS[i]
   }
   return null
 }
@@ -92,74 +69,70 @@ function findPrevious(statuses: Record<OpenCodeWizardStep, OpenCodeWizardStepSta
 function reducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const nextStatuses = { ...state.stepStatuses }
-      nextStatuses.detect = 'completed'
-      if (action.openCodeStatus.installed) nextStatuses.install = 'skipped'
-      if (action.openCodeStatus.installed && action.openCodeStatus.verified) nextStatuses.verify = 'skipped'
+      const s = action.minimaxStatus
+      const next = { ...state.stepStatuses }
+      next.detect = 'completed'
 
-      const allSkipped = ALL_STEPS.slice(1).every((step) => nextStatuses[step] === 'skipped')
-      if (allSkipped) {
-        return {
-          ...state,
-          currentStep: 'detect',
-          stepStatuses: nextStatuses,
-          openCodeStatus: action.openCodeStatus,
-          allConfigured: true,
+      if (s.api_key_configured && s.verified) {
+        // Everything already done
+        next.configure = 'skipped'
+        next.verify = 'skipped'
+        const allSkipped = ALL_STEPS.slice(1).every((step) => next[step] === 'skipped')
+        if (allSkipped) {
+          return { ...state, currentStep: 'detect', stepStatuses: next, minimaxStatus: s, allConfigured: true }
         }
+      } else if (s.api_key_configured && !s.verified) {
+        // Key exists but not yet verified — skip configure, go straight to verify
+        next.configure = 'skipped'
       }
 
-      const firstPending = ALL_STEPS.find((step) => nextStatuses[step] === 'pending')
-      if (firstPending) nextStatuses[firstPending] = 'active'
+      const firstPending = ALL_STEPS.find((step) => next[step] === 'pending')
+      if (firstPending) next[firstPending] = 'active'
 
-      return {
-        ...state,
-        currentStep: firstPending ?? 'detect',
-        stepStatuses: nextStatuses,
-        openCodeStatus: action.openCodeStatus,
-      }
+      return { ...state, currentStep: firstPending ?? 'detect', stepStatuses: next, minimaxStatus: s }
     }
 
     case 'STEP_COMPLETE': {
-      const nextStatuses = { ...state.stepStatuses }
-      nextStatuses[action.step] = 'completed'
-      const next = findNextPending(nextStatuses, ALL_STEPS.indexOf(action.step))
-      if (next) nextStatuses[next] = 'active'
+      const next = { ...state.stepStatuses }
+      next[action.step] = 'completed'
+      const nextStep = findNextPending(next, ALL_STEPS.indexOf(action.step))
+      if (nextStep) next[nextStep] = 'active'
       return {
         ...state,
-        currentStep: next ?? action.step,
-        stepStatuses: nextStatuses,
-        openCodeStatus: action.openCodeStatus ?? state.openCodeStatus,
+        currentStep: nextStep ?? action.step,
+        stepStatuses: next,
+        minimaxStatus: action.minimaxStatus ?? state.minimaxStatus,
         error: null,
-        allConfigured: !next,
+        allConfigured: !nextStep,
       }
     }
 
     case 'STEP_FAILED': {
-      const nextStatuses = { ...state.stepStatuses }
-      nextStatuses[action.step] = 'failed'
-      return { ...state, stepStatuses: nextStatuses, error: action.error }
+      const next = { ...state.stepStatuses }
+      next[action.step] = 'failed'
+      return { ...state, stepStatuses: next, error: action.error }
     }
 
     case 'GO_BACK': {
-      const previous = findPrevious(state.stepStatuses, ALL_STEPS.indexOf(state.currentStep))
-      if (!previous) return state
-      const nextStatuses = { ...state.stepStatuses }
-      nextStatuses[state.currentStep] = 'pending'
-      nextStatuses[previous] = 'active'
-      return { ...state, currentStep: previous, stepStatuses: nextStatuses, error: null }
+      const prev = findPrevious(state.stepStatuses, ALL_STEPS.indexOf(state.currentStep))
+      if (!prev) return state
+      const next = { ...state.stepStatuses }
+      next[state.currentStep] = 'pending'
+      next[prev] = 'active'
+      return { ...state, currentStep: prev, stepStatuses: next, error: null }
     }
 
     case 'RETRY': {
-      const nextStatuses = { ...state.stepStatuses }
-      nextStatuses[state.currentStep] = 'active'
-      return { ...state, stepStatuses: nextStatuses, error: null }
+      const next = { ...state.stepStatuses }
+      next[state.currentStep] = 'active'
+      return { ...state, stepStatuses: next, error: null }
     }
 
     case 'FORCE_REINSTALL': {
-      const nextStatuses = { ...state.stepStatuses }
-      nextStatuses['install'] = 'active'
-      if (nextStatuses['verify'] === 'skipped') nextStatuses['verify'] = 'pending'
-      return { ...state, currentStep: 'install', stepStatuses: nextStatuses, error: null, allConfigured: false }
+      const next = { ...state.stepStatuses }
+      next['configure'] = 'active'
+      if (next['verify'] === 'skipped') next['verify'] = 'pending'
+      return { ...state, currentStep: 'configure', stepStatuses: next, error: null, allConfigured: false }
     }
 
     default:
@@ -167,21 +140,21 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
+export default function MinimaxWizardModal({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
-  const markToolPending = useSetupStore((s) => s.markToolPending)
-  const [state, dispatch] = useReducer(reducer, entryMode, getInitialStateForMode)
+  const markToolPending = useSetupStore((state) => state.markToolPending)
+  const [state, dispatch] = useReducer(reducer, undefined, getInitialState)
   const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
-    markToolPending('opencode_cli')
+    markToolPending('minimax_provider')
     fetchPrerequisites()
     onComplete()
   }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
-    markToolPending('opencode_cli')
+    markToolPending('minimax_provider')
     fetchPrerequisites()
     onDismiss()
   }, [markToolPending, fetchPrerequisites, onDismiss])
@@ -195,21 +168,23 @@ export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode =
           <View style={[styles.completedIcon, { backgroundColor: colors.primary }]}>
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
-          <Image source={isDark ? Assets.opencodeWhite : Assets.opencodeBlack} style={styles.completedLogo} resizeMode="contain" />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>OpenCode is ready!</Text>
+          <Image source={isDark ? Assets.minimaxWhite : Assets.minimaxBlack} style={styles.completedLogo} resizeMode="contain" />
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Minimax is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            The runtime is installed and verified for later provider setup.
+            Your workspace is configured to use Minimax via OpenCode.
           </Text>
-          {state.openCodeStatus?.version ? (
-            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>v{state.openCodeStatus.version}</Text>
+          {state.minimaxStatus?.api_key_masked ? (
+            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
+              {state.minimaxStatus.api_key_masked}
+            </Text>
           ) : null}
           <TouchableOpacity
-            style={styles.reinstallButton}
+            style={styles.reconfigureButton}
             onPress={() => dispatch({ type: 'FORCE_REINSTALL' })}
             activeOpacity={0.7}
           >
             <RotateCcw color={colors.textTertiary} size={14} strokeWidth={2.25} />
-            <Text style={[styles.reinstallText, { color: colors.textTertiary }]}>Reinstall</Text>
+            <Text style={[styles.reconfigureText, { color: colors.textTertiary }]}>Re-configure</Text>
           </TouchableOpacity>
         </View>
       )
@@ -219,9 +194,9 @@ export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode =
       case 'detect':
         return <DetectStep dispatch={dispatch} />
       case 'review':
-        return <ReviewStep openCodeStatus={state.openCodeStatus} dispatch={dispatch} />
-      case 'install':
-        return <InstallStep dispatch={dispatch} />
+        return <ReviewStep minimaxStatus={state.minimaxStatus} dispatch={dispatch} onClose={handleClose} />
+      case 'configure':
+        return <ConfigureStep dispatch={dispatch} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
@@ -239,7 +214,7 @@ export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode =
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>OpenCode</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Minimax</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>
@@ -265,7 +240,7 @@ export default function OpenCodeWizardSheet({ onDismiss, onComplete, entryMode =
 
         {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
         {state.allConfigured && !animationDone ? (
-          <OpencodeSetupAnimation onComplete={onAnimationComplete} />
+          <MinimaxSetupAnimation onComplete={onAnimationComplete} />
         ) : null}
     </SetupWizardScreen>
   )
@@ -331,9 +306,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   completedDetail: {
-    ...typeStyles.bodySmall,
+    ...typeStyles.mono,
   },
-  reinstallButton: {
+  reconfigureButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[1],
@@ -341,7 +316,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[2],
   },
-  reinstallText: {
+  reconfigureText: {
     ...typeStyles.meta,
   },
 })

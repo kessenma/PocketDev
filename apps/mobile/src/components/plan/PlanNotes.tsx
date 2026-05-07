@@ -3,7 +3,7 @@ import { StyleSheet, TextInput } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
-import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 
 type Props = {
   value: string
@@ -14,13 +14,13 @@ export default function PlanNotes({ value, onChangeText }: Props) {
   const { colors } = useTheme()
 
   return (
-    <PlanCard>
-      <PlanCardHeader>
-        <PlanCardTitle>Your Notes</PlanCardTitle>
-        <PlanCardDescription>Add annotations or edits for the agent to consider.</PlanCardDescription>
-      </PlanCardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Your Notes</CardTitle>
+        <CardDescription>Add annotations or edits for the agent to consider.</CardDescription>
+      </CardHeader>
 
-      <PlanCardContent>
+      <CardContent>
         <TextInput
           multiline
           value={value}
@@ -37,8 +37,8 @@ export default function PlanNotes({ value, onChangeText }: Props) {
           ]}
           textAlignVertical="top"
         />
-      </PlanCardContent>
-    </PlanCard>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,13 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { MessageCircleQuestion, ShieldAlert, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskQuestion } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import { typeStyles } from '../../theme/typography'
 import { getQuestionOptionLabel } from './task-stream-utils'
 
@@ -25,7 +25,7 @@ type Props = {
 
 export default function TaskInteractionSheet({ taskId }: Props) {
   const { colors } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
+  const sheetRef = useRef<SheetHandle>(null)
   const questionsRaw = useTaskStore((s) => s.pendingQuestions.get(taskId))
   const questions = useMemo(() => questionsRaw ?? [], [questionsRaw])
   const answerQuestion = useTaskStore((s) => s.answerQuestion)
@@ -37,10 +37,6 @@ export default function TaskInteractionSheet({ taskId }: Props) {
   React.useEffect(() => {
     if (questions.length > 0) setDismissed(false)
   }, [questions.length])
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
 
   const visible = questions.length > 0 && !dismissed
   if (!visible) return null
@@ -54,7 +50,7 @@ export default function TaskInteractionSheet({ taskId }: Props) {
   }
 
   return (
-    <TrueSheet ref={sheetRef} detents={['auto', 1]} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={handleDismiss}>
+    <Sheet ref={sheetRef} detents={['auto', 1]} onDismiss={handleDismiss}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
@@ -93,7 +89,7 @@ export default function TaskInteractionSheet({ taskId }: Props) {
           />
         </ScrollView>
       </KeyboardAvoidingView>
-    </TrueSheet>
+    </Sheet>
   )
 }
 
@@ -168,10 +164,10 @@ function PermissionCard({
 
       <View style={styles.permissionButtons}>
         <View style={styles.flexButton}>
-          <BauhausButton onPress={() => onAnswer('y')}>Allow</BauhausButton>
+          <Button onPress={() => onAnswer('y')}>Allow</Button>
         </View>
         <View style={styles.flexButton}>
-          <BauhausButton variant="danger" onPress={() => onAnswer('n')}>Deny</BauhausButton>
+          <Button variant="danger" onPress={() => onAnswer('n')}>Deny</Button>
         </View>
       </View>
     </View>
@@ -192,10 +188,10 @@ function YesNoCard({
       <Text style={[styles.questionPrompt, { color: colors.text }]}>{question.prompt}</Text>
       <View style={styles.yesNoButtons}>
         <View style={styles.flexButton}>
-          <BauhausButton onPress={() => onAnswer('y')}>Yes</BauhausButton>
+          <Button onPress={() => onAnswer('y')}>Yes</Button>
         </View>
         <View style={styles.flexButton}>
-          <BauhausButton variant="secondary" onPress={() => onAnswer('n')}>No</BauhausButton>
+          <Button variant="secondary" onPress={() => onAnswer('n')}>No</Button>
         </View>
       </View>
     </View>
@@ -261,14 +257,14 @@ function FreeResponseCard({
         multiline
         textAlignVertical="top"
       />
-      <BauhausButton
+      <Button
         onPress={() => {
           if (input.trim()) onAnswer(input.trim())
         }}
         disabled={!input.trim()}
       >
         Send
-      </BauhausButton>
+      </Button>
     </View>
   )
 }
@@ -350,9 +346,9 @@ function FormCard({
           </View>
         ))}
       </View>
-      <BauhausButton onPress={() => onAnswer(JSON.stringify(values))} disabled={!canSubmit}>
+      <Button onPress={() => onAnswer(JSON.stringify(values))} disabled={!canSubmit}>
         Send
-      </BauhausButton>
+      </Button>
     </View>
   )
 }

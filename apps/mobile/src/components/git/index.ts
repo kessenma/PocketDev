@@ -4,13 +4,6 @@
  * to be wired into the server-side app.
  */
 export { default as GitBadge } from './GitBadge'
-export {
-  GitCard,
-  GitCardContent,
-  GitCardDescription,
-  GitCardHeader,
-  GitCardTitle,
-} from './GitCard'
 export { default as GitBranchList } from './GitBranchList'
 export { default as GitChangeList } from './GitChangeList'
 export { default as GitCommitComposer } from './GitCommitComposer'

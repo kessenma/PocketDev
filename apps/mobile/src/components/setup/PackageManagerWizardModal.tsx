@@ -6,16 +6,15 @@ import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
-import WizardStepper from './python-wizard/WizardStepper'
-import DetectStep from './python-wizard/DetectStep'
-import AddPpaStep from './python-wizard/AddPpaStep'
-import InstallPythonStep from './python-wizard/InstallPythonStep'
-import InstallVenvStep from './python-wizard/InstallVenvStep'
-import InstallPipStep from './python-wizard/InstallPipStep'
-import VerifyStep from './python-wizard/VerifyStep'
-import type { PythonSetupStatus, PythonWizardStep, PythonWizardStepStatus } from '@pocketdev/shared/types'
-import PythonSetupAnimation from '../animations/PythonSetupAnimation'
 import SetupWizardScreen from './SetupWizardScreen'
+import WizardStepper from './pkg-wizard/WizardStepper'
+import DetectStep from './pkg-wizard/DetectStep'
+import ReviewStep from './pkg-wizard/ReviewStep'
+import InstallStep from './pkg-wizard/InstallStep'
+import VerifyStep from './pkg-wizard/VerifyStep'
+import type { PkgInstallTool, PkgManagerStatus, PkgWizardStep, PkgWizardStepStatus } from '@pocketdev/shared/types'
+import { getDefaultSelectedTools } from './pkg-wizard/model'
+import PackageInstallAnimation from '../animations/PackageInstallAnimation'
 import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
@@ -25,47 +24,48 @@ interface Props {
 
 // ─── State machine ──────────────────────────────────────
 
-const ALL_STEPS: PythonWizardStep[] = [
-  'detect', 'add-ppa', 'install', 'install-venv', 'install-pip', 'verify',
-]
+const ALL_STEPS: PkgWizardStep[] = ['detect', 'review', 'install', 'verify']
 
 interface WizardState {
-  currentStep: PythonWizardStep
-  stepStatuses: Record<PythonWizardStep, PythonWizardStepStatus>
-  pythonStatus: PythonSetupStatus | null
+  currentStep: PkgWizardStep
+  stepStatuses: Record<PkgWizardStep, PkgWizardStepStatus>
+  pkgStatus: PkgManagerStatus | null
+  selectedTools: PkgInstallTool[]
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; pythonStatus: PythonSetupStatus }
-  | { type: 'STEP_COMPLETE'; step: PythonWizardStep }
-  | { type: 'STEP_FAILED'; step: PythonWizardStep; error: string }
+  | { type: 'DETECTION_COMPLETE'; pkgStatus: PkgManagerStatus }
+  | { type: 'STEP_COMPLETE'; step: PkgWizardStep }
+  | { type: 'STEP_FAILED'; step: PkgWizardStep; error: string }
+  | { type: 'TOGGLE_TOOL'; tool: PkgInstallTool }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
 
 function getInitialState(): WizardState {
-  const stepStatuses = {} as Record<PythonWizardStep, PythonWizardStepStatus>
+  const stepStatuses = {} as Record<PkgWizardStep, PkgWizardStepStatus>
   for (const step of ALL_STEPS) {
     stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
   }
   return {
     currentStep: 'detect',
     stepStatuses,
-    pythonStatus: null,
+    pkgStatus: null,
+    selectedTools: [],
     error: null,
     allConfigured: false,
   }
 }
 
-function findNextActiveStep(statuses: Record<PythonWizardStep, PythonWizardStepStatus>, afterIndex: number): PythonWizardStep | null {
+function findNextActiveStep(statuses: Record<PkgWizardStep, PkgWizardStepStatus>, afterIndex: number): PkgWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<PythonWizardStep, PythonWizardStepStatus>, beforeIndex: number): PythonWizardStep | null {
+function findPrevActiveStep(statuses: Record<PkgWizardStep, PkgWizardStepStatus>, beforeIndex: number): PkgWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) { // skip detect (index 0)
     const s = statuses[ALL_STEPS[i]]
     if (s === 'completed' || s === 'active') return ALL_STEPS[i]
@@ -76,47 +76,36 @@ function findPrevActiveStep(statuses: Record<PythonWizardStep, PythonWizardStepS
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const ps = action.pythonStatus
+      const ps = action.pkgStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
-
-      // Skip logic based on what's already installed
-      if (ps.ppa_added) newStatuses['add-ppa'] = 'skipped'
-      if (ps.installed) {
-        // Python is already installed — skip PPA and install
-        newStatuses['add-ppa'] = 'skipped'
-        newStatuses['install'] = 'skipped'
-      }
-      if (ps.venv_available) newStatuses['install-venv'] = 'skipped'
-      if (ps.pip_installed) newStatuses['install-pip'] = 'skipped'
-
-      // If everything is configured, go to all-done
-      const allSkipped = ALL_STEPS.slice(1).every((s) => newStatuses[s] === 'skipped')
-      if (allSkipped) {
-        return {
-          ...state,
-          currentStep: 'detect',
-          stepStatuses: newStatuses,
-          pythonStatus: ps,
-          allConfigured: true,
-        }
-      }
-
-      // Find first pending step
-      const firstPending = ALL_STEPS.find((s) => newStatuses[s] === 'pending')
-      if (firstPending) newStatuses[firstPending] = 'active'
+      newStatuses['review'] = 'active'
 
       return {
         ...state,
-        currentStep: firstPending ?? 'detect',
+        currentStep: 'review',
         stepStatuses: newStatuses,
-        pythonStatus: ps,
+        pkgStatus: ps,
+        selectedTools: getDefaultSelectedTools(ps),
+        allConfigured: false,
       }
     }
 
     case 'STEP_COMPLETE': {
       const newStatuses = { ...state.stepStatuses }
       newStatuses[action.step] = 'completed'
+
+      if (action.step === 'review' && state.selectedTools.length === 0) {
+        newStatuses['install'] = 'skipped'
+        newStatuses['verify'] = 'skipped'
+        return {
+          ...state,
+          currentStep: 'review',
+          stepStatuses: newStatuses,
+          error: null,
+          allConfigured: true,
+        }
+      }
 
       const currentIndex = ALL_STEPS.indexOf(action.step)
       const next = findNextActiveStep(newStatuses, currentIndex)
@@ -140,6 +129,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, stepStatuses: newStatuses, error: action.error }
     }
 
+    case 'TOGGLE_TOOL': {
+      const selectedTools = state.selectedTools.includes(action.tool)
+        ? state.selectedTools.filter((tool) => tool !== action.tool)
+        : [...state.selectedTools, action.tool]
+
+      return { ...state, selectedTools, allConfigured: false }
+    }
+
     case 'GO_BACK': {
       const currentIndex = ALL_STEPS.indexOf(state.currentStep)
       const prev = findPrevActiveStep(state.stepStatuses, currentIndex)
@@ -149,7 +146,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       newStatuses[state.currentStep] = 'pending'
       newStatuses[prev] = 'active'
 
-      return { ...state, currentStep: prev, stepStatuses: newStatuses, error: null }
+      return { ...state, currentStep: prev, stepStatuses: newStatuses, error: null, allConfigured: false }
     }
 
     case 'RETRY': {
@@ -165,7 +162,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
+export default function PackageManagerWizardModal({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)
@@ -173,22 +170,18 @@ export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
   const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
-    markToolPending('python')
+    markToolPending('npm')
     fetchPrerequisites()
     onComplete()
   }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
-    markToolPending('python')
+    markToolPending('npm')
     fetchPrerequisites()
     onDismiss()
   }, [markToolPending, fetchPrerequisites, onDismiss])
 
-  const currentIndex = ALL_STEPS.indexOf(state.currentStep)
-  const hasPrevStep = currentIndex > 1 && ALL_STEPS.slice(1, currentIndex).some(
-    (s) => state.stepStatuses[s] === 'completed' || state.stepStatuses[s] === 'active',
-  )
-  const canGoBack = hasPrevStep && !state.allConfigured
+  const canGoBack = ALL_STEPS.indexOf(state.currentStep) > 1 && !state.allConfigured
 
   function renderStep() {
     if (state.allConfigured) {
@@ -197,24 +190,27 @@ export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
           <View style={[styles.completedIcon, { backgroundColor: colors.primary }]}>
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
-          <Image
-            source={isDark ? Assets.pythonWhite : Assets.pythonBlack}
-            style={styles.completedLogo}
-            resizeMode="contain"
-          />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Python is ready!</Text>
+          <View style={styles.completedLogos}>
+            <Image source={isDark ? Assets.npmWhite : Assets.npmBlack} style={styles.completedLogo} resizeMode="contain" />
+            <Image source={isDark ? Assets.pnpmWhite : Assets.pnpmBlack} style={styles.completedLogo} resizeMode="contain" />
+            <Image source={isDark ? Assets.bunWhite : Assets.bunBlack} style={styles.completedLogo} resizeMode="contain" />
+          </View>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Package tools are ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Python{state.pythonStatus?.version ? ` ${state.pythonStatus.version}` : ''} with pip and venv are installed on your server.
+            Node.js, npm, pnpm, and Bun are available for your paired workspace.
           </Text>
-          {state.pythonStatus?.version && (
-            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              v{state.pythonStatus.version}
-            </Text>
-          )}
-          {state.pythonStatus?.path && (
-            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              {state.pythonStatus.path}
-            </Text>
+          {state.pkgStatus && (
+            <View style={styles.completedVersions}>
+              {state.pkgStatus.npm.version && (
+                <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>npm v{state.pkgStatus.npm.version}</Text>
+              )}
+              {state.pkgStatus.pnpm.version && (
+                <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>pnpm v{state.pkgStatus.pnpm.version}</Text>
+              )}
+              {state.pkgStatus.bun.version && (
+                <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>bun v{state.pkgStatus.bun.version}</Text>
+              )}
+            </View>
           )}
         </View>
       )
@@ -223,14 +219,10 @@ export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
-      case 'add-ppa':
-        return <AddPpaStep dispatch={dispatch} />
+      case 'review':
+        return <ReviewStep pkgStatus={state.pkgStatus!} selectedTools={state.selectedTools} dispatch={dispatch} />
       case 'install':
-        return <InstallPythonStep dispatch={dispatch} />
-      case 'install-venv':
-        return <InstallVenvStep dispatch={dispatch} pythonBin={state.pythonStatus?.binary ?? 'python3'} />
-      case 'install-pip':
-        return <InstallPipStep dispatch={dispatch} pythonBin={state.pythonStatus?.binary ?? 'python3'} />
+        return <InstallStep pkgStatus={state.pkgStatus!} selectedTools={state.selectedTools} dispatch={dispatch} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
@@ -249,7 +241,7 @@ export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Python Setup</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Package Tools</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>
@@ -278,7 +270,7 @@ export default function PythonWizardSheet({ onDismiss, onComplete }: Props) {
 
         {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
         {state.allConfigured && !animationDone && (
-          <PythonSetupAnimation onComplete={onAnimationComplete} />
+          <PackageInstallAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )
@@ -321,10 +313,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing[1],
   },
-  completedLogo: {
-    width: 48,
-    height: 48,
+  completedLogos: {
+    flexDirection: 'row',
+    gap: spacing[3],
     marginBottom: spacing[1],
+  },
+  completedLogo: {
+    width: 36,
+    height: 36,
   },
   completedTitle: {
     ...typeStyles.heading,
@@ -332,6 +328,12 @@ const styles = StyleSheet.create({
   completedSubtitle: {
     ...typeStyles.body,
     textAlign: 'center',
+  },
+  completedVersions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing[2],
   },
   completedDetail: {
     ...typeStyles.mono,

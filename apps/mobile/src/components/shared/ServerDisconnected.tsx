@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { palette, borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
-import BauhausButton from './BauhausButton'
+import { Button } from '../ui/Button'
 import CopyButton from './CopyButton'
 import { typeStyles } from '../../theme/typography'
 import ConnectingAnimation from '../animations/ConnectingAnimation'
@@ -110,14 +110,14 @@ export default function ServerDisconnected() {
           : `Lost connection to ${server.ip}:${server.port}.`}
       </Text>
 
-      <BauhausButton compact onPress={connect}>
+      <Button size="sm" onPress={connect}>
         Retry Connection
-      </BauhausButton>
+      </Button>
 
       {server && (
-        <BauhausButton compact variant="secondary" onPress={() => setConsoleOpen(true)}>
+        <Button size="sm" variant="secondary" onPress={() => setConsoleOpen(true)}>
           Server Console
-        </BauhausButton>
+        </Button>
       )}
 
       {consoleOpen && server && (

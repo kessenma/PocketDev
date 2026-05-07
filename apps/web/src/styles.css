@@ -1,13 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import './fonts.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans: 'pd-sans', system-ui, -apple-system, sans-serif;
-  --font-display: 'pd-display', "Avenir Next Condensed", "Arial Narrow", sans-serif;
+  --font-display: 'pd-display', Georgia, "Times New Roman", serif;
+  --font-display-italic: 'pd-display', Georgia, "Times New Roman", serif;
   --font-mono: 'pd-mono', "JetBrains Mono", Menlo, monospace;
   --font-terminal: 'pd-mono', "JetBrains Mono", Menlo, monospace;
 }

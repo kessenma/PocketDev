@@ -57,7 +57,7 @@ RootStack (native-stack)
 | Screen | Component Folder | Key Components |
 |---|---|---|
 | ConnectScreen | `QRScanner`, `animations/` | QRScanner, PairingAnimation, LiquidGlassCard |
-| ServerSetupScreen | `setup/` | SetupChecklist, *WizardSheet (Git, Claude, Codex, Copilot, Pkg, Python), InstallSheet, AiInspectSheet |
+| ServerSetupScreen | `setup/` | SetupChecklist, *WizardModal (Git, Claude, Codex, Copilot, Pkg, Python), InstallModal, AiInspectModal |
 | TasksScreen | `tasks/` | TaskListPane, TaskWorkspace, NewTaskSheet |
 | TaskDetailScreen | `tasks/` | TaskDetailPane |
 | CodeScreen | `files/`, `git/` | FileWorkspace, FileTreeList, CodeViewer, GitWorkspace, GitCard, GitChangeList, GitDiffPreview |
@@ -98,8 +98,12 @@ RootStack (native-stack)
 ## Design System (Bauhaus)
 <!-- Deep dive: docs/mobile/design-system.md -->
 
+**UI primitives** (`components/ui/`):
+- `Button` — primary/secondary/danger/quiet variants, sm/md/lg sizes, optional left/right/icon-only Lucide icons, loading spinner
+- `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent` — compound card with Bauhaus accent stripe
+- `Sheet` — modal sheet wrapper
+
 **Shared components** (`components/shared/`):
-- `BauhausButton` — primary/secondary/danger/quiet variants, loading spinner
 - `BauhausPanel` — Base card with accent color stripe
 - `BauhausBadge` — Pill badge with colored dot
 - `LiquidGlassCard` — Frosted glass card container
@@ -121,7 +125,7 @@ RootStack (native-stack)
 
 - **Feature folders**: Each domain (git, files, tasks, containers, plan, setup) has its own folder with focused components
 - **Thin screens**: Screens are orchestrators (~30-50 lines) composing feature components
-- **Wizard pattern**: `*WizardSheet` components for multi-step guided setup (Git, Claude, Codex, Copilot, Pkg, Python)
+- **Wizard pattern**: `*WizardModal` components for multi-step guided setup (Git, Claude, Codex, Copilot, Pkg, Python)
 - **Workspace pattern**: `*Workspace` components are the primary content area for a domain (GitWorkspace, FileWorkspace, TaskWorkspace, ContainerWorkspace, PlanWorkspace, ServerWorkspace)
 - **Model files**: Some feature folders have `model.ts` for data transforms and view models
 

@@ -155,7 +155,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function TypeScriptWizardSheet({ onDismiss, onComplete }: Props) {
+export default function TypeScriptWizardModal({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)

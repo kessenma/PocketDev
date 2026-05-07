@@ -1,10 +1,11 @@
 import { insertTask, getRecentTasks, getToolPath, getProject, getTask, insertTaskTurn, resetTaskForContinuation } from '../../db/index.ts'
 import { ManagedProcess } from './managed-process.ts'
 import { ManagedAgentProcess, claudeProviderConfig } from './managed-agent-process.ts'
+import { ShellPtyProcess } from './shell-pty-process.ts'
 import { getActiveProjectId } from '../system/projects.ts'
 
 /** Active processes keyed by task ID — only holds running processes, cleaned up on completion */
-const processes = new Map<string, ManagedProcess | ManagedAgentProcess>()
+const processes = new Map<string, ManagedProcess | ManagedAgentProcess | ShellPtyProcess>()
 
 type TaskMode = 'default' | 'plan'
 
@@ -77,6 +78,12 @@ export function startTask(
     const proc = new ManagedAgentProcess({ taskId, prompt, cwd, mode, model, sessionId, onComplete, provider: claudeProviderConfig() })
     processes.set(taskId, proc)
     void proc.start()
+  } else if (agentType === 'shell') {
+    console.log(`[task-manager] Starting shell (PTY) task ${taskId}: ${prompt.slice(0, 80)}`)
+    console.log(`[task-manager]   cwd=${cwd}`)
+    const proc = new ShellPtyProcess({ taskId, command: prompt, cwd, onComplete })
+    processes.set(taskId, proc)
+    proc.start()
   } else {
     const command = buildCommand(agentType, prompt, model, mode, sessionId ?? undefined)
     console.log(`[task-manager] Starting task ${taskId}: ${command.map((c) => c.includes(' ') ? `"${c}"` : c).join(' ')}`)
@@ -165,6 +172,6 @@ export function getTaskList() {
 }
 
 /** Get a specific active process */
-export function getProcess(taskId: string): ManagedProcess | ManagedAgentProcess | undefined {
+export function getProcess(taskId: string): ManagedProcess | ManagedAgentProcess | ShellPtyProcess | undefined {
   return processes.get(taskId)
 }

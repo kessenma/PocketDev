@@ -4,7 +4,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
-import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitRemoteState } from './model'
 
 type Props = {
@@ -29,18 +29,18 @@ export default function GitPushPanel({ remote, isPushing, isPulling, onPushPress
           : 'Branch is already in sync with the remote.'
 
   return (
-    <GitCard>
-      <GitCardHeader>
+    <Card>
+      <CardHeader>
         <View style={styles.headerRow}>
           <View style={styles.titleBlock}>
-            <GitCardTitle>Push</GitCardTitle>
-            <GitCardDescription>{summary}</GitCardDescription>
+            <CardTitle>Push</CardTitle>
+            <CardDescription>{summary}</CardDescription>
           </View>
           <GitBadge variant={statusVariant(remote.status)}>{remote.status}</GitBadge>
         </View>
-      </GitCardHeader>
+      </CardHeader>
 
-      <GitCardContent>
+      <CardContent>
         <View style={[styles.metrics, { backgroundColor: colors.backgroundSecondary }]}> 
           <View style={styles.metricCell}>
             <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>Remote</Text>
@@ -81,8 +81,8 @@ export default function GitPushPanel({ remote, isPushing, isPulling, onPushPress
             <Text style={[styles.buttonText, { color: colors.primaryText }]}>Push to {remote.upstream}</Text>
           )}
         </TouchableOpacity>
-      </GitCardContent>
-    </GitCard>
+      </CardContent>
+    </Card>
   )
 }
 

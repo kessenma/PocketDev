@@ -6,12 +6,12 @@ import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
 import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
-import WizardStepper from './rust-wizard/WizardStepper'
-import DetectStep from './rust-wizard/DetectStep'
-import InstallRustupStep from './rust-wizard/InstallRustupStep'
-import VerifyStep from './rust-wizard/VerifyStep'
-import type { RustSetupStatus, RustWizardStep, RustWizardStepStatus } from '@pocketdev/shared/types'
-import RustSetupAnimation from '../animations/RustSetupAnimation'
+import WizardStepper from './go-wizard/WizardStepper'
+import DetectStep from './go-wizard/DetectStep'
+import InstallGoStep from './go-wizard/InstallGoStep'
+import VerifyStep from './go-wizard/VerifyStep'
+import type { GoSetupStatus, GoWizardStep, GoWizardStepStatus } from '@pocketdev/shared/types'
+import GoSetupAnimation from '../animations/GoSetupAnimation'
 import SetupWizardScreen from './SetupWizardScreen'
 import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
@@ -22,45 +22,45 @@ interface Props {
 
 // ─── State machine ──────────────────────────────────────
 
-const ALL_STEPS: RustWizardStep[] = ['detect', 'install-rustup', 'verify']
+const ALL_STEPS: GoWizardStep[] = ['detect', 'install', 'verify']
 
 interface WizardState {
-  currentStep: RustWizardStep
-  stepStatuses: Record<RustWizardStep, RustWizardStepStatus>
-  rustStatus: RustSetupStatus | null
+  currentStep: GoWizardStep
+  stepStatuses: Record<GoWizardStep, GoWizardStepStatus>
+  goStatus: GoSetupStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; rustStatus: RustSetupStatus }
-  | { type: 'STEP_COMPLETE'; step: RustWizardStep }
-  | { type: 'STEP_FAILED'; step: RustWizardStep; error: string }
+  | { type: 'DETECTION_COMPLETE'; goStatus: GoSetupStatus }
+  | { type: 'STEP_COMPLETE'; step: GoWizardStep }
+  | { type: 'STEP_FAILED'; step: GoWizardStep; error: string }
   | { type: 'GO_BACK' }
   | { type: 'RETRY' }
 
 function getInitialState(): WizardState {
-  const stepStatuses = {} as Record<RustWizardStep, RustWizardStepStatus>
+  const stepStatuses = {} as Record<GoWizardStep, GoWizardStepStatus>
   for (const step of ALL_STEPS) {
     stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
   }
   return {
     currentStep: 'detect',
     stepStatuses,
-    rustStatus: null,
+    goStatus: null,
     error: null,
     allConfigured: false,
   }
 }
 
-function findNextActiveStep(statuses: Record<RustWizardStep, RustWizardStepStatus>, afterIndex: number): RustWizardStep | null {
+function findNextActiveStep(statuses: Record<GoWizardStep, GoWizardStepStatus>, afterIndex: number): GoWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<RustWizardStep, RustWizardStepStatus>, beforeIndex: number): RustWizardStep | null {
+function findPrevActiveStep(statuses: Record<GoWizardStep, GoWizardStepStatus>, beforeIndex: number): GoWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) { // skip detect (index 0)
     const s = statuses[ALL_STEPS[i]]
     if (s === 'completed' || s === 'active') return ALL_STEPS[i]
@@ -71,14 +71,13 @@ function findPrevActiveStep(statuses: Record<RustWizardStep, RustWizardStepStatu
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const rs = action.rustStatus
+      const gs = action.goStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
 
-      // Skip install if Rust is already installed with cargo
-      if (rs.installed && rs.cargo_installed) {
-        newStatuses['install-rustup'] = 'skipped'
-        newStatuses['verify'] = 'skipped'
+      // Skip install if Go is already installed
+      if (gs.installed) {
+        newStatuses['install'] = 'skipped'
       }
 
       // If everything is configured, go to all-done
@@ -88,7 +87,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          rustStatus: rs,
+          goStatus: gs,
           allConfigured: true,
         }
       }
@@ -101,7 +100,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: firstPending ?? 'detect',
         stepStatuses: newStatuses,
-        rustStatus: rs,
+        goStatus: gs,
       }
     }
 
@@ -156,7 +155,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function RustWizardSheet({ onDismiss, onComplete }: Props) {
+export default function GoWizardModal({ onDismiss, onComplete }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)
@@ -164,13 +163,13 @@ export default function RustWizardSheet({ onDismiss, onComplete }: Props) {
   const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
-    markToolPending('rust')
+    markToolPending('go')
     fetchPrerequisites()
     onComplete()
   }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
-    markToolPending('rust')
+    markToolPending('go')
     fetchPrerequisites()
     onDismiss()
   }, [markToolPending, fetchPrerequisites, onDismiss])
@@ -189,22 +188,27 @@ export default function RustWizardSheet({ onDismiss, onComplete }: Props) {
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
           <Image
-            source={isDark ? Assets.rustWhite : Assets.rustBlack}
+            source={isDark ? Assets.goWhite : Assets.goBlack}
             style={styles.completedLogo}
             resizeMode="contain"
           />
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Rust is ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Go is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Rust{state.rustStatus?.version ? ` ${state.rustStatus.version}` : ''} with Cargo{state.rustStatus?.cargo_version ? ` ${state.rustStatus.cargo_version}` : ''} are installed on your server.
+            Go{state.goStatus?.version ? ` ${state.goStatus.version}` : ''} is installed on your server.
           </Text>
-          {state.rustStatus?.version && (
+          {state.goStatus?.version && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              rustc v{state.rustStatus.version}
+              v{state.goStatus.version}
             </Text>
           )}
-          {state.rustStatus?.path && (
+          {state.goStatus?.path && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              {state.rustStatus.path}
+              {state.goStatus.path}
+            </Text>
+          )}
+          {state.goStatus?.gopath && (
+            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
+              GOPATH: {state.goStatus.gopath}
             </Text>
           )}
         </View>
@@ -214,8 +218,8 @@ export default function RustWizardSheet({ onDismiss, onComplete }: Props) {
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
-      case 'install-rustup':
-        return <InstallRustupStep dispatch={dispatch} />
+      case 'install':
+        return <InstallGoStep dispatch={dispatch} />
       case 'verify':
         return <VerifyStep dispatch={dispatch} />
       default:
@@ -234,7 +238,7 @@ export default function RustWizardSheet({ onDismiss, onComplete }: Props) {
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Rust Setup</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Go Setup</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>
@@ -263,7 +267,7 @@ export default function RustWizardSheet({ onDismiss, onComplete }: Props) {
 
         {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
         {state.allConfigured && !animationDone && (
-          <RustSetupAnimation onComplete={onAnimationComplete} />
+          <GoSetupAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )

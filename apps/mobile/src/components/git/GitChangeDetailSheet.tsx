@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -14,19 +14,13 @@ type Props = {
 
 export default function GitChangeDetailSheet({ change, onDismiss }: Props) {
   const { colors } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
+  const sheetRef = useRef<SheetHandle>(null)
 
   return (
-    <TrueSheet
+    <Sheet
       ref={sheetRef}
       detents={[0.6, 1]}
-      backgroundColor={colors.background}
-      cornerRadius={24}
-      onDidDismiss={onDismiss}
+      onDismiss={onDismiss}
     >
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerCopy}>
@@ -47,7 +41,7 @@ export default function GitChangeDetailSheet({ change, onDismiss }: Props) {
       <View style={styles.content}>
         <GitDiffPreview change={change} variant="plain" />
       </View>
-    </TrueSheet>
+    </Sheet>
   )
 }
 

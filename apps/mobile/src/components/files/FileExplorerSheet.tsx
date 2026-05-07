@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -9,7 +9,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { FlashList } from '@shopify/flash-list'
 import { FileCode2, FolderOpen, Pin, Search, X } from 'lucide-react-native'
 import { borderRadius, palette, spacing, type SemanticTheme } from '@pocketdev/shared/theme'
@@ -35,7 +35,7 @@ const CHROME_HEIGHT = 142
 export default function FileExplorerSheet({ onDismiss }: Props) {
   const { colors } = useTheme()
   const { height: windowHeight } = useWindowDimensions()
-  const sheetRef = useRef<TrueSheet>(null)
+  const sheetRef = useRef<SheetHandle>(null)
   const [listHeight, setListHeight] = useState(Math.max(windowHeight * 0.6 - CHROME_HEIGHT, 200))
 
   const updateListHeight = useCallback((position: number) => {
@@ -58,10 +58,6 @@ export default function FileExplorerSheet({ onDismiss }: Props) {
   const runSearch = useFilesStore((state) => state.runSearch)
   const clearSearch = useFilesStore((state) => state.clearSearch)
   const toggleContextPath = useFilesStore((state) => state.toggleContextPath)
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
 
   const hasSearchResults = searchQuery.trim().length > 0
   const pathLabel = currentPath === '.' ? rootLabel ?? 'Project root' : currentPath
@@ -163,12 +159,10 @@ export default function FileExplorerSheet({ onDismiss }: Props) {
     ) : null
 
   return (
-    <TrueSheet
+    <Sheet
       ref={sheetRef}
       detents={[0.6, 1]}
-      backgroundColor={colors.background}
-      cornerRadius={24}
-      onDidDismiss={onDismiss}
+      onDismiss={onDismiss}
       onDidPresent={({ nativeEvent }) => updateListHeight(nativeEvent.position)}
       onDetentChange={({ nativeEvent }) => updateListHeight(nativeEvent.position)}
     >
@@ -258,7 +252,7 @@ export default function FileExplorerSheet({ onDismiss }: Props) {
           />
         </View>
       </View>
-    </TrueSheet>
+    </Sheet>
   )
 }
 

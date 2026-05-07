@@ -22,7 +22,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
 import { buildMarkdownStyle } from '../../theme/markdown'
 import BauhausBadge from '../shared/BauhausBadge'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import { typeStyles } from '../../theme/typography'
 import { getToolPresentation, groupActivitiesIntoCards } from './task-stream-utils'
 import type { GroupedStreamItem } from './task-stream-utils'
@@ -105,9 +105,9 @@ export default function TaskStreamer({ taskId }: Props) {
 
       {!autoScroll && (
         <View style={styles.scrollButton}>
-          <BauhausButton compact onPress={handleScrollToBottom}>
+          <Button size="sm" onPress={handleScrollToBottom}>
             Scroll To Bottom
-          </BauhausButton>
+          </Button>
         </View>
       )}
     </View>

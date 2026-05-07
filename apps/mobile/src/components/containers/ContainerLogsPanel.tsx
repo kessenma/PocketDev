@@ -12,13 +12,7 @@ import type { ContainerLogsDirection, ContainerLogsFilter, ContainerLogLine, Con
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import ContainerBadge from './ContainerBadge'
-import {
-  ContainerCard,
-  ContainerCardContent,
-  ContainerCardDescription,
-  ContainerCardHeader,
-  ContainerCardTitle,
-} from './ContainerCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import ContainerSegmentedControl from './ContainerSegmentedControl'
 import { typeStyles } from '../../theme/typography'
 
@@ -73,30 +67,30 @@ export default function ContainerLogsPanel({
 
   if (!container) {
     return (
-      <ContainerCard style={styles.emptyCard}>
-        <ContainerCardHeader>
-          <ContainerCardTitle>Select a container</ContainerCardTitle>
-          <ContainerCardDescription>Choose a Docker container to load logs, filter errors, or follow live output.</ContainerCardDescription>
-        </ContainerCardHeader>
-      </ContainerCard>
+      <Card style={styles.emptyCard}>
+        <CardHeader>
+          <CardTitle>Select a container</CardTitle>
+          <CardDescription>Choose a Docker container to load logs, filter errors, or follow live output.</CardDescription>
+        </CardHeader>
+      </Card>
     )
   }
 
   return (
-    <ContainerCard style={styles.card}>
-      <ContainerCardHeader>
+    <Card style={styles.card}>
+      <CardHeader>
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
-            <ContainerCardTitle>{container.name}</ContainerCardTitle>
-            <ContainerCardDescription>{container.image}</ContainerCardDescription>
+            <CardTitle>{container.name}</CardTitle>
+            <CardDescription>{container.image}</CardDescription>
           </View>
           <ContainerBadge variant={container.state === 'running' ? 'success' : container.state === 'restarting' ? 'warning' : 'outline'}>
             {container.state}
           </ContainerBadge>
         </View>
-      </ContainerCardHeader>
+      </CardHeader>
 
-      <ContainerCardContent>
+      <CardContent>
         <View style={styles.controls}>
           <View style={styles.inputBlock}>
             <Text style={[styles.controlLabel, { color: colors.textTertiary }]}>Line Count</Text>
@@ -190,8 +184,8 @@ export default function ContainerLogsPanel({
             )}
           </ScrollView>
         </View>
-      </ContainerCardContent>
-    </ContainerCard>
+      </CardContent>
+    </Card>
   )
 }
 

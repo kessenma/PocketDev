@@ -38,7 +38,7 @@ import {
   getCliModelId,
   type ModelProviderId,
 } from '../model-selector'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import BauhausBadge from '../shared/BauhausBadge'
 import { BauhausPanel } from '../shared/BauhausPanel'
 import { typeStyles } from '../../theme/typography'
@@ -529,7 +529,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       </ScrollView>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <BauhausButton
+        <Button
           onPress={handleSubmit}
           loading={submitting}
           disabled={submitting || prompt.trim().length === 0 || (providerAvailability != null && providerAvailability !== 'available')}
@@ -539,7 +539,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             : providerAvailability === 'installed_no_auth'
               ? `${selectedProvider.label} not authenticated`
               : 'Start Task'}
-        </BauhausButton>
+        </Button>
       </View>
       {showFilterSheet && (
         <PromptFilterSheet

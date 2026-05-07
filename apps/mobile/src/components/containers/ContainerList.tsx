@@ -3,13 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import ContainerBadge from './ContainerBadge'
-import {
-  ContainerCard,
-  ContainerCardContent,
-  ContainerCardDescription,
-  ContainerCardHeader,
-  ContainerCardTitle,
-} from './ContainerCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { ContainerSummary } from './model'
 import { typeStyles } from '../../theme/typography'
 
@@ -23,13 +17,13 @@ export default function ContainerList({ containers, selectedContainerId, onSelec
   const { colors } = useTheme()
 
   return (
-    <ContainerCard>
-      <ContainerCardHeader>
-        <ContainerCardTitle>Containers</ContainerCardTitle>
-        <ContainerCardDescription>Choose any running, stopped, or looping container to inspect logs.</ContainerCardDescription>
-      </ContainerCardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Containers</CardTitle>
+        <CardDescription>Choose any running, stopped, or looping container to inspect logs.</CardDescription>
+      </CardHeader>
 
-      <ContainerCardContent>
+      <CardContent>
         {containers.length > 0 ? (
           containers.map((container) => {
             const selected = container.id === selectedContainerId
@@ -76,8 +70,8 @@ export default function ContainerList({ containers, selectedContainerId, onSelec
             <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>This server is not running any Docker containers yet.</Text>
           </View>
         )}
-      </ContainerCardContent>
-    </ContainerCard>
+      </CardContent>
+    </Card>
   )
 }
 

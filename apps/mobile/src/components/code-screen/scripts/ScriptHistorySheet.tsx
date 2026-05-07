@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../../ui/Sheet'
 import { CircleCheck, CircleX, Clock, History, Square, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
@@ -63,10 +64,18 @@ function ScriptRow({ item, borderColor }: { item: Task; borderColor: string }) {
   )
 }
 
+const CHROME_HEIGHT = 60
+
 export default function ScriptHistorySheet({ onDismiss }: Props) {
   const { colors } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
+  const { height: windowHeight } = useWindowDimensions()
+  const sheetRef = useRef<SheetHandle>(null)
   const tasks = useTaskStore((s) => s.tasks)
+  const [listHeight, setListHeight] = useState(Math.max(windowHeight * 0.5 - CHROME_HEIGHT, 120))
+
+  const updateListHeight = useCallback((position: number) => {
+    setListHeight(Math.max(windowHeight - position - CHROME_HEIGHT, 120))
+  }, [windowHeight])
 
   const scriptHistory: Task[] = useMemo(
     () =>
@@ -76,17 +85,13 @@ export default function ScriptHistorySheet({ onDismiss }: Props) {
     [tasks],
   )
 
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
-
   return (
-    <TrueSheet
+    <Sheet
       ref={sheetRef}
       detents={[0.5, 1]}
-      backgroundColor={colors.background}
-      cornerRadius={24}
-      onDidDismiss={onDismiss}
+      onDismiss={onDismiss}
+      onDidPresent={({ nativeEvent }) => updateListHeight(nativeEvent.position)}
+      onDetentChange={({ nativeEvent }) => updateListHeight(nativeEvent.position)}
     >
       <View style={styles.container}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -116,12 +121,12 @@ export default function ScriptHistorySheet({ onDismiss }: Props) {
             renderItem={({ item }) => (
               <ScriptRow item={item} borderColor={colors.border} />
             )}
-            style={styles.list}
+            style={{ height: listHeight }}
             contentContainerStyle={styles.listContent}
           />
         )}
       </View>
-    </TrueSheet>
+    </Sheet>
   )
 }
 

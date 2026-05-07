@@ -4,7 +4,7 @@ import { spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
-import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitBranchOption, GitRemoteState } from './model'
 
 type Props = {
@@ -24,20 +24,20 @@ export default function GitRepoSummaryCard({ repoName, repoPath, branch, remote 
         : 'Working tree aligned with remote'
 
   return (
-    <GitCard>
-      <GitCardHeader>
+    <Card>
+      <CardHeader>
         <View style={styles.headerRow}>
           <View style={styles.titleBlock}>
-            <GitCardTitle>{repoName || 'No repository selected'}</GitCardTitle>
-            <GitCardDescription>{repoPath || 'Pick a repository to load git status.'}</GitCardDescription>
+            <CardTitle>{repoName || 'No repository selected'}</CardTitle>
+            <CardDescription>{repoPath || 'Pick a repository to load git status.'}</CardDescription>
           </View>
           <GitBadge variant={branch?.protected ? 'primary' : 'outline'}>
             {branch?.name ?? 'No branch'}
           </GitBadge>
         </View>
-      </GitCardHeader>
+      </CardHeader>
 
-      <GitCardContent>
+      <CardContent>
         <View style={styles.metricRow}>
           <View style={styles.metricCell}>
             <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>Upstream</Text>
@@ -52,8 +52,8 @@ export default function GitRepoSummaryCard({ repoName, repoPath, branch, remote 
         <View style={[styles.syncBanner, { backgroundColor: colors.backgroundSecondary }]}> 
           <Text style={[styles.syncText, { color: colors.textSecondary }]}>{syncText}</Text>
         </View>
-      </GitCardContent>
-    </GitCard>
+      </CardContent>
+    </Card>
   )
 }
 

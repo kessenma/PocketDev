@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
   Image,
   ScrollView,
@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { Bug, CheckCircle2, ChevronLeft, LockKeyhole, ShieldAlert, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import { typeStyles } from '../../theme/typography'
 import { Assets } from '../../../assets'
 import type { TaskDebugIssueKind, TaskDebugSelection } from './task-debug-utils'
@@ -133,13 +133,9 @@ export default function TaskDebugSheet({
   setupReport,
 }: Props) {
   const { colors, isDark } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
+  const sheetRef = useRef<SheetHandle>(null)
   const [step, setStep] = useState<DebugStep>('issue')
   const [cliSelection, setCliSelection] = useState<CliKey | null>(null)
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
 
   function handleIssueNext() {
     const defaultCli = getDefaultCli(taskAgentType, setupReport)
@@ -166,7 +162,7 @@ export default function TaskDebugSheet({
   const canFinish = step === 'cli-select' && cliSelection != null && selection != null
 
   return (
-    <TrueSheet ref={sheetRef} detents={[0.65, 1]} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={onDismiss}>
+    <Sheet ref={sheetRef} detents={[0.65, 1]} onDismiss={onDismiss}>
       <View style={[styles.sheet, { borderColor: colors.border }]}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -251,12 +247,12 @@ export default function TaskDebugSheet({
             ) : null}
 
             <View style={[styles.footer, { borderTopColor: colors.border }]}>
-              <BauhausButton
+              <Button
                 onPress={handleIssueNext}
                 disabled={selection == null}
               >
                 {selection === 'permissions' ? 'Select CLI' : 'Select CLI'}
-              </BauhausButton>
+              </Button>
             </View>
           </>
         ) : (
@@ -311,17 +307,17 @@ export default function TaskDebugSheet({
             </ScrollView>
 
             <View style={[styles.footer, { borderTopColor: colors.border }]}>
-              <BauhausButton
+              <Button
                 onPress={handleFinish}
                 disabled={!canFinish}
               >
                 {selection === 'permissions' ? 'Go to Task Stream' : 'Continue'}
-              </BauhausButton>
+              </Button>
             </View>
           </>
         )}
       </View>
-    </TrueSheet>
+    </Sheet>
   )
 }
 

@@ -1,77 +1,89 @@
 import React, { useReducer, useCallback } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
-import { ChevronLeft, X, Check } from 'lucide-react-native'
+import { Assets } from '../../../assets'
+import { ChevronLeft, X, Check, RotateCcw } from 'lucide-react-native'
 import SetupWizardScreen from './SetupWizardScreen'
-import WizardStepper from './git-wizard/WizardStepper'
-import DetectStep from './git-wizard/DetectStep'
-import InstallGitStep from './git-wizard/InstallGitStep'
-import InstallGitHubCliStep from './git-wizard/InstallGitHubCliStep'
-import GitHubCliAuthStep from './git-wizard/GitHubCliAuthStep'
-import ConfigureIdentityStep from './git-wizard/ConfigureIdentityStep'
-import type { GitSetupStatus, GitWizardStep, GitWizardStepStatus } from '@pocketdev/shared/types'
-import GitHubSetupAnimation from '../animations/GitHubSetupAnimation'
+import WizardStepper from './claude-wizard/WizardStepper'
+import DetectStep from './claude-wizard/DetectStep'
+import InstallStep from './claude-wizard/InstallStep'
+import AuthenticateStep from './claude-wizard/AuthenticateStep'
+import VerifyStep from './claude-wizard/VerifyStep'
+import type { ClaudeSetupStatus, ClaudeWizardStep, ClaudeWizardStepStatus } from '@pocketdev/shared/types'
+import ClaudeSetupAnimation from '../animations/ClaudeSetupAnimation'
 import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
   onDismiss: () => void
   onComplete: () => void
+  entryMode?: 'full' | 'auth_repair'
 }
 
 // ─── State machine ──────────────────────────────────────
 
-const ALL_STEPS: GitWizardStep[] = [
-  'detect', 'install', 'install-gh', 'github-cli-auth', 'configure-identity',
-]
+const ALL_STEPS: ClaudeWizardStep[] = ['detect', 'install', 'authenticate', 'verify']
 
 interface WizardState {
-  currentStep: GitWizardStep
-  stepStatuses: Record<GitWizardStep, GitWizardStepStatus>
-  setupStatus: GitSetupStatus | null
-  userName: string
-  userEmail: string
-  githubUsername: string | null
+  currentStep: ClaudeWizardStep
+  stepStatuses: Record<ClaudeWizardStep, ClaudeWizardStepStatus>
+  claudeStatus: ClaudeSetupStatus | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; setupStatus: GitSetupStatus }
-  | { type: 'STEP_COMPLETE'; step: GitWizardStep }
-  | { type: 'STEP_FAILED'; step: GitWizardStep; error: string }
+  | { type: 'DETECTION_COMPLETE'; claudeStatus: ClaudeSetupStatus }
+  | { type: 'STEP_COMPLETE'; step: ClaudeWizardStep }
+  | { type: 'STEP_FAILED'; step: ClaudeWizardStep; error: string }
   | { type: 'GO_BACK' }
-  | { type: 'SET_IDENTITY'; name: string; email: string }
-  | { type: 'SET_GITHUB_USERNAME'; username: string }
   | { type: 'RETRY' }
+  | { type: 'FORCE_REINSTALL' }
 
-function getInitialState(): WizardState {
-  const stepStatuses = {} as Record<GitWizardStep, GitWizardStepStatus>
+function getInitialStateForMode(entryMode: Props['entryMode'] = 'full'): WizardState {
+  const stepStatuses = {} as Record<ClaudeWizardStep, ClaudeWizardStepStatus>
   for (const step of ALL_STEPS) {
-    stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
+    stepStatuses[step] = 'pending'
   }
+
+  if (entryMode === 'auth_repair') {
+    stepStatuses.detect = 'skipped'
+    stepStatuses.install = 'skipped'
+    stepStatuses.authenticate = 'active'
+    stepStatuses.verify = 'pending'
+    return {
+      currentStep: 'authenticate',
+      stepStatuses,
+      claudeStatus: null,
+      error: null,
+      allConfigured: false,
+    }
+  }
+
+  stepStatuses.detect = 'active'
   return {
     currentStep: 'detect',
     stepStatuses,
-    setupStatus: null,
-    userName: '',
-    userEmail: '',
-    githubUsername: null,
+    claudeStatus: null,
     error: null,
     allConfigured: false,
   }
 }
 
-function findNextActiveStep(statuses: Record<GitWizardStep, GitWizardStepStatus>, afterIndex: number): GitWizardStep | null {
+function getInitialState(): WizardState {
+  return getInitialStateForMode('full')
+}
+
+function findNextActiveStep(statuses: Record<ClaudeWizardStep, ClaudeWizardStepStatus>, afterIndex: number): ClaudeWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<GitWizardStep, GitWizardStepStatus>, beforeIndex: number): GitWizardStep | null {
+function findPrevActiveStep(statuses: Record<ClaudeWizardStep, ClaudeWizardStepStatus>, beforeIndex: number): ClaudeWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) { // skip detect (index 0)
     const s = statuses[ALL_STEPS[i]]
     if (s === 'completed' || s === 'active') return ALL_STEPS[i]
@@ -82,29 +94,30 @@ function findPrevActiveStep(statuses: Record<GitWizardStep, GitWizardStepStatus>
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const ss = action.setupStatus
+      const cs = action.claudeStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
 
-      if (ss.git_installed) newStatuses['install'] = 'skipped'
-      if (ss.gh_cli_installed) newStatuses['install-gh'] = 'skipped'
-      if (ss.gh_cli_authenticated && ss.private_repo_access) newStatuses['github-cli-auth'] = 'skipped'
-      if (ss.git_user_name && ss.git_user_email) newStatuses['configure-identity'] = 'skipped'
+      // Skip logic
+      if (cs.installed) newStatuses['install'] = 'skipped'
+      if (cs.authenticated) {
+        newStatuses['authenticate'] = 'skipped'
+        newStatuses['verify'] = 'skipped'
+      }
 
+      // Check if everything is already configured
       const allSkipped = ALL_STEPS.slice(1).every((s) => newStatuses[s] === 'skipped')
       if (allSkipped) {
         return {
           ...state,
           currentStep: 'detect',
           stepStatuses: newStatuses,
-          setupStatus: ss,
-          userName: ss.git_user_name ?? '',
-          userEmail: ss.git_user_email ?? '',
-          githubUsername: ss.github_username,
+          claudeStatus: cs,
           allConfigured: true,
         }
       }
 
+      // Find first pending step
       const firstPending = ALL_STEPS.find((s) => newStatuses[s] === 'pending')
       if (firstPending) newStatuses[firstPending] = 'active'
 
@@ -112,10 +125,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         ...state,
         currentStep: firstPending ?? 'detect',
         stepStatuses: newStatuses,
-        setupStatus: ss,
-        userName: ss.git_user_name ?? '',
-        userEmail: ss.git_user_email ?? '',
-        githubUsername: ss.github_username,
+        claudeStatus: cs,
       }
     }
 
@@ -157,16 +167,19 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, currentStep: prev, stepStatuses: newStatuses, error: null }
     }
 
-    case 'SET_IDENTITY':
-      return { ...state, userName: action.name, userEmail: action.email }
-
-    case 'SET_GITHUB_USERNAME':
-      return { ...state, githubUsername: action.username }
-
     case 'RETRY': {
       const newStatuses = { ...state.stepStatuses }
       newStatuses[state.currentStep] = 'active'
       return { ...state, stepStatuses: newStatuses, error: null }
+    }
+
+    case 'FORCE_REINSTALL': {
+      const newStatuses = { ...state.stepStatuses }
+      newStatuses['install'] = 'active'
+      // Re-pend authenticate/verify if they were skipped
+      if (newStatuses['authenticate'] === 'skipped') newStatuses['authenticate'] = 'pending'
+      if (newStatuses['verify'] === 'skipped') newStatuses['verify'] = 'pending'
+      return { ...state, currentStep: 'install', stepStatuses: newStatuses, error: null, allConfigured: false }
     }
 
     default:
@@ -176,21 +189,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function GitWizardSheet({ onDismiss, onComplete }: Props) {
-  const { colors } = useTheme()
+export default function ClaudeWizardModal({ onDismiss, onComplete, entryMode = 'full' }: Props) {
+  const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)
-  const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
+  const [state, dispatch] = useReducer(wizardReducer, entryMode, getInitialStateForMode)
   const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
-    markToolPending('git')
+    markToolPending('claude_cli')
     fetchPrerequisites()
     onComplete()
   }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
-    markToolPending('git')
+    markToolPending('claude_cli')
     fetchPrerequisites()
     onDismiss()
   }, [markToolPending, fetchPrerequisites, onDismiss])
@@ -204,20 +217,28 @@ export default function GitWizardSheet({ onDismiss, onComplete }: Props) {
           <View style={[styles.completedIcon, { backgroundColor: colors.primary }]}>
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Git is ready!</Text>
+          <Image
+            source={isDark ? Assets.claudeWhite : Assets.claudeBlack}
+            style={styles.completedLogo}
+            resizeMode="contain"
+          />
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Claude is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Your paired workspace is ready for Git and GitHub.
+            Your paired workspace is connected and ready to run Claude.
           </Text>
-          {state.githubUsername && (
+          {state.claudeStatus?.version && (
             <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              Connected as @{state.githubUsername}
+              v{state.claudeStatus.version}
             </Text>
           )}
-          {state.userName && (
-            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
-              {state.userName} {'<'}{state.userEmail}{'>'}
-            </Text>
-          )}
+          <TouchableOpacity
+            style={styles.reinstallButton}
+            onPress={() => dispatch({ type: 'FORCE_REINSTALL' })}
+            activeOpacity={0.7}
+          >
+            <RotateCcw color={colors.textTertiary} size={14} strokeWidth={2.25} />
+            <Text style={[styles.reinstallText, { color: colors.textTertiary }]}>Reinstall</Text>
+          </TouchableOpacity>
         </View>
       )
     }
@@ -226,19 +247,11 @@ export default function GitWizardSheet({ onDismiss, onComplete }: Props) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
       case 'install':
-        return <InstallGitStep dispatch={dispatch} />
-      case 'install-gh':
-        return <InstallGitHubCliStep dispatch={dispatch} />
-      case 'github-cli-auth':
-        return <GitHubCliAuthStep dispatch={dispatch} />
-      case 'configure-identity':
-        return (
-          <ConfigureIdentityStep
-            dispatch={dispatch}
-            initialName={state.userName}
-            initialEmail={state.userEmail}
-          />
-        )
+        return <InstallStep dispatch={dispatch} />
+      case 'authenticate':
+        return <AuthenticateStep dispatch={dispatch} />
+      case 'verify':
+        return <VerifyStep dispatch={dispatch} />
       default:
         return null
     }
@@ -255,7 +268,7 @@ export default function GitWizardSheet({ onDismiss, onComplete }: Props) {
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Git</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Claude</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>
@@ -284,7 +297,7 @@ export default function GitWizardSheet({ onDismiss, onComplete }: Props) {
 
         {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
         {state.allConfigured && !animationDone && (
-          <GitHubSetupAnimation onComplete={onAnimationComplete} />
+          <ClaudeSetupAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )
@@ -325,7 +338,12 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing[2],
+    marginBottom: spacing[1],
+  },
+  completedLogo: {
+    width: 48,
+    height: 48,
+    marginBottom: spacing[1],
   },
   completedTitle: {
     ...typeStyles.heading,
@@ -336,6 +354,17 @@ const styles = StyleSheet.create({
   },
   completedDetail: {
     ...typeStyles.mono,
+  },
+  reinstallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+    marginTop: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  reinstallText: {
+    ...typeStyles.meta,
   },
   footer: {
     paddingHorizontal: spacing[6],

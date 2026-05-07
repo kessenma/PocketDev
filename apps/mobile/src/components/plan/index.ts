@@ -5,13 +5,6 @@
  */
 export { default as PlanActionBar } from './PlanActionBar'
 export { default as PlanBadge } from './PlanBadge'
-export {
-  PlanCard,
-  PlanCardContent,
-  PlanCardDescription,
-  PlanCardHeader,
-  PlanCardTitle,
-} from './PlanCard'
 export { default as PlanConversation } from './PlanConversation'
 export { default as PlanHistoryList } from './PlanHistoryList'
 export { default as PlanNotes } from './PlanNotes'

@@ -4,10 +4,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
-import { Play, Square, Eye, ChevronDown, ChevronUp, X, CircleCheck, CircleX } from 'lucide-react-native'
+import { Play, Square, Eye, ChevronDown, ChevronUp, X, CircleCheck, CircleX, Send } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import CopyButton from '../shared/CopyButton'
@@ -24,6 +25,7 @@ type Props = {
   onStop: () => void
   onDismiss: () => void
   onPreview: (port: number) => void
+  onSendInput?: (text: string) => void
 }
 
 const MAX_VISIBLE_LINES = 80
@@ -38,14 +40,22 @@ export default function ScriptCard({
   onStop,
   onDismiss,
   onPreview,
+  onSendInput,
 }: Props) {
   const { colors } = useTheme()
   const [expanded, setExpanded] = useState(false)
+  const [inputText, setInputText] = useState('')
   const scrollRef = useRef<ScrollView>(null)
 
   const isActive = status === 'starting' || status === 'running'
   const isDone = status === 'completed' || status === 'failed'
   const hasOutput = outputLines.length > 0
+
+  function handleSendInput() {
+    if (!inputText.trim() || !onSendInput) return
+    onSendInput(inputText + '\n')
+    setInputText('')
+  }
 
   // Auto-expand when script starts producing output
   useEffect(() => {
@@ -156,6 +166,28 @@ export default function ScriptCard({
             ))}
           </ScrollView>
           <CopyButton value={fullOutput} label="Copy output" style={styles.copyButton} />
+          {isActive && onSendInput && (
+            <View style={[styles.inputRow, { backgroundColor: colors.background }]}>
+              <TextInput
+                style={[styles.inputField, { color: colors.text }]}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Type input…"
+                placeholderTextColor={colors.textTertiary}
+                returnKeyType="send"
+                onSubmitEditing={handleSendInput}
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={handleSendInput}
+                style={[styles.sendButton, { backgroundColor: colors.primary }]}
+              >
+                <Send color={colors.primaryText} size={14} strokeWidth={2.5} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -225,5 +257,24 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     alignSelf: 'flex-start',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing[2],
+    gap: spacing[2],
+    height: 36,
+  },
+  inputField: {
+    flex: 1,
+    ...typeStyles.mono,
+  },
+  sendButton: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })

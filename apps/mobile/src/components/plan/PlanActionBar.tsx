@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
-import { PlanCard, PlanCardContent } from './PlanCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 
 type Props = {
   canAccept: boolean
@@ -16,8 +16,8 @@ export default function PlanActionBar({ canAccept, isSubmitting, onAccept, onDen
   const { colors } = useTheme()
 
   return (
-    <PlanCard>
-      <PlanCardContent>
+    <Card>
+      <CardContent>
         <View style={styles.row}>
           <TouchableOpacity
             activeOpacity={0.7}
@@ -53,8 +53,8 @@ export default function PlanActionBar({ canAccept, isSubmitting, onAccept, onDen
             )}
           </TouchableOpacity>
         </View>
-      </PlanCardContent>
-    </PlanCard>
+      </CardContent>
+    </Card>
   )
 }
 

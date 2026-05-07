@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef } from 'react'
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import { typeStyles } from '../../theme/typography'
 
 interface Props {
@@ -19,19 +19,13 @@ interface Props {
 
 export default function PushConsentSheet({ onAgree, onDismiss }: Props) {
   const { colors } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
+  const sheetRef = useRef<SheetHandle>(null)
 
   return (
-    <TrueSheet
+    <Sheet
       ref={sheetRef}
       detents={[1]}
-      backgroundColor={colors.background}
-      cornerRadius={24}
-      onDidDismiss={onDismiss}
+      onDismiss={onDismiss}
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Enable Push Notifications</Text>
@@ -64,11 +58,11 @@ export default function PushConsentSheet({ onAgree, onDismiss }: Props) {
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <BauhausButton onPress={onAgree}>
+          <Button onPress={onAgree}>
             Enable Notifications
-          </BauhausButton>
+          </Button>
         </View>
-    </TrueSheet>
+    </Sheet>
   )
 }
 

@@ -4,7 +4,7 @@ import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
 import { BauhausPanel } from '../shared/BauhausPanel'
-import BauhausButton from '../shared/BauhausButton'
+import { Button } from '../ui/Button'
 import BauhausBadge from '../shared/BauhausBadge'
 import { typeStyles } from '../../theme/typography'
 import { getPushNotificationsEnabled, setPushNotificationsEnabled } from '../../services/storage'
@@ -81,13 +81,13 @@ export default function PushNotificationsSection() {
         </View>
 
         {enabled ? (
-          <BauhausButton variant="danger" onPress={handleDisable} loading={loading}>
+          <Button variant="danger" onPress={handleDisable} loading={loading}>
             Disable Notifications
-          </BauhausButton>
+          </Button>
         ) : (
-          <BauhausButton onPress={handleEnable} loading={loading}>
+          <Button onPress={handleEnable} loading={loading}>
             Enable Notifications
-          </BauhausButton>
+          </Button>
         )}
       </BauhausPanel>
 

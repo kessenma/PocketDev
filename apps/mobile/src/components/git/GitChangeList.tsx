@@ -5,7 +5,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
-import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import BauhausTooltip from '../shared/BauhausTooltip'
 import type { GitFileChange } from './model'
 
@@ -36,12 +36,12 @@ export default function GitChangeList({ changes, selectedFileId, onSelect }: Pro
   }
 
   return (
-    <GitCard>
-      <GitCardHeader>
+    <Card>
+      <CardHeader>
         <View style={styles.headerRow}>
           <View>
-            <GitCardTitle>Changed Files</GitCardTitle>
-            <GitCardDescription>Tap a file to inspect the diff before you commit or push.</GitCardDescription>
+            <CardTitle>Changed Files</CardTitle>
+            <CardDescription>Tap a file to inspect the diff before you commit or push.</CardDescription>
           </View>
           <View style={styles.headerRight}>
             <View style={[styles.countBadge, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
@@ -61,9 +61,9 @@ export default function GitChangeList({ changes, selectedFileId, onSelect }: Pro
             </TouchableOpacity>
           </View>
         </View>
-      </GitCardHeader>
+      </CardHeader>
 
-      <GitCardContent>
+      <CardContent>
         {changes.length > 0 ? (
           changes.map((change) => {
             const selected = change.id === selectedFileId
@@ -160,8 +160,8 @@ export default function GitChangeList({ changes, selectedFileId, onSelect }: Pro
             <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>There are no file changes left to review.</Text>
           </View>
         )}
-      </GitCardContent>
-    </GitCard>
+      </CardContent>
+    </Card>
   )
 }
 

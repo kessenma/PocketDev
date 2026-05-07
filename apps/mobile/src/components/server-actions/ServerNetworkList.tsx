@@ -3,13 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
-import {
-  ServerCard,
-  ServerCardContent,
-  ServerCardDescription,
-  ServerCardHeader,
-  ServerCardTitle,
-} from './ServerCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { ServerNetworkEntry } from './model'
 
 type Props = {
@@ -20,15 +14,15 @@ export default function ServerNetworkList({ entries }: Props) {
   const { colors } = useTheme()
 
   return (
-    <ServerCard>
-      <ServerCardHeader>
-        <ServerCardTitle>Network activity</ServerCardTitle>
-        <ServerCardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Network activity</CardTitle>
+        <CardDescription>
           Keep current throughput, interface pressure, and active connection counts visible in one place.
-        </ServerCardDescription>
-      </ServerCardHeader>
+        </CardDescription>
+      </CardHeader>
 
-      <ServerCardContent>
+      <CardContent>
         {entries.map((entry) => (
           <View
             key={entry.id}
@@ -49,8 +43,8 @@ export default function ServerNetworkList({ entries }: Props) {
             <Text style={[styles.detail, { color: colors.textSecondary }]}>{entry.detail}</Text>
           </View>
         ))}
-      </ServerCardContent>
-    </ServerCard>
+      </CardContent>
+    </Card>
   )
 }
 

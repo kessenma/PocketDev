@@ -1,11 +1,4 @@
 export { default as ContainerBadge } from './ContainerBadge'
-export {
-  ContainerCard,
-  ContainerCardContent,
-  ContainerCardDescription,
-  ContainerCardHeader,
-  ContainerCardTitle,
-} from './ContainerCard'
 export { default as ContainerList } from './ContainerList'
 export { default as ContainerLogsPanel } from './ContainerLogsPanel'
 export { default as ContainerSegmentedControl } from './ContainerSegmentedControl'

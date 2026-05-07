@@ -4,7 +4,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import PlanBadge from './PlanBadge'
-import { PlanCard, PlanCardContent, PlanCardDescription, PlanCardHeader, PlanCardTitle } from './PlanCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { PlanEntry, PlanStatus } from './model'
 
 type Props = {
@@ -23,15 +23,15 @@ export default function PlanHistoryList({ plans, onSelect }: Props) {
   const { colors } = useTheme()
 
   return (
-    <PlanCard>
-      <PlanCardHeader>
-        <PlanCardTitle>History</PlanCardTitle>
-        <PlanCardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>History</CardTitle>
+        <CardDescription>
           {plans.length > 0 ? `${plans.length} resolved plan${plans.length > 1 ? 's' : ''}` : 'No plans resolved yet.'}
-        </PlanCardDescription>
-      </PlanCardHeader>
+        </CardDescription>
+      </CardHeader>
 
-      <PlanCardContent>
+      <CardContent>
         {plans.length === 0 ? (
           <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No history</Text>
@@ -66,8 +66,8 @@ export default function PlanHistoryList({ plans, onSelect }: Props) {
             </TouchableOpacity>
           ))
         )}
-      </PlanCardContent>
-    </PlanCard>
+      </CardContent>
+    </Card>
   )
 }
 

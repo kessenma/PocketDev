@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../../ui/Sheet'
 import { ArrowLeft, ClipboardList } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { BulkEnvVarItem, EnvVar } from '@pocketdev/shared/types'
@@ -46,7 +46,7 @@ function parseDotEnv(text: string): BulkEnvVarItem[] {
 
 export default function EnvVarEditSheet({ projectPath, editTarget, onDismiss }: Props) {
   const { colors } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
+  const sheetRef = useRef<SheetHandle>(null)
   const create = useEnvStore((s) => s.create)
   const update = useEnvStore((s) => s.update)
   const bulkUpsert = useEnvStore((s) => s.bulkUpsert)
@@ -69,10 +69,6 @@ export default function EnvVarEditSheet({ projectPath, editTarget, onDismiss }: 
 
   // Force single mode when editing an existing var
   const activeMode = editTarget ? 'single' : mode
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
 
   async function handleSaveSingle() {
     if (!key.trim()) { setError('Key is required'); return }
@@ -125,7 +121,7 @@ export default function EnvVarEditSheet({ projectPath, editTarget, onDismiss }: 
     : (editTarget ? 'Save' : 'Add')
 
   return (
-    <TrueSheet ref={sheetRef} detents={[1]} backgroundColor={colors.background} cornerRadius={24} onDidDismiss={onDismiss}>
+    <Sheet ref={sheetRef} detents={[1]} onDismiss={onDismiss}>
       <View style={[styles.root, { backgroundColor: colors.background }]}>
         {/* Nav bar */}
         <View style={[styles.navBar, { borderBottomColor: colors.border }]}>
@@ -301,7 +297,7 @@ export default function EnvVarEditSheet({ projectPath, editTarget, onDismiss }: 
           </View>
         </KeyboardAvoidingView>
       </View>
-    </TrueSheet>
+    </Sheet>
   )
 }
 

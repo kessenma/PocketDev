@@ -4,7 +4,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
-import { GitCard, GitCardContent, GitCardHeader } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitDiffHunk, GitFileChange } from './model'
 import { inferLanguage } from '../files/model'
 import type { FileNode } from '../files/model'
@@ -170,9 +170,9 @@ export default function GitDiffPreview({ change, variant = 'card' }: Props) {
     }
 
     return (
-      <GitCard style={styles.card}>
-        <GitCardContent style={styles.content}>{body}</GitCardContent>
-      </GitCard>
+      <Card style={styles.card}>
+        <CardContent style={styles.content}>{body}</CardContent>
+      </Card>
     )
   }
 
@@ -186,10 +186,10 @@ export default function GitDiffPreview({ change, variant = 'card' }: Props) {
   }
 
   return (
-    <GitCard style={styles.card}>
-      <GitCardHeader>{header}</GitCardHeader>
-      <GitCardContent style={styles.content}>{body}</GitCardContent>
-    </GitCard>
+    <Card style={styles.card}>
+      <CardHeader>{header}</CardHeader>
+      <CardContent style={styles.content}>{body}</CardContent>
+    </Card>
   )
 }
 

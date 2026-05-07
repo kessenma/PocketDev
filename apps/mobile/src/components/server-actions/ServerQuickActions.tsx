@@ -3,13 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
-import {
-  ServerCard,
-  ServerCardContent,
-  ServerCardDescription,
-  ServerCardHeader,
-  ServerCardTitle,
-} from './ServerCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { ServerQuickAction } from './model'
 
 type Props = {
@@ -21,15 +15,15 @@ export default function ServerQuickActions({ actions, onRunAction }: Props) {
   const { colors } = useTheme()
 
   return (
-    <ServerCard>
-      <ServerCardHeader>
-        <ServerCardTitle>Quick checks</ServerCardTitle>
-        <ServerCardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Quick checks</CardTitle>
+        <CardDescription>
           Preview common workspace diagnostics and environment checks from one place.
-        </ServerCardDescription>
-      </ServerCardHeader>
+        </CardDescription>
+      </CardHeader>
 
-      <ServerCardContent>
+      <CardContent>
         {actions.map((action) => (
           <View
             key={action.id}
@@ -53,8 +47,8 @@ export default function ServerQuickActions({ actions, onRunAction }: Props) {
             </TouchableOpacity>
           </View>
         ))}
-      </ServerCardContent>
-    </ServerCard>
+      </CardContent>
+    </Card>
   )
 }
 

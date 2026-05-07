@@ -7,7 +7,7 @@ import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import type { RootStackParamList } from '../../navigation/types'
 import GitBadge from './GitBadge'
-import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitCommitEntry } from './model'
 
 type Props = {
@@ -19,12 +19,12 @@ export default function GitHistoryList({ commits }: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>()
 
   return (
-    <GitCard>
-      <GitCardHeader>
-        <GitCardTitle>Recent Commits</GitCardTitle>
-      </GitCardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Recent Commits</CardTitle>
+      </CardHeader>
 
-      <GitCardContent>
+      <CardContent>
         {commits.map((commit) => (
           <View key={commit.id} style={[styles.row, { backgroundColor: colors.backgroundSecondary }]}>
             <View style={styles.rowHeader}>
@@ -44,8 +44,8 @@ export default function GitHistoryList({ commits }: Props) {
         >
           <Text style={[styles.viewAllText, { color: colors.primary }]}>View Full History →</Text>
         </Pressable>
-      </GitCardContent>
-    </GitCard>
+      </CardContent>
+    </Card>
   )
 }
 

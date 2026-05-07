@@ -4,7 +4,7 @@ import { ChevronRight, FileCode2, Folder } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
-import { FileCard, FileCardContent, FileCardDescription, FileCardHeader, FileCardTitle } from './FileCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { FileNode } from './model'
 
 type Props = {
@@ -26,15 +26,15 @@ export default function FileTreeList({
   const expanded = new Set(expandedDirectoryIds)
 
   return (
-    <FileCard>
-      <FileCardHeader>
-        <FileCardTitle>Project Files</FileCardTitle>
-        <FileCardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Project Files</CardTitle>
+        <CardDescription>
           Browse the project tree from your paired server.
-        </FileCardDescription>
-      </FileCardHeader>
+        </CardDescription>
+      </CardHeader>
 
-      <FileCardContent style={styles.content}>
+      <CardContent style={styles.content}>
         {nodes.map((node) => (
           <TreeNodeRow
             key={node.id}
@@ -47,8 +47,8 @@ export default function FileTreeList({
             onSelectFile={onSelectFile}
           />
         ))}
-      </FileCardContent>
-    </FileCard>
+      </CardContent>
+    </Card>
   )
 }
 

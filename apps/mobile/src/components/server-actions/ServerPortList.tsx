@@ -3,13 +3,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
-import {
-  ServerCard,
-  ServerCardContent,
-  ServerCardDescription,
-  ServerCardHeader,
-  ServerCardTitle,
-} from './ServerCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { ServerPortEntry } from './model'
 
 type Props = {
@@ -26,15 +20,15 @@ export default function ServerPortList({ ports }: Props) {
   const { colors } = useTheme()
 
   return (
-    <ServerCard>
-      <ServerCardHeader>
-        <ServerCardTitle>Workspace activity</ServerCardTitle>
-        <ServerCardDescription>
+    <Card>
+      <CardHeader>
+        <CardTitle>Workspace activity</CardTitle>
+        <CardDescription>
           A quick view of active services and traffic-facing processes tied to the current workspace.
-        </ServerCardDescription>
-      </ServerCardHeader>
+        </CardDescription>
+      </CardHeader>
 
-      <ServerCardContent>
+      <CardContent>
         {ports.map((entry) => (
           <View
             key={entry.id}
@@ -74,8 +68,8 @@ export default function ServerPortList({ ports }: Props) {
             </View>
           </View>
         ))}
-      </ServerCardContent>
-    </ServerCard>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -10,7 +10,7 @@
     "dev": "bun run kill-port && bun --env-file=../../.env --bun vite dev --port 2222",
     "build": "bun --env-file=../../.env --bun vite build",
     "check-types": "tsc --noEmit",
-    "start": "bun run server.ts"
+    "start": "bun run kill-port && bun run server.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",

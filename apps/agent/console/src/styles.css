@@ -1,11 +1,11 @@
 @import "tailwindcss";
-@import '@pocketdev/shared/fonts.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans: 'pd-sans', system-ui, sans-serif;
-  --font-display: 'pd-display', "Avenir Next Condensed", "Arial Narrow", sans-serif;
+  --font-display: 'pd-display', Georgia, "Times New Roman", serif;
+  --font-display-italic: 'pd-display', Georgia, "Times New Roman", serif;
   --font-mono: 'pd-mono', "JetBrains Mono", Menlo, monospace;
 }
 

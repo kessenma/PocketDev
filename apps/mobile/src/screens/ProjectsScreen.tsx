@@ -12,7 +12,7 @@ import { useConnectionStore } from '../stores/connection'
 import ServerSegmentedControl from '../components/server-actions/ServerSegmentedControl'
 import { Globe, Lock, type LucideIcon } from 'lucide-react-native'
 import ProjectCloneCelebration from '../components/projects/ProjectCloneCelebration'
-import BauhausButton from '../components/shared/BauhausButton'
+import { Button } from '../components/ui/Button'
 import { BauhausPanel } from '../components/shared/BauhausPanel'
 import BauhausBadge from '../components/shared/BauhausBadge'
 import { typeStyles } from '../theme/typography'
@@ -150,23 +150,23 @@ export default function ProjectsScreen() {
           <View style={styles.localSection}>
             <View style={styles.actionRow}>
               <View style={styles.actionButton}>
-                <BauhausButton
+                <Button
                   loading={isProjectSelecting}
                   onPress={() => selectProject(project.id, false)}
                   disabled={isMutating}
                 >
                   Open
-                </BauhausButton>
+                </Button>
               </View>
               <View style={styles.actionButton}>
-                <BauhausButton
+                <Button
                   variant="secondary"
                   loading={isProjectSelecting}
                   onPress={() => selectProject(project.id, true)}
                   disabled={isMutating}
                 >
                   Pull + Open
-                </BauhausButton>
+                </Button>
               </View>
             </View>
 
@@ -186,7 +186,7 @@ export default function ProjectsScreen() {
             {branchForDownload ? (
               <View style={styles.actionRow}>
                 <View style={styles.actionButton}>
-                  <BauhausButton
+                  <Button
                     variant={offlineSnap ? 'secondary' : 'primary'}
                     loading={isThisDownloading}
                     disabled={isAnyDownloading && !isThisDownloading}
@@ -196,22 +196,22 @@ export default function ProjectsScreen() {
                     }}
                   >
                     {offlineSnap ? 'Re-download' : 'Download for Offline'}
-                  </BauhausButton>
+                  </Button>
                 </View>
                 {isThisDownloading ? (
                   <View style={styles.actionButton}>
-                    <BauhausButton variant="secondary" onPress={cancelDownload}>
+                    <Button variant="secondary" onPress={cancelDownload}>
                       Cancel
-                    </BauhausButton>
+                    </Button>
                   </View>
                 ) : offlineSnap ? (
                   <View style={styles.actionButton}>
-                    <BauhausButton
+                    <Button
                       variant="danger"
                       onPress={() => void clearOfflineData(project.id, branchForDownload)}
                     >
                       Remove Offline
-                    </BauhausButton>
+                    </Button>
                   </View>
                 ) : null}
               </View>
@@ -221,13 +221,13 @@ export default function ProjectsScreen() {
           <View style={styles.remoteSection}>
             <View style={styles.actionRow}>
               <View style={styles.actionButton}>
-                <BauhausButton
+                <Button
                   loading={isProjectCloning}
                   onPress={() => cloneProject(project.id, 'default')}
                   disabled={isMutating}
                 >
                   Clone Default
-                </BauhausButton>
+                </Button>
               </View>
             </View>
 
@@ -243,14 +243,14 @@ export default function ProjectsScreen() {
               autoCapitalize="none"
             />
             <View style={styles.actionButton}>
-              <BauhausButton
+              <Button
                 variant="secondary"
                 loading={isProjectCloning}
                 onPress={() => cloneProject(project.id, 'new', branchDraft)}
                 disabled={isMutating || branchDraft.trim().length === 0}
               >
                 Clone + New Branch
-              </BauhausButton>
+              </Button>
             </View>
           </View>
         )}

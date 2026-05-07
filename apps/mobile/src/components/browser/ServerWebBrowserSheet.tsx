@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, LayoutChangeEvent, Linking, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import WebView, { type WebViewNavigation, type WebViewProps } from 'react-native-webview'
 import { X, ChevronLeft, ChevronRight, RotateCw, ExternalLink, AlertCircle } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -30,7 +30,7 @@ export default function ServerWebBrowserSheet({
 }: Props) {
   const { colors } = useTheme()
   const { height: windowHeight } = useWindowDimensions()
-  const sheetRef = useRef<TrueSheet>(null)
+  const sheetRef = useRef<SheetHandle>(null)
   const webViewRef = useRef<WebView>(null)
   const [currentUrl, setCurrentUrl] = useState(initialUrl)
   const [canGoBack, setCanGoBack] = useState(false)
@@ -48,10 +48,6 @@ export default function ServerWebBrowserSheet({
   }
 
   const source = useMemo<WebViewProps['source']>(() => ({ uri: initialUrl }), [initialUrl])
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
 
   useEffect(() => {
     setCurrentUrl(initialUrl)
@@ -74,12 +70,10 @@ export default function ServerWebBrowserSheet({
   }
 
   return (
-    <TrueSheet
+    <Sheet
       ref={sheetRef}
       detents={[1]}
-      backgroundColor={colors.background}
-      cornerRadius={24}
-      onDidDismiss={onDismiss}
+      onDismiss={onDismiss}
     >
       <View style={[styles.header, { borderBottomColor: colors.border }]} onLayout={handleHeaderLayout}>
         <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} style={styles.iconButton} activeOpacity={0.7}>
@@ -179,7 +173,7 @@ export default function ServerWebBrowserSheet({
           </View>
         )}
       </View>
-    </TrueSheet>
+    </Sheet>
   )
 }
 

@@ -4,7 +4,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
-import { GitCard, GitCardContent, GitCardDescription, GitCardHeader, GitCardTitle } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitBranchOption } from './model'
 
 type Props = {
@@ -17,13 +17,13 @@ export default function GitBranchList({ branches, onSelectBranch }: Props) {
   const currentBranch = branches.find((branch) => branch.current) ?? null
 
   return (
-    <GitCard>
-      <GitCardHeader>
-        <GitCardTitle>Branch Switcher</GitCardTitle>
-        <GitCardDescription>Switch branches here, then review changes and history in the other git views.</GitCardDescription>
-      </GitCardHeader>
+    <Card>
+      <CardHeader>
+        <CardTitle>Branch Switcher</CardTitle>
+        <CardDescription>Switch branches here, then review changes and history in the other git views.</CardDescription>
+      </CardHeader>
 
-      <GitCardContent>
+      <CardContent>
         {currentBranch ? (
           <View style={[styles.currentBranchCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
             <Text style={[styles.currentBranchLabel, { color: colors.textTertiary }]}>Current branch</Text>
@@ -67,8 +67,8 @@ export default function GitBranchList({ branches, onSelectBranch }: Props) {
             </View>
           </TouchableOpacity>
         ))}
-      </GitCardContent>
-    </GitCard>
+      </CardContent>
+    </Card>
   )
 }
 

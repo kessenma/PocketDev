@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef } from 'react'
 import {
   ScrollView,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { TrueSheet } from '@lodev09/react-native-true-sheet'
+import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { X, Square, Eye, Terminal } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -21,15 +21,11 @@ interface Props {
 
 export default function RunningScriptsSheet({ onDismiss }: Props) {
   const { colors } = useTheme()
-  const sheetRef = useRef<TrueSheet>(null)
+  const sheetRef = useRef<SheetHandle>(null)
   const runningScripts = useScriptsStore((s) => s.runningScripts)
   const stopScript = useScriptsStore((s) => s.stopScript)
   const openPreview = usePreviewStore((s) => s.openPreview)
   const taskLogs = useTaskStore((s) => s.taskLogs)
-
-  useEffect(() => {
-    sheetRef.current?.present()
-  }, [])
 
   async function handlePreview(url: string) {
     void openPreview(url)
@@ -41,12 +37,11 @@ export default function RunningScriptsSheet({ onDismiss }: Props) {
   )
 
   return (
-    <TrueSheet
+    <Sheet
       ref={sheetRef}
       detents={[0.6, 1]}
       backgroundColor={colors.panel}
-      cornerRadius={24}
-      onDidDismiss={onDismiss}
+      onDismiss={onDismiss}
     >
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
@@ -78,7 +73,7 @@ export default function RunningScriptsSheet({ onDismiss }: Props) {
           ))}
         </ScrollView>
       )}
-    </TrueSheet>
+    </Sheet>
   )
 }
 

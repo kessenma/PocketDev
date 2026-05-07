@@ -13,7 +13,7 @@ import type { MainTabParamList, RootStackParamList } from '../navigation/types'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import ServerWorkspace from '../components/server-actions/ServerWorkspace'
 import ServerWebBrowserSheet from '../components/browser/ServerWebBrowserSheet'
-import BauhausButton from '../components/shared/BauhausButton'
+import { Button } from '../components/ui/Button'
 import { BauhausPanel } from '../components/shared/BauhausPanel'
 import BauhausBadge from '../components/shared/BauhausBadge'
 import OnDeviceAISection from '../components/settings/OnDeviceAISection'
@@ -153,18 +153,18 @@ export default function SettingsScreen({ navigation }: Props) {
 
         <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Workspace</Text>
-          <BauhausButton onPress={() => navigation.getParent()?.navigate('ServerSetup')}>
+          <Button onPress={() => navigation.getParent()?.navigate('ServerSetup')}>
             Workspace Tools
-          </BauhausButton>
+          </Button>
           {server && (
-            <BauhausButton onPress={() => setConsoleOpen(true)}>
+            <Button onPress={() => setConsoleOpen(true)}>
               Server Console
-            </BauhausButton>
+            </Button>
           )}
           {server && (
-            <BauhausButton onPress={() => navigation.getParent()?.navigate('ServerDebug')}>
+            <Button onPress={() => navigation.getParent()?.navigate('ServerDebug')}>
               Server Debug
-            </BauhausButton>
+            </Button>
           )}
           <View style={styles.row}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Services</Text>
@@ -190,9 +190,9 @@ export default function SettingsScreen({ navigation }: Props) {
             />
           </View>
           {!serverLocked && (
-            <BauhausButton variant="danger" onPress={handleLock} loading={lockLoading}>
+            <Button variant="danger" onPress={handleLock} loading={lockLoading}>
               Lock Server Port
-            </BauhausButton>
+            </Button>
           )}
         </BauhausPanel>
 
@@ -216,9 +216,9 @@ export default function SettingsScreen({ navigation }: Props) {
               <Text style={[styles.value, { color: colors.text }]}>v{agentVersion}</Text>
             </View>
           )}
-          <BauhausButton variant="danger" onPress={handleUnpair}>
+          <Button variant="danger" onPress={handleUnpair}>
             Remove Pairing
-          </BauhausButton>
+          </Button>
         </BauhausPanel>
 
         {server && (
@@ -227,9 +227,9 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={[styles.label, { color: colors.textSecondary }]}>
               Fully remove PocketDev from the paired server. Deletes the agent, data, and systemd units.
             </Text>
-            <BauhausButton variant="danger" onPress={handleUninstall}>
+            <Button variant="danger" onPress={handleUninstall}>
               Uninstall PocketDev
-            </BauhausButton>
+            </Button>
           </BauhausPanel>
         )}
       </ScrollView>

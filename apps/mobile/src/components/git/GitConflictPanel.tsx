@@ -5,7 +5,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import type { GitMergeState } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
-import { GitCard, GitCardContent, GitCardHeader, GitCardTitle } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import GitBadge from './GitBadge'
 
 type Props = {
@@ -21,13 +21,13 @@ export default function GitConflictPanel({ mergeState, isAborting, onAbort, onFi
   if (!mergeState.inProgress) return null
 
   return (
-    <GitCard>
-      <GitCardHeader>
+    <Card>
+      <CardHeader>
         <View style={styles.headerRow}>
           <View style={styles.titleBlock}>
             <View style={styles.titleLine}>
               <AlertTriangle color={colors.error} size={16} strokeWidth={2.5} />
-              <GitCardTitle>Merge Conflict</GitCardTitle>
+              <CardTitle>Merge Conflict</CardTitle>
             </View>
             <Text style={[styles.description, { color: colors.textSecondary }]}>
               Merging{mergeState.mergeBranch ? ` from ${mergeState.mergeBranch}` : ''} hit conflicts in{' '}
@@ -36,9 +36,9 @@ export default function GitConflictPanel({ mergeState, isAborting, onAbort, onFi
           </View>
           <GitBadge variant="error">conflict</GitBadge>
         </View>
-      </GitCardHeader>
+      </CardHeader>
 
-      <GitCardContent>
+      <CardContent>
         <View style={[styles.fileList, { backgroundColor: colors.backgroundSecondary }]}>
           {mergeState.conflictedPaths.map((path) => (
             <View key={path} style={styles.fileRow}>
@@ -74,8 +74,8 @@ export default function GitConflictPanel({ mergeState, isAborting, onAbort, onFi
               </>
             )}
         </TouchableOpacity>
-      </GitCardContent>
-    </GitCard>
+      </CardContent>
+    </Card>
   )
 }
 

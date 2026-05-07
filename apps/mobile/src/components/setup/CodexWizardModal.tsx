@@ -172,7 +172,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   }
 }
 
-export default function CodexWizardSheet({ onDismiss, onComplete, entryMode = 'full' }: Props) {
+export default function CodexWizardModal({ onDismiss, onComplete, entryMode = 'full' }: Props) {
   const { colors, isDark } = useTheme()
   const fetchPrerequisites = useSetupStore((state) => state.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)

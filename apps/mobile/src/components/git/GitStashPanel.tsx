@@ -6,7 +6,7 @@ import { typeStyles } from '../../theme/typography'
 import type { GitStashEntry } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import GitBadge from './GitBadge'
-import { GitCard, GitCardContent, GitCardHeader, GitCardTitle, GitCardDescription } from './GitCard'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitFileChange } from './model'
 
 type Props = {
@@ -28,16 +28,16 @@ export default function GitStashPanel({ stashes, changes, isStashing, onStash, o
   if (!hasChanges && !hasStashes) return null
 
   return (
-    <GitCard>
-      <GitCardHeader>
+    <Card>
+      <CardHeader>
         <View style={styles.headerRow}>
           <View style={styles.titleBlock}>
-            <GitCardTitle>Stashes</GitCardTitle>
-            <GitCardDescription>
+            <CardTitle>Stashes</CardTitle>
+            <CardDescription>
               {hasStashes
                 ? `${stashes.length} stash${stashes.length !== 1 ? 'es' : ''} saved`
                 : 'No stashes — save your changes for later.'}
-            </GitCardDescription>
+            </CardDescription>
           </View>
           <View style={styles.headerActions}>
             {hasStashes ? (
@@ -71,10 +71,10 @@ export default function GitStashPanel({ stashes, changes, isStashing, onStash, o
             </TouchableOpacity>
           </View>
         </View>
-      </GitCardHeader>
+      </CardHeader>
 
       {hasStashes && expanded ? (
-        <GitCardContent>
+        <CardContent>
           {stashes.map((stash) => (
             <View key={stash.index} style={[styles.stashRow, { backgroundColor: colors.backgroundSecondary }]}>
               <View style={styles.stashMeta}>
@@ -114,9 +114,9 @@ export default function GitStashPanel({ stashes, changes, isStashing, onStash, o
               </View>
             </View>
           ))}
-        </GitCardContent>
+        </CardContent>
       ) : null}
-    </GitCard>
+    </Card>
   )
 }
 

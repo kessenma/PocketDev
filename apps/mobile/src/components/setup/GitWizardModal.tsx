@@ -1,20 +1,19 @@
 import React, { useReducer, useCallback } from 'react'
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useSetupStore } from '../../stores/setup'
-import { Assets } from '../../../assets'
 import { ChevronLeft, X, Check } from 'lucide-react-native'
 import SetupWizardScreen from './SetupWizardScreen'
-import WizardStepper from './pkg-wizard/WizardStepper'
-import DetectStep from './pkg-wizard/DetectStep'
-import ReviewStep from './pkg-wizard/ReviewStep'
-import InstallStep from './pkg-wizard/InstallStep'
-import VerifyStep from './pkg-wizard/VerifyStep'
-import type { PkgInstallTool, PkgManagerStatus, PkgWizardStep, PkgWizardStepStatus } from '@pocketdev/shared/types'
-import { getDefaultSelectedTools } from './pkg-wizard/model'
-import PackageInstallAnimation from '../animations/PackageInstallAnimation'
+import WizardStepper from './git-wizard/WizardStepper'
+import DetectStep from './git-wizard/DetectStep'
+import InstallGitStep from './git-wizard/InstallGitStep'
+import InstallGitHubCliStep from './git-wizard/InstallGitHubCliStep'
+import GitHubCliAuthStep from './git-wizard/GitHubCliAuthStep'
+import ConfigureIdentityStep from './git-wizard/ConfigureIdentityStep'
+import type { GitSetupStatus, GitWizardStep, GitWizardStepStatus } from '@pocketdev/shared/types'
+import GitHubSetupAnimation from '../animations/GitHubSetupAnimation'
 import { useWizardCompletion } from '../../hooks/useWizardCompletion'
 
 interface Props {
@@ -24,48 +23,55 @@ interface Props {
 
 // ─── State machine ──────────────────────────────────────
 
-const ALL_STEPS: PkgWizardStep[] = ['detect', 'review', 'install', 'verify']
+const ALL_STEPS: GitWizardStep[] = [
+  'detect', 'install', 'install-gh', 'github-cli-auth', 'configure-identity',
+]
 
 interface WizardState {
-  currentStep: PkgWizardStep
-  stepStatuses: Record<PkgWizardStep, PkgWizardStepStatus>
-  pkgStatus: PkgManagerStatus | null
-  selectedTools: PkgInstallTool[]
+  currentStep: GitWizardStep
+  stepStatuses: Record<GitWizardStep, GitWizardStepStatus>
+  setupStatus: GitSetupStatus | null
+  userName: string
+  userEmail: string
+  githubUsername: string | null
   error: string | null
   allConfigured: boolean
 }
 
 type WizardAction =
-  | { type: 'DETECTION_COMPLETE'; pkgStatus: PkgManagerStatus }
-  | { type: 'STEP_COMPLETE'; step: PkgWizardStep }
-  | { type: 'STEP_FAILED'; step: PkgWizardStep; error: string }
-  | { type: 'TOGGLE_TOOL'; tool: PkgInstallTool }
+  | { type: 'DETECTION_COMPLETE'; setupStatus: GitSetupStatus }
+  | { type: 'STEP_COMPLETE'; step: GitWizardStep }
+  | { type: 'STEP_FAILED'; step: GitWizardStep; error: string }
   | { type: 'GO_BACK' }
+  | { type: 'SET_IDENTITY'; name: string; email: string }
+  | { type: 'SET_GITHUB_USERNAME'; username: string }
   | { type: 'RETRY' }
 
 function getInitialState(): WizardState {
-  const stepStatuses = {} as Record<PkgWizardStep, PkgWizardStepStatus>
+  const stepStatuses = {} as Record<GitWizardStep, GitWizardStepStatus>
   for (const step of ALL_STEPS) {
     stepStatuses[step] = step === 'detect' ? 'active' : 'pending'
   }
   return {
     currentStep: 'detect',
     stepStatuses,
-    pkgStatus: null,
-    selectedTools: [],
+    setupStatus: null,
+    userName: '',
+    userEmail: '',
+    githubUsername: null,
     error: null,
     allConfigured: false,
   }
 }
 
-function findNextActiveStep(statuses: Record<PkgWizardStep, PkgWizardStepStatus>, afterIndex: number): PkgWizardStep | null {
+function findNextActiveStep(statuses: Record<GitWizardStep, GitWizardStepStatus>, afterIndex: number): GitWizardStep | null {
   for (let i = afterIndex + 1; i < ALL_STEPS.length; i++) {
     if (statuses[ALL_STEPS[i]] === 'pending') return ALL_STEPS[i]
   }
   return null
 }
 
-function findPrevActiveStep(statuses: Record<PkgWizardStep, PkgWizardStepStatus>, beforeIndex: number): PkgWizardStep | null {
+function findPrevActiveStep(statuses: Record<GitWizardStep, GitWizardStepStatus>, beforeIndex: number): GitWizardStep | null {
   for (let i = beforeIndex - 1; i >= 1; i--) { // skip detect (index 0)
     const s = statuses[ALL_STEPS[i]]
     if (s === 'completed' || s === 'active') return ALL_STEPS[i]
@@ -76,36 +82,46 @@ function findPrevActiveStep(statuses: Record<PkgWizardStep, PkgWizardStepStatus>
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
   switch (action.type) {
     case 'DETECTION_COMPLETE': {
-      const ps = action.pkgStatus
+      const ss = action.setupStatus
       const newStatuses = { ...state.stepStatuses }
       newStatuses['detect'] = 'completed'
-      newStatuses['review'] = 'active'
+
+      if (ss.git_installed) newStatuses['install'] = 'skipped'
+      if (ss.gh_cli_installed) newStatuses['install-gh'] = 'skipped'
+      if (ss.gh_cli_authenticated && ss.private_repo_access) newStatuses['github-cli-auth'] = 'skipped'
+      if (ss.git_user_name && ss.git_user_email) newStatuses['configure-identity'] = 'skipped'
+
+      const allSkipped = ALL_STEPS.slice(1).every((s) => newStatuses[s] === 'skipped')
+      if (allSkipped) {
+        return {
+          ...state,
+          currentStep: 'detect',
+          stepStatuses: newStatuses,
+          setupStatus: ss,
+          userName: ss.git_user_name ?? '',
+          userEmail: ss.git_user_email ?? '',
+          githubUsername: ss.github_username,
+          allConfigured: true,
+        }
+      }
+
+      const firstPending = ALL_STEPS.find((s) => newStatuses[s] === 'pending')
+      if (firstPending) newStatuses[firstPending] = 'active'
 
       return {
         ...state,
-        currentStep: 'review',
+        currentStep: firstPending ?? 'detect',
         stepStatuses: newStatuses,
-        pkgStatus: ps,
-        selectedTools: getDefaultSelectedTools(ps),
-        allConfigured: false,
+        setupStatus: ss,
+        userName: ss.git_user_name ?? '',
+        userEmail: ss.git_user_email ?? '',
+        githubUsername: ss.github_username,
       }
     }
 
     case 'STEP_COMPLETE': {
       const newStatuses = { ...state.stepStatuses }
       newStatuses[action.step] = 'completed'
-
-      if (action.step === 'review' && state.selectedTools.length === 0) {
-        newStatuses['install'] = 'skipped'
-        newStatuses['verify'] = 'skipped'
-        return {
-          ...state,
-          currentStep: 'review',
-          stepStatuses: newStatuses,
-          error: null,
-          allConfigured: true,
-        }
-      }
 
       const currentIndex = ALL_STEPS.indexOf(action.step)
       const next = findNextActiveStep(newStatuses, currentIndex)
@@ -129,14 +145,6 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, stepStatuses: newStatuses, error: action.error }
     }
 
-    case 'TOGGLE_TOOL': {
-      const selectedTools = state.selectedTools.includes(action.tool)
-        ? state.selectedTools.filter((tool) => tool !== action.tool)
-        : [...state.selectedTools, action.tool]
-
-      return { ...state, selectedTools, allConfigured: false }
-    }
-
     case 'GO_BACK': {
       const currentIndex = ALL_STEPS.indexOf(state.currentStep)
       const prev = findPrevActiveStep(state.stepStatuses, currentIndex)
@@ -146,8 +154,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       newStatuses[state.currentStep] = 'pending'
       newStatuses[prev] = 'active'
 
-      return { ...state, currentStep: prev, stepStatuses: newStatuses, error: null, allConfigured: false }
+      return { ...state, currentStep: prev, stepStatuses: newStatuses, error: null }
     }
+
+    case 'SET_IDENTITY':
+      return { ...state, userName: action.name, userEmail: action.email }
+
+    case 'SET_GITHUB_USERNAME':
+      return { ...state, githubUsername: action.username }
 
     case 'RETRY': {
       const newStatuses = { ...state.stepStatuses }
@@ -162,21 +176,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 // ─── Component ──────────────────────────────────────────
 
-export default function PackageManagerWizardSheet({ onDismiss, onComplete }: Props) {
-  const { colors, isDark } = useTheme()
+export default function GitWizardModal({ onDismiss, onComplete }: Props) {
+  const { colors } = useTheme()
   const fetchPrerequisites = useSetupStore((s) => s.fetchPrerequisites)
   const markToolPending = useSetupStore((s) => s.markToolPending)
   const [state, dispatch] = useReducer(wizardReducer, undefined, getInitialState)
   const { animationDone, onAnimationComplete } = useWizardCompletion()
 
   const handleDone = useCallback(() => {
-    markToolPending('npm')
+    markToolPending('git')
     fetchPrerequisites()
     onComplete()
   }, [markToolPending, fetchPrerequisites, onComplete])
 
   const handleClose = useCallback(() => {
-    markToolPending('npm')
+    markToolPending('git')
     fetchPrerequisites()
     onDismiss()
   }, [markToolPending, fetchPrerequisites, onDismiss])
@@ -190,27 +204,19 @@ export default function PackageManagerWizardSheet({ onDismiss, onComplete }: Pro
           <View style={[styles.completedIcon, { backgroundColor: colors.primary }]}>
             <Check color={colors.primaryText} size={32} strokeWidth={2.5} />
           </View>
-          <View style={styles.completedLogos}>
-            <Image source={isDark ? Assets.npmWhite : Assets.npmBlack} style={styles.completedLogo} resizeMode="contain" />
-            <Image source={isDark ? Assets.pnpmWhite : Assets.pnpmBlack} style={styles.completedLogo} resizeMode="contain" />
-            <Image source={isDark ? Assets.bunWhite : Assets.bunBlack} style={styles.completedLogo} resizeMode="contain" />
-          </View>
-          <Text style={[styles.completedTitle, { color: colors.text }]}>Package tools are ready!</Text>
+          <Text style={[styles.completedTitle, { color: colors.text }]}>Git is ready!</Text>
           <Text style={[styles.completedSubtitle, { color: colors.textSecondary }]}>
-            Node.js, npm, pnpm, and Bun are available for your paired workspace.
+            Your paired workspace is ready for Git and GitHub.
           </Text>
-          {state.pkgStatus && (
-            <View style={styles.completedVersions}>
-              {state.pkgStatus.npm.version && (
-                <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>npm v{state.pkgStatus.npm.version}</Text>
-              )}
-              {state.pkgStatus.pnpm.version && (
-                <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>pnpm v{state.pkgStatus.pnpm.version}</Text>
-              )}
-              {state.pkgStatus.bun.version && (
-                <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>bun v{state.pkgStatus.bun.version}</Text>
-              )}
-            </View>
+          {state.githubUsername && (
+            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
+              Connected as @{state.githubUsername}
+            </Text>
+          )}
+          {state.userName && (
+            <Text style={[styles.completedDetail, { color: colors.textTertiary }]}>
+              {state.userName} {'<'}{state.userEmail}{'>'}
+            </Text>
           )}
         </View>
       )
@@ -219,12 +225,20 @@ export default function PackageManagerWizardSheet({ onDismiss, onComplete }: Pro
     switch (state.currentStep) {
       case 'detect':
         return <DetectStep dispatch={dispatch} />
-      case 'review':
-        return <ReviewStep pkgStatus={state.pkgStatus!} selectedTools={state.selectedTools} dispatch={dispatch} />
       case 'install':
-        return <InstallStep pkgStatus={state.pkgStatus!} selectedTools={state.selectedTools} dispatch={dispatch} />
-      case 'verify':
-        return <VerifyStep dispatch={dispatch} />
+        return <InstallGitStep dispatch={dispatch} />
+      case 'install-gh':
+        return <InstallGitHubCliStep dispatch={dispatch} />
+      case 'github-cli-auth':
+        return <GitHubCliAuthStep dispatch={dispatch} />
+      case 'configure-identity':
+        return (
+          <ConfigureIdentityStep
+            dispatch={dispatch}
+            initialName={state.userName}
+            initialEmail={state.userEmail}
+          />
+        )
       default:
         return null
     }
@@ -241,7 +255,7 @@ export default function PackageManagerWizardSheet({ onDismiss, onComplete }: Pro
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Package Tools</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Git</Text>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <X color={colors.textTertiary} size={20} strokeWidth={2.25} />
           </TouchableOpacity>
@@ -270,7 +284,7 @@ export default function PackageManagerWizardSheet({ onDismiss, onComplete }: Pro
 
         {/* Completion animation — full-screen overlay inside modal, reveals completion UI as it fades out */}
         {state.allConfigured && !animationDone && (
-          <PackageInstallAnimation onComplete={onAnimationComplete} />
+          <GitHubSetupAnimation onComplete={onAnimationComplete} />
         )}
     </SetupWizardScreen>
   )
@@ -311,16 +325,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing[1],
-  },
-  completedLogos: {
-    flexDirection: 'row',
-    gap: spacing[3],
-    marginBottom: spacing[1],
-  },
-  completedLogo: {
-    width: 36,
-    height: 36,
+    marginBottom: spacing[2],
   },
   completedTitle: {
     ...typeStyles.heading,
@@ -328,12 +333,6 @@ const styles = StyleSheet.create({
   completedSubtitle: {
     ...typeStyles.body,
     textAlign: 'center',
-  },
-  completedVersions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing[2],
   },
   completedDetail: {
     ...typeStyles.mono,
