@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native'
+import { BellRing } from 'lucide-react-native'
 import { Sheet, type SheetHandle } from '../ui/Sheet'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -58,7 +59,7 @@ export default function PushConsentSheet({ onAgree, onDismiss }: Props) {
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <Button onPress={onAgree}>
+          <Button leftIcon={BellRing} onPress={onAgree}>
             Enable Notifications
           </Button>
         </View>

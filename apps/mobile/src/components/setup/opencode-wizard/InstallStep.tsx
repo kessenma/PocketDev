@@ -8,7 +8,7 @@ import { useConnectionStore } from '../../../stores/connection'
 import { fetchOpenCodeInstallCommand, fetchOpenCodeSetupStatus, postInstallOpenCode } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import type { OpenCodeSetupStatus } from '@pocketdev/shared/types'
-import CopyButton from '../../shared/CopyButton'
+import CopyButton from '../../ui/CopyButton'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'install'; openCodeStatus?: OpenCodeSetupStatus | null }

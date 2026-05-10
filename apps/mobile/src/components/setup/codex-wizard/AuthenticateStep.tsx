@@ -12,7 +12,7 @@ import {
 import { Assets } from '../../../../assets'
 import { ExternalLink, RefreshCw, Send, ShieldCheck, Globe, Smartphone, Key, Circle, CircleDot } from 'lucide-react-native'
 import type { OpenAIOpenCodeAuthMethod, OpenAIOpenCodeAuthSessionStatus } from '@pocketdev/shared/types'
-import CopyButton from '../../shared/CopyButton'
+import CopyButton from '../../ui/CopyButton'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'authenticate' }

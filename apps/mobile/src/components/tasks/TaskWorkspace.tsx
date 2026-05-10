@@ -6,7 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import SplitViewLayout from '../layout/SplitViewLayout'
 import TaskDetailPane from './TaskDetailPane'
 import TaskListPane from './TaskListPane'
-import { BauhausPanel } from '../shared/BauhausPanel'
+import { Card } from '../ui/Card'
 import { typeStyles } from '../../theme/typography'
 
 type Props = {
@@ -29,7 +29,7 @@ export default function TaskWorkspace({
   return (
     <SplitViewLayout
       leading={
-        <BauhausPanel style={styles.panel} accentColor={colors.accentBlue}>
+        <Card style={styles.panel} accentColor={colors.accentBlue}>
           <View style={[styles.panelHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.panelEyebrow, { color: colors.textTertiary }]}>Tasks</Text>
             <Text style={[styles.panelTitle, { color: colors.text }]}>Recent work</Text>
@@ -42,7 +42,7 @@ export default function TaskWorkspace({
             onRefresh={onRefresh}
             tablet
           />
-        </BauhausPanel>
+        </Card>
       }
       trailing={
         <TaskDetailPane

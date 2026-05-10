@@ -1,35 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FlashList } from '@shopify/flash-list'
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native'
-import { FileCode2, FolderOpen, Maximize2, Pin, Search, Waypoints, WifiOff } from 'lucide-react-native'
-import { borderRadius, palette, spacing, type SemanticTheme } from '@pocketdev/shared/theme'
+import React, { useEffect, useState } from 'react'
+import { StyleSheet, View } from 'react-native'
+import { FolderOpen, Pin, Waypoints } from 'lucide-react-native'
+import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
-import { useAdaptiveLayout } from '../../../hooks/useAdaptiveLayout'
 import { useFilesStore } from '../../../stores/files'
-import { usePreviewStore } from '../../../stores/preview'
-import { useProjectsStore } from '../../../stores/projects'
-import CodeViewer from '../../files/CodeViewer'
-import FileExplorerSheet from '../../files/FileExplorerSheet'
-import { pathToName } from '../../files/model'
-import CodeScreenHeader from '../navigation/CodeScreenHeader'
-import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
-import EnvVarsTab from '../env-vars/EnvVarsTab'
-import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
 import { subscribeToGitEvents } from '../../../services/gitEventBus'
-import { typeStyles } from '../../../theme/typography'
+import ShrinkableHeader, { useShrinkableHeader } from '../../ui/ShrinkableHeader'
+import CodeSubTabNavigator from '../navigation/CodeSubTabNavigator'
+import EnvVarsTab from './env-vars/EnvVarsTab'
+import BrowserView from './views/BrowserView'
+import ContextView from './views/ContextView'
+import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
 
 type BrowseView = 'browser' | 'env' | 'context'
-type EntryItem = { id: string; path: string; name: string; description: string; kind: 'file' | 'directory' }
 
 const VIEW_OPTIONS: readonly CodeSubTabOption<BrowseView>[] = [
   { value: 'browser', label: 'Browser', icon: FolderOpen },
@@ -38,39 +21,11 @@ const VIEW_OPTIONS: readonly CodeSubTabOption<BrowseView>[] = [
 ]
 
 export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
-  const { colors } = useTheme()
-  const { layoutMode } = useAdaptiveLayout()
-  const projects = useProjectsStore((state) => state.projects)
-  const activeProject = projects.find((project) => project.isActive) ?? null
-  const rootLabel = useFilesStore((state) => state.rootLabel)
-  const currentPath = useFilesStore((state) => state.currentPath)
-  const currentEntries = useFilesStore((state) => state.currentEntries)
-  const selectedFile = useFilesStore((state) => state.selectedFile)
-  const selectedFileContent = useFilesStore((state) => state.selectedFileContent)
-  const isLoadingContent = useFilesStore((state) => state.isLoadingContent)
-  const activePhoneView = useFilesStore((state) => state.activePhoneView)
-  const wrapLines = useFilesStore((state) => state.wrapLines)
-  const searchQuery = useFilesStore((state) => state.searchQuery)
-  const searchResults = useFilesStore((state) => state.searchResults)
-  const isSearching = useFilesStore((state) => state.isSearching)
-  const selectedContextPaths = useFilesStore((state) => state.selectedContextPaths)
-  const lastActionMessage = useFilesStore((state) => state.lastActionMessage)
-  const isRefreshing = useFilesStore((state) => state.isRefreshing)
-  const offlineMode = useFilesStore((state) => state.offlineMode)
+  const { isDark } = useTheme()
   const clearOfflineMode = useFilesStore((state) => state.clearOfflineMode)
-  const setSearchQuery = useFilesStore((state) => state.setSearchQuery)
-  const runSearch = useFilesStore((state) => state.runSearch)
-  const clearSearch = useFilesStore((state) => state.clearSearch)
-  const openDirectory = useFilesStore((state) => state.openDirectory)
-  const navigateUp = useFilesStore((state) => state.navigateUp)
-  const selectFile = useFilesStore((state) => state.selectFile)
-  const goBackToBrowser = useFilesStore((state) => state.goBackToBrowser)
-  const toggleWrapLines = useFilesStore((state) => state.toggleWrapLines)
-  const toggleContextPath = useFilesStore((state) => state.toggleContextPath)
-  const clearContextPaths = useFilesStore((state) => state.clearContextPaths)
-  const openPreview = usePreviewStore((state) => state.openPreview)
-  const [explorerExpanded, setExplorerExpanded] = useState(false)
   const [activeView, setActiveView] = useState<BrowseView>('browser')
+  const [expanded, setExpanded] = useState(false)
+  const { scrollY, scrollHandler } = useShrinkableHeader(onScroll)
 
   useEffect(() => {
     return subscribeToGitEvents((event) => {
@@ -78,405 +33,55 @@ export default function CodeBrowseTab({ onScroll }: CodeScreenTabProps) {
     })
   }, [clearOfflineMode])
 
-  const scrollY = useRef(new Animated.Value(0)).current
-
   useEffect(() => {
-    scrollY.setValue(0)
+    scrollY.value = 0
   }, [activeView, scrollY])
 
-  const controlCompact = scrollY.interpolate({
-    inputRange: [60, 120],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  })
+  useEffect(() => {
+    if (!expanded) scrollY.value = 0
+  }, [expanded, scrollY])
 
-  const headerPadV = scrollY.interpolate({
-    inputRange: [60, 120],
-    outputRange: [spacing[3], spacing[1]],
-    extrapolate: 'clamp',
-  })
+  const handleTabChange = (next: BrowseView) => {
+    setActiveView(next)
+    if (next !== 'browser') setExpanded(false)
+  }
 
-  const headerGap = scrollY.interpolate({
-    inputRange: [60, 120],
-    outputRange: [spacing[2], 0],
-    extrapolate: 'clamp',
-  })
-
-  const handleScroll = useMemo(
-    () => Animated.event(
-      [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-      { useNativeDriver: false, listener: onScroll as any },
-    ),
-    [scrollY, onScroll],
-  )
-
-  const hasSearchResults = searchQuery.trim().length > 0
-  const items = hasSearchResults
-    ? searchResults.map((result) => ({
-        id: `${result.path}-${result.line_number}`,
-        path: result.path,
-        name: pathToName(result.path),
-        description: result.text || 'Match',
-        kind: 'file' as const,
-      }))
-    : currentEntries.map((entry) => ({
-        id: entry.id,
-        path: entry.path,
-        name: entry.name,
-        description: entry.kind === 'directory' ? 'Folder' : entry.path,
-        kind: entry.kind,
-      }))
-
-  const extraData = useMemo(
-    () => ({ selectedContextPaths, selectedFilePath: selectedFile?.path, colors }),
-    [selectedContextPaths, selectedFile?.path, colors],
-  )
-
-  const handleSelectFile = useCallback(async (filePath: string) => {
-    await selectFile(filePath)
-  }, [selectFile])
-
-  const handleBackToBrowser = useCallback(() => {
-    goBackToBrowser()
-    setActiveView('browser')
-  }, [goBackToBrowser])
-
-  const renderEntry = useCallback(({ item }: { item: EntryItem }) => {
-    const isPinned = selectedContextPaths.includes(item.path)
-    const isCurrentFile = selectedFile?.path === item.path
-
-    return (
-      <View style={[styles.entryRow, { borderBottomColor: colors.border }]}>
-        <Pressable
-          style={styles.entryMain}
-          onPress={() => {
-            if (item.kind === 'directory') {
-              void openDirectory(item.path)
-              return
-            }
-            void handleSelectFile(item.path)
-          }}
+  return (
+    <View style={styles.container}>
+      {expanded ? (
+        <View
+          style={[
+            styles.compactHeader,
+            {
+              backgroundColor: isDark ? 'rgba(14, 14, 14, 0.9)' : 'rgba(250, 248, 242, 0.96)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(26, 26, 26, 0.08)',
+            },
+          ]}
         >
-          {item.kind === 'directory' ? (
-            <FolderOpen color={colors.primary} size={18} strokeWidth={2.2} />
-          ) : (
-            <FileCode2 color={isCurrentFile ? colors.primary : colors.textSecondary} size={18} strokeWidth={2.2} />
-          )}
-          <View style={styles.entryCopy}>
-            <Text style={[styles.entryTitle, { color: isCurrentFile ? colors.primary : colors.text }]} numberOfLines={1}>
-              {renderFileLabel(item.name, item.kind, colors, isCurrentFile ? colors.primary : colors.text)}
-            </Text>
-            <Text style={[styles.entryDescription, { color: colors.textSecondary }]} numberOfLines={2}>
-              {item.description}
-            </Text>
-          </View>
-        </Pressable>
-
-        {item.kind === 'file' ? (
-          <TouchableOpacity
-            onPress={() => toggleContextPath(item.path)}
-            activeOpacity={0.7}
-            style={[
-              styles.pinButton,
-              {
-                borderColor: isPinned ? colors.primary : colors.border,
-                backgroundColor: isPinned ? colors.primary + '18' : colors.surface,
-              },
-            ]}
-          >
-            <Pin color={isPinned ? colors.primary : colors.textSecondary} size={14} strokeWidth={2.2} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-    )
-  }, [colors, handleSelectFile, openDirectory, selectedContextPaths, selectedFile?.path, toggleContextPath])
-
-  const browserEmptyState = !isRefreshing && !isSearching ? (
-    <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        {hasSearchResults ? 'No search results' : 'This folder is empty'}
-      </Text>
-      <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-        {hasSearchResults
-          ? 'Try a different query or clear the search to keep browsing.'
-          : 'Choose another path or refresh from the server.'}
-      </Text>
-    </View>
-  ) : null
-
-
-  const viewerSection = (
-    <CodeViewer
-      file={selectedFile}
-      content={selectedFileContent}
-      isLoading={isLoadingContent}
-      wrapLines={wrapLines}
-      onToggleWrap={toggleWrapLines}
-      variant="plain"
-      onBack={layoutMode === 'phone' ? handleBackToBrowser : undefined}
-      isContextSelected={selectedFile ? selectedContextPaths.includes(selectedFile.path) : false}
-      onToggleContext={selectedFile ? () => toggleContextPath(selectedFile.path) : undefined}
-    />
-  )
-
-  const browserSection = (
-    <View style={styles.sectionContainer}>
-      {activePhoneView === 'viewer' ? (
-        viewerSection
-      ) : (
-        <>
-          <View style={styles.browserStaticHeader}>
-            <View style={styles.explorerControls}>
-              <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Search color={colors.textTertiary} size={16} strokeWidth={2.2} />
-                <TextInput
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder={`Search in ${currentPath === '.' ? rootLabel || 'project' : currentPath}`}
-                  placeholderTextColor={colors.textTertiary}
-                  style={[styles.searchInput, { color: colors.text }]}
-                  autoCapitalize="none"
-                  returnKeyType="search"
-                  onSubmitEditing={() => {
-                    void runSearch()
-                  }}
-                />
-                {searchQuery.length > 0 ? (
-                  <Pressable onPress={clearSearch} accessibilityRole="button">
-                    <Text style={[styles.searchAction, { color: colors.primary }]}>Clear</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-
-              {offlineMode ? (
-                <View style={[styles.offlineBanner, { backgroundColor: colors.backgroundSecondary }]}>
-                  <WifiOff color={colors.textSecondary} size={14} strokeWidth={2.2} />
-                  <Text style={[styles.offlineBannerText, { color: colors.textSecondary }]}>
-                    Browsing offline cache
-                  </Text>
-                </View>
-              ) : null}
-
-              <View style={styles.pathRow}>
-                <TouchableOpacity
-                  onPress={() => {
-                    void navigateUp()
-                  }}
-                  activeOpacity={0.7}
-                  disabled={currentPath === '.'}
-                  style={[
-                    styles.pathButton,
-                    {
-                      borderColor: colors.border,
-                      backgroundColor: currentPath === '.' ? colors.backgroundSecondary : colors.surface,
-                      opacity: currentPath === '.' ? 0.5 : 1,
-                    },
-                  ]}
-                >
-                  <Text style={[styles.pathButtonText, { color: colors.text }]}>Up</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    void openDirectory('.')
-                  }}
-                  activeOpacity={0.7}
-                  style={[styles.pathButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                >
-                  <Text style={[styles.pathButtonText, { color: colors.text }]}>Root</Text>
-                </TouchableOpacity>
-
-                <Text style={[styles.pathLabel, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {currentPath === '.' ? rootLabel || 'Project root' : currentPath}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[styles.messageBanner, { backgroundColor: colors.backgroundSecondary }]}>
-              <Text style={[styles.messageText, { color: colors.textSecondary }]}>{lastActionMessage}</Text>
-            </View>
-
-            {isRefreshing || isSearching ? (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-                  {isSearching ? 'Searching files...' : 'Loading folder...'}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={[styles.browserCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
-            <TouchableOpacity
-              onPress={() => setExplorerExpanded(true)}
-              activeOpacity={0.7}
-              style={[styles.expandRow, { borderBottomColor: colors.border }]}
-            >
-              <Text style={[styles.expandPathText, { color: colors.textSecondary }]} numberOfLines={1}>
-                {currentPath === '.' ? rootLabel ?? 'Project root' : currentPath}
-              </Text>
-              <Maximize2 color={colors.textTertiary} size={14} strokeWidth={2.2} />
-            </TouchableOpacity>
-            <FlashList
-              data={items}
-              renderItem={renderEntry}
-              extraData={extraData}
-              keyExtractor={(item) => item.id}
-              getItemType={(item) => item.kind}
-              ListEmptyComponent={browserEmptyState}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              contentContainerStyle={styles.browserListContent}
-              style={styles.browserList}
-            />
-          </View>
-        </>
-      )}
-    </View>
-  )
-
-  const envSection = <EnvVarsTab onScroll={handleScroll} />
-
-  const contextSection = (
-    <ScrollView
-      contentContainerStyle={styles.contextContent}
-      showsVerticalScrollIndicator={false}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
-    >
-      <View style={[styles.contextTray, { backgroundColor: colors.backgroundSecondary }]}>
-        <View style={styles.contextTrayHeader}>
-          <Text style={[styles.contextTrayLabel, { color: colors.textTertiary }]}>AI Context</Text>
-          {selectedContextPaths.length > 0 ? (
-            <TouchableOpacity onPress={clearContextPaths} activeOpacity={0.7}>
-              <Text style={[styles.clearText, { color: colors.primary }]}>Clear</Text>
-            </TouchableOpacity>
-          ) : null}
+          <CodeSubTabNavigator
+            value={activeView}
+            options={VIEW_OPTIONS}
+            onChange={handleTabChange}
+            variant="segmented"
+          />
         </View>
-        {selectedContextPaths.length > 0 ? (
-          <View style={styles.contextChipRow}>
-            {selectedContextPaths.map((path) => (
-              <View key={path} style={[styles.contextChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.contextChipText, { color: colors.text }]} numberOfLines={1}>
-                  {path}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Text style={[styles.emptyInlineText, { color: colors.textSecondary }]}>
-            Pin files from the browser or code viewer, then ask AI with focused repo context.
-          </Text>
-        )}
-      </View>
-
-      <View style={[styles.contextTray, { backgroundColor: colors.backgroundSecondary }]}>
-        <Text style={[styles.contextTrayLabel, { color: colors.textTertiary }]}>Preview</Text>
-        <Text style={[styles.emptyInlineText, { color: colors.textSecondary }]}>
-          Open the proxied browser preview for the active project when a local dev server is running.
-        </Text>
-        <TouchableOpacity
-          onPress={() => {
-            void openPreview()
-          }}
-          activeOpacity={0.7}
-          style={[styles.primaryAction, styles.contextPreviewAction, { backgroundColor: colors.primary }]}
-        >
-          <Text style={[styles.primaryActionText, { color: colors.primaryText }]}>Open Preview</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      ) : (
+        <ShrinkableHeader
+          scrollY={scrollY}
+          tabs={{ value: activeView, options: VIEW_OPTIONS, onChange: handleTabChange, variant: 'segmented' }}
+        />
+      )}
+      {activeView === 'browser' && (
+        <BrowserView
+          scrollHandler={scrollHandler}
+          expanded={expanded}
+          onExpandChange={setExpanded}
+        />
+      )}
+      {activeView === 'env' && <EnvVarsTab onScroll={onScroll} />}
+      {activeView === 'context' && <ContextView scrollHandler={scrollHandler} />}
+    </View>
   )
-
-  return (
-    <>
-      <View style={styles.container}>
-        <CodeScreenHeader style={{ paddingTop: headerPadV, paddingBottom: headerPadV, gap: headerGap }}>
-          <CodeSubTabNavigator value={activeView} options={VIEW_OPTIONS} onChange={setActiveView} compact={controlCompact} />
-        </CodeScreenHeader>
-
-        {activeView === 'browser' ? browserSection : null}
-        {activeView === 'env' ? envSection : null}
-        {activeView === 'context' ? contextSection : null}
-      </View>
-
-      {explorerExpanded && <FileExplorerSheet onDismiss={() => setExplorerExpanded(false)} />}
-    </>
-  )
-}
-
-function renderFileLabel(
-  name: string,
-  kind: 'directory' | 'file',
-  colors: SemanticTheme,
-  defaultColor: string,
-) {
-  if (kind === 'directory') return name
-
-  const parts = splitFileName(name)
-  if (!parts.extension) return name
-
-  return (
-    <>
-      {parts.base}
-      <Text style={{ color: colorForExtension(parts.extension, colors, defaultColor) }}>{parts.extension}</Text>
-    </>
-  )
-}
-
-function splitFileName(name: string): { base: string; extension: string | null } {
-  const dotIndex = name.lastIndexOf('.')
-  if (dotIndex <= 0 || dotIndex === name.length - 1) {
-    return { base: name, extension: null }
-  }
-
-  return {
-    base: name.slice(0, dotIndex),
-    extension: name.slice(dotIndex),
-  }
-}
-
-function colorForExtension(extension: string, colors: SemanticTheme, defaultColor: string): string {
-  switch (extension.toLowerCase()) {
-    case '.ts':
-    case '.tsx':
-      return colors.primary
-    case '.js':
-    case '.jsx':
-    case '.mjs':
-    case '.cjs':
-      return palette.warning[600]
-    case '.py':
-      return colors.success
-    case '.md':
-    case '.markdown':
-    case '.mdx':
-      return palette.accent[600]
-    case '.rs':
-      return colors.error
-    case '.json':
-    case '.jsonc':
-      return palette.primary[500]
-    case '.yml':
-    case '.yaml':
-    case '.toml':
-      return palette.accent[700]
-    case '.sh':
-    case '.bash':
-    case '.zsh':
-    case '.fish':
-      return palette.success[700]
-    case '.html':
-    case '.css':
-    case '.scss':
-    case '.sass':
-    case '.less':
-      return palette.warning[700]
-    case '.sql':
-      return palette.accent[500]
-    default:
-      return defaultColor
-  }
 }
 
 const styles = StyleSheet.create({
@@ -484,226 +89,15 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing[3],
   },
-  sectionContainer: {
-    flex: 1,
-    minHeight: 0,
-  },
-  browserStaticHeader: {
-    gap: spacing[4],
-    marginBottom: spacing[4],
-  },
-  browserListContent: {
-    paddingBottom: spacing[8],
-  },
-  browserList: {
-    flex: 1,
-  },
-  expandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  expandPathText: {
-    ...typeStyles.meta,
-    flex: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-  },
-  primaryAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-  },
-  contextPreviewAction: {
-    alignSelf: 'flex-start',
-  },
-  primaryActionText: {
-    ...typeStyles.bodySmall,
-  },
-  secondaryAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
+  compactHeader: {
     borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    backgroundColor: 'transparent',
-  },
-  secondaryActionText: {
-    ...typeStyles.bodySmall,
-  },
-  contextTray: {
-    borderRadius: borderRadius.xl,
-    padding: spacing[4],
-    gap: spacing[3],
-  },
-  contextSummary: {
-    borderRadius: borderRadius.lg,
-    padding: spacing[3],
-    gap: spacing[3],
-  },
-  contextTrayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  contextTrayLabel: {
-    ...typeStyles.sectionTitle,
-  },
-  clearText: {
-    ...typeStyles.bodySmall,
-  },
-  contextChipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-  },
-  contextChip: {
-    maxWidth: '100%',
-    borderWidth: 1,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-  contextChipText: {
-    ...typeStyles.meta,
-    maxWidth: 260,
-  },
-  emptyInlineText: {
-    ...typeStyles.bodySmall,
-  },
-  explorerControls: {
-    gap: spacing[3],
-  },
-  searchBar: {
-    borderWidth: 1,
-    borderRadius: borderRadius.lg,
-    minHeight: 48,
-    paddingHorizontal: spacing[3],
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-  },
-  searchInput: {
-    flex: 1,
-    ...typeStyles.body,
-  },
-  searchAction: {
-    ...typeStyles.bodySmall,
-  },
-  pathRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-  },
-  pathButton: {
-    borderWidth: 1,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-  pathButtonText: {
-    ...typeStyles.meta,
-  },
-  pathLabel: {
-    ...typeStyles.bodySmall,
-    flex: 1,
-  },
-  messageBanner: {
-    borderRadius: borderRadius.lg,
+    borderRadius: 20,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
-  },
-  messageText: {
-    ...typeStyles.bodySmall,
-  },
-  browserCard: {
-    flex: 1,
-    minHeight: 0,
-    borderWidth: 1,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[4],
-  },
-  loadingText: {
-    ...typeStyles.bodySmall,
-  },
-  entryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  entryMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[3],
-  },
-  entryCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  entryTitle: {
-    ...typeStyles.button,
-  },
-  entryDescription: {
-    ...typeStyles.bodySmall,
-  },
-  pinButton: {
-    width: 34,
-    height: 34,
-    borderWidth: 1,
-    borderRadius: borderRadius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyState: {
-    padding: spacing[4],
-    gap: spacing[2],
-    margin: spacing[4],
-    borderRadius: borderRadius.lg,
-  },
-  emptyTitle: {
-    ...typeStyles.bodyBold,
-  },
-  emptyBody: {
-    ...typeStyles.bodySmall,
-  },
-  contextContent: {
-    gap: spacing[4],
-    paddingBottom: spacing[8],
-  },
-  statusMessage: {
-    ...typeStyles.bodySmall,
-  },
-  offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-  offlineBannerText: {
-    ...typeStyles.bodySmall,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
 })

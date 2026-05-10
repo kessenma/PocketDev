@@ -9,7 +9,7 @@ import { fetchClaudeSetupStatus } from '../../../services/api'
 import SudoPrompt from '../SudoPrompt'
 import { Assets } from '../../../../assets'
 import { Check, Clock, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Download } from 'lucide-react-native'
-import CopyButton from '../../shared/CopyButton'
+import CopyButton from '../../ui/CopyButton'
 
 // Marker pattern to detect success/failure
 const MARKER_OK = '___CLAUDE_INSTALL_OK___'

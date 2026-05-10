@@ -4,8 +4,8 @@ import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useContainerStore } from '../../stores/containers'
 import { useServerActionsStore } from '../../stores/server-actions'
-import { BauhausPanel } from '../shared/BauhausPanel'
-import BauhausBadge from '../shared/BauhausBadge'
+import { Card, CardTitle } from '../ui/Card'
+import Badge from '../ui/Badge'
 
 import { typeStyles } from '../../theme/typography'
 import { RefreshCw } from 'lucide-react-native'
@@ -76,8 +76,8 @@ export default function DebugContextPanel({
 
       {/* Metrics */}
       {metrics.length > 0 && (
-        <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>System</Text>
+        <Card style={styles.section} accentColor={colors.accentBlue}>
+          <CardTitle>System</CardTitle>
           {metrics.map((m) => (
             <View key={m.id} style={styles.row}>
               <Text style={[typeStyles.bodySmall, { color: colors.textSecondary }]}>{m.label}</Text>
@@ -91,12 +91,12 @@ export default function DebugContextPanel({
               </View>
             </View>
           ))}
-        </BauhausPanel>
+        </Card>
       )}
 
       {/* Containers */}
-      <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
-        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Containers</Text>
+      <Card style={styles.section} accentColor={colors.accentYellow}>
+        <CardTitle>Containers</CardTitle>
         {containers.length === 0 ? (
           <Text style={[typeStyles.bodySmall, { color: colors.textTertiary }]}>
             {isRefreshingContainers ? 'Loading...' : 'No containers found'}
@@ -113,7 +113,7 @@ export default function DebugContextPanel({
                 </Text>
               </View>
               <View style={styles.containerRight}>
-                <BauhausBadge
+                <Badge
                   label={c.state}
                   color={CONTAINER_STATE_COLORS[c.state] ?? '#94a3b8'}
                 />
@@ -126,11 +126,11 @@ export default function DebugContextPanel({
             </View>
           ))
         )}
-      </BauhausPanel>
+      </Card>
 
       {/* Ports */}
-      <BauhausPanel style={styles.section} accentColor={colors.accentRed}>
-        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Listening Ports</Text>
+      <Card style={styles.section} accentColor={colors.accentRed}>
+        <CardTitle>Listening Ports</CardTitle>
         {ports.length === 0 ? (
           <Text style={[typeStyles.bodySmall, { color: colors.textTertiary }]}>
             {isRefreshingServer ? 'Loading...' : 'No port data'}
@@ -146,18 +146,18 @@ export default function DebugContextPanel({
                   {p.service || p.process}
                 </Text>
               </View>
-              <BauhausBadge
+              <Badge
                 label={p.exposure}
                 color={p.exposure === 'public' ? '#facc15' : '#22c55e'}
               />
             </View>
           ))
         )}
-      </BauhausPanel>
+      </Card>
 
       {/* AI Model */}
-      <BauhausPanel style={styles.section} accentColor="#8b5cf6">
-        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>AI Model</Text>
+      <Card style={styles.section} accentColor="#8b5cf6">
+        <CardTitle>AI Model</CardTitle>
         <Text style={[typeStyles.bodySmall, { color: colors.textTertiary }]}>
           Used for AI Assist in the terminal.
         </Text>
@@ -168,7 +168,7 @@ export default function DebugContextPanel({
           onSelectProvider={onSelectProvider}
           onSelectModel={onSelectModel}
         />
-      </BauhausPanel>
+      </Card>
     </ScrollView>
   )
 }
@@ -189,9 +189,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: spacing[2],
-  },
-  sectionTitle: {
-    ...typeStyles.sectionTitle,
   },
   row: {
     flexDirection: 'row',

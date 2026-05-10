@@ -11,7 +11,7 @@ import {
 } from '../../../services/api'
 import { CheckCircle, ChevronDown, ChevronUp, ExternalLink, KeyRound, ShieldCheck, Globe, Circle, CircleDot } from 'lucide-react-native'
 import type { GitHubCliAuthSessionStatus } from '@pocketdev/shared/types'
-import CopyButton from '../../shared/CopyButton'
+import CopyButton from '../../ui/CopyButton'
 
 type WizardAction =
   | { type: 'STEP_COMPLETE'; step: 'github-cli-auth' }

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import {
   Brain,
+  ChevronsDown,
   ChevronRight,
   FileEdit,
   FilePlus,
@@ -21,7 +22,7 @@ import type { TaskActivity } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useTaskStore } from '../../stores/tasks'
 import { buildMarkdownStyle } from '../../theme/markdown'
-import BauhausBadge from '../shared/BauhausBadge'
+import Badge from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { typeStyles } from '../../theme/typography'
 import { getToolPresentation, groupActivitiesIntoCards } from './task-stream-utils'
@@ -105,7 +106,7 @@ export default function TaskStreamer({ taskId }: Props) {
 
       {!autoScroll && (
         <View style={styles.scrollButton}>
-          <Button size="sm" onPress={handleScrollToBottom}>
+          <Button size="sm" leftIcon={ChevronsDown} onPress={handleScrollToBottom}>
             Scroll To Bottom
           </Button>
         </View>
@@ -326,7 +327,7 @@ function TextRow({ activity, colors }: { activity: Extract<TaskActivity, { type:
 function StatusRow({ activity, colors }: { activity: Extract<TaskActivity, { type: 'status' }>; colors: any }) {
   return (
     <View style={styles.statusRow}>
-      <BauhausBadge label={activity.message} color={colors.primary} />
+      <Badge label={activity.message} color={colors.primary} />
     </View>
   )
 }

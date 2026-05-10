@@ -25,7 +25,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { MainTabParamList, RootStackParamList } from '../navigation/types'
 import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
-import BauhausTabs from '../components/shared/BauhausTabs'
+import Tabs from '../components/ui/Tabs'
 import TaskListPane from '../components/tasks/TaskListPane'
 import TaskWorkspace from '../components/tasks/TaskWorkspace'
 import RecentPromptsPane from '../components/tasks/RecentPromptsPane'
@@ -144,7 +144,7 @@ export default function TasksScreen({ navigation }: Props) {
     <>
       <AdaptiveShell style={{ backgroundColor: colors.background, paddingTop: top }} maxWidth={1360}>
         <View style={styles.container}>
-          <BauhausTabs tabs={TABS} scrollIndex={scrollIndex} onChange={handleTabChange} />
+          <Tabs tabs={TABS} scrollIndex={scrollIndex} onChange={handleTabChange} />
 
           <View style={styles.pager} onLayout={handlePagerLayout}>
             {pageWidth > 0 && (

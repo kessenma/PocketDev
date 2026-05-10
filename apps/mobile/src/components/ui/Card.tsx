@@ -8,7 +8,6 @@ type CardProps = {
   children: ReactNode
   style?: StyleProp<ViewStyle>
   accentColor?: string
-  alt?: boolean
 }
 
 type SectionProps = {
@@ -19,23 +18,24 @@ type SectionProps = {
 type TextProps = {
   children: ReactNode
   style?: StyleProp<TextStyle>
+  align?: 'left' | 'center' | 'right'
 }
 
-export function Card({ children, style, accentColor, alt = false }: CardProps) {
+export function Card({ children, style, accentColor }: CardProps) {
   const { colors } = useTheme()
+  const bracketColor = accentColor ?? colors.accentYellow
 
   return (
     <View
       style={[
         styles.card,
-        {
-          backgroundColor: alt ? colors.panelAlt : colors.panel,
-          borderColor: colors.border,
-        },
         style,
       ]}
     >
-      <View pointerEvents="none" style={[styles.accentBlock, { backgroundColor: accentColor ?? colors.accentYellow }]} />
+      <View pointerEvents="none" style={[styles.corner, styles.cornerTL, { borderColor: bracketColor }]} />
+      <View pointerEvents="none" style={[styles.corner, styles.cornerTR, { borderColor: bracketColor }]} />
+      <View pointerEvents="none" style={[styles.corner, styles.cornerBL, { borderColor: bracketColor }]} />
+      <View pointerEvents="none" style={[styles.corner, styles.cornerBR, { borderColor: bracketColor }]} />
       {children}
     </View>
   )
@@ -45,9 +45,9 @@ export function CardHeader({ children, style }: SectionProps) {
   return <View style={[styles.header, style]}>{children}</View>
 }
 
-export function CardTitle({ children, style }: TextProps) {
+export function CardTitle({ children, style, align = 'center' }: TextProps) {
   const { colors } = useTheme()
-  return <Text style={[styles.title, { color: colors.text }, style]}>{children}</Text>
+  return <Text style={[styles.title, { color: colors.text, textAlign: align }, style]}>{children}</Text>
 }
 
 export function CardDescription({ children, style }: TextProps) {
@@ -59,27 +59,54 @@ export function CardContent({ children, style }: SectionProps) {
   return <View style={[styles.content, style]}>{children}</View>
 }
 
+const BRACKET_SIZE = 32
+const BRACKET_THICKNESS = 2
+const BRACKET_INSET = 10
+
 const styles = StyleSheet.create({
   card: {
     position: 'relative',
     overflow: 'hidden',
-    borderWidth: 2,
     borderRadius: borderRadius.xl,
-    padding: spacing[4],
+    paddingTop: spacing[1],
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[4],
     gap: spacing[3],
   },
-  accentBlock: {
+  corner: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 18,
-    height: 18,
+    width: BRACKET_SIZE,
+    height: BRACKET_SIZE,
+  },
+  cornerTL: {
+    top: BRACKET_INSET,
+    left: BRACKET_INSET,
+    borderTopWidth: BRACKET_THICKNESS,
+    borderLeftWidth: BRACKET_THICKNESS,
+  },
+  cornerTR: {
+    top: BRACKET_INSET,
+    right: BRACKET_INSET,
+    borderTopWidth: BRACKET_THICKNESS,
+    borderRightWidth: BRACKET_THICKNESS,
+  },
+  cornerBL: {
+    bottom: BRACKET_INSET,
+    left: BRACKET_INSET,
+    borderBottomWidth: BRACKET_THICKNESS,
+    borderLeftWidth: BRACKET_THICKNESS,
+  },
+  cornerBR: {
+    bottom: BRACKET_INSET,
+    right: BRACKET_INSET,
+    borderBottomWidth: BRACKET_THICKNESS,
+    borderRightWidth: BRACKET_THICKNESS,
   },
   header: {
     gap: spacing[1],
   },
   title: {
-    ...typeStyles.screenTitle,
+    ...typeStyles.cardTitle,
   },
   description: {
     ...typeStyles.bodySmall,

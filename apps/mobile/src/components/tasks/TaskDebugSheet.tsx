@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native'
 import { Sheet, type SheetHandle } from '../ui/Sheet'
-import { Bug, CheckCircle2, ChevronLeft, LockKeyhole, ShieldAlert, X } from 'lucide-react-native'
+import { Bug, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, LockKeyhole, ShieldAlert, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Button } from '../ui/Button'
@@ -248,10 +248,11 @@ export default function TaskDebugSheet({
 
             <View style={[styles.footer, { borderTopColor: colors.border }]}>
               <Button
+                rightIcon={ChevronRight}
                 onPress={handleIssueNext}
                 disabled={selection == null}
               >
-                {selection === 'permissions' ? 'Select CLI' : 'Select CLI'}
+                Select CLI
               </Button>
             </View>
           </>
@@ -308,6 +309,7 @@ export default function TaskDebugSheet({
 
             <View style={[styles.footer, { borderTopColor: colors.border }]}>
               <Button
+                rightIcon={selection === 'permissions' ? ExternalLink : ChevronRight}
                 onPress={handleFinish}
                 disabled={!canFinish}
               >

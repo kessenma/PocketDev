@@ -1,13 +1,16 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
 import { Sheet, type SheetHandle } from '../ui/Sheet'
-import { X, Square, Eye, Terminal } from 'lucide-react-native'
+import { X, Square, Eye, Terminal, Send } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useScriptsStore, type RunningScript } from '../../stores/scripts'
@@ -26,6 +29,7 @@ export default function RunningScriptsSheet({ onDismiss }: Props) {
   const stopScript = useScriptsStore((s) => s.stopScript)
   const openPreview = usePreviewStore((s) => s.openPreview)
   const taskLogs = useTaskStore((s) => s.taskLogs)
+  const sendInput = useTaskStore((s) => s.sendInput)
 
   async function handlePreview(url: string) {
     void openPreview(url)
@@ -43,36 +47,39 @@ export default function RunningScriptsSheet({ onDismiss }: Props) {
       backgroundColor={colors.panel}
       onDismiss={onDismiss}
     >
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.headerLeft}>
-          <Terminal color={colors.primary} size={18} strokeWidth={2.25} />
-          <Text style={[styles.title, { color: colors.text }]}>Running Scripts</Text>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.headerLeft}>
+            <Terminal color={colors.primary} size={18} strokeWidth={2.25} />
+            <Text style={[styles.title, { color: colors.text }]}>Running Scripts</Text>
+          </View>
+          <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} style={styles.closeButton} activeOpacity={0.7}>
+            <X color={colors.text} size={20} strokeWidth={2.25} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => sheetRef.current?.dismiss()} style={styles.closeButton} activeOpacity={0.7}>
-          <X color={colors.text} size={20} strokeWidth={2.25} />
-        </TouchableOpacity>
-      </View>
 
-      {entries.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No scripts are running.
-          </Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-          {entries.map(([key, script]) => (
-            <RunningScriptRow
-              key={key}
-              scriptKey={key}
-              script={script}
-              lastLines={getLastLines(taskLogs, script.taskId, 3)}
-              onStop={stopScript}
-              onPreview={handlePreview}
-            />
-          ))}
-        </ScrollView>
-      )}
+        {entries.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No scripts are running.
+            </Text>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+            {entries.map(([key, script]) => (
+              <RunningScriptRow
+                key={key}
+                scriptKey={key}
+                script={script}
+                lastLines={getLastLines(taskLogs, script.taskId, 3)}
+                onStop={stopScript}
+                onPreview={handlePreview}
+                onSendInput={script.taskId ? (text) => sendInput(script.taskId!, text) : undefined}
+              />
+            ))}
+          </ScrollView>
+        )}
+      </KeyboardAvoidingView>
     </Sheet>
   )
 }
@@ -90,14 +97,23 @@ function RunningScriptRow({
   lastLines,
   onStop,
   onPreview,
+  onSendInput,
 }: {
   scriptKey: string
   script: RunningScript
   lastLines: string[]
   onStop: (key: string) => void
   onPreview: (targetUrl: string) => Promise<void>
+  onSendInput?: (text: string) => void
 }) {
   const { colors } = useTheme()
+  const [inputText, setInputText] = useState('')
+
+  function handleSend() {
+    if (!inputText.trim() || !onSendInput) return
+    onSendInput(inputText + '\n')
+    setInputText('')
+  }
 
   return (
     <View style={[styles.row, { backgroundColor: colors.backgroundSecondary }]}>
@@ -146,6 +162,29 @@ function RunningScriptRow({
               {line}
             </Text>
           ))}
+        </View>
+      )}
+
+      {onSendInput && (
+        <View style={[styles.inputRow, { backgroundColor: colors.background }]}>
+          <TextInput
+            style={[styles.inputField, { color: colors.text }]}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="Type input…"
+            placeholderTextColor={colors.textTertiary}
+            returnKeyType="send"
+            onSubmitEditing={handleSend}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleSend}
+            style={[styles.sendButton, { backgroundColor: colors.primary }]}
+          >
+            <Send color={colors.primaryText} size={13} strokeWidth={2.5} />
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -248,5 +287,24 @@ const styles = StyleSheet.create({
   },
   outputLine: {
     ...typeStyles.mono,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing[2],
+    gap: spacing[2],
+    height: 36,
+  },
+  inputField: {
+    flex: 1,
+    ...typeStyles.mono,
+  },
+  sendButton: {
+    width: 28,
+    height: 28,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })

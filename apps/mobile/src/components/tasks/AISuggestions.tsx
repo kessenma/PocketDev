@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { ChevronDown, ChevronUp, Cpu, Filter, Image as ImageIcon } from 'lucide-react-native'
-import BauhausTooltip from '../shared/BauhausTooltip'
+import Tooltip from '../ui/Tooltip'
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -76,7 +76,7 @@ function SuggestionChip({ suggestion, onPress }: { suggestion: FileSuggestion; o
   const color = getExtColor(ext)
 
   return (
-    <BauhausTooltip label={suggestion.path} direction="top" onPress={onPress}>
+    <Tooltip label={suggestion.path} direction="top" onPress={onPress}>
       <View style={[styles.chip, { borderColor: color + '40', backgroundColor: color + '0D' }]}>
         {renderExtIcon(ext, 14, color)}
         <Text style={[styles.chipText, { color }]} numberOfLines={1}>
@@ -84,7 +84,7 @@ function SuggestionChip({ suggestion, onPress }: { suggestion: FileSuggestion; o
         </Text>
         {ext ? <Text style={[styles.extLabel, { color: color + 'AA', textDecorationLine: 'underline' }]}>.{ext}</Text> : null}
       </View>
-    </BauhausTooltip>
+    </Tooltip>
   )
 }
 

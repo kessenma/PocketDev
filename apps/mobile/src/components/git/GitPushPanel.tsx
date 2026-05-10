@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
-import GitBadge from './GitBadge'
+import GitBadge from './primitives/GitBadge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitRemoteState } from './model'
 

@@ -21,7 +21,7 @@ import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import SplitViewLayout from '../components/layout/SplitViewLayout'
 import AnimatedGradientBackground from '../components/background/AnimatedGradientBackground'
-import { LiquidGlassCard } from '../components/shared/LiquidGlassCard'
+import { Card } from '../components/ui/Card'
 import QRScanner, { type QRScanResult } from '../components/QRScanner'
 import { ArrowRight, Link, Lock, ScanLine, Server, Unplug } from 'lucide-react-native'
 import PairingAnimation from '../components/animations/PairingAnimation'
@@ -177,7 +177,7 @@ export default function ConnectScreen({ navigation }: Props) {
   }
 
   const form = (
-    <LiquidGlassCard style={styles.formCard}>
+    <Card style={styles.formCard}>
       <View style={styles.form}>
         {/* Existing connection banner */}
         {existingServer && (
@@ -294,7 +294,7 @@ export default function ConnectScreen({ navigation }: Props) {
           )}
         </TouchableOpacity>
       </View>
-    </LiquidGlassCard>
+    </Card>
   )
 
   return (
@@ -325,7 +325,7 @@ export default function ConnectScreen({ navigation }: Props) {
           ) : (
             <SplitViewLayout
               leading={
-                <LiquidGlassCard style={styles.heroCard}>
+                <Card style={styles.heroCard}>
                   <View style={styles.heroCardContent}>
                     <View style={styles.bauhausDots}>
                       <View style={[styles.bauhausDotLg, { backgroundColor: palette.bauhaus.red }]} />
@@ -338,7 +338,7 @@ export default function ConnectScreen({ navigation }: Props) {
                       Pair once, then open tasks, review changes, and follow agent progress from anywhere.
                     </Text>
                   </View>
-                </LiquidGlassCard>
+                </Card>
               }
               trailing={form}
               leadingWidth={420}

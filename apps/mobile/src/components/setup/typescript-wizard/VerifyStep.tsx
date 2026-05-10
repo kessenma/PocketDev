@@ -8,7 +8,7 @@ import { useTerminalCommand } from '../../../hooks/useTerminalCommand'
 import { postVerifyTypeScript } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { ArrowRight, Check, RefreshCw, XCircle } from 'lucide-react-native'
-import CopyButton from '../../shared/CopyButton'
+import CopyButton from '../../ui/CopyButton'
 import SetupProgressCard from '../shared/SetupProgressCard'
 import SetupTerminalPanel from '../shared/SetupTerminalPanel'
 

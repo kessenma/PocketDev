@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Sheet, type SheetHandle } from '../ui/Sheet'
-import { X } from 'lucide-react-native'
+import { ChevronDown, ChevronUp, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
 import { fetchFileContent } from '../../services/api'
@@ -114,14 +114,14 @@ export default function FileViewerSheet({ filePath, activity, onDismiss }: Props
           </View>
           {lineHighlights.length > 1 && (
             <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.panel }]}>
-              <Button size="sm" variant="secondary" onPress={handlePrev}>
-                ↑ Prev
+              <Button size="sm" variant="secondary" leftIcon={ChevronUp} onPress={handlePrev}>
+                Prev
               </Button>
               <Text style={[styles.counter, { color: colors.textSecondary }]}>
                 {currentHighlightIndex + 1} of {lineHighlights.length}
               </Text>
-              <Button size="sm" variant="secondary" onPress={handleNext}>
-                ↓ Next
+              <Button size="sm" variant="secondary" leftIcon={ChevronDown} onPress={handleNext}>
+                Next
               </Button>
             </View>
           )}

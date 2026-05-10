@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { RotateCcw, Terminal } from 'lucide-react-native'
 import { palette, borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
 import { Button } from '../ui/Button'
-import CopyButton from './CopyButton'
+import CopyButton from '../ui/CopyButton'
 import { typeStyles } from '../../theme/typography'
 import ConnectingAnimation from '../animations/ConnectingAnimation'
 import ServerWebBrowserSheet from '../browser/ServerWebBrowserSheet'
@@ -110,12 +111,12 @@ export default function ServerDisconnected() {
           : `Lost connection to ${server.ip}:${server.port}.`}
       </Text>
 
-      <Button size="sm" onPress={connect}>
+      <Button size="sm" leftIcon={RotateCcw} onPress={connect}>
         Retry Connection
       </Button>
 
       {server && (
-        <Button size="sm" variant="secondary" onPress={() => setConsoleOpen(true)}>
+        <Button size="sm" variant="secondary" leftIcon={Terminal} onPress={() => setConsoleOpen(true)}>
           Server Console
         </Button>
       )}

@@ -10,11 +10,11 @@ import { useGitStore } from '../stores/git'
 import { useOfflineStore } from '../stores/offline'
 import { useConnectionStore } from '../stores/connection'
 import ServerSegmentedControl from '../components/server-actions/ServerSegmentedControl'
-import { Globe, Lock, type LucideIcon } from 'lucide-react-native'
+import { ArrowDownToLine, FolderOpen, GitBranch, GitFork, GitPullRequest, Globe, HardDriveDownload, Lock, RefreshCw, X, type LucideIcon } from 'lucide-react-native'
 import ProjectCloneCelebration from '../components/projects/ProjectCloneCelebration'
 import { Button } from '../components/ui/Button'
-import { BauhausPanel } from '../components/shared/BauhausPanel'
-import BauhausBadge from '../components/shared/BauhausBadge'
+import { Card } from '../components/ui/Card'
+import Badge from '../components/ui/Badge'
 import { typeStyles } from '../theme/typography'
 
 type ProjectFilter = 'all' | 'local' | 'needsClone' | 'downloaded'
@@ -114,7 +114,7 @@ export default function ProjectsScreen() {
     const isAnyDownloading = downloadingKey !== null
 
     return (
-      <BauhausPanel
+      <Card
         style={styles.card}
         accentColor={project.isActive ? colors.accentRed : project.isLocal ? colors.accentBlue : colors.accentYellow}
       >
@@ -139,9 +139,9 @@ export default function ProjectsScreen() {
               color={project.isLocal ? colors.accentBlue : colors.accentYellow}
             />
             {project.visibility === 'private' ? (
-              <Badge label="Private" color={colors.accentRed} icon={Lock} />
+              <ProjectBadge label="Private" color={colors.accentRed} icon={Lock} />
             ) : project.visibility === 'public' ? (
-              <Badge label="Public" color={colors.accentBlue} icon={Globe} />
+              <ProjectBadge label="Public" color={colors.accentBlue} icon={Globe} />
             ) : null}
           </View>
         </View>
@@ -151,6 +151,7 @@ export default function ProjectsScreen() {
             <View style={styles.actionRow}>
               <View style={styles.actionButton}>
                 <Button
+                  leftIcon={FolderOpen}
                   loading={isProjectSelecting}
                   onPress={() => selectProject(project.id, false)}
                   disabled={isMutating}
@@ -161,6 +162,7 @@ export default function ProjectsScreen() {
               <View style={styles.actionButton}>
                 <Button
                   variant="secondary"
+                  leftIcon={GitPullRequest}
                   loading={isProjectSelecting}
                   onPress={() => selectProject(project.id, true)}
                   disabled={isMutating}
@@ -172,7 +174,7 @@ export default function ProjectsScreen() {
 
             {offlineSnap ? (
               <View style={styles.offlineBadgeRow}>
-                <BauhausBadge
+                <Badge
                   label={`Offline · ${offlineSnap.fileCount.toLocaleString()} files · ${branchForDownload}`}
                   color={colors.success}
                 />
@@ -188,6 +190,7 @@ export default function ProjectsScreen() {
                 <View style={styles.actionButton}>
                   <Button
                     variant={offlineSnap ? 'secondary' : 'primary'}
+                    leftIcon={offlineSnap ? RefreshCw : ArrowDownToLine}
                     loading={isThisDownloading}
                     disabled={isAnyDownloading && !isThisDownloading}
                     onPress={() => {
@@ -200,7 +203,7 @@ export default function ProjectsScreen() {
                 </View>
                 {isThisDownloading ? (
                   <View style={styles.actionButton}>
-                    <Button variant="secondary" onPress={cancelDownload}>
+                    <Button variant="secondary" leftIcon={X} onPress={cancelDownload}>
                       Cancel
                     </Button>
                   </View>
@@ -208,6 +211,7 @@ export default function ProjectsScreen() {
                   <View style={styles.actionButton}>
                     <Button
                       variant="danger"
+                      leftIcon={HardDriveDownload}
                       onPress={() => void clearOfflineData(project.id, branchForDownload)}
                     >
                       Remove Offline
@@ -222,6 +226,7 @@ export default function ProjectsScreen() {
             <View style={styles.actionRow}>
               <View style={styles.actionButton}>
                 <Button
+                  leftIcon={GitFork}
                   loading={isProjectCloning}
                   onPress={() => cloneProject(project.id, 'default')}
                   disabled={isMutating}
@@ -245,6 +250,7 @@ export default function ProjectsScreen() {
             <View style={styles.actionButton}>
               <Button
                 variant="secondary"
+                leftIcon={GitBranch}
                 loading={isProjectCloning}
                 onPress={() => cloneProject(project.id, 'new', branchDraft)}
                 disabled={isMutating || branchDraft.trim().length === 0}
@@ -254,7 +260,7 @@ export default function ProjectsScreen() {
             </View>
           </View>
         )}
-      </BauhausPanel>
+      </Card>
     )
   }, [branchDrafts, setBranchDrafts, mutatingProjectId, mutatingAction, isMutating, cloneCelebrationProjectId, clearCloneCelebration, selectProject, cloneProject, colors, server, currentBranch, offlineSnapshots, downloadingKey, downloadProgress, startDownload, cancelDownload, clearOfflineData])
 
@@ -332,7 +338,7 @@ export default function ProjectsScreen() {
   )
 }
 
-function Badge({
+function ProjectBadge({
   label,
   color,
   icon: Icon,
@@ -344,7 +350,7 @@ function Badge({
   return (
     <View style={styles.badgeRow}>
       {Icon ? <Icon color={color} size={12} strokeWidth={2.2} /> : null}
-      <BauhausBadge label={label} color={color} />
+      <Badge label={label} color={color} />
     </View>
   )
 }

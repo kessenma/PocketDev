@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
-import { Cpu } from 'lucide-react-native'
+import { ArrowDownToLine, Cpu, Trash2 } from 'lucide-react-native'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useOnDeviceAIStore } from '../../stores/on-device-ai'
 import { MODEL_NAME, MODEL_SIZE_MB } from '../../services/embedding'
-import { BauhausPanel } from '../shared/BauhausPanel'
+import { Card, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
-import BauhausBadge from '../shared/BauhausBadge'
+import Badge from '../ui/Badge'
 import { typeStyles } from '../../theme/typography'
 
 export default function OnDeviceAISection() {
@@ -35,8 +35,8 @@ export default function OnDeviceAISection() {
         : 'Not Downloaded'
 
   return (
-    <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
-      <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>On-Device AI</Text>
+    <Card style={styles.section} accentColor={colors.accentBlue}>
+      <CardTitle>On-Device AI</CardTitle>
 
       <View style={styles.row}>
         <Text style={[styles.label, { color: colors.textSecondary }]}>Model</Text>
@@ -49,7 +49,7 @@ export default function OnDeviceAISection() {
         <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
         <View style={styles.statusRow}>
           {isDownloading && <ActivityIndicator size="small" color={colors.primary} />}
-          <BauhausBadge label={statusLabel} color={statusColor} />
+          <Badge label={statusLabel} color={statusColor} />
         </View>
       </View>
 
@@ -59,24 +59,21 @@ export default function OnDeviceAISection() {
       </View>
 
       {isReady ? (
-        <Button variant="danger" onPress={deleteModel}>
+        <Button variant="danger" leftIcon={Trash2} onPress={deleteModel}>
           Remove Model
         </Button>
       ) : !isDownloading ? (
-        <Button onPress={downloadModel}>
+        <Button leftIcon={ArrowDownToLine} onPress={downloadModel}>
           Download Model
         </Button>
       ) : null}
-    </BauhausPanel>
+    </Card>
   )
 }
 
 const styles = StyleSheet.create({
   section: {
     gap: spacing[3],
-  },
-  sectionTitle: {
-    ...typeStyles.sectionTitle,
   },
   row: {
     flexDirection: 'row',

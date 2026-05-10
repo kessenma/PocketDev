@@ -1,7 +1,7 @@
 import React from 'react'
 import { Image, LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native'
 import Animated, { useSharedValue, withTiming, runOnJS } from 'react-native-reanimated'
-import { Bug, Check, ChevronDown, ChevronUp, Copy, GalleryVerticalEnd, SquareTerminal, Terminal, X } from 'lucide-react-native'
+import { Bug, Check, ChevronDown, ChevronUp, Copy, GalleryVerticalEnd, Square, SquareTerminal, Terminal, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { AgentType } from '@pocketdev/shared/schema'
 import { useTheme } from '../contexts/ThemeContext'
@@ -10,7 +10,7 @@ import type { RootStackParamList } from '../navigation/types'
 import { MorphCardTarget, morphCollapse } from 'react-native-morph-card'
 import AdaptiveShell from '../components/layout/AdaptiveShell'
 import TaskDetailPane from '../components/tasks/TaskDetailPane'
-import BauhausBadge from '../components/shared/BauhausBadge'
+import Badge from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { useTaskStore } from '../stores/tasks'
 import { typeStyles } from '../theme/typography'
@@ -142,7 +142,7 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
         <>
           <View style={[styles.actionRow, { borderBottomColor: colors.border }]}>
             <View style={styles.actionLeft}>
-              {task && <BauhausBadge label={task.status} color={statusColor} />}
+              {task && <Badge label={task.status} color={statusColor} />}
               {elapsed && <Text style={[styles.elapsed, { color: colors.textTertiary }]}>{elapsed}</Text>}
             </View>
             <View style={styles.actionRight}>
@@ -173,7 +173,7 @@ export default function TaskDetailScreen({ navigation, route }: Props) {
                 }
               </TouchableOpacity>
               {isRunning && (
-                <Button variant="danger" size="sm" onPress={() => killTask(task!.id)}>
+                <Button variant="danger" size="sm" leftIcon={Square} onPress={() => killTask(task!.id)}>
                   Kill
                 </Button>
               )}

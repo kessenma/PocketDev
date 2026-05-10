@@ -22,8 +22,13 @@
 		D56BCF8989881C0910DF6E6A /* APNsDiagnostics.m in Sources */ = {isa = PBXBuildFile; fileRef = 5E6A328BC4176242AC156ADB /* APNsDiagnostics.m */; };
 		CBDDAED7254D45FBBA167134 /* IvyOraDisplay-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D5396F14D2A34BA5B4A2201F /* IvyOraDisplay-Light.ttf */; };
 		CB965CE04CB249028402F1A7 /* IvyOraDisplay-Light.woff in Resources */ = {isa = PBXBuildFile; fileRef = 7E5BB34CC24E4C189903E2D4 /* IvyOraDisplay-Light.woff */; };
-		E88B35DAA5E44042AD36E2ED /* fonts.css in Resources */ = {isa = PBXBuildFile; fileRef = 635F9D6B5F924BA88C03D9DC /* fonts.css */; };
 		8242EAB906934D1C8E41BCF2 /* IvyOraDisplay-Light.woff2 in Resources */ = {isa = PBXBuildFile; fileRef = 78ED6281D28B4A05B54A0A65 /* IvyOraDisplay-Light.woff2 */; };
+		B1C2D3E4F5A6B7C8D9E0F1A2 /* AfacadFlux-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* AfacadFlux-Variable.ttf */; };
+		D1E2F3A4B5C6D7E8F9A0B1C2 /* AncizarSerif-Italic-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C1D2E3F4A5B6C7D8E9F0A1B2 /* AncizarSerif-Italic-VariableFont_wght.ttf */; };
+		F1A2B3C4D5E6F7A8B9C0D1E2 /* AncizarSerif-VariableFont_wght.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D2 /* AncizarSerif-VariableFont_wght.ttf */; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* SairaStencil-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2B3C4D5E6F7A8B9C0D1E2F3 /* SairaStencil-ExtraBold.ttf */; };
+		D2E3F4A5B6C7D8E9F0A1B2C3 /* SairaStencil-Italic-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C2D3E4F5A6B7C8D9E0F1A2B3 /* SairaStencil-Italic-Variable.ttf */; };
+		F2A3B4C5D6E7F8A9B0C1D2E3 /* SairaStencil-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E2F3A4B5C6D7E8F9A0B1C2D3 /* SairaStencil-Variable.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,24 +37,29 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Mobile/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Mobile/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = Mobile/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		144A5103BF9F43CFB122C9C2 /* Geist-VariableFont_wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Geist-VariableFont_wght.ttf"; path = "../../../packages/shared/assets/fonts/Geist-VariableFont_wght.ttf"; sourceTree = "<group>"; };
-		328E2C9BA3A9415FAC535C83 /* Britney-Variable.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Britney-Variable.ttf"; path = "../../../packages/shared/assets/fonts/Britney-Variable.ttf"; sourceTree = "<group>"; };
+		144A5103BF9F43CFB122C9C2 /* Geist-VariableFont_wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Geist-VariableFont_wght.ttf"; path = "../assets/fonts/Geist-VariableFont_wght.ttf"; sourceTree = "<group>"; };
+		328E2C9BA3A9415FAC535C83 /* Britney-Variable.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Britney-Variable.ttf"; path = "../assets/fonts/Britney-Variable.ttf"; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-Mobile.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Mobile.debug.xcconfig"; path = "Target Support Files/Pods-Mobile/Pods-Mobile.debug.xcconfig"; sourceTree = "<group>"; };
-		4187FDB1A5B5420CB6A41868 /* Stardom-Regular.woff */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Stardom-Regular.woff"; path = "../../../packages/shared/assets/fonts/Stardom-Regular.woff"; sourceTree = "<group>"; };
+		4187FDB1A5B5420CB6A41868 /* Stardom-Regular.woff */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Stardom-Regular.woff"; path = "../assets/fonts/Stardom-Regular.woff"; sourceTree = "<group>"; };
 		43785ABADA529FC94AEAE66E /* APNsDiagnostics.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = APNsDiagnostics.swift; path = Mobile/APNsDiagnostics.swift; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-Mobile.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Mobile.release.xcconfig"; path = "Target Support Files/Pods-Mobile/Pods-Mobile.release.xcconfig"; sourceTree = "<group>"; };
-		5890320FA4FE471A9D8FEEE3 /* GeistMono-VariableFont_wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "GeistMono-VariableFont_wght.ttf"; path = "../../../packages/shared/assets/fonts/GeistMono-VariableFont_wght.ttf"; sourceTree = "<group>"; };
+		5890320FA4FE471A9D8FEEE3 /* GeistMono-VariableFont_wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "GeistMono-VariableFont_wght.ttf"; path = "../assets/fonts/GeistMono-VariableFont_wght.ttf"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-Mobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Mobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E6A328BC4176242AC156ADB /* APNsDiagnostics.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = APNsDiagnostics.m; path = Mobile/APNsDiagnostics.m; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Mobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		8A0682A22F8E059C00ACCB38 /* Mobile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = Mobile.entitlements; path = Mobile/Mobile.entitlements; sourceTree = "<group>"; };
-		D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Stardom-Regular.woff2"; path = "../../../packages/shared/assets/fonts/Stardom-Regular.woff2"; sourceTree = "<group>"; };
+		D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Stardom-Regular.woff2"; path = "../assets/fonts/Stardom-Regular.woff2"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		F0993BD833A3416CA6746F85 /* Stardom-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Stardom-Regular.ttf"; path = "../../../packages/shared/assets/fonts/Stardom-Regular.ttf"; sourceTree = "<group>"; };
-		D5396F14D2A34BA5B4A2201F /* IvyOraDisplay-Light.ttf */ = {isa = PBXFileReference; name = "IvyOraDisplay-Light.ttf"; path = "../../../packages/shared/assets/fonts/IvyOraDisplay-Light.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		7E5BB34CC24E4C189903E2D4 /* IvyOraDisplay-Light.woff */ = {isa = PBXFileReference; name = "IvyOraDisplay-Light.woff"; path = "../../../packages/shared/assets/fonts/IvyOraDisplay-Light.woff"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		635F9D6B5F924BA88C03D9DC /* fonts.css */ = {isa = PBXFileReference; name = "fonts.css"; path = "../../../packages/shared/assets/fonts/fonts.css"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		78ED6281D28B4A05B54A0A65 /* IvyOraDisplay-Light.woff2 */ = {isa = PBXFileReference; name = "IvyOraDisplay-Light.woff2"; path = "../../../packages/shared/assets/fonts/IvyOraDisplay-Light.woff2"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		F0993BD833A3416CA6746F85 /* Stardom-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Stardom-Regular.ttf"; path = "../assets/fonts/Stardom-Regular.ttf"; sourceTree = "<group>"; };
+		D5396F14D2A34BA5B4A2201F /* IvyOraDisplay-Light.ttf */ = {isa = PBXFileReference; name = "IvyOraDisplay-Light.ttf"; path = "../assets/fonts/IvyOraDisplay-Light.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		7E5BB34CC24E4C189903E2D4 /* IvyOraDisplay-Light.woff */ = {isa = PBXFileReference; name = "IvyOraDisplay-Light.woff"; path = "../assets/fonts/IvyOraDisplay-Light.woff"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		78ED6281D28B4A05B54A0A65 /* IvyOraDisplay-Light.woff2 */ = {isa = PBXFileReference; name = "IvyOraDisplay-Light.woff2"; path = "../assets/fonts/IvyOraDisplay-Light.woff2"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* AfacadFlux-Variable.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "AfacadFlux-Variable.ttf"; path = "../assets/fonts/AfacadFlux-Variable.ttf"; sourceTree = "<group>"; };
+		C1D2E3F4A5B6C7D8E9F0A1B2 /* AncizarSerif-Italic-VariableFont_wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "AncizarSerif-Italic-VariableFont_wght.ttf"; path = "../assets/fonts/AncizarSerif-Italic-VariableFont_wght.ttf"; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F8A9B0C1D2 /* AncizarSerif-VariableFont_wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "AncizarSerif-VariableFont_wght.ttf"; path = "../assets/fonts/AncizarSerif-VariableFont_wght.ttf"; sourceTree = "<group>"; };
+		A2B3C4D5E6F7A8B9C0D1E2F3 /* SairaStencil-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "SairaStencil-ExtraBold.ttf"; path = "../assets/fonts/SairaStencil-ExtraBold.ttf"; sourceTree = "<group>"; };
+		C2D3E4F5A6B7C8D9E0F1A2B3 /* SairaStencil-Italic-Variable.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "SairaStencil-Italic-Variable.ttf"; path = "../assets/fonts/SairaStencil-Italic-Variable.ttf"; sourceTree = "<group>"; };
+		E2F3A4B5C6D7E8F9A0B1C2D3 /* SairaStencil-Variable.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "SairaStencil-Variable.ttf"; path = "../assets/fonts/SairaStencil-Variable.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,8 +139,13 @@
 				D7DCDD7012DD4502B21049A5 /* Stardom-Regular.woff2 */,
 				D5396F14D2A34BA5B4A2201F /* IvyOraDisplay-Light.ttf */,
 				7E5BB34CC24E4C189903E2D4 /* IvyOraDisplay-Light.woff */,
-				635F9D6B5F924BA88C03D9DC /* fonts.css */,
 				78ED6281D28B4A05B54A0A65 /* IvyOraDisplay-Light.woff2 */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* AfacadFlux-Variable.ttf */,
+				C1D2E3F4A5B6C7D8E9F0A1B2 /* AncizarSerif-Italic-VariableFont_wght.ttf */,
+				E1F2A3B4C5D6E7F8A9B0C1D2 /* AncizarSerif-VariableFont_wght.ttf */,
+				A2B3C4D5E6F7A8B9C0D1E2F3 /* SairaStencil-ExtraBold.ttf */,
+				C2D3E4F5A6B7C8D9E0F1A2B3 /* SairaStencil-Italic-Variable.ttf */,
+				E2F3A4B5C6D7E8F9A0B1C2D3 /* SairaStencil-Variable.ttf */,
 			);
 			name = Resources;
 			path = "";
@@ -216,8 +231,13 @@
 				34473C10288149F9931DCF6A /* Stardom-Regular.woff2 in Resources */,
 				CBDDAED7254D45FBBA167134 /* IvyOraDisplay-Light.ttf in Resources */,
 				CB965CE04CB249028402F1A7 /* IvyOraDisplay-Light.woff in Resources */,
-				E88B35DAA5E44042AD36E2ED /* fonts.css in Resources */,
 				8242EAB906934D1C8E41BCF2 /* IvyOraDisplay-Light.woff2 in Resources */,
+				B1C2D3E4F5A6B7C8D9E0F1A2 /* AfacadFlux-Variable.ttf in Resources */,
+				D1E2F3A4B5C6D7E8F9A0B1C2 /* AncizarSerif-Italic-VariableFont_wght.ttf in Resources */,
+				F1A2B3C4D5E6F7A8B9C0D1E2 /* AncizarSerif-VariableFont_wght.ttf in Resources */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* SairaStencil-ExtraBold.ttf in Resources */,
+				D2E3F4A5B6C7D8E9F0A1B2C3 /* SairaStencil-Italic-Variable.ttf in Resources */,
+				F2A3B4C5D6E7F8A9B0C1D2E3 /* SairaStencil-Variable.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

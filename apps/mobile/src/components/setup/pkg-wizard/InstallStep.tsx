@@ -8,7 +8,7 @@ import { postInstallPkgTool } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { Check, Clock, RefreshCw, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react-native'
 import type { PkgInstallTool, PkgManagerStatus } from '@pocketdev/shared/types'
-import CopyButton from '../../shared/CopyButton'
+import CopyButton from '../../ui/CopyButton'
 import { buildSelectedInstallPlan, getNextInstallIndex, type ToolInstallStatus } from './model'
 
 interface ToolProgress {

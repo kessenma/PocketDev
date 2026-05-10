@@ -4,7 +4,7 @@ import { Terminal } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
-import CopyButton from '../../shared/CopyButton'
+import CopyButton from '../../ui/CopyButton'
 
 interface Props {
   description: React.ReactNode

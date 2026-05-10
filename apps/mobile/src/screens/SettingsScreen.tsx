@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+import { Bug, Lock, Terminal, Trash2, Unlink, Wrench } from 'lucide-react-native'
 import DeviceInfo from 'react-native-device-info'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../contexts/ThemeContext'
@@ -14,8 +15,8 @@ import AdaptiveShell from '../components/layout/AdaptiveShell'
 import ServerWorkspace from '../components/server-actions/ServerWorkspace'
 import ServerWebBrowserSheet from '../components/browser/ServerWebBrowserSheet'
 import { Button } from '../components/ui/Button'
-import { BauhausPanel } from '../components/shared/BauhausPanel'
-import BauhausBadge from '../components/shared/BauhausBadge'
+import { Card, CardTitle } from '../components/ui/Card'
+import Badge from '../components/ui/Badge'
 import OnDeviceAISection from '../components/settings/OnDeviceAISection'
 import PushNotificationsSection from '../components/settings/PushNotificationsSection'
 import { typeStyles } from '../theme/typography'
@@ -125,12 +126,12 @@ export default function SettingsScreen({ navigation }: Props) {
   return (
     <AdaptiveShell maxWidth={1200} style={{ backgroundColor: colors.background }}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Connection</Text>
+        <Card style={styles.section} accentColor={colors.accentBlue}>
+          <CardTitle>Connection</CardTitle>
           <View style={styles.row}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
             <View style={styles.statusRow}>
-              <BauhausBadge label={status} color={statusColor} />
+              <Badge label={status} color={statusColor} />
             </View>
           </View>
           {server ? (
@@ -149,20 +150,20 @@ export default function SettingsScreen({ navigation }: Props) {
               </View>
             </>
           ) : null}
-        </BauhausPanel>
+        </Card>
 
-        <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Workspace</Text>
-          <Button onPress={() => navigation.getParent()?.navigate('ServerSetup')}>
+        <Card style={styles.section} accentColor={colors.accentBlue}>
+          <CardTitle>Workspace</CardTitle>
+          <Button leftIcon={Wrench} onPress={() => navigation.getParent()?.navigate('ServerSetup')}>
             Workspace Tools
           </Button>
           {server && (
-            <Button onPress={() => setConsoleOpen(true)}>
+            <Button leftIcon={Terminal} onPress={() => setConsoleOpen(true)}>
               Server Console
             </Button>
           )}
           {server && (
-            <Button onPress={() => navigation.getParent()?.navigate('ServerDebug')}>
+            <Button leftIcon={Bug} onPress={() => navigation.getParent()?.navigate('ServerDebug')}>
               Server Debug
             </Button>
           )}
@@ -178,34 +179,34 @@ export default function SettingsScreen({ navigation }: Props) {
               <Text style={[styles.value, { color: colors.primary }]}>Review</Text>
             </TouchableOpacity>
           </View>
-        </BauhausPanel>
+        </Card>
 
-        <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Security</Text>
+        <Card style={styles.section} accentColor={colors.accentBlue}>
+          <CardTitle>Security</CardTitle>
           <View style={styles.row}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Server Port</Text>
-            <BauhausBadge
+            <Badge
               label={serverLocked ? 'Locked' : 'Open'}
               color={serverLocked ? '#ef4444' : '#22c55e'}
             />
           </View>
           {!serverLocked && (
-            <Button variant="danger" onPress={handleLock} loading={lockLoading}>
+            <Button variant="danger" leftIcon={Lock} onPress={handleLock} loading={lockLoading}>
               Lock Server Port
             </Button>
           )}
-        </BauhausPanel>
+        </Card>
 
-        <BauhausPanel style={styles.section} accentColor={colors.accentRed}>
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Server Health</Text>
+        <Card style={styles.section} accentColor={colors.accentBlue}>
+          <CardTitle>Server Health</CardTitle>
           <ServerWorkspace />
-        </BauhausPanel>
+        </Card>
 
         <PushNotificationsSection />
         <OnDeviceAISection />
 
-        <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
-          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>App</Text>
+        <Card style={styles.section} accentColor={colors.accentBlue}>
+          <CardTitle>App</CardTitle>
           <View style={styles.row}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Mobile Version</Text>
             <Text style={[styles.value, { color: colors.text }]}>{mobileVersion}</Text>
@@ -216,21 +217,21 @@ export default function SettingsScreen({ navigation }: Props) {
               <Text style={[styles.value, { color: colors.text }]}>v{agentVersion}</Text>
             </View>
           )}
-          <Button variant="danger" onPress={handleUnpair}>
+          <Button variant="danger" leftIcon={Unlink} onPress={handleUnpair}>
             Remove Pairing
           </Button>
-        </BauhausPanel>
+        </Card>
 
         {server && (
-          <BauhausPanel style={styles.section} accentColor={colors.accentRed}>
-            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Danger Zone</Text>
+          <Card style={styles.section} accentColor={colors.accentBlue}>
+            <CardTitle>Danger Zone</CardTitle>
             <Text style={[styles.label, { color: colors.textSecondary }]}>
               Fully remove PocketDev from the paired server. Deletes the agent, data, and systemd units.
             </Text>
-            <Button variant="danger" onPress={handleUninstall}>
+            <Button variant="danger" leftIcon={Trash2} onPress={handleUninstall}>
               Uninstall PocketDev
             </Button>
-          </BauhausPanel>
+          </Card>
         )}
       </ScrollView>
 
@@ -255,9 +256,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: spacing[3],
-  },
-  sectionTitle: {
-    ...typeStyles.sectionTitle,
   },
   row: {
     flexDirection: 'row',

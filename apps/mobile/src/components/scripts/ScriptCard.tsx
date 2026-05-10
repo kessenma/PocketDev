@@ -11,7 +11,7 @@ import {
 import { Play, Square, Eye, ChevronDown, ChevronUp, X, CircleCheck, CircleX, Send } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
-import CopyButton from '../shared/CopyButton'
+import CopyButton from '../ui/CopyButton'
 import type { ScriptRunStatus } from '../../stores/scripts'
 import { typeStyles } from '../../theme/typography'
 

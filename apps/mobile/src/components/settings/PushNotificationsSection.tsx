@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, Alert, Platform } from 'react-native'
+import { BellOff, BellRing } from 'lucide-react-native'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
-import { BauhausPanel } from '../shared/BauhausPanel'
+import { Card, CardTitle } from '../ui/Card'
 import { Button } from '../ui/Button'
-import BauhausBadge from '../shared/BauhausBadge'
+import Badge from '../ui/Badge'
 import { typeStyles } from '../../theme/typography'
 import { getPushNotificationsEnabled, setPushNotificationsEnabled } from '../../services/storage'
 import { enablePushNotifications, disablePushNotifications } from '../../services/push-notifications'
@@ -64,12 +65,12 @@ export default function PushNotificationsSection() {
 
   return (
     <>
-      <BauhausPanel style={styles.section} accentColor={colors.accentGreen}>
-        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Push Notifications</Text>
+      <Card style={styles.section} accentColor={colors.accentGreen}>
+        <CardTitle>Push Notifications</CardTitle>
 
         <View style={styles.row}>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
-          <BauhausBadge
+          <Badge
             label={enabled ? 'Enabled' : 'Disabled'}
             color={enabled ? '#22c55e' : '#6b7280'}
           />
@@ -81,15 +82,15 @@ export default function PushNotificationsSection() {
         </View>
 
         {enabled ? (
-          <Button variant="danger" onPress={handleDisable} loading={loading}>
+          <Button variant="danger" leftIcon={BellOff} onPress={handleDisable} loading={loading}>
             Disable Notifications
           </Button>
         ) : (
-          <Button onPress={handleEnable} loading={loading}>
+          <Button leftIcon={BellRing} onPress={handleEnable} loading={loading}>
             Enable Notifications
           </Button>
         )}
-      </BauhausPanel>
+      </Card>
 
       {consentVisible && (
         <PushConsentSheet
@@ -104,9 +105,6 @@ export default function PushNotificationsSection() {
 const styles = StyleSheet.create({
   section: {
     gap: spacing[3],
-  },
-  sectionTitle: {
-    ...typeStyles.sectionTitle,
   },
   row: {
     flexDirection: 'row',

@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { ChevronDown, ChevronUp, FileCode2, Filter, FolderOpen, Pin, Search, Trash2, X } from 'lucide-react-native'
+import { ChevronDown, ChevronUp, FileCode2, Filter, FolderOpen, Pin, Play, Search, Trash2, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TreeEntry } from '@pocketdev/shared/types'
 import type { AgentType, TaskMode } from '@pocketdev/shared/schema'
@@ -39,8 +39,8 @@ import {
   type ModelProviderId,
 } from '../model-selector'
 import { Button } from '../ui/Button'
-import BauhausBadge from '../shared/BauhausBadge'
-import { BauhausPanel } from '../shared/BauhausPanel'
+import Badge from '../ui/Badge'
+import { Card } from '../ui/Card'
 import { typeStyles } from '../../theme/typography'
 import { pathToName } from '../files/model'
 import { Assets } from '../../../assets'
@@ -286,7 +286,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
     >
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
         {/* ── Prompt (primary focus) ── */}
-        <BauhausPanel style={styles.section} accentColor={colors.accentBlue}>
+        <Card style={styles.section} accentColor={colors.accentBlue}>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Prompt</Text>
           <TextInput
             style={[styles.promptInput, { backgroundColor: colors.panelAlt, color: colors.text, borderColor: colors.border }]}
@@ -315,7 +315,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             </Text>
             <ChevronDown color={colors.textTertiary} size={14} strokeWidth={2.2} />
           </TouchableOpacity>
-        </BauhausPanel>
+        </Card>
 
         {/* ── AI File Suggestions ── */}
         {aiModelStatus === 'ready' && prompt.trim().length > 0 ? (
@@ -340,7 +340,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
         ) : null}
 
         {/* ── File Context Picker ── */}
-        <BauhausPanel style={styles.section} accentColor={colors.accentYellow}>
+        <Card style={styles.section} accentColor={colors.accentYellow}>
           <View style={styles.pickerHeader}>
             <TouchableOpacity
               style={styles.pickerHeaderTap}
@@ -365,7 +365,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             <View style={styles.chipRow}>
               {contextPaths.map((path) => (
                 <View key={path} style={styles.chip}>
-                  <BauhausBadge
+                  <Badge
                     label={pathToName(path)}
                     color={colors.accentBlue}
                     onRemove={() => toggleContextPath(path)}
@@ -498,9 +498,9 @@ export default function NewTaskForm({ onSubmitted }: Props) {
               </View>
             </View>
           ) : null}
-        </BauhausPanel>
+        </Card>
 
-        <BauhausPanel style={styles.section} accentColor={colors.accentRed}>
+        <Card style={styles.section} accentColor={colors.accentRed}>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Task Mode</Text>
           <View style={styles.modeRow}>
             {TASK_MODE_OPTIONS.map((option) => {
@@ -524,7 +524,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
               )
             })}
           </View>
-        </BauhausPanel>
+        </Card>
 
       </ScrollView>
 
@@ -533,6 +533,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
           onPress={handleSubmit}
           loading={submitting}
           disabled={submitting || prompt.trim().length === 0 || (providerAvailability != null && providerAvailability !== 'available')}
+          leftIcon={providerAvailability == null || providerAvailability === 'available' ? Play : undefined}
         >
           {providerAvailability === 'not_installed'
             ? `${selectedProvider.label} not installed`

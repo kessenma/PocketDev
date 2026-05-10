@@ -24,11 +24,11 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { typeStyles } from '../../theme/typography'
 import { buildMarkdownStyle } from '../../theme/markdown'
 import {
-  BauhausPanel,
-  BauhausPanelContent,
-  BauhausPanelHeader,
-} from '../shared/BauhausPanel'
-import BauhausBadge from '../shared/BauhausBadge'
+  Card,
+  CardContent,
+  CardHeader,
+} from '../ui/Card'
+import Badge from '../ui/Badge'
 import { getToolPresentation } from './task-stream-utils'
 import type { CardCategory, CardEntry, GroupedStreamItem, TodoItem } from './task-stream-utils'
 import FileViewerSheet from './FileViewerSheet'
@@ -48,7 +48,7 @@ export function GroupedItemRow({ item, isLast, isRunning }: { item: GroupedStrea
     case 'status':
       return (
         <View style={styles.statusRow}>
-          <BauhausBadge label={item.activity.message} color={colors.primary} />
+          <Badge label={item.activity.message} color={colors.primary} />
         </View>
       )
     case 'log':
@@ -103,28 +103,28 @@ function ActivityCard({ category, entries, initialExpanded = true }: { category:
   const { Icon } = meta
 
   return (
-    <BauhausPanel accentColor={accentColor}>
+    <Card accentColor={accentColor}>
       <Pressable onPress={() => setIsExpanded((v) => !v)} accessibilityRole="button">
-        <BauhausPanelHeader style={styles.cardHeader}>
+        <CardHeader style={styles.cardHeader}>
           <Icon color={accentColor} size={14} strokeWidth={2.25} />
           <Text style={[styles.cardTitle, { color: accentColor }]}>{meta.label}</Text>
-          <BauhausBadge label={String(entries.length)} color={accentColor} />
+          <Badge label={String(entries.length)} color={accentColor} />
           <View style={styles.chevronSpacer} />
           {isExpanded
             ? <ChevronUp color={colors.textTertiary} size={14} strokeWidth={2.25} />
             : <ChevronDown color={colors.textTertiary} size={14} strokeWidth={2.25} />
           }
-        </BauhausPanelHeader>
+        </CardHeader>
       </Pressable>
 
       {isExpanded && (
-        <BauhausPanelContent style={styles.cardBody}>
+        <CardContent style={styles.cardBody}>
           {entries.map((entry, i) => (
             <CardEntryRow key={i} entry={entry} accentColor={accentColor} />
           ))}
-        </BauhausPanelContent>
+        </CardContent>
       )}
-    </BauhausPanel>
+    </Card>
   )
 }
 
@@ -211,21 +211,21 @@ function ChecklistCard({ todos, initialExpanded = true }: { todos: TodoItem[]; i
   const accentColor = colors.primary
 
   return (
-    <BauhausPanel accentColor={accentColor}>
+    <Card accentColor={accentColor}>
       <Pressable onPress={() => setIsExpanded((v) => !v)} accessibilityRole="button">
-        <BauhausPanelHeader style={styles.cardHeader}>
+        <CardHeader style={styles.cardHeader}>
           <ListChecks color={accentColor} size={14} strokeWidth={2.25} />
           <Text style={[styles.cardTitle, { color: accentColor }]}>Tasks</Text>
-          <BauhausBadge label={`${done} / ${todos.length}`} color={accentColor} />
+          <Badge label={`${done} / ${todos.length}`} color={accentColor} />
           <View style={styles.chevronSpacer} />
           {isExpanded
             ? <ChevronUp color={colors.textTertiary} size={14} strokeWidth={2.25} />
             : <ChevronDown color={colors.textTertiary} size={14} strokeWidth={2.25} />}
-        </BauhausPanelHeader>
+        </CardHeader>
       </Pressable>
 
       {isExpanded && (
-        <BauhausPanelContent style={styles.cardBody}>
+        <CardContent style={styles.cardBody}>
           {todos.map((todo) => {
             const isComplete = todo.status === 'completed'
             const isActive = todo.status === 'in_progress'
@@ -251,9 +251,9 @@ function ChecklistCard({ todos, initialExpanded = true }: { todos: TodoItem[]; i
               </View>
             )
           })}
-        </BauhausPanelContent>
+        </CardContent>
       )}
-    </BauhausPanel>
+    </Card>
   )
 }
 
@@ -266,19 +266,19 @@ function ResultCard({ activity, isRunning }: { activity: Extract<TaskActivity, {
   const Icon = isRunning ? MessageSquare : Sparkles
 
   return (
-    <BauhausPanel accentColor={accentColor}>
-      <BauhausPanelHeader style={styles.cardHeader}>
+    <Card accentColor={accentColor}>
+      <CardHeader style={styles.cardHeader}>
         <Icon color={accentColor} size={14} strokeWidth={2.25} />
         <Text style={[styles.cardTitle, { color: accentColor }]}>{label}</Text>
-      </BauhausPanelHeader>
-      <BauhausPanelContent>
+      </CardHeader>
+      <CardContent>
         <EnrichedMarkdownText
           markdown={activity.content}
           streamingAnimation
           markdownStyle={buildMarkdownStyle(colors)}
         />
-      </BauhausPanelContent>
-    </BauhausPanel>
+      </CardContent>
+    </Card>
   )
 }
 

@@ -11,7 +11,7 @@ import {
 } from '../../../services/api'
 import { Assets } from '../../../../assets'
 import { ExternalLink, CheckCircle, RefreshCw, Send, ShieldCheck, ChevronDown } from 'lucide-react-native'
-import CopyButton from '../../shared/CopyButton'
+import CopyButton from '../../ui/CopyButton'
 import type { ClaudeAuthSessionStatus } from '@pocketdev/shared/types'
 
 type WizardAction =

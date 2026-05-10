@@ -16,7 +16,7 @@ import { usePreviewStore } from '../../stores/preview'
 import AdaptiveShell from '../layout/AdaptiveShell'
 import RunningScriptsSheet from '../scripts/RunningScriptsSheet'
 import ServerWebBrowserSheet from '../browser/ServerWebBrowserSheet'
-import SwipeablePager from '../shared/SwipeablePager'
+import SwipeablePager from '../ui/SwipeablePager'
 import CodeBrowseTab from './code-browse/CodeBrowseTab'
 import GitTab from './git/GitTab'
 import ScriptsTab from './scripts/ScriptsTab'
@@ -67,12 +67,11 @@ export default function CodeScreenShell({ navigation }: Props) {
     ])
   }, [refreshFiles, refreshGit, refreshProjects])
 
-  const onChildScroll = React.useMemo(
-    () =>
-      Animated.event(
-        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        { useNativeDriver: false },
-      ),
+  const onChildScroll = React.useCallback(
+    (event: any) => {
+      const y = event?.nativeEvent?.contentOffset?.y ?? event?.contentOffset?.y ?? 0
+      scrollY.setValue(y)
+    },
     [scrollY],
   )
 

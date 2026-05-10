@@ -8,21 +8,49 @@ See `docs/git/mobile_git.md` for the full workspace map and backend wiring notes
 
 | File | Role |
 |---|---|
-| `GitWorkspace.tsx` | Top-level workspace — composes segmented views |
-| `GitTab.tsx` | Thin re-export adapter for the code screen tab |
+| `GitWorkspace.tsx` | Top-level workspace — thin adapter forwarding to `GitTab` |
 | `index.ts` | Barrel export for the module |
 | `model.ts` | All local view model types (`GitFileChange`, `GitCommitEntry`, `GitBranchOption`, `GitRemoteState`, `GitView`) |
 
+## Folder Structure
+
+```
+components/git/
+├── primitives/          ← UI atoms with no view affinity
+│   ├── GitBadge.tsx
+│   └── GitSegmentedControl.tsx
+├── changes/             ← Changes tab building blocks
+│   ├── GitChangeList.tsx
+│   ├── GitChangeDetailSheet.tsx
+│   ├── GitDiffPreview.tsx
+│   ├── GitCommitComposer.tsx
+│   ├── GitRepoSummaryCard.tsx
+│   ├── GitStatusSummary.tsx
+│   ├── GitConflictPanel.tsx
+│   └── GitStashPanel.tsx
+├── history/             ← History tab building blocks
+│   ├── GitHistoryPane.tsx
+│   ├── GitHistoryList.tsx
+│   └── GitCommitDetailRow.tsx
+├── branches/            ← Branches tab building blocks
+│   └── GitBranchList.tsx
+├── GitPushPanel.tsx     ← Root: shared across all 3 views
+├── GitWorkspace.tsx     ← Root: thin adapter (unchanged)
+├── model.ts             ← Root: types used everywhere
+└── index.ts             ← Barrel export — all paths updated to subfolders
+```
+
+The view logic that orchestrates these components lives in `code-screen/git/views/` (ChangesView, HistoryView, BranchesView), which subscribe to stores directly.
+
 ## Component Map
 
-### Primitives
+### Primitives (`primitives/`)
 | Component | Purpose |
 |---|---|
-| `GitCard.tsx` | Shared card shell — re-exports `LiquidGlassCard` variants under `GitCard*` names |
-| `GitBadge.tsx` | Compact status pill — `success / error / warning / primary` variants |
-| `GitSegmentedControl.tsx` | Tab switcher for `changes`, `history`, `branches` views |
+| `GitBadge.tsx` | Compact status pill — `success / error / warning / primary / outline` variants |
+| `GitSegmentedControl.tsx` | Thin adapter around `CodeSubTabNavigator` for git views |
 
-### Changes View
+### Changes View (`changes/`)
 | Component | Purpose |
 |---|---|
 | `GitRepoSummaryCard.tsx` | Repo name, branch, remote URL |
@@ -31,19 +59,25 @@ See `docs/git/mobile_git.md` for the full workspace map and backend wiring notes
 | `GitChangeDetailSheet.tsx` | Full-screen modal slide-up wrapping `GitDiffPreview` |
 | `GitDiffPreview.tsx` | Scrollable diff view with syntax-highlighted hunks |
 | `GitCommitComposer.tsx` | Commit message input + commit action |
-| `GitPushPanel.tsx` | Push readiness, remote sync state, push action |
+| `GitConflictPanel.tsx` | Merge conflict banner with abort + AI fix actions |
+| `GitStashPanel.tsx` | Stash list with pop/apply/drop actions and stash button |
 
-### History View
+### History View (`history/`)
 | Component | Purpose |
 |---|---|
 | `GitHistoryList.tsx` | Recent commits — sha, message, author, relative time, files changed |
 | `GitCommitDetailRow.tsx` | Expandable commit row with per-file change entries |
-| `GitHistoryPane.tsx` | Pane wrapper composing the history list |
+| `GitHistoryPane.tsx` | Full-screen pane composing the history list with pull action |
 
-### Branches View
+### Branches View (`branches/`)
 | Component | Purpose |
 |---|---|
 | `GitBranchList.tsx` | Branch list with ahead/behind indicators and checkout action |
+
+### Shared (`root`)
+| Component | Purpose |
+|---|---|
+| `GitPushPanel.tsx` | Push readiness, remote sync state, push/pull actions — used in all 3 views |
 
 ## GitChangeList UX
 

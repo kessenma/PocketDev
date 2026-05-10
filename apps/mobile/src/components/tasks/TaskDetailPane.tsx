@@ -6,15 +6,15 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskActivity } from '@pocketdev/shared/types'
-import { Bug, Check, Copy, FileText, GalleryVerticalEnd, Layers, MessageSquare, ShieldAlert, SquareTerminal, Terminal, X } from 'lucide-react-native'
+import { Bug, Check, ChevronsDown, Copy, FileText, GalleryVerticalEnd, Layers, MessageSquare, RotateCcw, ShieldAlert, Square, SquareTerminal, Terminal, X } from 'lucide-react-native'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
 import { useSetupStore } from '../../stores/setup'
 import { useTaskStore } from '../../stores/tasks'
 import { useToast } from '../../hooks/useToast'
-import BauhausBadge from '../shared/BauhausBadge'
+import Badge from '../ui/Badge'
 import { Button } from '../ui/Button'
-import BauhausChatInput from '../shared/BauhausChatInput'
+import ChatInput from '../ui/ChatInput'
 import ClaudeWizardModal from '../setup/ClaudeWizardModal'
 import CodexWizardModal from '../setup/CodexWizardModal'
 import CopilotWizardModal from '../setup/CopilotWizardModal'
@@ -136,6 +136,7 @@ function DetailHeader({
           <View style={styles.permissionActions}>
             <Button
               size="sm"
+              leftIcon={RotateCcw}
               onPress={() => {
                 if (!task) return
                 clearPermissions(task.id)
@@ -144,7 +145,7 @@ function DetailHeader({
             >
               Re-run with Auto-Approve
             </Button>
-            <Button size="sm" variant="quiet" onPress={() => { if (taskId) clearPermissions(taskId) }}>
+            <Button size="sm" variant="quiet" leftIcon={X} onPress={() => { if (taskId) clearPermissions(taskId) }}>
               Dismiss
             </Button>
           </View>
@@ -568,7 +569,7 @@ export default function TaskDetailPane({
       {!hideStatusBar && (
         <View style={[styles.statusBar, { borderBottomColor: colors.border }]}>
           <View style={styles.statusMeta}>
-            {!hideHeader && <BauhausBadge label={task.status} color={statusColor} />}
+            {!hideHeader && <Badge label={task.status} color={statusColor} />}
             <Text style={[styles.elapsed, { color: colors.textTertiary }]}>{elapsed}</Text>
           </View>
           <View style={styles.statusActions}>
@@ -599,7 +600,7 @@ export default function TaskDetailPane({
               }
             </TouchableOpacity>
             {isRunning ? (
-              <Button variant="danger" size="sm" onPress={() => killTask(task.id)}>
+              <Button variant="danger" size="sm" leftIcon={Square} onPress={() => killTask(task.id)}>
                 Kill
               </Button>
             ) : null}
@@ -660,7 +661,7 @@ export default function TaskDetailPane({
 
       {!autoScroll ? (
         <View style={styles.scrollButton}>
-          <Button size="sm" onPress={handleScrollToBottom}>
+          <Button size="sm" leftIcon={ChevronsDown} onPress={handleScrollToBottom}>
             Scroll To Bottom
           </Button>
         </View>
@@ -674,7 +675,7 @@ export default function TaskDetailPane({
           <QuickCommandBar taskId={task.id} onSend={(data) => sendInput(task.id, data)} colors={colors} />
         ) : null}
         {isRunning && task.agent_type === 'claude' ? (
-          <BauhausChatInput
+          <ChatInput
             placeholder="Steer the agent..."
             onSend={(text) => sendInput(task.id, text + '\n')}
             onFindFiles={findFilesHandler}
@@ -689,7 +690,7 @@ export default function TaskDetailPane({
               colors={colors}
             />
           ) : (
-            <BauhausChatInput
+            <ChatInput
               placeholder="Queue a follow-up..."
               onSend={(text) => setQueuedContinuation(text)}
               onFindFiles={findFilesHandler}
@@ -700,7 +701,7 @@ export default function TaskDetailPane({
 
         {/* Completed: continue input */}
         {canContinue && !isRunning ? (
-          <BauhausChatInput
+          <ChatInput
             placeholder="Send a follow-up..."
             onSend={(text) => continueTask(task.id, text)}
             onFindFiles={findFilesHandler}

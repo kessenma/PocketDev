@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native'
 import { Sheet, type SheetHandle } from '../ui/Sheet'
-import { MessageCircleQuestion, ShieldAlert, X } from 'lucide-react-native'
+import { Check, MessageCircleQuestion, Send, ShieldAlert, ShieldCheck, ShieldOff, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TaskQuestion } from '@pocketdev/shared/types'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -164,10 +164,10 @@ function PermissionCard({
 
       <View style={styles.permissionButtons}>
         <View style={styles.flexButton}>
-          <Button onPress={() => onAnswer('y')}>Allow</Button>
+          <Button leftIcon={ShieldCheck} onPress={() => onAnswer('y')}>Allow</Button>
         </View>
         <View style={styles.flexButton}>
-          <Button variant="danger" onPress={() => onAnswer('n')}>Deny</Button>
+          <Button variant="danger" leftIcon={ShieldOff} onPress={() => onAnswer('n')}>Deny</Button>
         </View>
       </View>
     </View>
@@ -188,10 +188,10 @@ function YesNoCard({
       <Text style={[styles.questionPrompt, { color: colors.text }]}>{question.prompt}</Text>
       <View style={styles.yesNoButtons}>
         <View style={styles.flexButton}>
-          <Button onPress={() => onAnswer('y')}>Yes</Button>
+          <Button leftIcon={Check} onPress={() => onAnswer('y')}>Yes</Button>
         </View>
         <View style={styles.flexButton}>
-          <Button variant="secondary" onPress={() => onAnswer('n')}>No</Button>
+          <Button variant="secondary" leftIcon={X} onPress={() => onAnswer('n')}>No</Button>
         </View>
       </View>
     </View>
@@ -258,6 +258,7 @@ function FreeResponseCard({
         textAlignVertical="top"
       />
       <Button
+        rightIcon={Send}
         onPress={() => {
           if (input.trim()) onAnswer(input.trim())
         }}
@@ -346,7 +347,7 @@ function FormCard({
           </View>
         ))}
       </View>
-      <Button onPress={() => onAnswer(JSON.stringify(values))} disabled={!canSubmit}>
+      <Button rightIcon={Send} onPress={() => onAnswer(JSON.stringify(values))} disabled={!canSubmit}>
         Send
       </Button>
     </View>

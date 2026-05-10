@@ -14,7 +14,7 @@ import { typeStyles } from '../../theme/typography'
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'quiet'
 type Size = 'sm' | 'md' | 'lg'
-type IconComponent = React.ComponentType<{ color?: string; size?: number }>
+type IconComponent = React.ComponentType<{ color?: string; size?: number; strokeWidth?: number }>
 
 type Props = {
   children?: ReactNode
@@ -28,6 +28,8 @@ type Props = {
   icon?: IconComponent
   style?: StyleProp<ViewStyle>
 }
+
+const ICON_STROKE = 2.25
 
 export function Button({
   children,
@@ -47,6 +49,10 @@ export function Button({
   const iconOnly = Icon != null && !children
   const iconSize = size === 'sm' ? 14 : size === 'lg' ? 18 : 16
 
+  // Mute both text and icon colors when disabled/loading
+  const textColor = inactive ? colors.textTertiary : palette.textColor
+  const iconColor = inactive ? colors.textTertiary : palette.iconColor
+
   if (iconOnly) {
     const iconSizeStyle =
       size === 'sm' ? styles.iconButton_sm : size === 'lg' ? styles.iconButton_lg : styles.iconButton_md
@@ -56,20 +62,24 @@ export function Button({
         accessibilityRole="button"
         disabled={inactive}
         onPress={onPress}
-        style={[
+        style={({ pressed }) => [
           styles.iconButton,
           iconSizeStyle,
           {
-            backgroundColor: inactive ? colors.backgroundSecondary : palette.backgroundColor,
-            borderColor: palette.borderColor,
+            backgroundColor: inactive
+              ? colors.backgroundSecondary
+              : pressed ? palette.pressedBackgroundColor : palette.backgroundColor,
+            borderColor: inactive
+              ? colors.border
+              : pressed ? palette.pressedBorderColor : palette.borderColor,
           },
           style,
         ]}
       >
         {loading ? (
-          <ActivityIndicator size="small" color={palette.textColor} />
+          <ActivityIndicator size="small" color={iconColor} />
         ) : (
-          <Icon color={palette.textColor} size={iconSize} />
+          <Icon color={iconColor} size={iconSize} strokeWidth={ICON_STROKE} />
         )}
       </Pressable>
     )
@@ -83,54 +93,81 @@ export function Button({
       accessibilityRole="button"
       disabled={inactive}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.button,
         buttonSizeStyle,
         {
-          backgroundColor: inactive ? colors.backgroundSecondary : palette.backgroundColor,
-          borderColor: palette.borderColor,
+          backgroundColor: inactive
+            ? colors.backgroundSecondary
+            : pressed ? palette.pressedBackgroundColor : palette.backgroundColor,
+          borderColor: inactive
+            ? colors.border
+            : pressed ? palette.pressedBorderColor : palette.borderColor,
         },
         style,
       ]}
     >
       <View style={styles.content}>
         {loading ? (
-          <ActivityIndicator size="small" color={palette.textColor} />
+          <ActivityIndicator size="small" color={iconColor} />
         ) : LeftIcon ? (
-          <LeftIcon color={palette.textColor} size={iconSize} />
+          <LeftIcon color={iconColor} size={iconSize} strokeWidth={ICON_STROKE} />
         ) : null}
-        <Text style={[typeStyles.button, { color: palette.textColor }]}>{children}</Text>
-        {RightIcon && !loading ? <RightIcon color={palette.textColor} size={iconSize} /> : null}
+        <Text style={[typeStyles.button, { color: textColor }]}>{children}</Text>
+        {RightIcon && !loading ? (
+          <RightIcon color={iconColor} size={iconSize} strokeWidth={ICON_STROKE} />
+        ) : null}
       </View>
     </Pressable>
   )
 }
 
-function getVariantPalette(variant: Variant, colors: ReturnType<typeof useTheme>['colors']) {
+interface VariantPalette {
+  backgroundColor: string
+  borderColor: string
+  textColor: string
+  iconColor: string
+  pressedBackgroundColor: string
+  pressedBorderColor: string
+}
+
+function getVariantPalette(variant: Variant, colors: ReturnType<typeof useTheme>['colors']): VariantPalette {
   switch (variant) {
     case 'secondary':
       return {
         backgroundColor: colors.panelAlt,
         borderColor: colors.border,
         textColor: colors.text,
+        iconColor: colors.primary,          // blue pop on neutral background
+        pressedBackgroundColor: colors.primary + '22',
+        pressedBorderColor: colors.primary,
       }
     case 'danger':
       return {
         backgroundColor: colors.accentRed,
         borderColor: colors.border,
         textColor: colors.primaryText,
+        iconColor: colors.primaryText,      // white on red — max contrast
+        pressedBackgroundColor: colors.error,
+        pressedBorderColor: colors.border,
       }
     case 'quiet':
       return {
-        backgroundColor: 'transparent' as const,
+        backgroundColor: 'transparent',
         borderColor: colors.border,
         textColor: colors.text,
+        iconColor: colors.primary,          // blue pop on transparent
+        pressedBackgroundColor: colors.primary + '18',
+        pressedBorderColor: colors.primary,
       }
     default:
       return {
         backgroundColor: colors.primary,
         borderColor: colors.border,
         textColor: colors.primaryText,
+        iconColor: colors.primaryText,      // white on blue — max contrast
+        pressedBackgroundColor: colors.primaryHover,
+        pressedBorderColor: colors.border,
       }
   }
 }
