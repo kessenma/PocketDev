@@ -19,6 +19,7 @@ type TextProps = {
   children: ReactNode
   style?: StyleProp<TextStyle>
   align?: 'left' | 'center' | 'right'
+  icon?: ReactNode
 }
 
 export function Card({ children, style, accentColor }: CardProps) {
@@ -45,9 +46,17 @@ export function CardHeader({ children, style }: SectionProps) {
   return <View style={[styles.header, style]}>{children}</View>
 }
 
-export function CardTitle({ children, style, align = 'center' }: TextProps) {
+export function CardTitle({ children, style, align = 'center', icon }: TextProps) {
   const { colors } = useTheme()
-  return <Text style={[styles.title, { color: colors.text, textAlign: align }, style]}>{children}</Text>
+  const text = (
+    <Text style={[styles.title, { color: colors.text, textAlign: align }, style]}>
+      {children}
+    </Text>
+  )
+  if (icon) {
+    return <View style={styles.titleRow}>{icon}{text}</View>
+  }
+  return text
 }
 
 export function CardDescription({ children, style }: TextProps) {
@@ -104,6 +113,12 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: spacing[1],
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[2],
   },
   title: {
     ...typeStyles.cardTitle,

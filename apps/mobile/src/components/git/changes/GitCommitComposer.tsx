@@ -1,8 +1,10 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, TextInput, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { FilePlus } from 'lucide-react-native'
 import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
+import { Button } from '../../ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card'
 
 type Props = {
@@ -43,21 +45,14 @@ export default function GitCommitComposer({ value, canCommit, isCommitting, onCh
 
         <View style={styles.footerRow}>
           <Text style={[styles.helper, { color: colors.textSecondary }]}>Actions are local for now, but the commit composer already matches the future terminal-backed flow.</Text>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            disabled={!canCommit || isCommitting}
+          <Button
+            disabled={!canCommit}
+            loading={isCommitting}
             onPress={onCommitPress}
-            style={[
-              styles.button,
-              { backgroundColor: canCommit ? colors.primary : colors.border },
-            ]}
+            leftIcon={FilePlus}
           >
-            {isCommitting ? (
-              <ActivityIndicator color={colors.primaryText} size="small" />
-            ) : (
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Create Commit</Text>
-            )}
-          </TouchableOpacity>
+            Create Commit
+          </Button>
         </View>
       </CardContent>
     </Card>
@@ -78,15 +73,5 @@ const styles = StyleSheet.create({
   },
   helper: {
     ...typeStyles.bodySmall,
-  },
-  button: {
-    minHeight: 48,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing[4],
-  },
-  buttonText: {
-    ...typeStyles.bodyBold,
   },
 })

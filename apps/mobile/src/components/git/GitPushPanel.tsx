@@ -1,8 +1,10 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { ArrowDownToLine, GitPullRequestCreateArrow } from 'lucide-react-native'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
+import { Button } from '../ui/Button'
 import GitBadge from './primitives/GitBadge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
 import type { GitRemoteState } from './model'
@@ -55,32 +57,23 @@ export default function GitPushPanel({ remote, isPushing, isPulling, onPushPress
         </View>
 
         {canPull && (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            disabled={!canPull}
+          <Button
+            loading={isPulling}
             onPress={onPullPress}
-            style={[styles.button, { backgroundColor: colors.primary }]}
+            leftIcon={ArrowDownToLine}
           >
-            {isPulling ? (
-              <ActivityIndicator color={colors.primaryText} size="small" />
-            ) : (
-              <Text style={[styles.buttonText, { color: colors.primaryText }]}>Pull from {remote.upstream}</Text>
-            )}
-          </TouchableOpacity>
+            Pull from {remote.upstream}
+          </Button>
         )}
 
-        <TouchableOpacity
-          activeOpacity={0.7}
+        <Button
           disabled={!canPush}
+          loading={isPushing}
           onPress={onPushPress}
-          style={[styles.button, { backgroundColor: canPush ? colors.primary : colors.border }]}
+          leftIcon={GitPullRequestCreateArrow}
         >
-          {isPushing ? (
-            <ActivityIndicator color={colors.primaryText} size="small" />
-          ) : (
-            <Text style={[styles.buttonText, { color: colors.primaryText }]}>Push to {remote.upstream}</Text>
-          )}
-        </TouchableOpacity>
+          Push to {remote.upstream}
+        </Button>
       </CardContent>
     </Card>
   )
@@ -124,15 +117,6 @@ const styles = StyleSheet.create({
     ...typeStyles.sectionTitle,
   },
   metricValue: {
-    ...typeStyles.bodyBold,
-  },
-  button: {
-    minHeight: 48,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
     ...typeStyles.bodyBold,
   },
 })

@@ -88,6 +88,10 @@ export function Button({
   const buttonSizeStyle =
     size === 'sm' ? styles.button_sm : size === 'lg' ? styles.button_lg : styles.button_md
 
+  const hasLeft = loading || !!LeftIcon
+  const hasRight = !loading && !!RightIcon
+  const spread = hasLeft || hasRight
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -107,15 +111,19 @@ export function Button({
         style,
       ]}
     >
-      <View style={styles.content}>
+      <View style={spread ? styles.contentSpread : styles.content}>
         {loading ? (
           <ActivityIndicator size="small" color={iconColor} />
         ) : LeftIcon ? (
           <LeftIcon color={iconColor} size={iconSize} strokeWidth={ICON_STROKE} />
+        ) : hasRight ? (
+          <View style={{ width: iconSize, height: iconSize }} />
         ) : null}
         <Text style={[typeStyles.button, { color: textColor }]}>{children}</Text>
         {RightIcon && !loading ? (
           <RightIcon color={iconColor} size={iconSize} strokeWidth={ICON_STROKE} />
+        ) : hasLeft ? (
+          <View style={{ width: iconSize, height: iconSize }} />
         ) : null}
       </View>
     </Pressable>
@@ -213,5 +221,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing[2],
+  },
+  contentSpread: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 })

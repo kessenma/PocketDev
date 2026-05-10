@@ -1,8 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { useTheme } from '../../contexts/ThemeContext'
-import { typeStyles } from '../../theme/typography'
+import { useTheme } from '../../../contexts/ThemeContext'
+import { typeStyles } from '../../../theme/typography'
 
 type Props = {
   serverLabel: string

@@ -98,10 +98,6 @@ export default function ShrinkableHeader<T extends string = string>({
     interpolate(scrollY.value, [60, 120], [0, 1], 'clamp'),
   )
 
-  // Only non-layout properties here — animated padding/gap on ReanimatedLib.View
-  // are invisible to Yoga and cause siblings to be mis-positioned.
-  const headerCardStyle = useAnimatedStyle(() => ({}))
-
   const heroAnimStyle = useAnimatedStyle(() => {
     const naturalH = heroNaturalHeight.value
     const opacity = interpolate(scrollY.value, [0, 60], [1, 0], 'clamp')
@@ -135,7 +131,6 @@ export default function ShrinkableHeader<T extends string = string>({
           backgroundColor: isDark ? 'rgba(14, 14, 14, 0.9)' : 'rgba(250, 248, 242, 0.96)',
           borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(26, 26, 26, 0.08)',
         },
-        headerCardStyle,
       ]}
     >
       {hasHero ? (
@@ -205,7 +200,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[3],
     gap: spacing[2],
-    shadowColor: '#000000',
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -234,6 +228,8 @@ const styles = StyleSheet.create({
   },
   tabSection: {
     alignSelf: 'stretch',
+    marginRight: -spacing[3],
+    marginLeft: -spacing[3],
   },
   tabRow: {
     flexDirection: 'row',

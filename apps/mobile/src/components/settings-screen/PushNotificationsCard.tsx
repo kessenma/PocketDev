@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { View, Text, StyleSheet, Alert, Platform } from 'react-native'
-import { BellOff, BellRing } from 'lucide-react-native'
+import { Bell, BellOff, BellRing, Zap } from 'lucide-react-native'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useConnectionStore } from '../../stores/connection'
@@ -12,7 +12,7 @@ import { getPushNotificationsEnabled, setPushNotificationsEnabled } from '../../
 import { enablePushNotifications, disablePushNotifications } from '../../services/push-notifications'
 import PushConsentSheet from './PushConsentSheet'
 
-export default function PushNotificationsSection() {
+export default function PushNotificationsCard() {
   const { colors } = useTheme()
   const server = useConnectionStore((s) => s.server)
   const [enabled, setEnabled] = useState(getPushNotificationsEnabled)
@@ -65,20 +65,26 @@ export default function PushNotificationsSection() {
 
   return (
     <>
-      <Card style={styles.section} accentColor={colors.accentGreen}>
+      <Card style={styles.card} accentColor={colors.bracketAccent}>
         <CardTitle>Push Notifications</CardTitle>
 
         <View style={styles.row}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
+          <View style={styles.labelRow}>
+            <Bell size={14} color={colors.textSecondary} strokeWidth={2} />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
+          </View>
           <Badge
             label={enabled ? 'Enabled' : 'Disabled'}
-            color={enabled ? '#22c55e' : '#6b7280'}
+            color={enabled ? colors.accentGreen : colors.textTertiary}
           />
         </View>
 
         <View style={styles.row}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Triggers</Text>
-          <Text style={[styles.value, { color: colors.text }]}>Permission requests, task completion</Text>
+          <View style={styles.labelRow}>
+            <Zap size={14} color={colors.textSecondary} strokeWidth={2} />
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Triggers</Text>
+          </View>
+          <Text style={[styles.value, { color: colors.text }]}>Approvals, task completion</Text>
         </View>
 
         {enabled ? (
@@ -103,13 +109,18 @@ export default function PushNotificationsSection() {
 }
 
 const styles = StyleSheet.create({
-  section: {
+  card: {
     gap: spacing[3],
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
   },
   label: {
     ...typeStyles.bodySmall,

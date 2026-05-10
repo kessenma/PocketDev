@@ -1,23 +1,26 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Play } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { useTheme } from '../../contexts/ThemeContext'
-import { typeStyles } from '../../theme/typography'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import type { ServerQuickAction } from './model'
+import { useTheme } from '../../../contexts/ThemeContext'
+import { typeStyles } from '../../../theme/typography'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card'
+import type { ServerQuickAction } from '../../server-actions/model'
 
 type Props = {
   actions: ServerQuickAction[]
   onRunAction: (actionId: string) => void
 }
 
-export default function ServerQuickActions({ actions, onRunAction }: Props) {
+export default function ServerQuickActionsCard({ actions, onRunAction }: Props) {
   const { colors } = useTheme()
 
   return (
-    <Card>
+    <Card accentColor={colors.bracketAccent}>
       <CardHeader>
-        <CardTitle>Quick checks</CardTitle>
+        <CardTitle icon={<Play size={16} color={colors.textSecondary} strokeWidth={2} />}>
+          Quick checks
+        </CardTitle>
         <CardDescription>
           Preview common workspace diagnostics and environment checks from one place.
         </CardDescription>

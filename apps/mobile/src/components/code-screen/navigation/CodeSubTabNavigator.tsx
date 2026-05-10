@@ -14,6 +14,7 @@ import { typeStyles } from '../../../theme/typography'
 
 const CIRCLE_SIZE = 42
 const SEGMENT_H_PAD = spacing[2]
+const SEGMENT_GAP = 2
 
 // ---------------------------------------------------------------------------
 // Per-segment item
@@ -51,7 +52,7 @@ function Segment<T extends string>({
       stiffness: 260,
       mass: 0.7,
     })
-  }, [selected])
+  }, [activeAnim, selected])
 
   const segmentAnimStyle = useAnimatedStyle(() => {
     const padH = compact
@@ -142,6 +143,7 @@ export default function CodeSubTabNavigator<T extends string>({
   const optionCount = options.length
 
   const animatedIndex = useSharedValue(safeIndex)
+  const containerWidth = useSharedValue(0)
   const segmentXs = useSharedValue<number[]>([])
   const segmentWidths = useSharedValue<number[]>([])
 
@@ -151,22 +153,37 @@ export default function CodeSubTabNavigator<T extends string>({
       stiffness: 300,
       mass: 0.8,
     })
-  }, [safeIndex])
+  }, [animatedIndex, safeIndex])
 
-  // For 'segmented': indicator extends 1px beyond the container's top/bottom padding
-  // so the active tab's border replaces the container's border (fewer visual borders).
+  // For 'segmented': pill grows by overlapPx on each vertical side so it covers
+  // the container's top/bottom border (cleaner look, fewer visible borders).
   const overlapPx = variant === 'segmented' ? spacing[1] + 1 : 0
 
   const pillStyle = useAnimatedStyle(() => {
     const xs = segmentXs.value
     const ws = segmentWidths.value
-    if (xs.length < optionCount || ws.length < optionCount) return { opacity: 0 }
 
     const idxRange: number[] = []
-    for (let i = 0; i < optionCount; i++) idxRange.push(i)
+    let hasMeasuredSegments = optionCount > 0
+    for (let i = 0; i < optionCount; i++) {
+      idxRange.push(i)
+      if (!Number.isFinite(xs[i]) || !Number.isFinite(ws[i])) {
+        hasMeasuredSegments = false
+      }
+    }
 
-    const x = interpolate(animatedIndex.value, idxRange, xs as number[], 'clamp')
-    const w = interpolate(animatedIndex.value, idxRange, ws as number[], 'clamp')
+    const fallbackWidth = !scrollable && optionCount > 0
+      ? (containerWidth.value - SEGMENT_GAP * (optionCount - 1)) / optionCount
+      : 0
+
+    if (!hasMeasuredSegments && fallbackWidth <= 0) return { opacity: 0 }
+
+    const x = hasMeasuredSegments
+      ? interpolate(animatedIndex.value, idxRange, xs as number[], 'clamp')
+      : animatedIndex.value * (fallbackWidth + SEGMENT_GAP)
+    const w = hasMeasuredSegments
+      ? interpolate(animatedIndex.value, idxRange, ws as number[], 'clamp')
+      : fallbackWidth
 
     return {
       opacity: 1,
@@ -187,13 +204,16 @@ export default function CodeSubTabNavigator<T extends string>({
           borderColor: colors.border,
         },
       ]}
+      onLayout={(e) => {
+        containerWidth.value = e.nativeEvent.layout.width
+      }}
     >
       {/* Sliding active indicator — rendered first so segments sit on top */}
       <ReanimatedLib.View
         style={[
           styles.slidingPill,
           variant === 'segmented' && styles.slidingPillSegmented,
-          { backgroundColor: colors.surface, borderColor: colors.border },
+          { backgroundColor: colors.surface },
           pillStyle,
         ]}
       />
@@ -243,15 +263,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: borderRadius.full,
     flexDirection: 'row',
-    gap: 2,
+    gap: SEGMENT_GAP,
     paddingVertical: spacing[1],
-    paddingHorizontal: spacing[1],
+    overflow: 'hidden',
   },
   slidingPill: {
     position: 'absolute',
     left: 0,
     borderRadius: borderRadius.full,
-    borderWidth: 1,
   },
   segmentTouchable: {
     flex: 1,

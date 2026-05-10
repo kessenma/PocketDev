@@ -1,10 +1,11 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { Gauge } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { useTheme } from '../../contexts/ThemeContext'
-import { typeStyles } from '../../theme/typography'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import type { ServerMetric } from './model'
+import { useTheme } from '../../../contexts/ThemeContext'
+import { typeStyles } from '../../../theme/typography'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card'
+import type { ServerMetric } from '../../server-actions/model'
 
 type Props = {
   metrics: ServerMetric[]
@@ -17,13 +18,15 @@ const TONE_COLORS: Record<ServerMetric['tone'], string> = {
   neutral: '#64748b',
 }
 
-export default function ServerMetricGrid({ metrics }: Props) {
+export default function ServerMetricGridCard({ metrics }: Props) {
   const { colors } = useTheme()
 
   return (
-    <Card>
+    <Card accentColor={colors.bracketAccent}>
       <CardHeader>
-        <CardTitle>System snapshot</CardTitle>
+        <CardTitle icon={<Gauge size={16} color={colors.textSecondary} strokeWidth={2} />}>
+          System snapshot
+        </CardTitle>
         <CardDescription>
           Prototype cards for quick checks before digging into logs or shell commands.
         </CardDescription>

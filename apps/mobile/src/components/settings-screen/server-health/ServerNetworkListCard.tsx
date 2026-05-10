@@ -1,22 +1,25 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { Globe } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { useTheme } from '../../contexts/ThemeContext'
-import { typeStyles } from '../../theme/typography'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import type { ServerNetworkEntry } from './model'
+import { useTheme } from '../../../contexts/ThemeContext'
+import { typeStyles } from '../../../theme/typography'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card'
+import type { ServerNetworkEntry } from '../../server-actions/model'
 
 type Props = {
   entries: ServerNetworkEntry[]
 }
 
-export default function ServerNetworkList({ entries }: Props) {
+export default function ServerNetworkListCard({ entries }: Props) {
   const { colors } = useTheme()
 
   return (
-    <Card>
+    <Card accentColor={colors.bracketAccent}>
       <CardHeader>
-        <CardTitle>Network activity</CardTitle>
+        <CardTitle icon={<Globe size={16} color={colors.textSecondary} strokeWidth={2} />}>
+          Network activity
+        </CardTitle>
         <CardDescription>
           Keep current throughput, interface pressure, and active connection counts visible in one place.
         </CardDescription>

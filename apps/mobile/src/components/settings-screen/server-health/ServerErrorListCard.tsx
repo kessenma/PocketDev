@@ -1,10 +1,11 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { Activity } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { useTheme } from '../../contexts/ThemeContext'
-import { typeStyles } from '../../theme/typography'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import type { ServerErrorEntry } from './model'
+import { useTheme } from '../../../contexts/ThemeContext'
+import { typeStyles } from '../../../theme/typography'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card'
+import type { ServerErrorEntry } from '../../server-actions/model'
 
 type Props = {
   errors: ServerErrorEntry[]
@@ -16,13 +17,15 @@ const SEVERITY_COLORS: Record<ServerErrorEntry['severity'], string> = {
   info: '#2563eb',
 }
 
-export default function ServerErrorList({ errors }: Props) {
+export default function ServerErrorListCard({ errors }: Props) {
   const { colors } = useTheme()
 
   return (
-    <Card>
+    <Card accentColor={colors.bracketAccent}>
       <CardHeader>
-        <CardTitle>Recent server errors</CardTitle>
+        <CardTitle icon={<Activity size={16} color={colors.textSecondary} strokeWidth={2} />}>
+          Recent server errors
+        </CardTitle>
         <CardDescription>
           Shape the mobile debugging flow around the failures you actually need to inspect first.
         </CardDescription>

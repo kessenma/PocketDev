@@ -1,10 +1,11 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { EthernetPort } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
-import { useTheme } from '../../contexts/ThemeContext'
-import { typeStyles } from '../../theme/typography'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import type { ServerPortEntry } from './model'
+import { useTheme } from '../../../contexts/ThemeContext'
+import { typeStyles } from '../../../theme/typography'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/Card'
+import type { ServerPortEntry } from '../../server-actions/model'
 
 type Props = {
   ports: ServerPortEntry[]
@@ -16,13 +17,15 @@ const STATUS_COLORS: Record<ServerPortEntry['status'], string> = {
   closed: '#64748b',
 }
 
-export default function ServerPortList({ ports }: Props) {
+export default function ServerPortListCard({ ports }: Props) {
   const { colors } = useTheme()
 
   return (
-    <Card>
+    <Card accentColor={colors.bracketAccent}>
       <CardHeader>
-        <CardTitle>Workspace activity</CardTitle>
+        <CardTitle icon={<EthernetPort size={16} color={colors.textSecondary} strokeWidth={2} />}>
+          Workspace activity
+        </CardTitle>
         <CardDescription>
           A quick view of active services and traffic-facing processes tied to the current workspace.
         </CardDescription>
