@@ -46,10 +46,11 @@ export const fontFamilyTokens = {
   body: 'pd-sans',
   mono: 'pd-mono',
   // React Native uses PostScript names, not CSS aliases
-  displayNative: 'AncizarSerif',
-  displayItalicNative: 'AncizarSerif-Italic',
-  bodyNative: 'Geist',
-  monoNative: 'GeistMono',
+  displayNative: 'AncizarSerif-Light',
+  displayItalicNative: 'AncizarSerif-LightItalic',
+  bodyNative: 'Geist-Regular',
+  bodyItalicNative: 'Geist-Regular', // placeholder — update font-roles.json when an italic body font is added
+  monoNative: 'GeistMono-Regular',
 } as const
 
 export const semanticTypography = {
@@ -62,6 +63,11 @@ export const semanticTypography = {
     fontSize: 30,
     lineHeight: 34,
     letterSpacing: -0.8,
+  },
+  cardTitle: {
+    fontSize: 20,
+    lineHeight: 28,
+    letterSpacing: -0.5,
   },
   sectionTitle: {
     fontSize: 12,
