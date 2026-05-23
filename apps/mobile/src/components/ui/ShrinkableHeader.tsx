@@ -6,6 +6,7 @@ import ReanimatedLib, {
   useAnimatedStyle,
   useDerivedValue,
   interpolate,
+  interpolateColor,
   runOnJS,
   type SharedValue,
 } from 'react-native-reanimated'
@@ -98,6 +99,31 @@ export default function ShrinkableHeader<T extends string = string>({
     interpolate(scrollY.value, [60, 120], [0, 1], 'clamp'),
   )
 
+  const headerChromeStyle = useAnimatedStyle(() => {
+    const chromeOpacity = interpolate(scrollY.value, [40, 100], [1, 0], 'clamp')
+
+    return {
+      paddingVertical: interpolate(scrollY.value, [40, 100], [spacing[3], 0], 'clamp'),
+      gap: interpolate(scrollY.value, [40, 100], [spacing[2], 0], 'clamp'),
+      backgroundColor: interpolateColor(
+        scrollY.value,
+        [40, 100],
+        isDark
+          ? ['rgba(14, 14, 14, 0.9)', 'rgba(14, 14, 14, 0)']
+          : ['rgba(250, 248, 242, 0.96)', 'rgba(250, 248, 242, 0)'],
+      ),
+      borderColor: interpolateColor(
+        scrollY.value,
+        [40, 100],
+        isDark
+          ? ['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0)']
+          : ['rgba(26, 26, 26, 0.08)', 'rgba(26, 26, 26, 0)'],
+      ),
+      shadowOpacity: 0.08 * chromeOpacity,
+      elevation: chromeOpacity > 0.05 ? 4 : 0,
+    }
+  }, [isDark])
+
   const heroAnimStyle = useAnimatedStyle(() => {
     const naturalH = heroNaturalHeight.value
     const opacity = interpolate(scrollY.value, [0, 60], [1, 0], 'clamp')
@@ -127,10 +153,7 @@ export default function ShrinkableHeader<T extends string = string>({
     <ReanimatedLib.View
       style={[
         styles.headerCard,
-        {
-          backgroundColor: isDark ? 'rgba(14, 14, 14, 0.9)' : 'rgba(250, 248, 242, 0.96)',
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(26, 26, 26, 0.08)',
-        },
+        headerChromeStyle,
       ]}
     >
       {hasHero ? (
@@ -198,8 +221,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 20,
     paddingHorizontal: spacing[3],
-    paddingVertical: spacing[3],
-    gap: spacing[2],
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },

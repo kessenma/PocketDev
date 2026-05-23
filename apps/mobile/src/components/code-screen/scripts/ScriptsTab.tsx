@@ -13,6 +13,7 @@ import SuggestedScripts from './views/SuggestedScripts'
 import RunningScripts from './views/RunningScripts'
 import HistoryScripts from './views/HistoryScripts'
 import ShrinkableHeader, { useShrinkableHeader } from '../../ui/ShrinkableHeader'
+import TabScrollContainer from '../navigation/TabScrollContainer'
 
 type ScriptsView = 'scripts' | 'suggested' | 'running' | 'history'
 
@@ -79,17 +80,16 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
     }
 
     return (
-      <ReanimatedLib.ScrollView
+      <TabScrollContainer
         contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
+        minPaddingBottom={spacing[8]}
         onScroll={scrollHandler}
-        scrollEventThrottle={16}
       >
         {activeView === 'scripts' && <PackageScripts />}
         {activeView === 'suggested' && <SuggestedScripts />}
         {activeView === 'running' && <RunningScripts />}
         {activeView === 'history' && <HistoryScripts />}
-      </ReanimatedLib.ScrollView>
+      </TabScrollContainer>
     )
   })()
 

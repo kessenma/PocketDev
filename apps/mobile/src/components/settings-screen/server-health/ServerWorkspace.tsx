@@ -3,9 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { spacing, borderRadius } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { typeStyles } from '../../../theme/typography'
-import { useAdaptiveLayout } from '../../../hooks/useAdaptiveLayout'
 import { useServerActionsStore } from '../../../stores/server-actions'
-import SplitViewLayout from '../../layout/SplitViewLayout'
 import ServerSegmentedControl from '../../server-actions/ServerSegmentedControl'
 import ServerErrorListCard from './ServerErrorListCard'
 import ServerHealthHero from './ServerHealthHero'
@@ -22,7 +20,6 @@ const VIEW_OPTIONS = [
 
 export default function ServerWorkspace() {
   const { colors } = useTheme()
-  const { layoutMode } = useAdaptiveLayout()
   const serverLabel = useServerActionsStore((state) => state.serverLabel)
   const uptime = useServerActionsStore((state) => state.uptime)
   const activeView = useServerActionsStore((state) => state.activeView)
@@ -35,47 +32,24 @@ export default function ServerWorkspace() {
   const isRefreshing = useServerActionsStore((state) => state.isRefreshing)
   const selectView = useServerActionsStore((state) => state.selectView)
   const refresh = useServerActionsStore((state) => state.refresh)
-  const previewAction = useServerActionsStore((state) => state.previewAction)
 
-  const overviewView = layoutMode === 'tabletSplit'
-    ? (
-      <SplitViewLayout
-        leading={
-          <View style={styles.stack}>
-            <ServerMetricGridCard metrics={metrics} />
-            <ServerPortListCard ports={ports} />
-          </View>
-        }
-        trailing={
-          <View style={styles.stack}>
-            <ServerQuickActionsCard actions={actions} onRunAction={previewAction} />
-            <ServerErrorListCard errors={errors.slice(0, 2)} />
-          </View>
-        }
-        leadingWidth={420}
-      />
-    )
-    : (
-      <View style={styles.stack}>
-        <ServerMetricGridCard metrics={metrics} />
-        <ServerPortListCard ports={ports} />
-        <ServerQuickActionsCard actions={actions} onRunAction={previewAction} />
-        <ServerErrorListCard errors={errors.slice(0, 2)} />
-      </View>
-    )
+  const overviewView = (
+    <View style={styles.stack}>
+      <ServerMetricGridCard metrics={metrics} />
+    </View>
+  )
 
   const activityView = (
     <View style={styles.stack}>
-      <ServerNetworkListCard entries={network} />
       <ServerPortListCard ports={ports} />
-      <ServerQuickActionsCard actions={actions} onRunAction={previewAction} />
+      <ServerNetworkListCard entries={network} />
     </View>
   )
 
   const errorsView = (
     <View style={styles.stack}>
       <ServerErrorListCard errors={errors} />
-      <ServerQuickActionsCard actions={actions} onRunAction={previewAction} />
+      <ServerQuickActionsCard actions={actions} />
     </View>
   )
 

@@ -7,6 +7,11 @@ import type {
   ServerQuickAction,
   ServerView,
 } from '../components/server-actions/model'
+
+export type PreviewResult =
+  | { status: 'loading' }
+  | { status: 'ok'; output: string; exitCode: number }
+  | { status: 'error'; message: string }
 import {
   fetchServerSummary,
   fetchServerPorts,
@@ -29,6 +34,7 @@ type ServerActionsState = {
   lastActionMessage: string
   isRefreshing: boolean
   error: string | null
+  previewResults: Record<string, PreviewResult>
   selectView: (view: ServerView) => void
   refresh: () => void
   previewAction: (actionId: string) => void
@@ -50,6 +56,7 @@ export const useServerActionsStore = create<ServerActionsState>((set, get) => ({
   lastActionMessage: 'Pull to refresh to load server diagnostics.',
   isRefreshing: false,
   error: null,
+  previewResults: {},
 
   selectView: (view) => set({ activeView: view }),
 
@@ -108,20 +115,27 @@ export const useServerActionsStore = create<ServerActionsState>((set, get) => ({
     const server = getServer()
     if (!server) return
 
-    set({ lastActionMessage: `Running ${actionId}...` })
+    if (get().previewResults[actionId]?.status === 'loading') return
+
+    set((state) => ({
+      previewResults: { ...state.previewResults, [actionId]: { status: 'loading' } },
+    }))
 
     try {
       const result = await runServerAction(server.ip, server.port, actionId)
-      set({
-        lastActionMessage: result.exitCode === 0
-          ? `${actionId} completed. Output: ${result.output.slice(0, 200)}${result.output.length > 200 ? '...' : ''}`
-          : `${actionId} exited with code ${result.exitCode}.`,
-      })
+      set((state) => ({
+        previewResults: {
+          ...state.previewResults,
+          [actionId]: { status: 'ok', output: result.output, exitCode: result.exitCode },
+        },
+      }))
     } catch (err) {
-      set({
-        lastActionMessage: `Failed to run ${actionId}.`,
-        error: err instanceof Error ? err.message : 'Action failed',
-      })
+      set((state) => ({
+        previewResults: {
+          ...state.previewResults,
+          [actionId]: { status: 'error', message: err instanceof Error ? err.message : 'Action failed' },
+        },
+      }))
     }
   },
 }))

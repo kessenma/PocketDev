@@ -1,4 +1,4 @@
-export type PlanView = 'plan' | 'conversation' | 'history'
+export type PlanView = 'review' | 'history'
 
 export type PlanStatus = 'pending' | 'accepted' | 'denied' | 'revised'
 
@@ -29,6 +29,7 @@ export interface PlanMessage {
 
 export interface PlanEntry {
   id: string
+  taskId: string
   title: string
   description: string
   agentName: string

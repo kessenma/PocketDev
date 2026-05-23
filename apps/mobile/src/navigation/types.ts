@@ -11,6 +11,7 @@ export type RootStackParamList = {
   NewTask: undefined
   GitHistory: undefined
   ServerDebug: undefined
+  ServerHealth: undefined
 }
 
 export type MainTabParamList = {

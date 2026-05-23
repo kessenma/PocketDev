@@ -11,6 +11,7 @@ import NewTaskScreen from '../screens/NewTaskScreen'
 import ProjectsScreen from '../screens/ProjectsScreen'
 import GitHistoryScreen from '../screens/GitHistoryScreen'
 import ServerDebugScreen from '../screens/ServerDebugScreen'
+import ServerHealthScreen from '../screens/ServerHealthScreen'
 import MainTabs from './MainTabs'
 import { useConnectionStore } from '../stores/connection'
 import type { RootStackParamList } from './types'
@@ -125,6 +126,11 @@ export default function RootNavigator() {
         name="ServerDebug"
         component={ServerDebugScreen}
         options={{ title: 'Server Debug' }}
+      />
+      <Stack.Screen
+        name="ServerHealth"
+        component={ServerHealthScreen}
+        options={{ title: 'Server Health' }}
       />
     </Stack.Navigator>
   )

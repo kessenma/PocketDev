@@ -1,12 +1,12 @@
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import ReanimatedLib from 'react-native-reanimated'
 import { FolderGit2, Ghost, GitBranch, RefreshCw, Shapes, Split } from 'lucide-react-native'
 import { borderRadius, palette, spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useGitStore } from '../../../stores/git'
 import Tooltip from '../../ui/Tooltip'
 import ShrinkableHeader, { useShrinkableHeader } from '../../ui/ShrinkableHeader'
+import TabScrollContainer from '../navigation/TabScrollContainer'
 import ChangesView from './views/ChangesView'
 import HistoryView from './views/HistoryView'
 import BranchesView from './views/BranchesView'
@@ -99,12 +99,11 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
         statusLine={lastActionMessage}
       />
 
-      <ReanimatedLib.ScrollView
+      <TabScrollContainer
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        minPaddingBottom={spacing[8]}
         onScroll={scrollHandler}
-        scrollEventThrottle={16}
       >
         {!hasRepoContext && !isRefreshing ? (
           <View style={[styles.emptyBanner, { backgroundColor: colors.backgroundSecondary }]}>
@@ -116,7 +115,7 @@ export default function GitTab({ onScroll, onOpenProjects }: CodeScreenTabProps)
         {activeView === 'changes' && <ChangesView />}
         {activeView === 'history' && <HistoryView />}
         {activeView === 'branches' && <BranchesView />}
-      </ReanimatedLib.ScrollView>
+      </TabScrollContainer>
     </View>
   )
 }
@@ -158,7 +157,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     gap: spacing[4],
     paddingTop: spacing[3],
-    paddingBottom: spacing[8],
   },
   emptyBanner: {
     borderRadius: borderRadius.lg,

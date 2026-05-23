@@ -26,5 +26,6 @@ const styles = StyleSheet.create({
   stack: {
     gap: spacing[4],
     flex: 1,
+    paddingBottom: spacing[24] * 3,
   },
 })

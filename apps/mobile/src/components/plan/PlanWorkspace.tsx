@@ -16,12 +16,15 @@ import PlanStepList from './PlanStepList'
 import PlanSummaryCard from './PlanSummaryCard'
 
 const VIEW_OPTIONS = [
-  { value: 'plan', label: 'Plan' },
-  { value: 'conversation', label: 'Conversation' },
+  { value: 'review', label: 'Review' },
   { value: 'history', label: 'History' },
 ] as const
 
-export default function PlanWorkspace() {
+type Props = {
+  onAccepted?: () => void
+}
+
+export default function PlanWorkspace({ onAccepted }: Props) {
   const { colors } = useTheme()
   const { layoutMode } = useAdaptiveLayout()
   const activePlan = usePlanStore((state) => state.activePlan)
@@ -43,43 +46,35 @@ export default function PlanWorkspace() {
     : 0
   const canAccept = !!activePlan && pendingQuestionCount === 0 && !isSubmitting
 
+  function handleAccept() {
+    acceptPlan()
+    onAccepted?.()
+  }
+
   const header = (
-    <View style={styles.header}>
-      <View style={styles.headerText}>
-        <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>Plan Review</Text>
-        <Text style={[styles.title, { color: colors.text }]}>Agent plan review</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Review agent-proposed plans, answer questions, and accept or deny them before implementation continues.
-        </Text>
-      </View>
-
-      <View style={styles.controlRow}>
-        <PlanSegmentedControl
-          value={activeView}
-          options={VIEW_OPTIONS}
-          onChange={selectView}
-        />
-        <Text
-          accessibilityRole="button"
-          onPress={refresh}
-          style={[styles.refreshLink, { color: isRefreshing ? colors.textTertiary : colors.primary }]}
-        >
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </Text>
-      </View>
-
-      <View style={[styles.messageBanner, { backgroundColor: colors.backgroundSecondary }]}>
-        <Text style={[styles.messageText, { color: colors.textSecondary }]}>{lastActionMessage}</Text>
-      </View>
+    <View style={styles.controlRow}>
+      <PlanSegmentedControl
+        value={activeView}
+        options={VIEW_OPTIONS}
+        onChange={selectView}
+      />
+      <Text
+        accessibilityRole="button"
+        onPress={refresh}
+        style={[styles.refreshLink, { color: isRefreshing ? colors.textTertiary : colors.primary }]}
+      >
+        {isRefreshing ? 'Refreshing...' : 'Refresh'}
+      </Text>
     </View>
   )
 
-  const planView = activePlan ? (
+  const reviewContent = activePlan ? (
     layoutMode === 'tabletSplit' ? (
       <SplitViewLayout
         leading={
           <View style={styles.stack}>
             <PlanSummaryCard
+              taskId={activePlan.taskId}
               title={activePlan.title}
               description={activePlan.description}
               agentName={activePlan.agentName}
@@ -92,12 +87,15 @@ export default function PlanWorkspace() {
         }
         trailing={
           <View style={styles.stack}>
-            <PlanQuestionList questions={activePlan.questions} onAnswer={answerQuestion} />
+            {activePlan.questions.length > 0 && (
+              <PlanQuestionList questions={activePlan.questions} onAnswer={answerQuestion} />
+            )}
+            <PlanConversation messages={activePlan.messages} onSend={sendMessage} />
             <PlanNotes value={activePlan.userNotes} onChangeText={updateNotes} />
             <PlanActionBar
               canAccept={canAccept}
               isSubmitting={isSubmitting}
-              onAccept={acceptPlan}
+              onAccept={handleAccept}
               onDeny={denyPlan}
             />
           </View>
@@ -107,6 +105,7 @@ export default function PlanWorkspace() {
     ) : (
       <View style={styles.stack}>
         <PlanSummaryCard
+          taskId={activePlan.taskId}
           title={activePlan.title}
           description={activePlan.description}
           agentName={activePlan.agentName}
@@ -115,37 +114,20 @@ export default function PlanWorkspace() {
           pendingQuestionCount={pendingQuestionCount}
         />
         <PlanStepList steps={activePlan.steps} />
-        <PlanQuestionList questions={activePlan.questions} onAnswer={answerQuestion} />
+        {activePlan.questions.length > 0 && (
+          <PlanQuestionList questions={activePlan.questions} onAnswer={answerQuestion} />
+        )}
+        <PlanConversation messages={activePlan.messages} onSend={sendMessage} />
         <PlanNotes value={activePlan.userNotes} onChangeText={updateNotes} />
         <PlanActionBar
           canAccept={canAccept}
           isSubmitting={isSubmitting}
-          onAccept={acceptPlan}
+          onAccept={handleAccept}
           onDeny={denyPlan}
         />
       </View>
     )
   ) : (
-    <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>No active plan</Text>
-      <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-        When an agent proposes a plan, it will appear here for your review.
-      </Text>
-    </View>
-  )
-
-  const conversationView = activePlan ? (
-    <PlanConversation messages={activePlan.messages} onSend={sendMessage} />
-  ) : (
-    <View style={[styles.emptyState, { backgroundColor: colors.backgroundSecondary }]}>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>No conversation</Text>
-      <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
-        Start a conversation with the agent when a plan is active.
-      </Text>
-    </View>
-  )
-
-  const historyView = (
     <PlanHistoryList plans={history} onSelect={() => {}} />
   )
 
@@ -156,9 +138,13 @@ export default function PlanWorkspace() {
       showsVerticalScrollIndicator={false}
     >
       {header}
-      {activeView === 'plan' ? planView : null}
-      {activeView === 'conversation' ? conversationView : null}
-      {activeView === 'history' ? historyView : null}
+      {lastActionMessage ? (
+        <View style={[styles.messageBanner, { backgroundColor: colors.backgroundSecondary }]}>
+          <Text style={[styles.messageText, { color: colors.textSecondary }]}>{lastActionMessage}</Text>
+        </View>
+      ) : null}
+      {activeView === 'review' ? reviewContent : null}
+      {activeView === 'history' ? <PlanHistoryList plans={history} onSelect={() => {}} /> : null}
     </ScrollView>
   )
 }
@@ -171,29 +157,14 @@ const styles = StyleSheet.create({
     gap: spacing[4],
     paddingBottom: spacing[8],
   },
-  header: {
-    gap: spacing[3],
-  },
-  headerText: {
-    gap: spacing[1],
-  },
-  eyebrow: {
-    ...typeStyles.sectionTitle,
-  },
-  title: {
-    ...typeStyles.heading,
-  },
-  subtitle: {
-    ...typeStyles.body,
-    maxWidth: 760,
-  },
   controlRow: {
-    gap: spacing[3],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   refreshLink: {
     ...typeStyles.bodySmall,
     fontWeight: '700',
-    alignSelf: 'flex-start',
   },
   messageBanner: {
     borderRadius: borderRadius.lg,
@@ -206,18 +177,5 @@ const styles = StyleSheet.create({
   stack: {
     gap: spacing[4],
     flex: 1,
-  },
-  emptyState: {
-    borderRadius: borderRadius.lg,
-    padding: spacing[4],
-    gap: spacing[2],
-    minHeight: 180,
-    justifyContent: 'center',
-  },
-  emptyTitle: {
-    ...typeStyles.bodyBold,
-  },
-  emptyBody: {
-    ...typeStyles.bodySmall,
   },
 })

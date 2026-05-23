@@ -1,87 +1,137 @@
-import React from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import React, { useState } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  ChevronDown,
+  ChevronUp,
+  FileEdit,
+  FilePlus,
+  FileText,
+  Terminal,
+  Trash2,
+} from 'lucide-react-native'
 import { EnrichedMarkdownText } from 'react-native-enriched-markdown'
-import { borderRadius, spacing } from '@pocketdev/shared/theme'
+import { spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../theme/typography'
 import { useTheme } from '../../contexts/ThemeContext'
 import { buildMarkdownStyle } from '../../theme/markdown'
-import PlanBadge from './PlanBadge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
+import Badge from '../ui/Badge'
+import { Card, CardContent, CardHeader } from '../ui/Card'
 import type { PlanStep, PlanStepKind } from './model'
+
+type StepMeta = {
+  label: string
+  Icon: React.ComponentType<{ color: string; size: number; strokeWidth: number }>
+  getColor: (colors: any) => string
+}
+
+const STEP_META: Record<PlanStepKind, StepMeta> = {
+  create: {
+    label: 'Create',
+    Icon: FilePlus,
+    getColor: (colors) => colors.accentGreen,
+  },
+  modify: {
+    label: 'Modify',
+    Icon: FileEdit,
+    getColor: (colors) => colors.accentBlue,
+  },
+  delete: {
+    label: 'Delete',
+    Icon: Trash2,
+    getColor: (colors) => colors.accentRed,
+  },
+  run: {
+    label: 'Run',
+    Icon: Terminal,
+    getColor: (colors) => colors.accentYellow,
+  },
+  note: {
+    label: 'Note',
+    Icon: FileText,
+    getColor: (colors) => colors.textTertiary,
+  },
+}
 
 type Props = {
   steps: PlanStep[]
 }
 
-const KIND_VARIANT: Record<PlanStepKind, 'primary' | 'success' | 'error' | 'warning' | 'neutral'> = {
-  create: 'success',
-  modify: 'primary',
-  delete: 'error',
-  run: 'warning',
-  note: 'neutral',
+export default function PlanStepList({ steps }: Props) {
+  return (
+    <View style={styles.list}>
+      {steps.map((step, index) => (
+        <StepCard key={step.id} step={step} index={index} />
+      ))}
+    </View>
+  )
 }
 
-export default function PlanStepList({ steps }: Props) {
+function StepCard({ step, index }: { step: PlanStep; index: number }) {
   const { colors } = useTheme()
+  const [expanded, setExpanded] = useState(true)
+  const meta = STEP_META[step.kind]
+  const accentColor = meta.getColor(colors)
+  const { Icon } = meta
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Steps</CardTitle>
-        <CardDescription>{steps.length} steps in this plan</CardDescription>
-      </CardHeader>
+    <Card accentColor={accentColor}>
+      <Pressable onPress={() => setExpanded((v) => !v)} accessibilityRole="button">
+        <CardHeader style={styles.header}>
+          <Icon color={accentColor} size={14} strokeWidth={2.25} />
+          <Text style={[styles.kindLabel, { color: accentColor }]}>{meta.label}</Text>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={expanded ? undefined : 1}>
+            {step.title}
+          </Text>
+          <Badge label={String(index + 1)} color={accentColor} />
+          <View style={styles.spacer} />
+          {expanded
+            ? <ChevronUp color={colors.textTertiary} size={14} strokeWidth={2.25} />
+            : <ChevronDown color={colors.textTertiary} size={14} strokeWidth={2.25} />}
+        </CardHeader>
+      </Pressable>
 
-      <CardContent>
-        {steps.map((step, index) => (
-          <View
-            key={step.id}
-            style={[styles.stepRow, { backgroundColor: colors.backgroundSecondary }]}
-          >
-            <View style={styles.stepHeader}>
-              <Text style={[styles.stepNumber, { color: colors.textTertiary }]}>{index + 1}</Text>
-              <View style={styles.stepTitleBlock}>
-                <Text style={[styles.stepTitle, { color: colors.text }]}>{step.title}</Text>
-                {step.filePath ? (
-                  <Text style={[styles.filePath, { color: colors.primary }]}>{step.filePath}</Text>
-                ) : null}
-              </View>
-              <PlanBadge variant={KIND_VARIANT[step.kind]}>{step.kind}</PlanBadge>
-            </View>
-            <EnrichedMarkdownText
-              markdown={step.description}
-              markdownStyle={buildMarkdownStyle(colors)}
-            />
-          </View>
-        ))}
-      </CardContent>
+      {expanded && (
+        <CardContent style={styles.body}>
+          {step.filePath ? (
+            <Text style={[styles.filePath, { color: accentColor }]}>{step.filePath}</Text>
+          ) : null}
+          <EnrichedMarkdownText
+            markdown={step.description}
+            markdownStyle={buildMarkdownStyle(colors)}
+          />
+        </CardContent>
+      )}
     </Card>
   )
 }
 
 const styles = StyleSheet.create({
-  stepRow: {
-    borderRadius: borderRadius.lg,
-    padding: spacing[3],
-    gap: spacing[2],
+  list: {
+    gap: spacing[3],
   },
-  stepHeader: {
+  header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing[2],
+    flexWrap: 'nowrap',
   },
-  stepNumber: {
-    ...typeStyles.bodySmall,
+  kindLabel: {
+    ...typeStyles.meta,
     fontWeight: '700',
-    minWidth: 20,
   },
-  stepTitleBlock: {
+  title: {
+    ...typeStyles.bodySmall,
+    fontWeight: '600',
     flex: 1,
-    gap: spacing[1],
   },
-  stepTitle: {
-    ...typeStyles.button,
+  spacer: {
+    flex: 0,
+  },
+  body: {
+    gap: spacing[2],
   },
   filePath: {
     ...typeStyles.meta,
+    fontWeight: '600',
   },
 })

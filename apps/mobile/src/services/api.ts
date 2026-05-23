@@ -306,6 +306,20 @@ export async function postCreateProjectBranch(
   return response.json() as Promise<ProjectMutationResult>
 }
 
+export type DockerStatus = { available: boolean; total: number; running: number }
+
+export async function fetchDockerStatus(ip: string, port: number): Promise<DockerStatus> {
+  try {
+    const response = await fetch(apiUrl(ip, port, '/containers/status'), {
+      headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+    })
+    if (!response.ok) return { available: false, total: 0, running: 0 }
+    return response.json() as Promise<DockerStatus>
+  } catch {
+    return { available: false, total: 0, running: 0 }
+  }
+}
+
 export async function fetchContainers(ip: string, port: number): Promise<ContainerSummary[]> {
   const response = await fetch(apiUrl(ip, port, '/containers'), {
     headers: {

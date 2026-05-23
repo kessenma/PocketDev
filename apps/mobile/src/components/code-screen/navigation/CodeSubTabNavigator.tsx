@@ -12,9 +12,11 @@ import { useTheme } from '../../../contexts/ThemeContext'
 import type { CodeSubTabOption } from './types'
 import { typeStyles } from '../../../theme/typography'
 
-const CIRCLE_SIZE = 42
+const EXPANDED_SEGMENT_HEIGHT = spacing[10]
+const COMPACT_SEGMENT_HEIGHT = spacing[8]
 const SEGMENT_H_PAD = spacing[2]
 const SEGMENT_GAP = 2
+const AnimatedTouchableOpacity = ReanimatedLib.createAnimatedComponent(TouchableOpacity)
 
 // ---------------------------------------------------------------------------
 // Per-segment item
@@ -64,6 +66,14 @@ function Segment<T extends string>({
     return { paddingHorizontal: padH, gap }
   })
 
+  const touchableAnimStyle = useAnimatedStyle(() => {
+    const minHeight = compact
+      ? interpolate(compact.value, [0, 1], [EXPANDED_SEGMENT_HEIGHT, COMPACT_SEGMENT_HEIGHT], 'clamp')
+      : EXPANDED_SEGMENT_HEIGHT
+
+    return { minHeight }
+  })
+
   const labelAnimStyle = useAnimatedStyle(() => {
     if (labelMode === 'active-only' && activeAnim.value < 0.01) {
       return { opacity: 0, maxWidth: 0, overflow: 'hidden' as const }
@@ -82,11 +92,11 @@ function Segment<T extends string>({
   }, [labelMode])
 
   return (
-    <TouchableOpacity
+    <AnimatedTouchableOpacity
       activeOpacity={0.7}
       onPress={() => onChange(option.value)}
       onLayout={(e) => onLayout(e.nativeEvent.layout.x, e.nativeEvent.layout.width)}
-      style={styles.segmentTouchable}
+      style={[styles.segmentTouchable, touchableAnimStyle]}
     >
       <ReanimatedLib.View style={[styles.segment, variant === 'segmented' && styles.segmentSquare, segmentAnimStyle]}>
         {Icon ? (
@@ -105,7 +115,7 @@ function Segment<T extends string>({
           </Text>
         </ReanimatedLib.View>
       </ReanimatedLib.View>
-    </TouchableOpacity>
+    </AnimatedTouchableOpacity>
   )
 }
 
@@ -155,13 +165,26 @@ export default function CodeSubTabNavigator<T extends string>({
     })
   }, [animatedIndex, safeIndex])
 
-  // For 'segmented': pill grows by overlapPx on each vertical side so it covers
-  // the container's top/bottom border (cleaner look, fewer visible borders).
-  const overlapPx = variant === 'segmented' ? spacing[1] + 1 : 0
+  const containerAnimStyle = useAnimatedStyle(() => {
+    const paddingVertical = compact
+      ? interpolate(compact.value, [0, 1], [spacing[1], spacing[0]], 'clamp')
+      : spacing[1]
+
+    return { paddingVertical }
+  })
 
   const pillStyle = useAnimatedStyle(() => {
     const xs = segmentXs.value
     const ws = segmentWidths.value
+    const segmentHeight = compact
+      ? interpolate(compact.value, [0, 1], [EXPANDED_SEGMENT_HEIGHT, COMPACT_SEGMENT_HEIGHT], 'clamp')
+      : EXPANDED_SEGMENT_HEIGHT
+    const paddingVertical = compact
+      ? interpolate(compact.value, [0, 1], [spacing[1], spacing[0]], 'clamp')
+      : spacing[1]
+    // For 'segmented', the indicator overlaps by 1px so it covers the
+    // container border while still matching the current compact height.
+    const overlapPx = variant === 'segmented' ? paddingVertical + 1 : 0
 
     const idxRange: number[] = []
     let hasMeasuredSegments = optionCount > 0
@@ -187,8 +210,8 @@ export default function CodeSubTabNavigator<T extends string>({
 
     return {
       opacity: 1,
-      top: spacing[1] - overlapPx,
-      height: CIRCLE_SIZE + 2 * overlapPx,
+      top: paddingVertical - overlapPx,
+      height: segmentHeight + 2 * overlapPx,
       transform: [{ translateX: x }],
       width: w,
     }
@@ -199,6 +222,7 @@ export default function CodeSubTabNavigator<T extends string>({
       style={[
         styles.container,
         variant === 'segmented' && styles.containerSegmented,
+        containerAnimStyle,
         {
           backgroundColor: colors.backgroundSecondary,
           borderColor: colors.border,
@@ -264,7 +288,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     flexDirection: 'row',
     gap: SEGMENT_GAP,
-    paddingVertical: spacing[1],
     overflow: 'hidden',
   },
   slidingPill: {
@@ -274,11 +297,11 @@ const styles = StyleSheet.create({
   },
   segmentTouchable: {
     flex: 1,
-    minHeight: CIRCLE_SIZE,
+    minHeight: EXPANDED_SEGMENT_HEIGHT,
   },
   segment: {
     flex: 1,
-    minHeight: CIRCLE_SIZE,
+    minHeight: EXPANDED_SEGMENT_HEIGHT,
     borderRadius: borderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',

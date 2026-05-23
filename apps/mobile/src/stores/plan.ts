@@ -46,6 +46,7 @@ function getWs() {
 function sharedToLocal(plan: SharedPlanEntry): PlanEntry {
   return {
     id: plan.id,
+    taskId: plan.taskId,
     title: plan.title,
     description: plan.description,
     agentName: plan.agentName,
@@ -72,7 +73,7 @@ function sharedToLocal(plan: SharedPlanEntry): PlanEntry {
 export const usePlanStore = create<PlanState>((set, get) => ({
   activePlan: null,
   history: [],
-  activeView: 'plan',
+  activeView: 'review',
   lastActionMessage: 'Waiting for the agent to propose a plan.',
   isRefreshing: false,
   isSubmitting: false,
@@ -204,6 +205,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
   handlePlanProposed: (event) => {
     const plan: PlanEntry = {
       id: event.planId,
+      taskId: event.taskId,
       title: event.title,
       description: event.description,
       agentName: event.agentName,
@@ -222,7 +224,7 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
     set({
       activePlan: plan,
-      activeView: 'plan',
+      activeView: 'review',
       lastActionMessage: `New plan from ${event.agentName}: "${event.title}"`,
     })
   },

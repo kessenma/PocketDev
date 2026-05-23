@@ -143,9 +143,8 @@ export default function MainTabs() {
         component={SettingsScreen}
         options={{
           title: 'Settings',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => renderTabIcon('Settings', { color, size }),
-          headerRight: renderStatusDot,
-          headerRightContainerStyle: { paddingRight: 16 },
         }}
       />
     </Tab.Navigator>

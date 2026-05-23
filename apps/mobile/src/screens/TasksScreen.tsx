@@ -11,7 +11,6 @@ import ReanimatedLib, {
   scrollTo as reanimatedScrollTo,
 } from 'react-native-reanimated'
 import { Plus } from 'lucide-react-native'
-import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../contexts/ThemeContext'
 import { useTaskStore } from '../stores/tasks'
@@ -29,8 +28,10 @@ import Tabs from '../components/ui/Tabs'
 import TaskListPane from '../components/tasks/TaskListPane'
 import TaskWorkspace from '../components/tasks/TaskWorkspace'
 import RecentPromptsPane from '../components/tasks/RecentPromptsPane'
+import PlanWorkspace from '../components/plan/PlanWorkspace'
+import { usePlanStore } from '../stores/plan'
 
-const TABS = [{ label: 'Tasks' }, { label: 'Prompts' }]
+const TABS = [{ label: 'Tasks' }, { label: 'Prompts' }, { label: 'Plans' }]
 
 type Props = {
   navigation: CompositeNavigationProp<
@@ -43,6 +44,9 @@ export default function TasksScreen({ navigation }: Props) {
   const { colors } = useTheme()
   const { top } = useSafeAreaInsets()
   const { layoutMode } = useAdaptiveLayout()
+  const refreshPlan = usePlanStore((s) => s.refresh)
+  const activePlan = usePlanStore((s) => s.activePlan)
+  const prevActivePlanRef = React.useRef(activePlan)
   const tasks = useTaskStore((s) => s.tasks)
   const activeTaskId = useTaskStore((s) => s.activeTaskId)
   const setTasks = useTaskStore((s) => s.setTasks)
@@ -72,6 +76,10 @@ export default function TasksScreen({ navigation }: Props) {
   React.useEffect(() => {
     void refreshFromServer().catch(() => {})
   }, [refreshFromServer, server])
+
+  React.useEffect(() => {
+    refreshPlan()
+  }, [refreshPlan])
 
   const taskList = React.useMemo(
     () =>
@@ -127,6 +135,13 @@ export default function TasksScreen({ navigation }: Props) {
     }
   }
 
+  React.useEffect(() => {
+    if (activePlan && !prevActivePlanRef.current) {
+      handleTabChange(2)
+    }
+    prevActivePlanRef.current = activePlan
+  }, [activePlan]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function handleScrollEnd(event: { nativeEvent: { contentOffset: { x: number } } }) {
     if (pageWidth > 0) {
       const newIndex = Math.round(event.nativeEvent.contentOffset.x / pageWidth)
@@ -181,6 +196,10 @@ export default function TasksScreen({ navigation }: Props) {
 
                 <View style={[styles.page, { width: pageWidth }]}>
                   <RecentPromptsPane onPromptPress={handleRecentPromptPress} />
+                </View>
+
+                <View style={[styles.page, { width: pageWidth }]}>
+                  <PlanWorkspace onAccepted={() => handleTabChange(0)} />
                 </View>
               </ReanimatedLib.ScrollView>
             )}
