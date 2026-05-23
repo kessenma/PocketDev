@@ -12,6 +12,24 @@ function normalizeFilter(value: unknown): ContainerLogsFilter {
 }
 
 export const containerRoutes = new Elysia({ prefix: '/containers' })
+  .get('/status', async ({ request, set }) => {
+    const deviceId = await authenticateRequest(request.headers.get('authorization'))
+    if (!deviceId) {
+      set.status = 401
+      return { error: 'Unauthorized' }
+    }
+
+    try {
+      const containers = await listContainers()
+      return {
+        available: true,
+        total: containers.length,
+        running: containers.filter((c) => c.is_running).length,
+      }
+    } catch {
+      return { available: false, total: 0, running: 0 }
+    }
+  })
   .get('/', async ({ request, set }) => {
     const deviceId = await authenticateRequest(request.headers.get('authorization'))
     if (!deviceId) {
