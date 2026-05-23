@@ -99,8 +99,6 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
     trainLeft    = trainLeft1 + (trainLeft2 - trainLeft1) * exitEased
   }
 
-  const svgW = 2400 * currentScale
-  const svgH = 200 * currentScale
   const trainTop = h / 2 - TRAIN_WINDOW_CY * currentScale
 
   // Hub circle fades in at start, fades out before train settles
@@ -160,15 +158,18 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
       <div
         className="absolute"
         style={{
-          left: trainLeft,
-          top: trainTop,
-          width: svgW,
-          height: svgH,
+          left: 0,
+          top: 0,
+          width: 2400,
+          height: 200,
+          transform: `translate(${trainLeft}px, ${trainTop}px) scale(${currentScale})`,
+          transformOrigin: '0 0',
+          willChange: 'transform',
           pointerEvents: 'none',
         }}
         aria-hidden="true"
       >
-        <TrainSideSvg width={svgW} height={svgH} />
+        <TrainSideSvg width={2400} height={200} />
       </div>
 
       {/* Phone in person's hands + VPS + direct connection */}

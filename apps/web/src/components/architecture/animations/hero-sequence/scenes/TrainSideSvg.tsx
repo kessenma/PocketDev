@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { palette } from '@pocketdev/shared/theme'
 
 const { yellow, blue } = palette.bauhaus
@@ -11,7 +12,7 @@ export const TRAIN_WINDOW_R = 4
 
 type Props = { width: number; height: number }
 
-export function TrainSideSvg({ width, height }: Props) {
+export const TrainSideSvg = memo(function TrainSideSvg({ width, height }: Props) {
   return (
     <svg
       viewBox="0 0 2400 200"
@@ -90,4 +91,4 @@ export function TrainSideSvg({ width, height }: Props) {
 
     </svg>
   )
-}
+})
