@@ -51,7 +51,7 @@ Good areas for contributions right now:
 
 ## 3. Fork and Clone
 
-1. Fork the [PocketDev repository](https://github.com/yourusername/pocketdev) on GitHub.
+1. Fork the [PocketDev repository](https://github.com/kessenma/pocketdev) on GitHub.
 2. Clone your fork:
    ```bash
    git clone https://github.com/YOUR_USERNAME/pocketdev

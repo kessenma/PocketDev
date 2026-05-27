@@ -63,6 +63,8 @@ export function PocketRevealScene({ progress: p, vpSize, isDesktopLayout }: Prop
   }
 
   const pocketSlideY = pocketFade * (h * 0.8)
+  // Waistband opening in pocket-local coords is at y≈108; this tracks it in screen space
+  const pocketOpeningY = pTy + pocketSlideY + 108 * pS
 
   // Text sweeps in from left → holds at center → exits right, all within scene 01
   const taglineIn     = mapP(p, 0.38, 0.58)
@@ -95,6 +97,10 @@ export function PocketRevealScene({ progress: p, vpSize, isDesktopLayout }: Prop
         <clipPath id="pocket-triangle-clip">
           <polygon points="148,50 88,170 208,170" />
         </clipPath>
+        {/* Clips circle to only render above the pocket opening so it appears to rise out */}
+        <clipPath id="circle-emerge-clip">
+          <rect x={0} y={0} width={w} height={pocketOpeningY} />
+        </clipPath>
       </defs>
 
       {/* Pocket — slides off bottom as ball escapes */}
@@ -126,6 +132,7 @@ export function PocketRevealScene({ progress: p, vpSize, isDesktopLayout }: Prop
         r={Math.max(circleR, 0.1)}
         fill={blue}
         opacity={circleAlpha}
+        clipPath="url(#circle-emerge-clip)"
       />
 
       {/* Tagline — appears after ball settles, carried into scene 02 */}

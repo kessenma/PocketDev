@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { palette, fontFamilyTokens } from '@pocketdev/shared/theme'
 import { BauhausPhone } from '#/components/architecture/sections/HowPocketDevWorks/shared/BauhausPhone'
 import { TrainSideSvg, TRAIN_WINDOW_CX, TRAIN_WINDOW_CY, TRAIN_WINDOW_R } from './TrainSideSvg'
+import RotatingText from '#/components/ui/RotatingText'
 
 const { blue, red, yellow, black } = palette.bauhaus
 
@@ -64,7 +65,7 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
 
   // ── Phase boundaries ──────────────────────────────────────────
   const ENTRY_END = 0.50  // train finishes driving in
-  const HOLD_END  = 0.65  // cinematic pause ends, exit begins
+  const HOLD_END  = 0.80  // cinematic pause ends, exit begins
 
   // ── Entry easing (0 → ENTRY_END) ──────────────────────────────
   const entryT = clamp(progress / ENTRY_END, 0, 1)
@@ -111,8 +112,8 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
 
   // ── Phone + VPS — build in during hold, fade out early in exit ──
   const elemBuild = mapP(progress, ENTRY_END, HOLD_END)
-  // Start fading as soon as exit begins, gone by 0.88
-  const elemFade  = mapP(progress, HOLD_END + 0.04, 0.88)
+  // Start fading as soon as exit begins, gone by 0.96
+  const elemFade  = mapP(progress, HOLD_END + 0.04, 0.96)
   const elemOp    = elemBuild * (1 - elemFade)
   const arcOp     = mapP(elemBuild, 0.55, 0.95)
 
@@ -193,25 +194,44 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
           <DashedArc x1={phoneCX} y1={phoneCY} x2={vpsCX} y2={vpsCY}
             color={blue} bend={0} opacity={arcOp} />
 
-          {/* Scene headline */}
-          <g transform={`translate(${textSlideX}, 0)`} opacity={elemBuild}>
-            <text x={textX} y={textY} textAnchor="start" fontSize={textFs}
-              fill={black} fontFamily={monoFont} fontWeight="500">
-              So you can build
-            </text>
-            <text x={textX} y={textY + textLh} textAnchor="start" fontSize={textFs}
-              fill={black} fontFamily={monoFont} fontWeight="500">
-              wherever and whenever
-            </text>
-            <text x={textX} y={textY + textLh * 2} textAnchor="start" fontSize={textFs}
-              fill={black} fontFamily={monoFont} fontWeight="500">
-              ideas come
-            </text>
-          </g>
         </g>
-
-
       </svg>
+
+      {/* Scene headline — HTML overlay so RotatingText can animate */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: textX,
+          top: textY - textFs,
+          transform: `translateX(${textSlideX}px)`,
+          opacity: elemBuild * (1 - mapP(progress, HOLD_END + 0.04, 0.96)),
+          fontFamily: monoFont,
+          fontSize: textFs,
+          fontWeight: 500,
+          color: black,
+          lineHeight: `${textLh}px`,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <span>So you can build</span>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
+          <RotatingText
+            texts={['wher', 'when']}
+            style={{ backgroundColor: yellow, borderRadius: 3, paddingInline: 3 }}
+            staggerFrom="last"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '-120%' }}
+            staggerDuration={0.03}
+            splitLevelClassName="overflow-hidden"
+            transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+            rotationInterval={2000}
+          />
+          <span>ever</span>
+        </span>
+        <span>ideas come</span>
+      </div>
     </>
   )
 }

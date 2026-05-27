@@ -73,7 +73,7 @@ The agent is designed to run on any Linux VPS with Bun installed. See [apps/agen
 
 ```bash
 # Clone and run manually
-git clone https://github.com/yourusername/pocketdev
+git clone https://github.com/kessenma/pocketdev
 cd pocketdev/apps/agent
 bun install
 bun run src/index.ts

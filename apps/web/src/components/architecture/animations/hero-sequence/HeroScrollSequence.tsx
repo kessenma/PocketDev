@@ -38,12 +38,22 @@ const INSTALL_COMMAND_LINES = [
   '| bash',
 ]
 
-// Scene boundaries (global hero progress 0→1)
-const SCENE1_END   = 0.22  // pocket reveal
-const SCENE2_START = 0.22  // developers on the go (extended)
-const SCENE2_END   = 0.58
-const SCENE3_START = 0.58  // linux admins
-const SCENE3_END   = 0.77
+// Scene scroll durations (vh). Change any value freely — all boundaries recalculate.
+const SCROLL = {
+  scene1:  132,  // pocket reveal
+  scene2:  264,  // developers on the go
+  scene3:  114,  // linux admins
+  outro:    90,  // pills fade-in
+} as const
+const TOTAL_VH = SCROLL.scene1 + SCROLL.scene2 + SCROLL.scene3 + SCROLL.outro
+const p = (vh: number) => vh / TOTAL_VH
+
+// Derived scene boundaries (0 → 1 of total scroll progress)
+const SCENE1_END   = p(SCROLL.scene1)
+const SCENE2_START = SCENE1_END
+const SCENE2_END   = p(SCROLL.scene1 + SCROLL.scene2)
+const SCENE3_START = SCENE2_END
+const SCENE3_END   = p(SCROLL.scene1 + SCROLL.scene2 + SCROLL.scene3)
 
 export function HeroScrollSequence({
   onProgressChange,
@@ -89,13 +99,28 @@ export function HeroScrollSequence({
     onProgressChange?.(latest)
   })
 
-  const headerOpacity = useTransform(scrollYProgress, [0, 0.12, 0.20], [1, 1, 0])
-  const headerY       = useTransform(scrollYProgress, [0.12, 0.22], [0, -Math.max(vpSize.h, 420)])
-  const pillsOpacity  = useTransform(scrollYProgress, [0.88, 0.93, 0.94, 0.98], [0, 1, 1, 0])
-  const pillsY        = useTransform(scrollYProgress, [0.88, 0.93], [20, 0])
+  const headerOpacity = useTransform(scrollYProgress, [0, SCENE1_END * 0.55, SCENE1_END * 0.91], [1, 1, 0])
+  const headerY       = useTransform(scrollYProgress, [SCENE1_END * 0.55, SCENE1_END], [0, -Math.max(vpSize.h, 420)])
 
-  // Per-scene opacities — scenes 1↔2 and 2↔3 cross-fade over a short window
-  const scene1Opacity = useTransform(scrollYProgress, [0.18, 0.24], [1, 0])
+  const outroStart   = SCENE3_END
+  const outroLen     = 1 - outroStart
+  const pillsOpacity = useTransform(
+    scrollYProgress,
+    [outroStart + outroLen * 0.20, outroStart + outroLen * 0.53, outroStart + outroLen * 0.60, outroStart + outroLen * 0.87],
+    [0, 1, 1, 0],
+  )
+  const pillsY = useTransform(
+    scrollYProgress,
+    [outroStart + outroLen * 0.20, outroStart + outroLen * 0.53],
+    [20, 0],
+  )
+
+  // Per-scene opacities — scene 1→2 cross-fades over a short window
+  const scene1Opacity = useTransform(
+    scrollYProgress,
+    [SCENE1_END * 0.82, SCENE2_START + (SCENE2_END - SCENE2_START) * 0.05],
+    [1, 0],
+  )
 
   // Normalized 0→1 progress per scene
   const scene1Progress = Math.min(1, Math.max(0, progress / SCENE1_END))
@@ -117,7 +142,7 @@ export function HeroScrollSequence({
   const spring = { type: 'spring', stiffness: 220, damping: 26 } as const
 
   return (
-    <section ref={sectionRef} className="relative" style={{ height: '600vh', backgroundColor: PAPER }}>
+    <section ref={sectionRef} className="relative" style={{ height: `${TOTAL_VH}vh`, backgroundColor: PAPER }}>
       <div className="sticky top-0 h-screen overflow-hidden" style={{ backgroundColor: PAPER }}>
 
         {/* Header — pushed up when betaOpen */}

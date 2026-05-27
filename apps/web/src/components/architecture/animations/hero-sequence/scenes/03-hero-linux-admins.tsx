@@ -206,7 +206,14 @@ export function LinuxAdminScene({ progress, heroProgress, vpSize, isDesktopLayou
         </text>
         <text x={w / 2} y={labelY2} textAnchor="middle"
           fontSize={isDesktopLayout ? 12 : 10} fill={subColor} fontFamily={monoFont}>
-          You can ssh into the prod server and fix the issue with your AI of choice.
+          {isDesktopLayout ? (
+            'You can ssh into the prod server and fix the issue with your AI of choice.'
+          ) : (
+            <>
+              <tspan x={w / 2} dy="0">You can ssh into the prod server</tspan>
+              <tspan x={w / 2} dy="14">and fix the issue with your AI of choice.</tspan>
+            </>
+          )}
         </text>
       </g>
     </svg>
