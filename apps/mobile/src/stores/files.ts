@@ -3,7 +3,7 @@ import type { FileSearchResult } from '@pocketdev/shared/types'
 import type { FileNode, FileView } from '../components/files/model'
 import { inferLanguage, treeEntryToFileNode, pathToName } from '../components/files/model'
 import { listDirectory, fetchFileContent, searchFiles } from '../services/api'
-import { getCachedDirectorySnapshot, saveCachedDirectorySnapshot } from '../services/storage'
+import { getCachedDirectorySnapshot, saveCachedDirectorySnapshot, clearCachedDirectorySnapshots } from '../services/storage'
 import { useConnectionStore } from './connection'
 import { getOfflineDb } from '../db/OfflineDatabaseProvider'
 import {
@@ -60,6 +60,8 @@ type FilesState = {
   resetForProjectSwitch: () => void
   refresh: () => Promise<void>
 }
+
+let _directoryGeneration = 0
 
 export const useFilesStore = create<FilesState>((set, get) => ({
   rootLabel: '',
@@ -162,6 +164,7 @@ export const useFilesStore = create<FilesState>((set, get) => ({
   }),
 
   openDirectory: async (path) => {
+    const generation = _directoryGeneration
     const cached = get().directoryEntriesByPath[path]
     const server = useConnectionStore.getState().server
     const persisted = server ? getCachedDirectorySnapshot(server.deviceId, path) : null
@@ -221,6 +224,7 @@ export const useFilesStore = create<FilesState>((set, get) => ({
 
     try {
       const result = await listDirectory(server.ip, server.port, path)
+      if (_directoryGeneration !== generation) return
       const entries = result.entries.map(treeEntryToFileNode)
       saveCachedDirectorySnapshot(server.deviceId, {
         base: result.base,
@@ -241,6 +245,7 @@ export const useFilesStore = create<FilesState>((set, get) => ({
         error: null,
       }))
     } catch (error) {
+      if (_directoryGeneration !== generation) return
       set({
         isRefreshing: false,
         lastActionMessage: 'Failed to load directory.',
@@ -358,22 +363,31 @@ export const useFilesStore = create<FilesState>((set, get) => ({
     lastActionMessage: 'Cleared AI context files.',
   }),
 
-  resetForProjectSwitch: () => set({
-    currentPath: '.',
-    currentEntries: [],
-    directoryEntriesByPath: {},
-    selectedFileId: null,
-    selectedFile: null,
-    selectedFileContent: null,
-    activePhoneView: 'browser',
-    searchQuery: '',
-    searchResults: [],
-    isSearching: false,
-    selectedContextPaths: [],
-    offlineMode: false,
-    lastActionMessage: 'Project changed. Reloading workspace files...',
-    error: null,
-  }),
+  resetForProjectSwitch: () => {
+    _directoryGeneration++
+    const server = useConnectionStore.getState().server
+    if (server) {
+      clearCachedDirectorySnapshots(server.deviceId)
+    }
+    set({
+      currentPath: '.',
+      currentEntries: [],
+      directoryEntriesByPath: {},
+      selectedFileId: null,
+      selectedFile: null,
+      selectedFileContent: null,
+      isLoadingContent: false,
+      isRefreshing: false,
+      activePhoneView: 'browser',
+      searchQuery: '',
+      searchResults: [],
+      isSearching: false,
+      selectedContextPaths: [],
+      offlineMode: false,
+      lastActionMessage: 'Project changed. Reloading workspace files...',
+      error: null,
+    })
+  },
 
   refresh: async () => {
     if (get().isRefreshing) return

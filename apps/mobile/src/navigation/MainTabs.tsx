@@ -89,6 +89,7 @@ export default function MainTabs() {
           fontSize: typeStyles.sectionTitle.fontSize,
           fontWeight: '800',
         },
+        tabBarPosition: isTabletDevice ? 'left' : 'bottom',
         sceneStyle: { backgroundColor: colors.background },
         tabBarStyle: isTabletDevice
           ? { display: 'none' }

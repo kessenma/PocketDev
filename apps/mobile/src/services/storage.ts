@@ -318,6 +318,14 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes
 }
 
+export function clearCachedDirectorySnapshots(serverId: string) {
+  const prefix = `${KEYS.FILE_DIRECTORY_CACHE_PREFIX}:${serverId}:`
+  const keys = getStorage().getAllKeys().filter((k) => k.startsWith(prefix))
+  for (const key of keys) {
+    getStorage().remove(key)
+  }
+}
+
 function getDirectoryCacheKey(serverId: string, path: string): string {
   return `${KEYS.FILE_DIRECTORY_CACHE_PREFIX}:${serverId}:${path}`
 }

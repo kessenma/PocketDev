@@ -76,6 +76,7 @@ type GitState = {
   dropStash: (index: number) => void
   refreshStashes: () => void
   abortMerge: () => void
+  resetForProjectChange: () => void
 }
 
 const emptyRemote: GitRemoteState = {
@@ -192,6 +193,24 @@ export const useGitStore = create<GitState>((set, get) => ({
   isStashing: false,
   isAborting: false,
   error: null,
+
+  resetForProjectChange: () => set({
+    repoName: '',
+    repoPath: '',
+    currentBranch: '',
+    changes: [],
+    commits: [],
+    detailedCommits: [],
+    branches: [],
+    remote: emptyRemote,
+    stashes: [],
+    mergeState: null,
+    taskCount: 0,
+    selectedFileId: null,
+    commitMessage: '',
+    error: null,
+    lastActionMessage: 'Switching repository...',
+  }),
 
   selectView: (view) => set({ activeView: view }),
 

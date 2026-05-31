@@ -434,6 +434,44 @@ export default function TaskDetailPane({
     return () => clearTimeout(t)
   }, [inferredDebugSelection, task?.status, showDebugSheet, showCodexWizard, showClaudeWizard])
 
+  // Derived task state — computed before early return so hooks below are always called.
+  const isRunning = task?.status === 'running' ?? false
+  const isTerminal = task?.status === 'completed' || task?.status === 'failed'
+  const isOpencodeFamily = task ? OPENCODE_FAMILY.has(task.agent_type) : false
+  const canContinue = !!(
+    isTerminal &&
+    task &&
+    (task.agent_type === 'claude' || task.agent_type === 'codex' || isOpencodeFamily) &&
+    task.session_id
+  )
+
+  // Auto-send queued follow-up once the task completes and session is ready.
+  // Must be before the early return to keep hook order stable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!task || !queuedContinuation || !canContinue || isRunning) return
+    continueTask(task.id, queuedContinuation)
+    setQueuedContinuation(null)
+  }, [canContinue, isRunning, queuedContinuation])
+
+  // Extract the AI's final text response for the result card.
+  // Must be before the early return to keep hook order stable.
+  const resultText = useMemo(() => {
+    if (activities.length > 0) {
+      const textParts = activities
+        .filter((a): a is Extract<typeof a, { type: 'text' }> => a.type === 'text')
+        .map((a) => a.content)
+      if (textParts.length > 0) return textParts.join('\n\n')
+    }
+    if (logs.length > 0) {
+      const textLines = logs.filter(
+        (l) => l.length > 0 && !/^\[(system|tool|thinking|error|result|done|agent)\]/.test(l) && !/^Warning:/.test(l),
+      )
+      if (textLines.length > 0) return textLines.join('\n')
+    }
+    return null
+  }, [activities, logs])
+
   async function handleFindFiles(draft: string) {
     const taskContext = task ? extractUserRequest(task.prompt) : ''
     const searchText = [taskContext, draft].filter(Boolean).join(' ').trim()
@@ -528,41 +566,10 @@ export default function TaskDetailPane({
     )
   }
 
-  const isRunning = task.status === 'running'
-  const isTerminal = task.status === 'completed' || task.status === 'failed'
-  const isOpencodeFamily = OPENCODE_FAMILY.has(task.agent_type)
-  const canContinue = isTerminal && (task.agent_type === 'claude' || task.agent_type === 'codex' || isOpencodeFamily) && !!task.session_id
   const isMultiTurn = (task.turn_count ?? 1) > 1
   const findFilesHandler = handleFindFiles
-
-  // Auto-send queued follow-up once the task completes and session is ready
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!queuedContinuation || !canContinue || isRunning) return
-    continueTask(task.id, queuedContinuation)
-    setQueuedContinuation(null)
-  }, [canContinue, isRunning, queuedContinuation])
   const statusColor = STATUS_COLORS[task.status ?? 'pending']
   const elapsed = task.started_at ? formatElapsed(task.started_at, task.completed_at) : '--'
-
-  // Extract the AI's final text response for the result card
-  const resultText = useMemo(() => {
-    // From structured activities — grab all text blocks
-    if (activities.length > 0) {
-      const textParts = activities
-        .filter((a): a is Extract<typeof a, { type: 'text' }> => a.type === 'text')
-        .map((a) => a.content)
-      if (textParts.length > 0) return textParts.join('\n\n')
-    }
-    // Fallback: parse from raw logs — lines that aren't prefixed with [system], [tool], [thinking], [error], [result], [done], [agent]
-    if (logs.length > 0) {
-      const textLines = logs.filter(
-        (l) => l.length > 0 && !/^\[(system|tool|thinking|error|result|done|agent)\]/.test(l) && !/^Warning:/.test(l),
-      )
-      if (textLines.length > 0) return textLines.join('\n')
-    }
-    return null
-  }, [activities, logs])
 
   return (
     <View style={[styles.container, { backgroundColor: colors.panel, borderColor: colors.border }]}>

@@ -286,8 +286,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
     >
       <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
         {/* ── Prompt (primary focus) ── */}
-        <Card style={styles.section} accentColor={colors.accentBlue}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Prompt</Text>
+        <Card style={styles.section} accentColor={colors.accentBlue} header="Prompt">
           <TextInput
             style={[styles.promptInput, { backgroundColor: colors.panelAlt, color: colors.text, borderColor: colors.border }]}
             value={prompt}
@@ -340,16 +339,13 @@ export default function NewTaskForm({ onSubmitted }: Props) {
         ) : null}
 
         {/* ── File Context Picker ── */}
-        <Card style={styles.section} accentColor={colors.accentYellow}>
+        <Card style={styles.section} accentColor={colors.accentYellow} header={`File Context${contextPaths.length > 0 ? ` (${contextPaths.length})` : ''}`}>
           <View style={styles.pickerHeader}>
             <TouchableOpacity
               style={styles.pickerHeaderTap}
               activeOpacity={0.7}
               onPress={() => setPickerExpanded((prev) => !prev)}
             >
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                File Context{contextPaths.length > 0 ? ` (${contextPaths.length})` : ''}
-              </Text>
               {pickerExpanded
                 ? <ChevronUp color={colors.textSecondary} size={18} strokeWidth={2.2} />
                 : <ChevronDown color={colors.textSecondary} size={18} strokeWidth={2.2} />}
@@ -500,8 +496,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
           ) : null}
         </Card>
 
-        <Card style={styles.section} accentColor={colors.accentRed}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Task Mode</Text>
+        <Card style={styles.section} accentColor={colors.accentRed} header="Task Mode">
           <View style={styles.modeRow}>
             {TASK_MODE_OPTIONS.map((option) => {
               const selected = option.value === selectedTaskMode
@@ -656,9 +651,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: spacing[2],
-  },
-  label: {
-    ...typeStyles.labelStrong,
   },
   modelButton: {
     flexDirection: 'row',

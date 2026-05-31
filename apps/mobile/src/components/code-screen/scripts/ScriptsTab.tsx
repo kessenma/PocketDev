@@ -5,6 +5,7 @@ import { History, SportShoe, Terminal, Wrench } from 'lucide-react-native'
 import { spacing } from '@pocketdev/shared/theme'
 import { useTheme } from '../../../contexts/ThemeContext'
 import { useScriptsStore } from '../../../stores/scripts'
+import { useProjectsStore } from '../../../stores/projects'
 import PackageSelector from '../../scripts/PackageSelector'
 import type { CodeScreenTabProps, CodeSubTabOption } from '../navigation/types'
 import { typeStyles } from '../../../theme/typography'
@@ -32,11 +33,14 @@ export default function ScriptsTab({ onScroll }: CodeScreenTabProps) {
   const selectedPackageIndex = useScriptsStore((s) => s.selectedPackageIndex)
   const fetchScripts = useScriptsStore((s) => s.fetchScripts)
   const selectPackage = useScriptsStore((s) => s.selectPackage)
+  const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const [activeView, setActiveView] = useState<ScriptsView>('scripts')
 
   useEffect(() => {
-    void fetchScripts()
-  }, [fetchScripts])
+    if (activeProjectId) {
+      void fetchScripts()
+    }
+  }, [activeProjectId, fetchScripts])
 
   const selectedPkg = packages[selectedPackageIndex] ?? null
 

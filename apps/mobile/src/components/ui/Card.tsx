@@ -8,6 +8,7 @@ type CardProps = {
   children: ReactNode
   style?: StyleProp<ViewStyle>
   accentColor?: string
+  header?: string
 }
 
 type SectionProps = {
@@ -22,7 +23,7 @@ type TextProps = {
   icon?: ReactNode
 }
 
-export function Card({ children, style, accentColor }: CardProps) {
+export function Card({ children, style, accentColor, header }: CardProps) {
   const { colors } = useTheme()
   const bracketColor = accentColor ?? colors.accentYellow
 
@@ -37,6 +38,7 @@ export function Card({ children, style, accentColor }: CardProps) {
       <View pointerEvents="none" style={[styles.corner, styles.cornerTR, { borderColor: bracketColor }]} />
       <View pointerEvents="none" style={[styles.corner, styles.cornerBL, { borderColor: bracketColor }]} />
       <View pointerEvents="none" style={[styles.corner, styles.cornerBR, { borderColor: bracketColor }]} />
+      {header ? <Text style={[styles.cardHeader, { color: colors.textSecondary }]}>{header}</Text> : null}
       {children}
     </View>
   )
@@ -77,10 +79,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     borderRadius: borderRadius.xl,
-    paddingTop: spacing[1],
+    paddingTop: spacing[3],
     paddingHorizontal: spacing[4],
     paddingBottom: spacing[4],
     gap: spacing[3],
+  },
+  cardHeader: {
+    ...typeStyles.labelStrong,
   },
   corner: {
     position: 'absolute',

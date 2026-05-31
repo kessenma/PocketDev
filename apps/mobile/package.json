@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "test": "jest",
     "ios": "rock run:ios",
+    "ios-dynamic": "node scripts/pick-ios-destination.js",
     "android": "rock run:android",
     "check-types": "tsc --noEmit",
     "deploy:ios:beta": "node scripts/deploy-testflight.js beta",

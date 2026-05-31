@@ -11,10 +11,12 @@ import { useFilesStore } from './files'
 import { useGitStore } from './git'
 import { usePreviewStore } from './preview'
 import { useEnvStore } from './env'
+import { useScriptsStore } from './scripts'
 
 type ProjectsState = {
   projects: ProjectSummary[]
   githubUsername: string | null
+  activeProjectId: string | null
   isLoading: boolean
   isMutating: boolean
   mutatingProjectId: string | null
@@ -37,15 +39,19 @@ async function refreshRepoAwareStores() {
   useFilesStore.getState().resetForProjectSwitch()
   usePreviewStore.getState().resetForProjectChange()
   useEnvStore.getState().resetForProjectChange()
+  useGitStore.getState().resetForProjectChange()
+  useScriptsStore.getState().resetForProjectChange()
   await Promise.allSettled([
     useFilesStore.getState().refresh(),
     useGitStore.getState().refresh(),
+    useScriptsStore.getState().fetchScripts(),
   ])
 }
 
 export const useProjectsStore = create<ProjectsState>((set) => ({
   projects: [],
   githubUsername: null,
+  activeProjectId: null,
   isLoading: false,
   isMutating: false,
   mutatingProjectId: null,
@@ -68,9 +74,11 @@ export const useProjectsStore = create<ProjectsState>((set) => ({
     set({ isLoading: true, error: null, lastActionMessage: 'Loading repositories...' })
     try {
       const result = await fetchProjects(server.ip, server.port)
+      const activeProjectId = result.projects.find((p) => p.isActive)?.id ?? null
       set({
         projects: result.projects,
         githubUsername: result.githubUsername,
+        activeProjectId,
         isLoading: false,
         lastActionMessage: `Loaded ${result.projects.length} repositories.`,
       })

@@ -340,7 +340,7 @@ export default function ConnectScreen({ navigation }: Props) {
                   </View>
                 </Card>
               }
-              trailing={form}
+              trailing={<View style={styles.trailingCenter}>{form}</View>}
               leadingWidth={420}
             />
           )}
@@ -501,6 +501,10 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     ...typographyScale.sm,
+  },
+  trailingCenter: {
+    flex: 1,
+    justifyContent: 'center',
   },
   heroCard: {
     flex: 1,

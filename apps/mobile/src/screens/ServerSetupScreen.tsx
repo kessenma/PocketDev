@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image, ActivityIndicator } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image } from 'react-native'
 import { useTheme } from '../contexts/ThemeContext'
 import { spacing, typographyScale, palette } from '@pocketdev/shared/theme'
 import { useSetupStore } from '../stores/setup'
@@ -46,7 +46,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
   const setupStatus = getServerSetupStatus(report)
   const setupProgress = getSetupProgress(report)
   const showingCachedSetup = !!report && revalidating && reportSource === 'cache'
-  const checkingSetup = !hydrated || revalidating
   const canContinue = setupStatus.ready && hasLiveConfirmation && !revalidating
   const scrollY = React.useRef(new Animated.Value(0)).current
 
@@ -303,12 +302,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
     extrapolate: 'clamp',
   })
 
-  const metaTranslateY = scrollY.interpolate({
-    inputRange: [0, 120],
-    outputRange: [0, -12],
-    extrapolate: 'clamp',
-  })
-
   const logosHeight = scrollY.interpolate({
     inputRange: [0, 80],
     outputRange: [36, 0],
@@ -331,22 +324,14 @@ export default function ServerSetupScreen({ navigation }: Props) {
     typescript: { light: Assets.typescriptBlack, dark: Assets.typescriptWhite },
   }
 
-  const workspaceStateLabel =
-    !hydrated || (!report && revalidating)
-      ? 'Checking…'
-      : showingCachedSetup
-        ? 'Checking…'
-        : revalidating
-          ? 'Refreshing'
-          : setupStatus.ready
-            ? 'Ready'
-            : 'In Progress'
-
   return (
     <AnimatedGradientBackground colors={colors} isDark={isDark} variant="setup">
       <View style={styles.container}>
         <View style={[styles.header, styles.headerCard, headerCardStyle]}>
-          <View pointerEvents="none" style={[styles.headerAccent, { backgroundColor: bauhaus.red }]} />
+          <View pointerEvents="none" style={[styles.corner, styles.cornerTL, { borderColor: bauhaus.red }]} />
+          <View pointerEvents="none" style={[styles.corner, styles.cornerTR, { borderColor: bauhaus.red }]} />
+          <View pointerEvents="none" style={[styles.corner, styles.cornerBL, { borderColor: bauhaus.red }]} />
+          <View pointerEvents="none" style={[styles.corner, styles.cornerBR, { borderColor: bauhaus.red }]} />
           <Animated.View style={[styles.headerIntro, { height: introHeight, opacity: introOpacity }]}>
             <TouchableOpacity
               style={[styles.backButton, { borderColor: colors.borderStrong }]}
@@ -367,35 +352,6 @@ export default function ServerSetupScreen({ navigation }: Props) {
               Enable the tools your paired workspace uses for coding tasks
             </Animated.Text>
           </Animated.View>
-          <Animated.View style={[styles.headerMetaRow, { transform: [{ translateY: metaTranslateY }] }]}>
-            <View
-              style={[
-                styles.statusBlock,
-                {
-                  backgroundColor: canContinue ? bauhaus.yellow : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(26,26,26,0.05)'),
-                  borderColor: canContinue ? bauhaus.yellow : colors.border,
-                },
-              ]}
-            >
-              <Text style={[styles.statusBlockLabel, { color: canContinue ? bauhaus.black : colors.textTertiary }]}>Workspace</Text>
-              <View style={styles.statusBlockValueRow}>
-                {checkingSetup && (
-                  <ActivityIndicator
-                    size="small"
-                    color={canContinue ? bauhaus.black : colors.textTertiary}
-                  />
-                )}
-                <Text style={[styles.statusBlockValue, { color: canContinue ? bauhaus.black : colors.text }]}>
-                  {workspaceStateLabel}
-                </Text>
-              </View>
-            </View>
-            <View style={[styles.statusBlock, { backgroundColor: bauhaus.blue, borderColor: bauhaus.blue }]}>
-              <Text style={[styles.statusBlockLabel, { color: 'rgba(255,255,255,0.72)' }]}>Mode</Text>
-              <Text style={[styles.statusBlockValue, { color: '#ffffff' }]}>Guided Setup</Text>
-            </View>
-          </Animated.View>
-
           {/* Progress bar with logos */}
           <View style={styles.progressSection}>
             <Animated.View style={[styles.progressLogos, { height: logosHeight, opacity: logosOpacity }]}>
@@ -675,41 +631,34 @@ const styles = StyleSheet.create({
     ...typographyScale.sm,
     maxWidth: '88%',
   },
-  headerAccent: {
+  corner: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 92,
-    height: 92,
-    borderBottomLeftRadius: 32,
+    width: 32,
+    height: 32,
   },
-  headerMetaRow: {
-    flexDirection: 'row',
-    gap: spacing[3],
-    marginTop: spacing[2],
+  cornerTL: {
+    top: 10,
+    left: 10,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
   },
-  statusBlock: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[3],
+  cornerTR: {
+    top: 10,
+    right: 10,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
   },
-  statusBlockLabel: {
-    ...typographyScale.xs,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 4,
+  cornerBL: {
+    bottom: 10,
+    left: 10,
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
   },
-  statusBlockValue: {
-    ...typographyScale.base,
-    fontWeight: '700',
-  },
-  statusBlockValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
+  cornerBR: {
+    bottom: 10,
+    right: 10,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
   },
   progressSection: {
     marginTop: spacing[3],
