@@ -1,56 +1,54 @@
-import type { CSSProperties, ReactNode } from 'react'
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { HeroScrollSequence } from '#/components/architecture/animations/hero-sequence'
 import {
-  SiAndroid,
-  SiAndroidHex,
-  SiApple,
-  SiAppleHex,
-  SiClaude,
-  SiClaudeHex,
-  SiGithubcopilot,
-  SiGithubcopilotHex,
-} from '@icons-pack/react-simple-icons'
-import { buttonVariants } from '#/components/ui/button'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '#/components/ui/accordion'
-import { ArchitectureHeroAnimation } from '#/components/architecture/animations/ArchitectureHeroAnimation'
-import { PocketHeroSvg } from '#/components/architecture/animations/PocketHeroSvg'
-import {
+  DocsCalloutSection,
   HowPocketDevWorksSection,
-  SecurityModelSection,
-  TechStackSection,
+  RepoHistoryTransitionSection,
+  TridentDiagramSection,
 } from '#/components/architecture/sections'
-import { brandAssets } from '#/components/architecture/shared/brand-assets'
-import { BrandAssetIcon } from '#/components/architecture/shared/BrandAssetIcon'
-import { InstallCommand } from '#/components/landing/InstallCommand'
-import { Features } from '#/components/landing/Features'
+import { GrowsToAgentOverlay } from '#/components/architecture/sections/GrowsToAgentOverlay'
+import { HeroToConsoleOverlay } from '#/components/architecture/sections/HeroToConsoleOverlay'
 import { Footer } from '#/components/landing/Footer'
-import {
-  architectureTextStyles,
-  architectureTokens,
-  blendHexColors,
-} from '#/components/architecture/shared/theme'
+import { architectureTokens } from '#/components/architecture/shared/theme'
+
+function ClientOnly({ children, fallback = null }: { children: ReactNode; fallback?: ReactNode }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  return mounted ? <>{children}</> : <>{fallback}</>
+}
 
 export const Route = createFileRoute('/')({
-  component: HomePage,
+  component: ArchitecturePage,
 })
 
-function HomePage() {
-  const [lowerPageTakeoverProgress, setLowerPageTakeoverProgress] = useState(0)
-  const lowerPageStyle: CSSProperties & Record<string, string | number> = {
-    '--architecture-paper': blendHexColors('#f7f1e3', architectureTokens.colors.blue, lowerPageTakeoverProgress),
-    '--architecture-panel-alt': blendHexColors('#efe5cb', architectureTokens.colors.blue, Math.min(1, lowerPageTakeoverProgress * 1.12)),
-    '--architecture-text': blendHexColors('#201d18', '#ffffff', lowerPageTakeoverProgress),
-    '--architecture-text-secondary': blendHexColors('#5c5549', '#dbeafe', lowerPageTakeoverProgress),
-    '--architecture-border': blendHexColors('#b7aa91', '#93c5fd', lowerPageTakeoverProgress),
-    '--architecture-surface': `rgba(255,255,255, ${0.02 + lowerPageTakeoverProgress * 0.06})`,
-    backgroundColor: blendHexColors('#f7f1e3', architectureTokens.colors.blue, lowerPageTakeoverProgress),
-  }
+const PRE_TRAVEL = 1.0  // circle completes full journey during RepoHistory exit
+
+function ArchitecturePage() {
+  const howItWorksRef = useRef<HTMLDivElement>(null)
+  const [heroProgress, setHeroProgress] = useState(0)
+  const [howItWorksRailProgress, setHowItWorksRailProgress] = useState(0)
+  const [repoHistoryProgress, setRepoHistoryProgress] = useState(0)
+  const [tridentProgress, setTridentProgress] = useState(0)
+  const [badgePosition, setBadgePosition] = useState({ x: 0, y: 0 })
+  const [vpSize, setVpSize] = useState({ w: 1280, h: 800 })
+
+  useEffect(() => {
+    const sync = () => setVpSize({ w: window.innerWidth, h: window.innerHeight })
+    sync()
+    window.addEventListener('resize', sync)
+    return () => window.removeEventListener('resize', sync)
+  }, [])
+
+  const isDesktopLayout = vpSize.w >= 1024
+  const agentX = isDesktopLayout ? vpSize.w * 0.32 : vpSize.w * 0.4
+  const agentY = isDesktopLayout ? vpSize.h * 0.48 : vpSize.h * 0.52
+  // With PRE_TRAVEL = 1.0 the circle arrives at agentX/agentY during exit,
+  // so TridentBuildScene starts with the circle already settled.
+  // badgePosition.y goes negative after the section scrolls off the top of the viewport —
+  // check !== 0 (uninitialized) rather than > 0 so seedY is still passed correctly.
+  const seedX = badgePosition.x !== 0 ? badgePosition.x + (agentX - badgePosition.x) * PRE_TRAVEL : undefined
+  const seedY = badgePosition.y !== 0 ? badgePosition.y + (agentY - badgePosition.y) * PRE_TRAVEL : undefined
 
   return (
     <div
@@ -64,130 +62,36 @@ function HomePage() {
         `,
       }}
     >
-      {/* Hero */}
-      <header className="flex flex-col items-center px-6 pt-24 pb-8 text-center">
-        <div
-          className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs mb-8"
-          style={{
-            borderColor: architectureTokens.colors.border,
-            color: architectureTokens.colors.textSecondary,
-          }}
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          </span>
-          Coming soon
-        </div>
+      <ClientOnly>
+        <HeroScrollSequence onProgressChange={setHeroProgress} />
+        <HowPocketDevWorksSection
+          sectionRef={howItWorksRef}
+          onRailProgress={setHowItWorksRailProgress}
+        />
+        <RepoHistoryTransitionSection
+          onTransitionProgress={setRepoHistoryProgress}
+          onGrowsBadgePosition={(x, y) => setBadgePosition({ x, y })}
+        />
+        <TridentDiagramSection
+          onProgress={setTridentProgress}
+          seedX={seedX}
+          seedY={seedY}
+        />
+        <GrowsToAgentOverlay
+          repoHistoryProgress={repoHistoryProgress}
+          tridentProgress={tridentProgress}
+          badgeX={badgePosition.x}
+          badgeY={badgePosition.y}
+        />
+        <HeroToConsoleOverlay
+          heroProgress={heroProgress}
+          railProgress={howItWorksRailProgress}
+        />
+      </ClientOnly>
 
-        <h1
-          className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl"
-          style={architectureTextStyles.heroTitle}
-        >
-          Run your dev environment{' '}
-          <span className="bg-gradient-to-r from-blue-500 to-violet-500 bg-clip-text text-transparent">
-            from your pocket
-          </span>
-        </h1>
+      <DocsCalloutSection />
 
-        <p
-          className="mt-4 max-w-xl text-lg"
-          style={architectureTextStyles.heroLead}
-        >
-          Install on any Linux VPS, pair your phone, and control AI coding agents
-          from anywhere. No laptop required.
-        </p>
-
-        <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
-          <a href="#install" className={buttonVariants({ size: 'lg' })}>
-            Get Started
-          </a>
-          <a
-            href="https://github.com/kessenma/PocketDev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ variant: 'outline', size: 'lg' })}
-          >
-            View on GitHub
-          </a>
-        </div>
-
-        <PocketHeroSvg className="mt-12 w-48 sm:w-56" />
-        <ArchitectureHeroAnimation className="mt-12 w-full max-w-lg" />
-
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          <IconPill icon={<SiApple size={14} color={`#${SiAppleHex}`} />} label="iOS" />
-          <IconPill icon={<SiAndroid size={14} color={`#${SiAndroidHex}`} />} label="Android" />
-          <IconPill icon={<SiClaude size={14} color={`#${SiClaudeHex}`} />} label="Claude" />
-          <IconPill icon={<BrandAssetIcon src={brandAssets.codexBlack} alt="Codex" />} label="Codex" />
-          <IconPill icon={<SiGithubcopilot size={14} color={`#${SiGithubcopilotHex}`} />} label="Copilot" />
-        </div>
-      </header>
-
-      <InstallCommand />
-      <Features />
-
-      <HowPocketDevWorksSection onLowerPageTakeoverChange={setLowerPageTakeoverProgress} />
-
-      <div style={lowerPageStyle}>
-        {/* CTA strip */}
-        <section className="flex flex-col items-center gap-4 px-6 py-16 text-center">
-          <h2
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: 'var(--architecture-text)' }}
-          >
-            Ready to get started?
-          </h2>
-          <div className="flex flex-col items-center gap-3 sm:flex-row">
-            <a href="#install" className={buttonVariants({ size: 'lg' })}>
-              Get Started
-            </a>
-            <a
-              href="https://github.com/kessenma/PocketDev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonVariants({ variant: 'outline', size: 'lg' })}
-            >
-              View on GitHub
-            </a>
-          </div>
-        </section>
-
-        {/* Tech deep-dive accordion */}
-        <section className="mx-auto max-w-4xl px-6 pb-16">
-          <Accordion>
-            <AccordionItem value="tech-deep-dive">
-              <AccordionTrigger
-                className="text-base font-semibold"
-                style={{ color: 'var(--architecture-text)' }}
-              >
-                Under the hood
-              </AccordionTrigger>
-              <AccordionContent>
-                <TechStackSection />
-                <SecurityModelSection />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </section>
-
-        <Footer />
-      </div>
-    </div>
-  )
-}
-
-function IconPill({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <div
-      className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs"
-      style={{
-        borderColor: architectureTokens.colors.border,
-        color: architectureTokens.colors.textSecondary,
-      }}
-    >
-      <span className="shrink-0">{icon}</span>
-      <span>{label}</span>
+      <Footer />
     </div>
   )
 }

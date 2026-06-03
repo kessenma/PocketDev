@@ -14,8 +14,9 @@ export function DocsCalloutSection() {
       </h2>
       <p className="max-w-md text-base text-neutral-500">
         Deep-dives on the wire protocol, security model, agent endpoints, and more.
+        PocketDev is free to self-host — the source code is on GitHub.
       </p>
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <a
           href="https://docs.pocketdev.run/"
           target="_blank"
@@ -24,8 +25,13 @@ export function DocsCalloutSection() {
         >
           Learn more in the docs
         </a>
-        <a href="/" className={buttonVariants({ variant: 'outline', size: 'lg' })}>
-          Back to home
+        <a
+          href="https://github.com/kessenma/PocketDev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonVariants({ variant: 'outline', size: 'lg' })}
+        >
+          View on GitHub
         </a>
       </div>
     </div>

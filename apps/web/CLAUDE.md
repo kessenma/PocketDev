@@ -18,8 +18,7 @@ pnpm dev:web   # Dev server (port 3000)
 
 | Route | File | Purpose |
 |---|---|---|
-| `/` | `routes/index.tsx` | Landing page (merged hero, storytelling, install, features, tech accordion) |
-| `/architecture` | `routes/architecture.tsx` | Architecture deep-dive (kept for reference) |
+| `/` | `routes/index.tsx` | Landing page (scroll-animated hero, how it works, repo history, trident diagram, docs callout) |
 
 ## Components
 

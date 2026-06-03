@@ -77,7 +77,7 @@ export default function QRScanner({ visible, onScan, onClose }: Props) {
               onPress={handleRequestPermission}
             >
               <Text style={[styles.permissionButtonText, { color: colors.primaryText }]}>
-                Grant Camera Access
+                Continue
               </Text>
             </TouchableOpacity>
           </View>

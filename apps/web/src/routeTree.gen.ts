@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ArchitectureRouteImport } from './routes/architecture'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
@@ -17,11 +16,6 @@ import { Route as AdminPushRouteImport } from './routes/admin/push'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminBetaRouteImport } from './routes/admin/beta'
 
-const ArchitectureRoute = ArchitectureRouteImport.update({
-  id: '/architecture',
-  path: '/architecture',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -56,7 +50,6 @@ const AdminBetaRoute = AdminBetaRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/architecture': typeof ArchitectureRoute
   '/admin/beta': typeof AdminBetaRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/push': typeof AdminPushRoute
@@ -65,7 +58,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/architecture': typeof ArchitectureRoute
   '/admin/beta': typeof AdminBetaRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/push': typeof AdminPushRoute
@@ -75,7 +67,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/architecture': typeof ArchitectureRoute
   '/admin/beta': typeof AdminBetaRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/push': typeof AdminPushRoute
@@ -86,7 +77,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
-    | '/architecture'
     | '/admin/beta'
     | '/admin/login'
     | '/admin/push'
@@ -95,7 +85,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
-    | '/architecture'
     | '/admin/beta'
     | '/admin/login'
     | '/admin/push'
@@ -104,7 +93,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
-    | '/architecture'
     | '/admin/beta'
     | '/admin/login'
     | '/admin/push'
@@ -114,18 +102,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  ArchitectureRoute: typeof ArchitectureRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/architecture': {
-      id: '/architecture'
-      path: '/architecture'
-      fullPath: '/architecture'
-      preLoaderRoute: typeof ArchitectureRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -190,7 +170,6 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  ArchitectureRoute: ArchitectureRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

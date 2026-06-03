@@ -6,16 +6,34 @@ PocketDev is a solo-built project, so reviews may take a few days. The best way 
 
 ## Table of Contents
 
-1. [Before You Start](#1-before-you-start)
-2. [Setup Development Environment](#2-setup-development-environment)
-3. [Fork and Clone](#3-fork-and-clone)
-4. [Run Locally](#4-run-locally)
-5. [Create a Pull Request](#5-create-a-pull-request)
-6. [Contribution Guidelines](#6-contribution-guidelines)
+1. [License and CLA](#1-license-and-cla)
+2. [Before You Start](#2-before-you-start)
+3. [Setup Development Environment](#3-setup-development-environment)
+4. [Fork and Clone](#4-fork-and-clone)
+5. [Run Locally](#5-run-locally)
+6. [Create a Pull Request](#6-create-a-pull-request)
+7. [Contribution Guidelines](#7-contribution-guidelines)
 
 ---
 
-## 1. Before You Start
+## 1. License and CLA
+
+PocketDev is licensed under the [Functional Source License, Version 1.1 (FSL-1.1-Apache-2.0)](LICENSE).
+
+FSL is source-available: you can read, fork, run, and contribute freely. The only restriction
+is that you cannot publish the app (or a derivative) to any app store (Apple App Store,
+Google Play, etc.). This is a launch-time precaution against bad-faith forks, not a permanent
+philosophy — the plan is to relicense to Apache 2.0 once PocketDev has a community large
+enough that the community itself is the best defense. The FSL also converts to Apache 2.0
+automatically after two years per version.
+
+**By submitting a pull request you agree to the [Contributor License Agreement](CLA.md).**
+The CLA is lightweight — it lets PocketDev be relicensed to a fully open source license in
+the future without needing individual permission from each contributor.
+
+---
+
+## 2. Before You Start
 
 **Open an issue first** for any non-trivial change — a new feature, a refactor, or an integration. This avoids duplicate work and lets us discuss approach before you write a line of code. Bug fixes and typos can go straight to a PR.
 
@@ -28,7 +46,7 @@ Good areas for contributions right now:
 
 ---
 
-## 2. Setup Development Environment
+## 3. Setup Development Environment
 
 **Prerequisites:**
 
@@ -49,7 +67,7 @@ Good areas for contributions right now:
 
 ---
 
-## 3. Fork and Clone
+## 4. Fork and Clone
 
 1. Fork the [PocketDev repository](https://github.com/kessenma/pocketdev) on GitHub.
 2. Clone your fork:
@@ -69,7 +87,7 @@ Good areas for contributions right now:
 
 ---
 
-## 4. Run Locally
+## 5. Run Locally
 
 ### Agent + sample app (Docker — recommended)
 
@@ -119,7 +137,7 @@ pnpm check-types
 
 ---
 
-## 5. Create a Pull Request
+## 6. Create a Pull Request
 
 1. Create a branch from `main`:
    ```bash
@@ -141,7 +159,7 @@ PRs without a linked issue (for non-trivial changes) or without testing notes ma
 
 ---
 
-## 6. Contribution Guidelines
+## 7. Contribution Guidelines
 
 ### Code style
 - Match the patterns you see in the file you're editing

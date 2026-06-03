@@ -13,6 +13,8 @@ function GetStartedPage() {
       <p>
         PocketDev is a mobile-first interface for controlling AI coding agents on remote servers.
         Install it on a Linux machine running Ubuntu 24.04, pair your phone, and control Claude, Codex, or GitHub Copilot from anywhere.
+        The source code is available at{' '}
+        <ExternalLink href="https://github.com/kessenma/PocketDev">github.com/kessenma/PocketDev</ExternalLink>.
       </p>
 
       <h2>Prerequisites</h2>
@@ -174,6 +176,23 @@ function GetStartedPage() {
         More documentation is coming soon. In the meantime, check out the{' '}
         <Link to="/architecture">architecture overview</Link> for a deeper look at how PocketDev works.
       </p>
+
+      <h2>Support</h2>
+      <p>
+        PocketDev is free and open source. If you run into issues or have questions:
+      </p>
+      <ul>
+        <li>
+          <strong>GitHub Issues</strong> — open a bug report or ask a question at{' '}
+          <a href="https://github.com/kessenma/PocketDev/issues" target="_blank" rel="noopener noreferrer">
+            github.com/kessenma/PocketDev/issues
+          </a>
+        </li>
+        <li>
+          <strong>Email</strong> — reach out directly at{' '}
+          <a href="mailto:kessenmacher7832@gmail.com">kessenmacher7832@gmail.com</a>
+        </li>
+      </ul>
     </>
   )
 }

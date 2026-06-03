@@ -2,7 +2,14 @@ export function Footer() {
   return (
     <footer className="border-t border-border px-6 py-8">
       <div className="mx-auto flex max-w-4xl items-center justify-between text-sm text-muted-foreground">
-        <span>PocketDev</span>
+        <a
+          href="https://github.com/kessenma/PocketDev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-foreground hover:underline"
+        >
+          Open Source on GitHub
+        </a>
         <span>
           Built by{' '}
           <a

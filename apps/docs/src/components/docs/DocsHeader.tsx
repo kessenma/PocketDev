@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Menu } from 'lucide-react'
+import { Github, Menu } from 'lucide-react'
 import { docsFonts, docsTokens } from './theme'
 
 export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
@@ -19,7 +19,7 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
         <Menu size={18} />
       </button>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-1 items-center gap-3">
         <a
           href="https://pocketdev.run"
           className="text-sm font-semibold transition-colors hover:opacity-80"
@@ -44,6 +44,20 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
           Docs
         </Link>
       </div>
+
+      <a
+        href="https://github.com/kessenma/PocketDev"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-70"
+        style={{
+          color: docsTokens.colors.textSecondary,
+          border: `1px solid ${docsTokens.colors.border}`,
+        }}
+      >
+        <Github size={14} />
+        GitHub
+      </a>
     </header>
   )
 }
