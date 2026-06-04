@@ -1,0 +1,123 @@
+begin
+  require 'dotenv'
+  Dotenv.load(File.join(__dir__, '.env'))
+rescue LoadError
+  UI.important("'dotenv' gem not available; ensure env vars are exported in your shell.")
+end
+
+def play_store_json_key!
+  key_path = ENV['PLAY_STORE_JSON_KEY_PATH']&.strip
+  UI.user_error!("Set PLAY_STORE_JSON_KEY_PATH in android/fastlane/.env or export it before running Fastlane.") if key_path.nil? || key_path.empty?
+  expanded = File.expand_path(key_path)
+  UI.user_error!("Play Store JSON key not found at: #{expanded}") unless File.exist?(expanded)
+  expanded
+end
+
+def keystore_properties!
+  path = ENV['ANDROID_KEYSTORE_PATH']&.strip
+  UI.user_error!("Set ANDROID_KEYSTORE_PATH in android/fastlane/.env") if path.nil? || path.empty?
+  expanded = File.expand_path(path)
+  UI.user_error!("Keystore not found at: #{expanded}") unless File.exist?(expanded)
+  {
+    "ROCK_UPLOAD_STORE_FILE"     => expanded,
+    "ROCK_UPLOAD_STORE_PASSWORD" => ENV['ANDROID_KEYSTORE_PASSWORD'],
+    "ROCK_UPLOAD_KEY_ALIAS"      => ENV['ANDROID_KEY_ALIAS'],
+    "ROCK_UPLOAD_KEY_PASSWORD"   => ENV['ANDROID_KEY_PASSWORD'],
+  }
+end
+
+def read_version_field(field)
+  version_file = File.expand_path("../../ios-version.json", __dir__)
+  text = File.read(version_file)
+  match = text.match(/"#{field}":\s*(\d+)/)
+  match ? match[1].to_i : 1
+end
+
+def version_name
+  major = read_version_field('major')
+  minor = read_version_field('minor')
+  patch = read_version_field('patch')
+  "#{major}.#{minor}.#{patch}"
+end
+
+def version_code
+  read_version_field('build')
+end
+
+AAB_PATH = File.expand_path("../app/build/outputs/bundle/release/app-release.aab", __dir__)
+
+default_platform(:android)
+
+platform :android do
+  desc "Build release AAB and upload to internal testing track"
+  lane :internal do
+    UI.message("Building #{version_name} (#{version_code}) for internal testing...")
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      properties: keystore_properties!
+    )
+    upload_to_play_store(
+      track: "internal",
+      aab: AAB_PATH,
+      json_key: play_store_json_key!,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+    UI.success("Uploaded #{version_name} (#{version_code}) to internal testing track.")
+  end
+
+  desc "Build release AAB and upload to open testing (beta) track"
+  lane :beta do
+    UI.message("Building #{version_name} (#{version_code}) for open testing...")
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+
+      properties: keystore_properties!
+    )
+    upload_to_play_store(
+      track: "beta",
+      aab: AAB_PATH,
+      json_key: play_store_json_key!,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+    UI.success("Uploaded #{version_name} (#{version_code}) to open testing track.")
+  end
+
+  desc "Build release AAB and upload to production track"
+  lane :release do
+    UI.message("Building #{version_name} (#{version_code}) for production...")
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+
+      properties: keystore_properties!
+    )
+    upload_to_play_store(
+      track: "production",
+      aab: AAB_PATH,
+      json_key: play_store_json_key!,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      release_status: "draft",
+    )
+    UI.success("Uploaded #{version_name} (#{version_code}) to production track as draft.")
+    UI.message("Review and publish manually in Google Play Console.")
+  end
+
+  error do |lane, exception|
+    UI.error("Fastlane failed in lane: #{lane}")
+    UI.error("Error: #{exception.message}")
+  end
+end

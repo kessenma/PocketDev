@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { Github, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
+import githubIcon from '../../../../../packages/shared/assets/brands/github-white.png'
 import { docsFonts, docsTokens } from './theme'
 
 export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
@@ -55,7 +56,7 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
           border: `1px solid ${docsTokens.colors.border}`,
         }}
       >
-        <Github size={14} />
+        <img src={githubIcon} alt="" width={14} height={14} />
         GitHub
       </a>
     </header>

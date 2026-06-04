@@ -2,6 +2,17 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+def readVersionField(String field) {
+    def text = new File("${rootDir}/../ios-version.json").text
+    def matcher = (text =~ /"${field}":\s*(\d+)/)
+    return matcher.find() ? matcher.group(1).toInteger() : 1
+}
+
+def getVersionCodeFromJson() { return readVersionField('build') }
+def getVersionNameFromJson() {
+    return "${readVersionField('major')}.${readVersionField('minor')}.${readVersionField('patch')}"
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -77,13 +88,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.mobile"
+    namespace "run.pocketdev.mobile"
     defaultConfig {
-        applicationId "com.mobile"
+        applicationId "run.pocketdev.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode getVersionCodeFromJson()
+        versionName getVersionNameFromJson()
     }
     signingConfigs {
         debug {

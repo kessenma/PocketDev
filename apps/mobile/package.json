@@ -13,6 +13,9 @@
     "check-types": "tsc --noEmit",
     "deploy:ios:beta": "node scripts/deploy-testflight.js beta",
     "deploy:ios:release": "node scripts/deploy-testflight.js release",
+    "deploy:android:internal": "node scripts/deploy-playstore.js internal",
+    "deploy:android:beta": "node scripts/deploy-playstore.js beta",
+    "deploy:android:release": "node scripts/deploy-playstore.js release",
     "grant-clipboard": "node scripts/grant-clipboard-permission.js",
     "sync-clipboard": "pbpaste | xcrun simctl pbcopy booted"
   },

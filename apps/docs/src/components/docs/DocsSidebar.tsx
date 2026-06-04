@@ -11,7 +11,7 @@ declare module '@tanstack/react-router' {
 
 function useNavItems() {
   const router = useRouter()
-  return Object.entries(router.routesByPath)
+  return Object.entries(router.routesById)
     .filter(([, route]) => route.options.staticData?.navLabel != null)
     .sort(([, a], [, b]) => (a.options.staticData!.navOrder ?? 0) - (b.options.staticData!.navOrder ?? 0))
     .map(([path, route]) => ({ href: path, label: route.options.staticData!.navLabel! }))
@@ -35,7 +35,7 @@ export function DocsSidebar({
         {navItems.map((item) => (
           <li key={item.href}>
             <Link
-              to={item.href}
+              to={item.href as string}
               onClick={onClose}
               activeOptions={{ exact: true }}
               className="block rounded-md px-3 py-1.5 text-sm transition-colors"

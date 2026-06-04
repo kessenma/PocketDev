@@ -13,6 +13,7 @@ import { Route as UserAgreementRouteImport } from './routes/user-agreement'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as MobileAppRouteImport } from './routes/mobile-app'
+import { Route as LicenseRouteImport } from './routes/license'
 import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as EncryptionRouteImport } from './routes/encryption'
 import { Route as ArchitectureRouteImport } from './routes/architecture'
@@ -36,6 +37,11 @@ const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
 const MobileAppRoute = MobileAppRouteImport.update({
   id: '/mobile-app',
   path: '/mobile-app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LicenseRoute = LicenseRouteImport.update({
+  id: '/license',
+  path: '/license',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GetStartedRoute = GetStartedRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/architecture': typeof ArchitectureRoute
   '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
+  '/license': typeof LicenseRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/tasks': typeof TasksRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/architecture': typeof ArchitectureRoute
   '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
+  '/license': typeof LicenseRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/tasks': typeof TasksRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/architecture': typeof ArchitectureRoute
   '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
+  '/license': typeof LicenseRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/tasks': typeof TasksRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/architecture'
     | '/encryption'
     | '/get-started'
+    | '/license'
     | '/mobile-app'
     | '/privacy-policy'
     | '/tasks'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/architecture'
     | '/encryption'
     | '/get-started'
+    | '/license'
     | '/mobile-app'
     | '/privacy-policy'
     | '/tasks'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/architecture'
     | '/encryption'
     | '/get-started'
+    | '/license'
     | '/mobile-app'
     | '/privacy-policy'
     | '/tasks'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   ArchitectureRoute: typeof ArchitectureRoute
   EncryptionRoute: typeof EncryptionRoute
   GetStartedRoute: typeof GetStartedRoute
+  LicenseRoute: typeof LicenseRoute
   MobileAppRoute: typeof MobileAppRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   TasksRoute: typeof TasksRoute
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/mobile-app'
       fullPath: '/mobile-app'
       preLoaderRoute: typeof MobileAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/license': {
+      id: '/license'
+      path: '/license'
+      fullPath: '/license'
+      preLoaderRoute: typeof LicenseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/get-started': {
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   ArchitectureRoute: ArchitectureRoute,
   EncryptionRoute: EncryptionRoute,
   GetStartedRoute: GetStartedRoute,
+  LicenseRoute: LicenseRoute,
   MobileAppRoute: MobileAppRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   TasksRoute: TasksRoute,
@@ -208,12 +229,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
