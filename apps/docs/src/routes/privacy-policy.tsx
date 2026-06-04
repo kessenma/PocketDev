@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/privacy-policy')({
+  staticData: { navLabel: 'Privacy Policy', navOrder: 7 },
   component: PrivacyPolicyPage,
 })
 

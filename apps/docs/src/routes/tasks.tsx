@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/tasks')({
+  staticData: { navLabel: 'Tasks', navOrder: 3 },
   component: TasksPage,
 })
 

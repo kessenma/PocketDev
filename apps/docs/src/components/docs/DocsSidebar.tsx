@@ -1,7 +1,21 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import { X } from 'lucide-react'
-import { NAV_ITEMS } from './nav-items'
 import { docsTextStyles, docsTokens } from './theme'
+
+declare module '@tanstack/react-router' {
+  interface StaticDataRouteOption {
+    navLabel?: string
+    navOrder?: number
+  }
+}
+
+function useNavItems() {
+  const router = useRouter()
+  return Object.entries(router.routesByPath)
+    .filter(([, route]) => route.options.staticData?.navLabel != null)
+    .sort(([, a], [, b]) => (a.options.staticData!.navOrder ?? 0) - (b.options.staticData!.navOrder ?? 0))
+    .map(([path, route]) => ({ href: path, label: route.options.staticData!.navLabel! }))
+}
 
 export function DocsSidebar({
   open,
@@ -10,13 +24,15 @@ export function DocsSidebar({
   open: boolean
   onClose: () => void
 }) {
+  const navItems = useNavItems()
+
   const nav = (
     <nav className="py-8 px-4">
       <p style={docsTextStyles.sectionLabel} className="mb-3 px-3">
         Documentation
       </p>
       <ul className="space-y-0.5">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <li key={item.href}>
             <Link
               to={item.href}

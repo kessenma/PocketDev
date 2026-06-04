@@ -3,6 +3,7 @@ import { InstallCommand } from '#/components/landing/InstallCommand'
 import { ExternalLink } from '#/components/ui/ExternalLink'
 
 export const Route = createFileRoute('/get-started')({
+  staticData: { navLabel: 'Get Started', navOrder: 1 },
   component: GetStartedPage,
 })
 

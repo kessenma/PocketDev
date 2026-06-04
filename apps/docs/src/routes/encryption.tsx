@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ExternalLink } from '#/components/ui/ExternalLink'
 
 export const Route = createFileRoute('/encryption')({
+  staticData: { navLabel: 'Encryption', navOrder: 5 },
   component: EncryptionPage,
 })
 

@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ExternalLink } from '#/components/ui/ExternalLink'
 
 export const Route = createFileRoute('/architecture')({
+  staticData: { navLabel: 'Architecture', navOrder: 2 },
   component: ArchitecturePage,
 })
 
