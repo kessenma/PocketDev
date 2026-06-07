@@ -100,8 +100,6 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
     trainLeft    = trainLeft1 + (trainLeft2 - trainLeft1) * exitEased
   }
 
-  const svgW = 2400 * currentScale
-  const svgH = 200 * currentScale
   const trainTop = h / 2 - TRAIN_WINDOW_CY * currentScale
 
   // Hub circle fades in at start, fades out before train settles
@@ -163,14 +161,16 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
         style={{
           left: 0,
           top: 0,
-          width: svgW,
-          height: svgH,
-          transform: `translate(${trainLeft}px, ${trainTop}px)`,
+          width: 2400,
+          height: 200,
+          transform: `translate(${trainLeft}px, ${trainTop}px) scale(${currentScale})`,
+          transformOrigin: '0 0',
+          willChange: 'transform',
           pointerEvents: 'none',
         }}
         aria-hidden="true"
       >
-        <TrainSideSvg width={svgW} height={svgH} />
+        <TrainSideSvg width={2400} height={200} />
       </div>
 
       {/* Phone in person's hands + VPS + direct connection */}
@@ -193,6 +193,14 @@ export function DevOnTheGoScene({ progress, vpSize, isDesktopLayout }: Props) {
           {/* Direct straight line: phone → vps */}
           <DashedArc x1={phoneCX} y1={phoneCY} x2={vpsCX} y2={vpsCY}
             color={blue} bend={0} opacity={arcOp} />
+
+          {/* Person — rendered at native screen resolution (not inside scaled train bitmap).
+              Matrix flattens all 4 original nested transforms so path coords map directly to
+              screen space: scale=0.342*currentScale, origin offset=(hx-39.95*cs, hy-27.98*cs) */}
+          <g transform={`matrix(${0.342 * currentScale},0,0,${0.342 * currentScale},${hx - 39.95 * currentScale},${hy - 27.98 * currentScale})`}>
+            <path fill={blue} d="M126.497,129.532C125.504,130.267 125.559,130.14 125.606,131.407C126.773,131.877 132.812,134.306 140.524,136.398C144.408,137.452 143.602,137.186 147.345,137.985C148.706,138.468 153.576,138.62 153.572,142.505C153.545,172.387 151.212,172.587 149.172,174.125C138.767,181.97 142.882,158.777 143.002,154.536C143.052,152.801 143.027,153.964 143.196,149.475C143.437,143.095 118.292,148.743 108.512,146.493C102.517,140.13 105.835,104.232 106.114,103.37C107.146,100.18 126.029,81.667 125.46,118.529C133.86,123.462 150.117,124.644 147.664,132.572C145.123,134.275 144.758,135.611 126.497,129.532Z" />
+            <path fill={blue} d="M117.502,153.943C106.178,154.361 100.961,154.44 100.961,154.44C100.961,154.44 99.977,154.436 99.265,153.683C98.067,152.416 93.275,108.433 92.845,104.487C92.596,102.2 97.113,102.145 97.532,102.14C102.054,102.086 100.747,144.54 106.486,147.081C117.717,153.108 151.139,143.287 139.518,153.91C136.816,156.38 142.544,178.42 139.56,178.781C137.386,179.044 136.296,167.558 136.045,166.757C135.996,166.602 135.507,162.17 135.438,161.499C134.234,149.875 129.324,154.011 117.502,153.943Z" />
+          </g>
 
         </g>
       </svg>

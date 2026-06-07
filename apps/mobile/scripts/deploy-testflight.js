@@ -136,7 +136,7 @@ async function main() {
   sanitizeAppDelegate();
 
   const logPath = setupBuildLog();
-  log('📄', `Log: ${path.relative(ROOT, logPath)}`);
+  log('📄', `Log: ${logPath}`);
 
   const fastlaneCmd = [
     'eval "$(rbenv init -)"',
@@ -169,11 +169,11 @@ async function main() {
   if (exitCode === 0) {
     console.log('');
     log('✅', 'Deploy completed successfully!');
-    log('📄', `Full log: ${path.relative(ROOT, logPath)}`);
+    log('📄', `Full log: ${logPath}`);
   } else {
     console.log('');
     log('❌', 'Deploy failed!');
-    log('📄', `Full log: ${path.relative(ROOT, logPath)}`);
+    log('📄', `Full log: ${logPath}`);
     process.exit(1);
   }
 }

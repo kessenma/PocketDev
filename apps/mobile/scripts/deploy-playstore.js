@@ -26,14 +26,47 @@ const logDir = `deploy-android-${mode}`;
 
 // ── Pre-flight ───────────────────────────────────────────────────────────────
 
-function ensureGradlePluginSymlink() {
+function ensurePnpmSymlink(pkgPath, displayName) {
   const WORKSPACE_ROOT = path.resolve(ROOT, '../..');
-  const target = path.join(WORKSPACE_ROOT, 'node_modules/.pnpm/node_modules/@react-native/gradle-plugin');
-  const link = path.join(ROOT, 'node_modules/@react-native/gradle-plugin');
+  const target = path.join(WORKSPACE_ROOT, 'node_modules/.pnpm/node_modules', pkgPath);
+  const link = path.join(ROOT, 'node_modules', pkgPath);
   if (!fs.existsSync(link)) {
+    fs.mkdirSync(path.dirname(link), { recursive: true });
     fs.symlinkSync(target, link);
-    log('🔗', 'Created @react-native/gradle-plugin symlink for Gradle');
+    log('🔗', `Created ${displayName} symlink for Gradle`);
   }
+}
+
+// react-native-executorch v0.8.0 includes CxxModuleWrapper.h which was removed
+// in React Native 0.84+. The header isn't actually used in the .cpp file.
+function patchNativeModules() {
+  const header = path.join(
+    ROOT,
+    'node_modules/react-native-executorch/android/src/main/cpp/ETInstallerModule.h'
+  );
+  if (!fs.existsSync(header)) return;
+  const original = fs.readFileSync(header, 'utf8');
+  const patched = original.replace('#include <react/jni/CxxModuleWrapper.h>\n', '');
+  if (patched !== original) {
+    fs.writeFileSync(header, patched);
+    log('🔧', 'Patched react-native-executorch: removed stale CxxModuleWrapper.h include');
+  }
+}
+
+function ensureGradleSymlinks() {
+  const WORKSPACE_ROOT = path.resolve(ROOT, '../..');
+  const storeScope = path.join(WORKSPACE_ROOT, 'node_modules/.pnpm/node_modules/@react-native');
+
+  // Symlink every @react-native/* sub-package that exists in the pnpm dedup
+  // store but is missing from apps/mobile/node_modules/@react-native/
+  if (fs.existsSync(storeScope)) {
+    for (const pkg of fs.readdirSync(storeScope)) {
+      ensurePnpmSymlink(`@react-native/${pkg}`, `@react-native/${pkg}`);
+    }
+  }
+
+  // Non-scoped packages also needed by Gradle / Hermes
+  ensurePnpmSymlink('hermes-compiler', 'hermes-compiler');
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -106,11 +139,12 @@ const TRACK_LABELS = { internal: 'Internal Testing', beta: 'Open Testing', relea
 async function main() {
   log('🚀', `Deploying Android app to ${TRACK_LABELS[mode]}...`);
 
-  ensureGradlePluginSymlink();
+  patchNativeModules();
+  ensureGradleSymlinks();
   pruneOldLogs();
 
   const logPath = setupBuildLog();
-  log('📄', `Log: ${path.relative(ROOT, logPath)}`);
+  log('📄', `Log: ${logPath}`);
 
   const fastlaneCmd = [
     'eval "$(rbenv init -)"',
@@ -143,11 +177,11 @@ async function main() {
   if (exitCode === 0) {
     console.log('');
     log('✅', 'Deploy completed successfully!');
-    log('📄', `Full log: ${path.relative(ROOT, logPath)}`);
+    log('📄', `Full log: ${logPath}`);
   } else {
     console.log('');
     log('❌', 'Deploy failed!');
-    log('📄', `Full log: ${path.relative(ROOT, logPath)}`);
+    log('📄', `Full log: ${logPath}`);
     process.exit(1);
   }
 }
