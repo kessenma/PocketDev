@@ -26,6 +26,7 @@ import AppCard from '../components/settings-screen/AppCard'
 import DangerZoneCard from '../components/settings-screen/DangerZoneCard'
 import PushNotificationsCard from '../components/settings-screen/PushNotificationsCard'
 import OnDeviceAICard from '../components/settings-screen/OnDeviceAICard'
+import BugReportCard from '../components/settings-screen/BugReportCard'
 import type { CodeSubTabOption } from '../components/code-screen/navigation/types'
 
 type SettingsTab = 'server' | 'app'
@@ -199,6 +200,12 @@ export default function SettingsScreen({ navigation }: Props) {
             <>
               <PushNotificationsCard />
               <OnDeviceAICard />
+              <BugReportCard
+                mobileVersion={mobileVersion}
+                agentVersion={agentVersion}
+                server={server}
+                status={status}
+              />
               <AppCard
                 mobileVersion={mobileVersion}
                 agentVersion={agentVersion}

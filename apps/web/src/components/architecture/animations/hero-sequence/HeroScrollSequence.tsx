@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import {
   motion,
-  AnimatePresence,
   useMotionValueEvent,
   useReducedMotion,
   useScroll,
@@ -25,7 +24,6 @@ import { ArchitectureHeroAnimation } from '../ArchitectureHeroAnimation'
 import { brandAssets } from '../../shared/brand-assets'
 import { BrandAssetIcon } from '../../shared/BrandAssetIcon'
 import { architectureTextStyles } from '../../shared/theme'
-import { BetaInlineView } from './BetaInlineView'
 import { PocketRevealScene } from './scenes/01-pocket-reveal'
 import { DevOnTheGoScene } from './scenes/02-hero-developers'
 import { LinuxAdminScene } from './scenes/03-hero-linux-admins'
@@ -65,8 +63,6 @@ export function HeroScrollSequence({
   const [progress, setProgress] = useState(0)
   const [vpSize, setVpSize] = useState({ w: 1280, h: 800 })
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
-  const [betaOpen, setBetaOpen] = useState(false)
-
   useEffect(() => {
     if (typeof window === 'undefined') return
     const sync = () => setVpSize({ w: window.innerWidth, h: window.innerHeight })
@@ -83,11 +79,6 @@ export function HeroScrollSequence({
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
   }, [])
-
-  useEffect(() => {
-    document.body.style.overflow = betaOpen ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [betaOpen])
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -131,7 +122,7 @@ export function HeroScrollSequence({
     return (
       <header className="flex flex-col items-center px-6 pt-24 pb-8 text-center">
         <HeroTitle />
-        <HeroDescription onOpen={() => setBetaOpen(true)} />
+        <HeroDescription />
         <PocketHeroSvg className="mt-12 w-48 sm:w-56" />
         <ArchitectureHeroAnimation className="mt-12 w-full max-w-lg" />
         <Pills />
@@ -139,29 +130,19 @@ export function HeroScrollSequence({
     )
   }
 
-  const spring = { type: 'spring', stiffness: 220, damping: 26 } as const
-
   return (
     <section ref={sectionRef} className="relative" style={{ height: `${TOTAL_VH}vh`, backgroundColor: PAPER }}>
       <div className="sticky top-0 h-screen overflow-hidden" style={{ backgroundColor: PAPER }}>
 
-        {/* Header — pushed up when betaOpen */}
         <motion.div
           className="absolute inset-x-0 top-0 z-10 flex flex-col items-center px-6 pt-24 text-center"
           style={{ opacity: headerOpacity, y: headerY }}
-          animate={betaOpen ? { y: -vpSize.h, opacity: 0 } : {}}
-          transition={spring}
         >
           <HeroTitle />
-          <HeroDescription onOpen={() => setBetaOpen(true)} />
+          <HeroDescription />
         </motion.div>
 
-        {/* Scenes — all three slide away together when betaOpen */}
-        <motion.div
-          className="absolute inset-0"
-          animate={betaOpen ? { y: vpSize.h } : {}}
-          transition={spring}
-        >
+        <motion.div className="absolute inset-0">
           {/* Scene 1: Ball rises from pocket */}
           <motion.div className="absolute inset-0" style={{ opacity: scene1Opacity }}>
             <PocketRevealScene
@@ -189,26 +170,15 @@ export function HeroScrollSequence({
               isDesktopLayout={isDesktopLayout}
             />
           </motion.div>
-
-
         </motion.div>
 
         {/* Pills — fades in near the end */}
         <motion.div
           className="absolute inset-x-0 bottom-8 z-10 flex justify-center px-6"
           style={{ opacity: pillsOpacity, y: pillsY }}
-          animate={betaOpen ? { opacity: 0 } : {}}
-          transition={spring}
         >
           <Pills />
         </motion.div>
-
-        {/* Beta form */}
-        <AnimatePresence>
-          {betaOpen && (
-            <BetaInlineView onClose={() => setBetaOpen(false)} />
-          )}
-        </AnimatePresence>
 
       </div>
     </section>
@@ -226,7 +196,7 @@ function HeroTitle() {
   )
 }
 
-function HeroDescription({ onOpen }: { onOpen: () => void }) {
+function HeroDescription() {
   return (
     <>
       <p
@@ -250,13 +220,14 @@ function HeroDescription({ onOpen }: { onOpen: () => void }) {
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-        <button
-          type="button"
-          onClick={onOpen}
-          className="rounded-full border border-foreground/80 bg-foreground px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-background shadow-sm transition-opacity hover:opacity-80 cursor-pointer"
+        <a
+          href="https://apps.apple.com/us/app/pocket-dev/id6762034037"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full border border-foreground/80 bg-foreground px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-background shadow-sm transition-opacity hover:opacity-80"
         >
-          Request Beta access →
-        </button>
+          Download on iOS →
+        </a>
       </div>
     </>
   )

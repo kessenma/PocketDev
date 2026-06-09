@@ -1500,3 +1500,24 @@ export async function postUninstall(ip: string, port: number): Promise<void> {
   if (!response.ok) throw new Error(`Failed to uninstall (${response.status})`)
 }
 
+export async function reportBugViaServer(
+  ip: string,
+  port: number,
+  title: string,
+  body: string,
+): Promise<{ url: string }> {
+  const response = await fetch(apiUrl(ip, port, '/bugs/report'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ title, body }),
+  })
+  if (!response.ok) {
+    const text = await response.text().catch(() => response.status.toString())
+    throw new Error(text)
+  }
+  return response.json() as Promise<{ url: string }>
+}
+

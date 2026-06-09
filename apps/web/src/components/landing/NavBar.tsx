@@ -3,10 +3,11 @@ import { architectureTokens } from '#/components/architecture/shared/theme'
 
 const DOCS_URL = 'https://docs.pocketdev.run'
 const GITHUB_URL = 'https://github.com/kessenma/PocketDev'
+const APP_STORE_URL = 'https://apps.apple.com/us/app/pocket-dev/id6762034037'
 
 export function NavBar() {
   const [visible, setVisible] = useState(true)
-  const [hovered, setHovered] = useState<'docs' | 'github' | null>(null)
+  const [hovered, setHovered] = useState<'docs' | 'github' | 'appstore' | null>(null)
   const lastScrollY = useRef(0)
 
   useEffect(() => {
@@ -28,6 +29,34 @@ export function NavBar() {
         pointerEvents: visible ? 'auto' : 'none',
       }}
     >
+      <a
+        href={APP_STORE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="relative rounded-full border px-3 py-1 text-xs font-semibold transition-colors duration-200"
+        style={{
+          color: architectureTokens.colors.text,
+          borderColor: architectureTokens.colors.border,
+          backgroundColor: architectureTokens.colors.paper,
+        }}
+        onMouseEnter={() => setHovered('appstore')}
+        onMouseLeave={() => setHovered(null)}
+      >
+        Download on iOS
+        <span
+          className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-md px-2.5 py-1 text-xs transition-all duration-200"
+          style={{
+            backgroundColor: architectureTokens.colors.panelAlt,
+            color: architectureTokens.colors.textSecondary,
+            border: `1px solid ${architectureTokens.colors.border}`,
+            opacity: hovered === 'appstore' ? 1 : 0,
+            transform: hovered === 'appstore' ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(-4px)',
+            pointerEvents: 'none',
+          }}
+        >
+          Available on the App Store
+        </span>
+      </a>
       <a
         href={GITHUB_URL}
         target="_blank"

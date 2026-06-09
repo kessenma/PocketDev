@@ -37,6 +37,10 @@
       "types": "./dist/assets/index.d.ts",
       "import": "./dist/assets/index.js"
     },
+    "./links": {
+      "types": "./dist/links.d.ts",
+      "import": "./dist/links.js"
+    },
     "./fonts.css": "./assets/fonts/fonts.css"
   },
   "scripts": {

@@ -38,10 +38,12 @@ function MobileAppPage() {
 
       <h2>iOS</h2>
       <p>
-        The iOS app will be available on the App Store.
+        The iOS app is available on the App Store.
       </p>
       <p>
-        App Store link coming soon.
+        <a href="https://apps.apple.com/us/app/pocket-dev/id6762034037" target="_blank" rel="noopener noreferrer">
+          Download PocketDev on the App Store →
+        </a>
       </p>
 
       <h2>Android</h2>

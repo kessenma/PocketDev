@@ -5,7 +5,7 @@
 Install on any Linux VPS, pair your phone, and run Claude, Codex, or Copilot from anywhere — over a direct, encrypted connection with no cloud middleman.
 
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-blue.svg)](LICENSE)
-[![iOS](https://img.shields.io/badge/iOS-App_Store-black?logo=apple)](https://pocketdev.run)
+[![iOS](https://img.shields.io/badge/iOS-App_Store-black?logo=apple)](https://apps.apple.com/us/app/pocket-dev/id6762034037)
 [![Android](https://img.shields.io/badge/Android-coming_soon-3DDC84?logo=android)](https://pocketdev.run)
 
 ---

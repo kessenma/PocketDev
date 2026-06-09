@@ -22,7 +22,11 @@ function GetStartedPage() {
       <ul>
         <li>A Linux server (<ExternalLink href="https://releases.ubuntu.com/24.04/">Ubuntu 24.04+</ExternalLink> has been tested but other distributions may work) with SSH access</li>
         <li>At least 1 GB of RAM and 2 GB of disk space</li>
-        <li>A mobile device running iOS 16+ (Android coming soon)</li>
+        <li>
+          A mobile device running iOS 16+{' '}
+          (<ExternalLink href="https://apps.apple.com/us/app/pocket-dev/id6762034037">download on the App Store</ExternalLink>)
+          — Android coming soon
+        </li>
       </ul>
 
       <h2>Installation</h2>
