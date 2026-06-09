@@ -50,6 +50,13 @@
       "when": 1777806382406,
       "tag": "0006_freezing_doctor_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780998238419,
+      "tag": "0007_colorful_hulk",
+      "breakpoints": true
     }
   ]
 }

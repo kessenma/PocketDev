@@ -43,4 +43,10 @@ export const BrandAssets = {
   rustWhite: require('../../assets/brands/rust-white.png'),
   typescriptBlack: require('../../assets/brands/typescript-black.png'),
   typescriptWhite: require('../../assets/brands/typescript-white.png'),
+  appleBlack: require('../../assets/brands/apple-black.png'),
+  appleWhite: require('../../assets/brands/apple-white.png'),
+  googlePlayBlack: require('../../assets/brands/google-play-black.png'),
+  googlePlayWhite: require('../../assets/brands/google-play-white.png'),
+  androidBlack: require('../../assets/brands/android-black.png'),
+  androidWhite: require('../../assets/brands/android-white.png'),
 };

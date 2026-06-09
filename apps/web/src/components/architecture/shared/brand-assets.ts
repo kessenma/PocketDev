@@ -20,6 +20,12 @@ import goBlack from '../../../../../../packages/shared/assets/brands/go-black.pn
 import goWhite from '../../../../../../packages/shared/assets/brands/go-white.png'
 import typescriptBlack from '../../../../../../packages/shared/assets/brands/typescript-black.png'
 import typescriptWhite from '../../../../../../packages/shared/assets/brands/typescript-white.png'
+import appleBlack from '../../../../../../packages/shared/assets/brands/apple-black.png'
+import appleWhite from '../../../../../../packages/shared/assets/brands/apple-white.png'
+import googlePlayBlack from '../../../../../../packages/shared/assets/brands/google-play-black.png'
+import googlePlayWhite from '../../../../../../packages/shared/assets/brands/google-play-white.png'
+import androidBlack from '../../../../../../packages/shared/assets/brands/android-black.png'
+import androidWhite from '../../../../../../packages/shared/assets/brands/android-white.png'
 
 export const brandAssets = {
   claudeBlack,
@@ -44,4 +50,10 @@ export const brandAssets = {
   goWhite,
   typescriptBlack,
   typescriptWhite,
+  appleBlack,
+  appleWhite,
+  googlePlayBlack,
+  googlePlayWhite,
+  androidBlack,
+  androidWhite,
 } as const

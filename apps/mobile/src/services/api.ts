@@ -1521,3 +1521,76 @@ export async function reportBugViaServer(
   return response.json() as Promise<{ url: string }>
 }
 
+export type AttachmentMeta = {
+  filename: string
+  size: number
+  uploadedAt: string
+}
+
+export type AttachmentListResponse = {
+  attachments: AttachmentMeta[]
+  folder: string
+}
+
+export type AttachmentUploadResponse = {
+  filename: string
+  originalName: string
+  size: number
+  folder: string
+}
+
+export async function uploadAttachment(
+  ip: string,
+  port: number,
+  localUri: string,
+  filename: string,
+  mimeType: string,
+): Promise<AttachmentUploadResponse> {
+  const formData = new FormData()
+  formData.append('file', { uri: localUri, name: filename, type: mimeType } as unknown as Blob)
+  const response = await fetch(apiUrl(ip, port, '/attachments/upload'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+    body: formData,
+  })
+  if (!response.ok) {
+    const text = await response.text().catch(() => response.status.toString())
+    throw new Error(text)
+  }
+  return response.json() as Promise<AttachmentUploadResponse>
+}
+
+export async function listAttachments(
+  ip: string,
+  port: number,
+): Promise<AttachmentListResponse> {
+  const response = await fetch(apiUrl(ip, port, '/attachments/list'), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to list attachments (${response.status})`)
+  return response.json() as Promise<AttachmentListResponse>
+}
+
+export async function deleteAttachment(
+  ip: string,
+  port: number,
+  filename: string,
+): Promise<void> {
+  const response = await fetch(
+    `${apiUrl(ip, port, '/attachments/file')}?filename=${encodeURIComponent(filename)}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+    },
+  )
+  if (!response.ok) throw new Error(`Failed to delete attachment (${response.status})`)
+}
+
+export async function wipeAttachments(ip: string, port: number): Promise<void> {
+  const response = await fetch(apiUrl(ip, port, '/attachments/wipe'), {
+    method: 'DELETE',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to wipe attachments (${response.status})`)
+}
+

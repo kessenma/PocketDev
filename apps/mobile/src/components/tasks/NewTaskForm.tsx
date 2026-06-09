@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { ChevronDown, ChevronUp, FileCode2, Filter, FolderOpen, Pin, Play, Search, Trash2, X } from 'lucide-react-native'
+import { ChevronDown, ChevronUp, FileCode2, Filter, FolderOpen, Paperclip, Pin, Play, Search, Trash2, X } from 'lucide-react-native'
 import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import type { TreeEntry } from '@pocketdev/shared/types'
 import type { AgentType, TaskMode } from '@pocketdev/shared/schema'
@@ -21,10 +21,12 @@ import { useTheme } from '../../contexts/ThemeContext'
 import { addRecentPrompt } from '../../services/storage'
 import { listDirectory, searchFiles, fetchFileTree } from '../../services/api'
 import AISuggestions from './AISuggestions'
+import AttachmentPickerSheet from './AttachmentPickerSheet'
 import FindFilesButton from './FindFilesButton'
 import PromptFilterSheet from './PromptFilterSheet'
 import { useOnDeviceAIStore } from '../../stores/on-device-ai'
 import { useNewTaskDraftStore } from '../../stores/new-task-draft'
+import { useAttachmentStore } from '../../stores/attachments'
 import { useTaskStore } from '../../stores/tasks'
 import { useFilesStore } from '../../stores/files'
 import { useProjectsStore } from '../../stores/projects'
@@ -87,10 +89,20 @@ export default function NewTaskForm({ onSubmitted }: Props) {
   const selectedProvider = getProviderById(selectedProviderId as ModelProviderId, providerCatalog)
   const selectedModel = getModelById(selectedProviderId as ModelProviderId, selectedModelId, providerCatalog)
 
+  const pendingFiles = useAttachmentStore((s) => s.pendingFiles)
+  const clearPendingFiles = useAttachmentStore((s) => s.clearPendingFiles)
+  const isUploadingFn = useAttachmentStore((s) => s.isUploading)
+
+  const uploadedCount = pendingFiles.filter((f) => f.serverFilename && !f.uploading).length
+  const anyUploading = isUploadingFn()
+
   const [submitting, setSubmitting] = React.useState(false)
 
   // --- Model sheet state ---
   const [showModelSheet, setShowModelSheet] = React.useState(false)
+
+  // --- Attachment sheet state ---
+  const [showAttachmentSheet, setShowAttachmentSheet] = React.useState(false)
 
   // --- File picker local state ---
   const [pickerExpanded, setPickerExpanded] = React.useState(false)
@@ -259,6 +271,10 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       : '- No specific files pinned'
 
     const toolsHint = formatCompactToolsHint(setupReport)
+    const uploadedFiles = pendingFiles.filter((f) => f.serverFilename && f.serverFolder)
+    const attachmentSection = uploadedFiles.length > 0
+      ? uploadedFiles.map((f) => `- ${f.serverFolder}/${f.serverFilename}  (original: ${f.name})`).join('\n')
+      : null
     const taskPrompt = [
       'You are working in the active PocketDev repository context.',
       `Repository: ${activeProject?.name ?? rootLabel ?? 'Unknown repo'}`,
@@ -268,6 +284,7 @@ export default function NewTaskForm({ onSubmitted }: Props) {
       'Pinned file context:',
       contextSection,
       ...(toolsHint ? [toolsHint] : []),
+      ...(attachmentSection ? ['', 'Attached files (uploaded to server):', attachmentSection] : []),
       '',
       'User request:',
       trimmedPrompt,
@@ -296,24 +313,56 @@ export default function NewTaskForm({ onSubmitted }: Props) {
             multiline
             textAlignVertical="top"
           />
-          {/* Model selector button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => setShowModelSheet(true)}
-            style={[styles.modelButton, { borderColor: colors.border, backgroundColor: colors.panelAlt }]}
-          >
-            {PROVIDER_LOGOS[selectedProviderId] ? (
-              <Image
-                source={isDark ? PROVIDER_LOGOS[selectedProviderId].dark : PROVIDER_LOGOS[selectedProviderId].light}
-                style={styles.modelButtonLogo}
-                resizeMode="contain"
-              />
-            ) : null}
-            <Text style={[styles.modelButtonLabel, { color: colors.text }]} numberOfLines={1}>
-              {selectedProvider.label} / {selectedModel.name}
-            </Text>
-            <ChevronDown color={colors.textTertiary} size={14} strokeWidth={2.2} />
-          </TouchableOpacity>
+          {/* Model + attachment row */}
+          <View style={styles.modelRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setShowModelSheet(true)}
+              style={[styles.modelButton, { borderColor: colors.border, backgroundColor: colors.panelAlt }]}
+            >
+              {PROVIDER_LOGOS[selectedProviderId] ? (
+                <Image
+                  source={isDark ? PROVIDER_LOGOS[selectedProviderId].dark : PROVIDER_LOGOS[selectedProviderId].light}
+                  style={styles.modelButtonLogo}
+                  resizeMode="contain"
+                />
+              ) : null}
+              <Text style={[styles.modelButtonLabel, { color: colors.text }]} numberOfLines={1}>
+                {selectedProvider.label} / {selectedModel.name}
+              </Text>
+              <ChevronDown color={colors.textTertiary} size={14} strokeWidth={2.2} />
+            </TouchableOpacity>
+
+            {/* Attachment / upload indicator button */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setShowAttachmentSheet(true)}
+              style={[
+                styles.attachButton,
+                {
+                  borderColor: uploadedCount > 0 ? colors.primary : colors.border,
+                  backgroundColor: colors.panelAlt,
+                },
+              ]}
+            >
+              {anyUploading
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : (
+                  <>
+                    <Paperclip
+                      color={uploadedCount > 0 ? colors.primary : colors.textTertiary}
+                      size={15}
+                      strokeWidth={2.2}
+                    />
+                    {uploadedCount > 0 && (
+                      <Text style={[styles.attachCount, { color: colors.primary }]}>
+                        {uploadedCount}
+                      </Text>
+                    )}
+                  </>
+                )}
+            </TouchableOpacity>
+          </View>
         </Card>
 
         {/* ── AI File Suggestions ── */}
@@ -537,6 +586,9 @@ export default function NewTaskForm({ onSubmitted }: Props) {
               : 'Start Task'}
         </Button>
       </View>
+      {showAttachmentSheet && (
+        <AttachmentPickerSheet onDismiss={() => setShowAttachmentSheet(false)} />
+      )}
       {showFilterSheet && (
         <PromptFilterSheet
           prompt={prompt}
@@ -652,6 +704,11 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing[2],
   },
+  modelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
   modelButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -660,7 +717,22 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[2],
-    alignSelf: 'flex-start',
+    flex: 1,
+  },
+  attachButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+    borderWidth: 2,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    minWidth: 44,
+    justifyContent: 'center',
+  },
+  attachCount: {
+    ...typeStyles.meta,
+    fontWeight: '700',
   },
   modelButtonLogo: {
     width: 18,

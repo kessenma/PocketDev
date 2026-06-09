@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { architectureTokens } from '#/components/architecture/shared/theme'
+import { brandAssets } from '#/components/architecture/shared/brand-assets'
 
 const DOCS_URL = 'https://docs.pocketdev.run'
 const GITHUB_URL = 'https://github.com/kessenma/PocketDev'
@@ -33,7 +34,7 @@ export function NavBar() {
         href={APP_STORE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative rounded-full border px-3 py-1 text-xs font-semibold transition-colors duration-200"
+        className="relative flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors duration-200"
         style={{
           color: architectureTokens.colors.text,
           borderColor: architectureTokens.colors.border,
@@ -42,6 +43,7 @@ export function NavBar() {
         onMouseEnter={() => setHovered('appstore')}
         onMouseLeave={() => setHovered(null)}
       >
+        <img src={brandAssets.appleBlack} alt="" style={{ width: 12, height: 12, objectFit: 'contain' }} />
         Download on iOS
         <span
           className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-md px-2.5 py-1 text-xs transition-all duration-200"

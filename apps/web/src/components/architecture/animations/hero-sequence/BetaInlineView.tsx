@@ -15,6 +15,7 @@ import { palette } from '@pocketdev/shared/theme'
 const submitBetaInterest = createServerFn({ method: 'POST' })
   .inputValidator(z.object({
     email: z.string().email(),
+    platform: z.enum(['ios', 'android']),
     jobResponsibility: z.string().min(1),
     jobResponsibilityOther: z.string().optional(),
     useType: z.string().min(1),
@@ -27,6 +28,7 @@ const submitBetaInterest = createServerFn({ method: 'POST' })
     if (existing) return { success: true, alreadyRegistered: true }
     await db.insert(betaSignups).values({
       email: data.email,
+      platform: data.platform,
       jobResponsibility: data.jobResponsibility,
       jobResponsibilityOther: data.jobResponsibilityOther,
       useType: data.useType,
@@ -107,6 +109,7 @@ function PhoneSvg({ fill, showText }: { fill: string; showText: boolean }) {
 }
 
 export function BetaInlineView({ onClose }: { onClose: () => void }) {
+  const [platform, setPlatform] = useState<'ios' | 'android' | ''>('')
   const [email, setEmail] = useState('')
   const [jobResponsibility, setJobResponsibility] = useState('')
   const [jobResponsibilityOther, setJobResponsibilityOther] = useState('')
@@ -136,12 +139,13 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!email || !jobResponsibility || !useType) return
+    if (!platform || !email || !jobResponsibility || !useType) return
     setStatus('loading')
     setErrorMsg('')
     try {
       const result = await submitBetaInterest({
         data: {
+          platform: platform as 'ios' | 'android',
           email,
           jobResponsibility,
           jobResponsibilityOther: jobResponsibility === 'other' ? jobResponsibilityOther : undefined,
@@ -203,16 +207,16 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
           className="mb-1 text-xs uppercase tracking-widest"
           style={{ color: architectureTokens.colors.textSecondary, fontFamily: 'var(--font-mono), monospace' }}
         >
-          iOS devices only:
+          iOS TestFlight · Android Early Access
         </p>
         <h2
           className="mb-2 text-2xl font-bold"
           style={{ color: architectureTokens.colors.text, fontFamily: architectureFonts.display, letterSpacing: '-0.03em' }}
         >
-          TestFlight link
+          Join the Beta
         </h2>
         <p className="mb-6 text-sm" style={{ color: architectureTokens.colors.textSecondary }}>
-          Limited to 100 external testers. Link will be sent if selected.
+          iOS app is live — also sign up for TestFlight or the Android early access list.
         </p>
 
         {isSuccess ? (
@@ -234,24 +238,83 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
           <>
             {/* Progress bar */}
             <div className="flex gap-1 mb-5">
-              {[0, 1, 2, 3].map(i => (
+              {[0, 1, 2, 3, 4].map(i => (
                 <div
                   key={i}
                   className="h-0.5 flex-1 rounded-full transition-colors duration-300"
-                  style={{ backgroundColor: i < Math.min(4, Math.max(activeStep + 1, highWaterMark)) ? palette.bauhaus.blue : architectureTokens.colors.border }}
+                  style={{ backgroundColor: i < Math.min(5, Math.max(activeStep + 1, highWaterMark)) ? palette.bauhaus.blue : architectureTokens.colors.border }}
                 />
               ))}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-0">
 
-              {/* ── Completed: Email ── */}
+              {/* ── Active: Platform ── */}
+              <AnimatePresence mode="wait">
+                {activeStep === 0 && (
+                  <motion.div
+                    key="step-platform"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-2 pb-4"
+                  >
+                    <label className="text-xs font-medium uppercase tracking-wider" style={{ color: architectureTokens.colors.textSecondary }}>Platform</label>
+                    <div className="flex gap-3">
+                      {([['ios', 'iOS (TestFlight)'], ['android', 'Android']] as const).map(([value, label]) => {
+                        const active = platform === value
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => { setPlatform(value); setTimeout(advance, 150) }}
+                            className="flex-1 rounded-lg border py-3 text-sm font-medium transition-all duration-200"
+                            style={{
+                              backgroundColor: active ? palette.bauhaus.blue : 'rgba(255,255,255,0.8)',
+                              borderColor: active ? palette.bauhaus.blue : architectureTokens.colors.border,
+                              color: active ? '#fff' : architectureTokens.colors.textSecondary,
+                            }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── Completed: Platform ── */}
               <AnimatePresence>
                 {activeStep !== 0 && highWaterMark >= 1 && (
                   <motion.button
-                    key="sum-email"
+                    key="sum-platform"
                     type="button"
                     onClick={() => setActiveStep(0)}
+                    className="w-full text-left flex items-center justify-between py-2.5 border-b"
+                    style={{ borderColor: architectureTokens.colors.border }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest" style={{ color: architectureTokens.colors.textSecondary }}>Platform</div>
+                      <div className="text-sm font-medium mt-0.5" style={{ color: architectureTokens.colors.text }}>{platform === 'ios' ? 'iOS (TestFlight)' : 'Android'}</div>
+                    </div>
+                    <Pencil size={11} style={{ color: architectureTokens.colors.textSecondary, opacity: 0.45 }} />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {/* ── Completed: Email ── */}
+              <AnimatePresence>
+                {activeStep !== 1 && highWaterMark >= 2 && (
+                  <motion.button
+                    key="sum-email"
+                    type="button"
+                    onClick={() => setActiveStep(1)}
                     className="w-full text-left flex items-center justify-between py-2.5 border-b"
                     style={{ borderColor: architectureTokens.colors.border }}
                     initial={{ opacity: 0 }}
@@ -270,7 +333,7 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
               {/* ── Active: Email ── */}
               <AnimatePresence mode="wait">
-                {activeStep === 0 && (
+                {activeStep === 1 && (
                   <motion.div
                     key="step-email"
                     initial={{ opacity: 0, y: 8 }}
@@ -310,11 +373,11 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
               {/* ── Completed: Role ── */}
               <AnimatePresence>
-                {activeStep !== 1 && highWaterMark >= 2 && (
+                {activeStep !== 2 && highWaterMark >= 3 && (
                   <motion.button
                     key="sum-role"
                     type="button"
-                    onClick={() => setActiveStep(1)}
+                    onClick={() => setActiveStep(2)}
                     className="w-full text-left flex items-center justify-between py-2.5 border-b"
                     style={{ borderColor: architectureTokens.colors.border }}
                     initial={{ opacity: 0 }}
@@ -333,7 +396,7 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
               {/* ── Active: Role ── */}
               <AnimatePresence mode="wait">
-                {activeStep === 1 && (
+                {activeStep === 2 && (
                   <motion.div
                     key="step-role"
                     initial={{ opacity: 0, y: 8 }}
@@ -390,11 +453,11 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
               {/* ── Completed: Use type ── */}
               <AnimatePresence>
-                {activeStep !== 2 && highWaterMark >= 3 && (
+                {activeStep !== 3 && highWaterMark >= 4 && (
                   <motion.button
                     key="sum-use"
                     type="button"
-                    onClick={() => setActiveStep(2)}
+                    onClick={() => setActiveStep(3)}
                     className="w-full text-left flex items-center justify-between py-2.5 border-b"
                     style={{ borderColor: architectureTokens.colors.border }}
                     initial={{ opacity: 0 }}
@@ -413,7 +476,7 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
               {/* ── Active: Use type ── */}
               <AnimatePresence mode="wait">
-                {activeStep === 2 && (
+                {activeStep === 3 && (
                   <motion.div
                     key="step-use"
                     initial={{ opacity: 0, y: 8 }}
@@ -450,11 +513,11 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
               {/* ── Completed: Employer ── */}
               <AnimatePresence>
-                {activeStep !== 3 && highWaterMark >= 4 && (
+                {activeStep !== 4 && highWaterMark >= 5 && (
                   <motion.button
                     key="sum-employer"
                     type="button"
-                    onClick={() => setActiveStep(3)}
+                    onClick={() => setActiveStep(4)}
                     className="w-full text-left flex items-center justify-between py-2.5 border-b"
                     style={{ borderColor: architectureTokens.colors.border }}
                     initial={{ opacity: 0 }}
@@ -473,7 +536,7 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
               {/* ── Active: Employer ── */}
               <AnimatePresence mode="wait">
-                {activeStep === 3 && (
+                {activeStep === 4 && (
                   <motion.div
                     key="step-employer"
                     initial={{ opacity: 0, y: 8 }}
@@ -503,7 +566,7 @@ export function BetaInlineView({ onClose }: { onClose: () => void }) {
 
               {/* ── Submit ── */}
               <AnimatePresence>
-                {highWaterMark >= 4 && (
+                {highWaterMark >= 5 && (
                   <motion.div
                     key="submit"
                     initial={{ opacity: 0, y: 8 }}

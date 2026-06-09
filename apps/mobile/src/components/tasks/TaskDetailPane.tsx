@@ -30,7 +30,9 @@ import { buildMarkdownStyle } from '../../theme/markdown'
 import type { GroupedStreamItem } from './task-stream-utils'
 import { inferTaskDebugSelection, type TaskDebugSelection } from './task-debug-utils'
 import { useOnDeviceAIStore } from '../../stores/on-device-ai'
-import { fetchFileTree } from '../../services/api'
+import { fetchFileTree, listAttachments } from '../../services/api'
+import { getTaskAttachments, type CachedAttachment } from '../../db/attachmentOperations'
+import { Paperclip } from 'lucide-react-native'
 import { typeStyles } from '../../theme/typography'
 
 type Props = {
@@ -243,6 +245,10 @@ export default function TaskDetailPane({
   const [showDebugSheet, setShowDebugSheet] = useState(false)
   const [showCodexWizard, setShowCodexWizard] = useState(false)
   const [showClaudeWizard, setShowClaudeWizard] = useState(false)
+
+  // Cached attachment metadata for this task
+  const [cachedAttachments, setCachedAttachments] = useState<CachedAttachment[]>([])
+  const [staleFilenames, setStaleFilenames] = useState<Set<string>>(new Set())
   const [showCopilotWizard, setShowCopilotWizard] = useState(false)
   const [showOpenCodeWizard, setShowOpenCodeWizard] = useState(false)
   const [debugSelection, setDebugSelection] = useState<TaskDebugSelection>(null)
@@ -354,6 +360,23 @@ export default function TaskDetailPane({
       void loadTurnsForTask(taskId)
     }
   }, [task?.turn_count, taskId, turns.length, loadTurnsForTask])
+
+  // Load cached attachments for this task, then check staleness against server
+  useEffect(() => {
+    if (!taskId) { setCachedAttachments([]); return }
+    getTaskAttachments(taskId).then((atts) => {
+      setCachedAttachments(atts)
+      if (atts.length > 0 && server) {
+        listAttachments(server.ip, server.port)
+          .then((res) => {
+            const liveSet = new Set(res.attachments.map((a) => a.filename))
+            const stale = new Set(atts.filter((a) => !liveSet.has(a.serverFilename)).map((a) => a.serverFilename))
+            setStaleFilenames(stale)
+          })
+          .catch(() => {})
+      }
+    }).catch(() => {})
+  }, [taskId, server])
 
   const rawStreamItems: StreamItem[] = useMemo(() => {
     if (showRawLogs) return logs.map((l) => ({ kind: 'log' as const, data: l }))
@@ -631,6 +654,34 @@ export default function TaskDetailPane({
           <Text style={[styles.progressLabel, { color: colors.textTertiary }]}>
             {todoProgress.done} of {todoProgress.total} tasks
           </Text>
+        </View>
+      )}
+
+      {cachedAttachments.length > 0 && (
+        <View style={[styles.attachmentsRow, { borderBottomColor: colors.border }]}>
+          <Paperclip color={colors.textTertiary} size={12} strokeWidth={2.2} />
+          {cachedAttachments.map((att) => {
+            const isStale = staleFilenames.has(att.serverFilename)
+            return (
+              <View
+                key={att.id}
+                style={[
+                  styles.attachChip,
+                  {
+                    backgroundColor: isStale ? colors.accentRed + '15' : colors.panelAlt,
+                    borderColor: isStale ? colors.accentRed + '50' : colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.attachChipText, { color: isStale ? colors.accentRed : colors.textSecondary }]}
+                  numberOfLines={1}
+                >
+                  {isStale ? '⚠ ' : ''}{att.originalName}
+                </Text>
+              </View>
+            )
+          })}
         </View>
       )}
 
@@ -1122,6 +1173,25 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressLabel: {
+    ...typeStyles.meta,
+  },
+  attachmentsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing[1],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  attachChip: {
+    borderWidth: 1,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 2,
+    maxWidth: 200,
+  },
+  attachChipText: {
     ...typeStyles.meta,
   },
   queuedBanner: {

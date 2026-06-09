@@ -1,0 +1,1 @@
+ALTER TABLE "beta_signups" ADD COLUMN "platform" varchar(20);

@@ -103,9 +103,20 @@ CREATE TABLE IF NOT EXISTS sync_state (
   value TEXT NOT NULL,
   updated_at TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS task_attachments (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  original_name TEXT NOT NULL,
+  server_filename TEXT NOT NULL,
+  server_folder TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  uploaded_at TEXT NOT NULL
+);
 `
 
 export const CREATE_INDEXES_SQL = `
+CREATE INDEX IF NOT EXISTS idx_task_attachments_task_id ON task_attachments(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_turns_task_id ON task_turns(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_logs_task_id ON task_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_created_at ON tasks(created_at);

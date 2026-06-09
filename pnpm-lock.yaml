@@ -214,6 +214,9 @@ importers:
       '@react-native-clipboard/clipboard':
         specifier: ^1.16.3
         version: 1.16.3(react-native@0.85.1)(react@19.2.3)
+      '@react-native-documents/picker':
+        specifier: ^12.0.1
+        version: 12.0.1(react-native@0.85.1)(react@19.2.3)
       '@react-native-executorch/bare-resource-fetcher':
         specifier: link:vendor/react-native-executorch/packages/bare-resource-fetcher
         version: link:vendor/react-native-executorch/packages/bare-resource-fetcher
@@ -4148,6 +4151,16 @@ packages:
     dependencies:
       joi: 17.13.3
     dev: true
+
+  /@react-native-documents/picker@12.0.1(react-native@0.85.1)(react@19.2.3):
+    resolution: {integrity: sha512-vpJKb4t/5bnxe9+gQl+plJfKrrIsmYwANGhNH2B9E1dS1+6FDBzg4Dwmcq4ueaGfkRKEPJ606mJttVEH1ZKZaA==}
+    peerDependencies:
+      react: '*'
+      react-native: '>=0.79.0'
+    dependencies:
+      react: 19.2.3
+      react-native: 0.85.1(patch_hash=bjdslkbxkamr3vl4jv6od4kmze)(@babel/core@7.29.0)(@react-native/jest-preset@0.85.1)(@react-native/metro-config@0.84.1)(@types/react@19.2.14)(react@19.2.3)
+    dev: false
 
   /@react-native-masked-view/masked-view@0.3.2(react-native@0.85.1)(react@19.2.3):
     resolution: {integrity: sha512-XwuQoW7/GEgWRMovOQtX3A4PrXhyaZm0lVUiY8qJDvdngjLms9Cpdck6SmGAUNqQwcj2EadHC1HwL0bEyoa/SQ==}

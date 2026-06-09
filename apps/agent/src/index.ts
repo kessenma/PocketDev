@@ -32,6 +32,7 @@ import { envRoutes } from './routes/envs.ts'
 import { offlineSnapshotRoutes } from './routes/offline-snapshots.ts'
 import { pushTokenRoutes } from './routes/push-token.ts'
 import { bugsRoutes } from './routes/bugs.ts'
+import { attachmentRoutes } from './routes/attachments.ts'
 import { screenshotRoutes } from './services/preview/preview-screenshot.ts'
 import { consoleRoutes, consoleStaticRoutes } from './routes/console.ts'
 import { passkeyRoutes } from './routes/passkey.ts'
@@ -107,6 +108,7 @@ new Elysia()
       .use(offlineSnapshotRoutes)
       .use(pushTokenRoutes)
       .use(bugsRoutes)
+      .use(attachmentRoutes)
       .use(fileRoutes)
     )
     // WebSocket routes

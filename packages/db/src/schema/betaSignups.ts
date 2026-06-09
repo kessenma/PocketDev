@@ -7,5 +7,6 @@ export const betaSignups = pgTable('beta_signups', {
   jobResponsibilityOther: varchar('job_responsibility_other', { length: 255 }),
   useType: varchar('use_type', { length: 50 }).notNull(),
   employer: varchar('employer', { length: 255 }),
+  platform: varchar('platform', { length: 20 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })

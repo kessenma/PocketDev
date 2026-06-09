@@ -24,6 +24,8 @@ import { ArchitectureHeroAnimation } from '../ArchitectureHeroAnimation'
 import { brandAssets } from '../../shared/brand-assets'
 import { BrandAssetIcon } from '../../shared/BrandAssetIcon'
 import { architectureTextStyles } from '../../shared/theme'
+import { BetaInlineView } from './BetaInlineView'
+import { AnimatePresence } from 'framer-motion'
 import { PocketRevealScene } from './scenes/01-pocket-reveal'
 import { DevOnTheGoScene } from './scenes/02-hero-developers'
 import { LinuxAdminScene } from './scenes/03-hero-linux-admins'
@@ -63,6 +65,13 @@ export function HeroScrollSequence({
   const [progress, setProgress] = useState(0)
   const [vpSize, setVpSize] = useState({ w: 1280, h: 800 })
   const [isDesktopLayout, setIsDesktopLayout] = useState(false)
+  const [betaOpen, setBetaOpen] = useState(false)
+
+  useEffect(() => {
+    document.body.style.overflow = betaOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [betaOpen])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const sync = () => setVpSize({ w: window.innerWidth, h: window.innerHeight })
@@ -118,11 +127,13 @@ export function HeroScrollSequence({
   const scene2Progress = Math.min(1, Math.max(0, (progress - SCENE2_START) / (SCENE2_END - SCENE2_START)))
   const scene3Progress = Math.min(1, Math.max(0, (progress - SCENE3_START) / (SCENE3_END - SCENE3_START)))
 
+  const spring = { type: 'spring', stiffness: 220, damping: 26 } as const
+
   if (reduceMotion) {
     return (
       <header className="flex flex-col items-center px-6 pt-24 pb-8 text-center">
         <HeroTitle />
-        <HeroDescription />
+        <HeroDescription onOpenBeta={() => setBetaOpen(true)} />
         <PocketHeroSvg className="mt-12 w-48 sm:w-56" />
         <ArchitectureHeroAnimation className="mt-12 w-full max-w-lg" />
         <Pills />
@@ -137,12 +148,18 @@ export function HeroScrollSequence({
         <motion.div
           className="absolute inset-x-0 top-0 z-10 flex flex-col items-center px-6 pt-24 text-center"
           style={{ opacity: headerOpacity, y: headerY }}
+          animate={betaOpen ? { y: -vpSize.h, opacity: 0 } : {}}
+          transition={spring}
         >
           <HeroTitle />
-          <HeroDescription />
+          <HeroDescription onOpenBeta={() => setBetaOpen(true)} />
         </motion.div>
 
-        <motion.div className="absolute inset-0">
+        <motion.div
+          className="absolute inset-0"
+          animate={betaOpen ? { y: vpSize.h } : {}}
+          transition={spring}
+        >
           {/* Scene 1: Ball rises from pocket */}
           <motion.div className="absolute inset-0" style={{ opacity: scene1Opacity }}>
             <PocketRevealScene
@@ -176,9 +193,17 @@ export function HeroScrollSequence({
         <motion.div
           className="absolute inset-x-0 bottom-8 z-10 flex justify-center px-6"
           style={{ opacity: pillsOpacity, y: pillsY }}
+          animate={betaOpen ? { opacity: 0 } : {}}
+          transition={spring}
         >
           <Pills />
         </motion.div>
+
+        <AnimatePresence>
+          {betaOpen && (
+            <BetaInlineView onClose={() => setBetaOpen(false)} />
+          )}
+        </AnimatePresence>
 
       </div>
     </section>
@@ -196,7 +221,7 @@ function HeroTitle() {
   )
 }
 
-function HeroDescription() {
+function HeroDescription({ onOpenBeta }: { onOpenBeta: () => void }) {
   return (
     <>
       <p
@@ -224,10 +249,19 @@ function HeroDescription() {
           href="https://apps.apple.com/us/app/pocket-dev/id6762034037"
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-full border border-foreground/80 bg-foreground px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-background shadow-sm transition-opacity hover:opacity-80"
+          className="inline-flex items-center gap-2 rounded-full border border-foreground/80 bg-foreground px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-background shadow-sm transition-opacity hover:opacity-80"
         >
-          Download on iOS →
+          <img src={brandAssets.appleWhite} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} />
+          App Store
         </a>
+        <button
+          type="button"
+          onClick={onOpenBeta}
+          className="inline-flex items-center gap-2 rounded-full border border-foreground/30 bg-transparent px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-foreground/70 shadow-sm transition-opacity hover:opacity-80 cursor-pointer"
+        >
+          <img src={brandAssets.androidBlack} alt="" style={{ width: 13, height: 13, objectFit: 'contain', opacity: 0.7 }} />
+          Join the Beta
+        </button>
       </div>
     </>
   )
