@@ -1,5 +1,6 @@
 import { architectureFonts, architectureTokens } from '../shared/theme'
 import { palette } from '@pocketdev/shared/theme'
+import { DOCS_URL, GITHUB_URL } from '@pocketdev/shared/links'
 
 export function DocsCalloutSection() {
   return (
@@ -22,7 +23,7 @@ export function DocsCalloutSection() {
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <a
-          href="https://docs.pocketdev.run/"
+          href={DOCS_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-80"
@@ -31,7 +32,7 @@ export function DocsCalloutSection() {
           Learn more in the docs
         </a>
         <a
-          href="https://github.com/kessenma/PocketDev"
+          href={GITHUB_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-80"

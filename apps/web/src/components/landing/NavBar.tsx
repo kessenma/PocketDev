@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { architectureTokens } from '#/components/architecture/shared/theme'
 import { brandAssets } from '#/components/architecture/shared/brand-assets'
-
-const DOCS_URL = 'https://docs.pocketdev.run'
-const GITHUB_URL = 'https://github.com/kessenma/PocketDev'
-const APP_STORE_URL = 'https://apps.apple.com/us/app/pocket-dev/id6762034037'
+import { APP_STORE_URL, DOCS_URL, GITHUB_URL } from '@pocketdev/shared/links'
 
 export function NavBar() {
   const [visible, setVisible] = useState(true)

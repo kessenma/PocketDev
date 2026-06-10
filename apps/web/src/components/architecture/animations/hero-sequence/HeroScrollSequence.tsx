@@ -18,6 +18,7 @@ import {
   SiGithubcopilotHex,
 } from '@icons-pack/react-simple-icons'
 import { palette } from '@pocketdev/shared/theme'
+import { APP_STORE_URL, DOCS_URL, GITHUB_URL } from '@pocketdev/shared/links'
 import { CopyButton } from '@pocketdev/shared/components'
 import { PocketHeroSvg } from '../PocketHeroSvg'
 import { ArchitectureHeroAnimation } from '../ArchitectureHeroAnimation'
@@ -246,7 +247,7 @@ function HeroDescription({ onOpenBeta }: { onOpenBeta: () => void }) {
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <a
-          href="https://apps.apple.com/us/app/pocket-dev/id6762034037"
+          href={APP_STORE_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] shadow-sm transition-opacity hover:opacity-80"
@@ -264,6 +265,27 @@ function HeroDescription({ onOpenBeta }: { onOpenBeta: () => void }) {
           <img src={brandAssets.androidBlack} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} />
           Join the Beta
         </button>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
+        <a
+          href={DOCS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[0.7rem] font-medium uppercase tracking-[0.15em] transition-opacity hover:opacity-60"
+          style={{ color: palette.bauhaus.black }}
+        >
+          Docs ↗
+        </a>
+        <a
+          href={GITHUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[0.7rem] font-medium uppercase tracking-[0.15em] transition-opacity hover:opacity-60"
+          style={{ color: palette.bauhaus.black }}
+        >
+          <img src={brandAssets.githubBlack} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} />
+          Open Source
+        </a>
       </div>
     </>
   )

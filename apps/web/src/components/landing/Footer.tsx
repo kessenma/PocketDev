@@ -1,11 +1,12 @@
 import { architectureTokens } from '#/components/architecture/shared/theme'
+import { GITHUB_URL } from '@pocketdev/shared/links'
 
 export function Footer() {
   return (
     <footer className="px-6 py-8" style={{ borderTop: `1px solid ${architectureTokens.colors.border}` }}>
       <div className="mx-auto flex max-w-4xl items-center justify-between text-sm" style={{ color: architectureTokens.colors.textSecondary }}>
         <a
-          href="https://github.com/kessenma/PocketDev"
+          href={GITHUB_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="hover:underline"
@@ -16,7 +17,7 @@ export function Footer() {
         <span>
           Built by{' '}
           <a
-            href="https://github.com/kessenmacher"
+            href="https://github.com/kessenma"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:underline"
