@@ -249,7 +249,8 @@ function HeroDescription({ onOpenBeta }: { onOpenBeta: () => void }) {
           href="https://apps.apple.com/us/app/pocket-dev/id6762034037"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-full border border-foreground/80 bg-foreground px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-background shadow-sm transition-opacity hover:opacity-80"
+          className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] shadow-sm transition-opacity hover:opacity-80"
+          style={{ backgroundColor: palette.bauhaus.black, color: palette.bauhaus.cream, border: `1px solid ${palette.bauhaus.black}` }}
         >
           <img src={brandAssets.appleWhite} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} />
           App Store
@@ -257,9 +258,10 @@ function HeroDescription({ onOpenBeta }: { onOpenBeta: () => void }) {
         <button
           type="button"
           onClick={onOpenBeta}
-          className="inline-flex items-center gap-2 rounded-full border border-foreground/30 bg-transparent px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] text-foreground/70 shadow-sm transition-opacity hover:opacity-80 cursor-pointer"
+          className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.2em] shadow-sm transition-opacity hover:opacity-80 cursor-pointer"
+          style={{ backgroundColor: 'transparent', color: palette.bauhaus.black, border: `1px solid ${palette.bauhaus.black}80` }}
         >
-          <img src={brandAssets.androidBlack} alt="" style={{ width: 13, height: 13, objectFit: 'contain', opacity: 0.7 }} />
+          <img src={brandAssets.androidBlack} alt="" style={{ width: 13, height: 13, objectFit: 'contain' }} />
           Join the Beta
         </button>
       </div>
