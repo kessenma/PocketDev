@@ -703,7 +703,17 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       }
     }
 
-    return { tasks, activeProcesses, totalCount: tasks.length, taskLogs, taskCommands, taskFiles }
+    // Extract attachment references from task prompts (injected by mobile during submit)
+    const taskAttachments: Record<string, Array<{ serverPath: string; originalName: string }>> = {}
+    const attachmentLineRe = /^- (.+?)\s{2,}\(original: (.+?)\)$/gm
+    for (const task of tasks) {
+      const matches = [...task.prompt.matchAll(attachmentLineRe)]
+      if (matches.length > 0) {
+        taskAttachments[task.id] = matches.map((m) => ({ serverPath: m[1], originalName: m[2] }))
+      }
+    }
+
+    return { tasks, activeProcesses, totalCount: tasks.length, taskLogs, taskCommands, taskFiles, taskAttachments }
   })
 
   // ─── Kill task (requires session) ──────────────────────

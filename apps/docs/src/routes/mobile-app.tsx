@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/mobile-app')({
-  staticData: { navLabel: 'Mobile App', navOrder: 4 },
+  staticData: { navLabel: 'Mobile App', navOrder: 5 },
   component: MobileAppPage,
 })
 

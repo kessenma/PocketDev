@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/license')({
-  staticData: { navLabel: 'License', navOrder: 6 },
+  staticData: { navLabel: 'License', navOrder: 7 },
   component: LicensePage,
 })
 

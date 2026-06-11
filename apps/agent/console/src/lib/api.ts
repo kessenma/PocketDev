@@ -546,6 +546,11 @@ export interface PendingTaskQuestion {
   }
 }
 
+export interface TaskAttachmentEntry {
+  serverPath: string
+  originalName: string
+}
+
 export interface TasksDebugInfo {
   tasks: TaskDebugEntry[]
   activeProcesses: Array<{
@@ -558,6 +563,7 @@ export interface TasksDebugInfo {
   taskLogs: Record<string, TaskLogEntry[]>
   taskCommands: Record<string, string>
   taskFiles: Record<string, TaskFileTouchEntry[]>
+  taskAttachments: Record<string, TaskAttachmentEntry[]>
 }
 
 export async function fetchTasksDebug(): Promise<TasksDebugInfo> {

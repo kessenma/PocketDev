@@ -3,7 +3,8 @@ import { StatusBadge } from '#/components/ui/status-badge'
 import type { StatusBadgeColor } from '#/components/ui/status-badge'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
-import { killTaskFromConsole, fetchTasksDebug, type TasksDebugInfo } from '#/lib/api'
+import { killTaskFromConsole, fetchTasksDebug, type TasksDebugInfo, type TaskAttachmentEntry } from '#/lib/api'
+import { Paperclip } from 'lucide-react'
 import { cn } from '#/lib/utils'
 import { CopyButton } from '@pocketdev/shared/components'
 import { RefreshCw, Square, Zap } from 'lucide-react'
@@ -462,6 +463,12 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                       <span>{formatShortTime(task.createdAt)}</span>
                       <span>•</span>
                       <span>{task.projectName ?? 'No project'}</span>
+                      {tasksInfo?.taskAttachments?.[task.id]?.length ? (
+                        <span className="flex items-center gap-1 text-foreground/50">
+                          <Paperclip className="h-3 w-3" />
+                          {tasksInfo.taskAttachments[task.id].length}
+                        </span>
+                      ) : null}
                     </div>
                   </button>
                 )
@@ -594,6 +601,23 @@ export function TasksDiagnosticsTab({ tasksInfo: tasksInfoProp, onRefresh, stand
                             {touch.action}
                           </StatusBadge>
                           <span className="min-w-0 truncate font-mono text-[11px] text-foreground/70">{touch.filePath}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {tasksInfo?.taskAttachments?.[selectedTask.id]?.length ? (
+                  <div className="mt-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-foreground/38">
+                      Attachments ({tasksInfo.taskAttachments[selectedTask.id].length})
+                    </p>
+                    <div className="mt-2 space-y-1 rounded-xl border border-border/40 bg-background/40 p-3">
+                      {tasksInfo.taskAttachments[selectedTask.id].map((att, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <Paperclip className="h-3 w-3 shrink-0 text-foreground/40" />
+                          <span className="shrink-0 font-medium text-foreground/80">{att.originalName}</span>
+                          <span className="min-w-0 truncate font-mono text-[11px] text-foreground/40">{att.serverPath}</span>
                         </div>
                       ))}
                     </div>

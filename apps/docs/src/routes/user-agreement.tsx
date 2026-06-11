@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/user-agreement')({
-  staticData: { navLabel: 'User Agreement', navOrder: 8 },
+  staticData: { navLabel: 'User Agreement', navOrder: 9 },
   component: UserAgreementPage,
 })
 

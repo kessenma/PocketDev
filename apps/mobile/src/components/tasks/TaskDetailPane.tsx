@@ -458,7 +458,7 @@ export default function TaskDetailPane({
   }, [inferredDebugSelection, task?.status, showDebugSheet, showCodexWizard, showClaudeWizard])
 
   // Derived task state — computed before early return so hooks below are always called.
-  const isRunning = task?.status === 'running' ?? false
+  const isRunning = task?.status === 'running'
   const isTerminal = task?.status === 'completed' || task?.status === 'failed'
   const isOpencodeFamily = task ? OPENCODE_FAMILY.has(task.agent_type) : false
   const canContinue = !!(

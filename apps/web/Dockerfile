@@ -6,6 +6,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/package.json
+COPY apps/agent/console/package.json ./apps/agent/console/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/db/package.json ./packages/db/package.json
 COPY patches/ ./patches/
@@ -18,6 +19,17 @@ COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_module
 COPY package.json pnpm-workspace.yaml ./
 COPY packages/shared/ ./packages/shared/
 RUN cd packages/shared && npx tsc -p tsconfig.build.json
+
+# Build the console SPA in demo mode (backend-less, mock-backed) for the public demo.
+FROM base AS console-demo-build
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/agent/console/node_modules ./apps/agent/console/node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY package.json pnpm-workspace.yaml ./
+COPY packages/shared/ ./packages/shared/
+COPY --from=shared-build /app/packages/shared/dist ./packages/shared/dist
+COPY apps/agent/console/ ./apps/agent/console/
+RUN cd apps/agent/console && VITE_DEMO=1 npx vite build --base=/console-demo/ --outDir dist-demo
 
 # Build the web app
 FROM base AS build
@@ -50,6 +62,9 @@ COPY --from=deps /app/package.json /app/package.json
 # Web app node_modules, built output, server, and runtime source
 COPY --from=deps /app/apps/web/node_modules ./node_modules
 COPY --from=build /app/apps/web/dist ./dist
+
+# Interactive console demo, served as static files at /console-demo/
+COPY --from=console-demo-build /app/apps/agent/console/dist-demo ./dist/client/console-demo
 COPY --from=build /app/apps/web/server.ts ./server.ts
 COPY --from=build /app/apps/web/src ./src
 COPY --from=build /app/apps/web/package.json ./package.json
