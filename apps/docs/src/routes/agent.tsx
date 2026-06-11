@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { DEMO_URL } from '@pocketdev/shared/links'
 import { InstallCommand } from '#/components/landing/InstallCommand'
 import { ExternalLink } from '#/components/ui/ExternalLink'
 import { docsTokens } from '#/components/docs/theme'
@@ -7,8 +8,6 @@ export const Route = createFileRoute('/agent')({
   staticData: { navLabel: 'Agent', navOrder: 3 },
   component: AgentPage,
 })
-
-const DEMO_URL = 'https://pocketdev.run/console-demo/index.html#/console'
 
 function DemoButton() {
   return (

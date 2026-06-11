@@ -18,7 +18,7 @@ import {
   SiGithubcopilotHex,
 } from '@icons-pack/react-simple-icons'
 import { palette } from '@pocketdev/shared/theme'
-import { APP_STORE_URL, DOCS_URL, GITHUB_URL } from '@pocketdev/shared/links'
+import { APP_STORE_URL, DEMO_URL, DOCS_URL, GITHUB_URL } from '@pocketdev/shared/links'
 import { CopyButton } from '@pocketdev/shared/components'
 import { PocketHeroSvg } from '../PocketHeroSvg'
 import { ArchitectureHeroAnimation } from '../ArchitectureHeroAnimation'
@@ -267,6 +267,15 @@ function HeroDescription({ onOpenBeta }: { onOpenBeta: () => void }) {
         </button>
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-4">
+        <a
+          href={DEMO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[0.7rem] font-medium uppercase tracking-[0.15em] transition-opacity hover:opacity-60"
+          style={{ color: palette.bauhaus.black }}
+        >
+          Live Demo ↗
+        </a>
         <a
           href={DOCS_URL}
           target="_blank"
