@@ -2,7 +2,7 @@
 
 **Control AI coding agents from your phone. No laptop required.**
 
-Install on any Linux VPS, pair your phone, and run Claude, Codex, or Copilot from anywhere — over a direct, encrypted connection with no cloud middleman.
+Install on any Linux VPS or a Mac (e.g. a Mac mini at home), pair your phone, and run Claude, Codex, or Copilot from anywhere — over a direct, encrypted connection with no cloud middleman.
 
 [![License: BSL 1.1](https://img.shields.io/badge/License-BSL_1.1-blue.svg)](LICENSE)
 [![iOS](https://img.shields.io/badge/iOS-App_Store-black?logo=apple)](https://apps.apple.com/us/app/pocket-dev/id6762034037)
@@ -64,6 +64,8 @@ curl -fsSL https://pocketdev.run/install.sh | bash
 ```
 
 Then download the mobile app, scan the QR code shown in your terminal, and you're paired.
+
+On a Mac, run the same command **without sudo** — it installs a per-user launchd agent instead of a systemd service. For a Mac at home, use [Tailscale](https://tailscale.com) to reach it from your phone (`… | bash -s -- --tailscale-serve`). See [docs/macos/](docs/macos/README.md).
 
 ---
 

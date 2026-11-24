@@ -1,6 +1,8 @@
 # PocketDev Agent
 
-Bun + Elysia server installed on target Linux VPS machines. Provides the API that the mobile app and console SPA interact with.
+Bun + Elysia server installed on target Linux VPS machines (systemd, `apps/web/install.sh`) or Macs (per-user launchd LaunchAgent, `apps/web/install-macos.sh`). Provides the API that the mobile app and console SPA interact with.
+
+Platform-specific behaviour (service manager restarts, detached upgrade/uninstall scripts, apt vs brew install commands) goes through `src/services/system/platform.ts` — don't call `systemctl`/`systemd-run`/`apt-get` directly from routes. See [docs/macos/README.md](../../docs/macos/README.md).
 
 ## Database
 

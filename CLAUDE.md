@@ -1,6 +1,6 @@
 # PocketDev
 
-Mobile-first interface for controlling AI coding agents on remote servers. Install on any Linux VPS, pair your phone, control Claude/Codex from anywhere.
+Mobile-first interface for controlling AI coding agents on remote servers. Install on any Linux VPS or a Mac (launchd, see `docs/macos/`), pair your phone, control Claude/Codex from anywhere.
 
 ## Project Structure
 
@@ -36,6 +36,7 @@ Deep-dive documentation lives in `docs/` — see each CLAUDE.md for links to rel
 - `docs/plan/` — Plan review workspace
 - `docs/projects/` — Project system
 - `docs/testing/` — Local testing setup, testing infrastructure
+- `docs/macos/` — macOS (launchd) install, Mac mini server setup, Tailscale remote access
 - `docs/database/` — Agent migrations
 - `docs/app-icon/` — Shared icon generation pipeline (iOS, Android, web)
 - `docs/agent/update-system.md` — Self-update mechanism, version tracking, rollback
