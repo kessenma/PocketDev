@@ -13,7 +13,9 @@ curl -fsSL https://pocketdev.run/install-macos.sh | bash -s -- --tailscale-serve
 ```
 
 Run it **as your normal user, without sudo**. For reaching the Mac from your
-phone outside your home network, see **[tailscale.md](tailscale.md)**.
+phone outside your home network, see **[tailscale.md](tailscale.md)**. To let
+agents build, sign and upload iOS apps from the Mac (optional), see
+**[app-store.md](app-store.md)**.
 
 ## Why a user LaunchAgent (and not root)
 

@@ -75,6 +75,10 @@ function HomeServersPage() {
         (<code>xcode-select --install</code>) first. PocketDev's setup wizards use Homebrew to install tools
         like Node, the GitHub CLI and tmux on a Mac.
       </p>
+      <p>
+        If you build iOS apps, a Mac at home can also sign and upload them to TestFlight for you. See{' '}
+        <Link to="/ios-developers">Shipping iOS Apps</Link>.
+      </p>
 
       <h2>Set up Tailscale</h2>
       <p>You can do this from the installer or from the web console. Both run the same steps.</p>

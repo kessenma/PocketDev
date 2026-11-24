@@ -81,6 +81,7 @@ function GetStartedPage() {
         <li><strong>AI Assistants</strong> — At least one of Claude, Codex, or GitHub Copilot must be authenticated</li>
         <li><strong>Languages</strong> — Python, Rust, Go, TypeScript (detected automatically)</li>
         <li><strong>Infrastructure</strong> — Docker (optional)</li>
+        <li><strong>App Store</strong> — Xcode and App Store Connect access, on Macs only (optional). See <Link to="/ios-developers">Shipping iOS Apps</Link></li>
       </ul>
       <p>
         Your workspace is ready when the required tools, at least one AI assistant, and Python are all configured.
