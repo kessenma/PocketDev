@@ -67,6 +67,12 @@ import type {
   PythonSetupStatus,
   RustSetupStatus,
   GoSetupStatus,
+  AppleSetupStatus,
+  AppleCreateKeyRequest,
+  AppleCreateKeyCommand,
+  AppleImportKeyRequest,
+  AppleKeyResult,
+  AppleVerifyResult,
   TypeScriptSetupStatus,
   PkgManagerStatus,
   PkgInstallTool,
@@ -1304,6 +1310,110 @@ export async function postVerifyGo(ip: string, port: number): Promise<GoSetupSta
   })
   if (!response.ok) throw new Error(`Failed to verify Go (${response.status})`)
   return response.json() as Promise<GoSetupStatus>
+}
+
+// ─── Apple / App Store Connect Setup ───────────────────────────────
+
+async function readAppleError(response: Response, fallback: string): Promise<string> {
+  const data = await response.json().catch(() => null) as { error?: unknown } | null
+  return typeof data?.error === 'string' && data.error ? data.error : `${fallback} (${response.status})`
+}
+
+export async function fetchAppleSetupStatus(
+  ip: string,
+  port: number,
+  options: { validate?: boolean } = {},
+): Promise<AppleSetupStatus> {
+  const path = options.validate ? '/apple-setup/status?validate=1' : '/apple-setup/status'
+  const response = await fetch(apiUrl(ip, port, path), {
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(`Failed to fetch App Store setup status (${response.status})`)
+  return response.json() as Promise<AppleSetupStatus>
+}
+
+export async function postAppleXcodesCommand(ip: string, port: number, appleId: string): Promise<string> {
+  const response = await fetch(apiUrl(ip, port, '/apple-setup/xcodes-command'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ apple_id: appleId }),
+  })
+  if (!response.ok) throw new Error(await readAppleError(response, 'Failed to prepare the Xcode download'))
+  const data = await response.json() as { command: string }
+  return data.command
+}
+
+export async function postAppleTelemetry(ip: string, port: number, enabled: boolean): Promise<AppleSetupStatus> {
+  const response = await fetch(apiUrl(ip, port, '/apple-setup/telemetry'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify({ enabled }),
+  })
+  if (!response.ok) throw new Error(await readAppleError(response, 'Failed to update asc telemetry'))
+  return response.json() as Promise<AppleSetupStatus>
+}
+
+export async function postAppleCreateKeyCommand(
+  ip: string,
+  port: number,
+  request: AppleCreateKeyRequest,
+): Promise<AppleCreateKeyCommand> {
+  const response = await fetch(apiUrl(ip, port, '/apple-setup/create-key-command'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify(request),
+  })
+  if (!response.ok) throw new Error(await readAppleError(response, 'Failed to prepare the key request'))
+  return response.json() as Promise<AppleCreateKeyCommand>
+}
+
+export async function postAppleFinishKey(ip: string, port: number): Promise<AppleKeyResult> {
+  const response = await fetch(apiUrl(ip, port, '/apple-setup/finish-key'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(await readAppleError(response, 'Failed to save the new key'))
+  return response.json() as Promise<AppleKeyResult>
+}
+
+/** Resolves with `ok: false` (instead of throwing) when the agent rejects the key. */
+export async function postAppleImportKey(
+  ip: string,
+  port: number,
+  request: AppleImportKeyRequest,
+): Promise<AppleKeyResult> {
+  const response = await fetch(apiUrl(ip, port, '/apple-setup/import-key'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: await buildPocketDevAuthorizationHeader(),
+    },
+    body: JSON.stringify(request),
+  })
+  if (response.status === 400) {
+    const data = await response.json().catch(() => null) as AppleKeyResult | null
+    if (data && typeof data.ok === 'boolean') return data
+  }
+  if (!response.ok) throw new Error(await readAppleError(response, 'Failed to import the key'))
+  return response.json() as Promise<AppleKeyResult>
+}
+
+export async function postAppleVerify(ip: string, port: number): Promise<AppleVerifyResult> {
+  const response = await fetch(apiUrl(ip, port, '/apple-setup/verify'), {
+    method: 'POST',
+    headers: { Authorization: await buildPocketDevAuthorizationHeader() },
+  })
+  if (!response.ok) throw new Error(await readAppleError(response, 'Failed to verify App Store Connect'))
+  return response.json() as Promise<AppleVerifyResult>
 }
 
 // ─── TypeScript Setup ──────────────────────────────────────────────

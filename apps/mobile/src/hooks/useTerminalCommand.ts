@@ -4,8 +4,19 @@ import { buildTerminalWsUrl } from '../services/api'
 import { buildPocketDevAuthorizationHeader } from '../services/auth'
 import { createReactNativeWebSocket } from '../services/websocket'
 import { getSudoPassword, saveSudoPassword } from '../services/secure-storage'
+import {
+  createSecurePromptMatcher,
+  type SecurePromptMatch,
+  type SecurePromptSpec,
+} from '../utils/secure-prompts'
 
-const SUDO_PROMPT_PATTERN = /\[sudo\] password for/
+/** sudo (agent sets SUDO_PROMPT on macOS) and xcodes' "macOS User Password:" both want the login password. */
+const SUDO_PROMPTS: SecurePromptSpec[] = [
+  { pattern: /\[sudo\] password for/, title: 'sudo password required', kind: 'password' },
+  { pattern: /macOS User Password:/, title: 'sudo password required', kind: 'password' },
+]
+
+export type { SecurePromptSpec, SecurePromptMatch } from '../utils/secure-prompts'
 
 export interface UseTerminalCommandOptions {
   /** Sent automatically when WebSocket connects */
@@ -16,6 +27,11 @@ export interface UseTerminalCommandOptions {
   persistent?: boolean
   /** Side-effect callback fired on every output chunk */
   onOutput?: (chunk: string, fullOutput: string) => void
+  /**
+   * Interactive prompts (passwords, verification codes) to answer through a
+   * native entry sheet. Values are sent straight to the terminal and never stored.
+   */
+  securePrompts?: SecurePromptSpec[]
 }
 
 export interface UseTerminalCommandReturn {
@@ -30,6 +46,12 @@ export interface UseTerminalCommandReturn {
   sendInput: (data: string) => void
   submitSudoPassword: (password: string, remember: boolean) => void
   cancelSudoPrompt: () => void
+  /** The secure prompt currently waiting for input (see `securePrompts`) */
+  securePrompt: SecurePromptMatch | null
+  /** Send the value + newline to the terminal; nothing is stored */
+  submitSecurePrompt: (value: string) => void
+  /** Dismiss the prompt and interrupt the running command (Ctrl-C) */
+  cancelSecurePrompt: () => void
   /** Clear output + error state for retry flows */
   reset: () => void
   /** Explicitly close the WebSocket */
@@ -39,14 +61,21 @@ export interface UseTerminalCommandReturn {
 export function useTerminalCommand(
   options: UseTerminalCommandOptions = {},
 ): UseTerminalCommandReturn {
-  const { initialCommand, errorPatterns = [], persistent = false, onOutput } = options
+  const { initialCommand, errorPatterns = [], persistent = false, onOutput, securePrompts } = options
   const server = useConnectionStore((s) => s.server)
+
+  // Latest prompt specs (they may depend on props, e.g. a prefilled email)
+  const securePromptsRef = useRef<SecurePromptSpec[]>(securePrompts ?? [])
+  securePromptsRef.current = securePrompts ?? []
+  const promptMatcherRef = useRef(createSecurePromptMatcher(() => securePromptsRef.current))
+  const sudoMatcherRef = useRef(createSecurePromptMatcher(SUDO_PROMPTS))
 
   const [output, setOutput] = useState('')
   const [hasError, setHasError] = useState(false)
   const [done, setDone] = useState(false)
   const [connected, setConnected] = useState(false)
   const [showSudoPrompt, setShowSudoPrompt] = useState(false)
+  const [securePrompt, setSecurePrompt] = useState<SecurePromptMatch | null>(null)
 
   const wsRef = useRef<WebSocket | null>(null)
   const outputRef = useRef('')
@@ -78,6 +107,22 @@ export function useTerminalCommand(
 
   const cancelSudoPrompt = useCallback(() => setShowSudoPrompt(false), [])
 
+  // ── Secure prompts ────────────────────────────────────────────
+
+  const submitSecurePrompt = useCallback((value: string) => {
+    setSecurePrompt(null)
+    if (wsRef.current && readyRef.current && sessionIdRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: value + '\n' }))
+    }
+  }, [])
+
+  const cancelSecurePrompt = useCallback(() => {
+    setSecurePrompt(null)
+    if (wsRef.current && readyRef.current && sessionIdRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: '\x03' }))
+    }
+  }, [])
+
   // ── Send helpers ──────────────────────────────────────────────
 
   const sendCommand = useCallback((cmd: string) => {
@@ -103,6 +148,9 @@ export function useTerminalCommand(
     setOutput('')
     setHasError(false)
     setDone(false)
+    setSecurePrompt(null)
+    promptMatcherRef.current.reset()
+    sudoMatcherRef.current.reset()
   }, [])
 
   const disconnect = useCallback(() => {
@@ -126,6 +174,8 @@ export function useTerminalCommand(
 
       wsRef.current = termWs
       outputRef.current = ''
+      promptMatcherRef.current.reset()
+      sudoMatcherRef.current.reset()
       sessionIdRef.current = null
       readyRef.current = false
       setOutput('')
@@ -160,8 +210,12 @@ export function useTerminalCommand(
           else return
         } catch { text = event.data as string }
 
-        // Sudo detection
-        if (SUDO_PROMPT_PATTERN.test(text)) handleSudoNeeded()
+        // Sudo detection (rolling buffer, so prompts split across chunks are caught)
+        if (sudoMatcherRef.current.push(text)) handleSudoNeeded()
+
+        // Secure prompts (Apple Account password, verification codes, …)
+        const prompt = promptMatcherRef.current.push(text)
+        if (prompt) setSecurePrompt(prompt)
 
         // Accumulate output
         outputRef.current += text
@@ -209,6 +263,9 @@ export function useTerminalCommand(
     sendInput,
     submitSudoPassword,
     cancelSudoPrompt,
+    securePrompt,
+    submitSecurePrompt,
+    cancelSecurePrompt,
     reset,
     disconnect,
   }

@@ -8,6 +8,8 @@ const PACKAGE_MANAGER_TOOL_IDS = ['node', 'npm', 'pnpm', 'bun'] as const
 const AI_ASSISTANT_TOOL_IDS = ['claude_cli', 'codex_cli', 'copilot_cli', 'opencode_cli'] as const
 const OPENCODE_TOOL_ID = 'opencode_cli'
 const LANGUAGE_TOOL_IDS = ['python', 'rust', 'go', 'typescript'] as const
+/** Optional App Store tooling (macOS hosts only). Never counts toward setup progress or `ready`. */
+const APPLE_TOOL_IDS = ['xcode', 'asc_cli'] as const
 
 function isToolConfigured(tool: ToolCheck | undefined): boolean {
   if (!tool) return false
@@ -66,8 +68,27 @@ export function getLanguageTools(report: PrerequisitesReport | null): ToolCheck[
 
 export function getSupportingTools(report: PrerequisitesReport | null): ToolCheck[] {
   if (!report) return []
-  const primaryIds = new Set(['git', 'github_cli', ...PACKAGE_MANAGER_TOOL_IDS, ...AI_ASSISTANT_TOOL_IDS, ...LANGUAGE_TOOL_IDS])
+  const primaryIds = new Set<string>([
+    'git',
+    'github_cli',
+    ...PACKAGE_MANAGER_TOOL_IDS,
+    ...AI_ASSISTANT_TOOL_IDS,
+    ...LANGUAGE_TOOL_IDS,
+    ...APPLE_TOOL_IDS,
+  ])
   return report.tools.filter((tool) => !primaryIds.has(tool.id))
+}
+
+export function getAppleSetupTools(report: PrerequisitesReport | null): ToolCheck[] {
+  return APPLE_TOOL_IDS
+    .map((id) => getToolById(report, id))
+    .filter((tool): tool is ToolCheck => !!tool)
+}
+
+/** The App Store section only appears on macOS hosts that report Xcode / asc rows. */
+export function shouldShowAppleSetup(report: PrerequisitesReport | null): boolean {
+  if (!report || typeof report.os !== 'string' || !report.os.startsWith('macOS')) return false
+  return getAppleSetupTools(report).length > 0
 }
 
 export function getServerSetupStatus(report: PrerequisitesReport | null) {

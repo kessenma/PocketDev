@@ -7,6 +7,7 @@ import { useSetupStore } from '../../stores/setup'
 import { useToast } from '../../hooks/useToast'
 import SetupCheckItem from './SetupCheckItem'
 import DatabaseSetup from './DatabaseSetup'
+import AppleDeveloperSetup from './AppleDeveloperSetup'
 import OnDeviceModelSetup from './OnDeviceModelSetup'
 import type { ToolCheck } from '@pocketdev/shared/types'
 import {
@@ -314,6 +315,21 @@ export default function SetupChecklist({
                   </View>
                 </>
               ) : null}
+
+              <AppleDeveloperSetup
+                report={report}
+                disabled={showCachedLoadingState}
+                showLoadingState={
+                  showCachedLoadingState || pendingToolIds.includes('xcode') || pendingToolIds.includes('asc_cli')
+                }
+                onDisabledPress={() => {
+                  toast({
+                    title: 'Checking workspace status',
+                    description: 'Setup actions are locked until the server confirms the current tool status.',
+                    variant: 'info',
+                  })
+                }}
+              />
 
               <DatabaseSetup
                 databases={report?.databases ?? []}
