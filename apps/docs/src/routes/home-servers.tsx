@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { InstallCommand } from '#/components/landing/InstallCommand'
 import { ExternalLink } from '#/components/ui/ExternalLink'
+import { HomeServerIllustration } from '#/components/illustrations/HomeServerIllustration'
 
 export const Route = createFileRoute('/home-servers')({
   staticData: { navLabel: 'Running on a Home Server', navOrder: 1.5 },
@@ -18,6 +19,7 @@ function HomeServersPage() {
         on your desk or a Linux box in a closet, and control it from your phone anywhere. This page explains
         how that works and how to set it up.
       </p>
+      <HomeServerIllustration />
 
       <h2>Why a home server needs one extra step</h2>
       <p>
