@@ -14,6 +14,7 @@ import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as MobileAppRouteImport } from './routes/mobile-app'
 import { Route as LicenseRouteImport } from './routes/license'
+import { Route as HomeServersRouteImport } from './routes/home-servers'
 import { Route as GetStartedRouteImport } from './routes/get-started'
 import { Route as EncryptionRouteImport } from './routes/encryption'
 import { Route as ArchitectureRouteImport } from './routes/architecture'
@@ -43,6 +44,11 @@ const MobileAppRoute = MobileAppRouteImport.update({
 const LicenseRoute = LicenseRouteImport.update({
   id: '/license',
   path: '/license',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeServersRoute = HomeServersRouteImport.update({
+  id: '/home-servers',
+  path: '/home-servers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GetStartedRoute = GetStartedRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/architecture': typeof ArchitectureRoute
   '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
+  '/home-servers': typeof HomeServersRoute
   '/license': typeof LicenseRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/architecture': typeof ArchitectureRoute
   '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
+  '/home-servers': typeof HomeServersRoute
   '/license': typeof LicenseRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/architecture': typeof ArchitectureRoute
   '/encryption': typeof EncryptionRoute
   '/get-started': typeof GetStartedRoute
+  '/home-servers': typeof HomeServersRoute
   '/license': typeof LicenseRoute
   '/mobile-app': typeof MobileAppRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/architecture'
     | '/encryption'
     | '/get-started'
+    | '/home-servers'
     | '/license'
     | '/mobile-app'
     | '/privacy-policy'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/architecture'
     | '/encryption'
     | '/get-started'
+    | '/home-servers'
     | '/license'
     | '/mobile-app'
     | '/privacy-policy'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/architecture'
     | '/encryption'
     | '/get-started'
+    | '/home-servers'
     | '/license'
     | '/mobile-app'
     | '/privacy-policy'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   ArchitectureRoute: typeof ArchitectureRoute
   EncryptionRoute: typeof EncryptionRoute
   GetStartedRoute: typeof GetStartedRoute
+  HomeServersRoute: typeof HomeServersRoute
   LicenseRoute: typeof LicenseRoute
   MobileAppRoute: typeof MobileAppRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/license'
       fullPath: '/license'
       preLoaderRoute: typeof LicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home-servers': {
+      id: '/home-servers'
+      path: '/home-servers'
+      fullPath: '/home-servers'
+      preLoaderRoute: typeof HomeServersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/get-started': {
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   ArchitectureRoute: ArchitectureRoute,
   EncryptionRoute: EncryptionRoute,
   GetStartedRoute: GetStartedRoute,
+  HomeServersRoute: HomeServersRoute,
   LicenseRoute: LicenseRoute,
   MobileAppRoute: MobileAppRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,

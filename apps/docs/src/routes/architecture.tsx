@@ -19,7 +19,7 @@ function ArchitecturePage() {
 
       <h2>System Overview</h2>
       <p>
-        The core runtime is the PocketDev agent, a Bun and Elysia process running on your Linux
+        The core runtime is the PocketDev agent, a Bun and Elysia process running on your Linux or macOS
         server. It handles pairing, task orchestration, terminal sessions, file access, preview
         proxying, and local SQLite-backed runtime state.
       </p>

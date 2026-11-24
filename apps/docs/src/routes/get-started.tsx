@@ -13,14 +13,14 @@ function GetStartedPage() {
       <h1>Get Started</h1>
       <p>
         PocketDev is a mobile-first interface for controlling AI coding agents on remote servers.
-        Install it on a Linux machine running Ubuntu 24.04, pair your phone, and control Claude, Codex, or GitHub Copilot from anywhere.
+        Install it on a Linux server or a Mac (for example a Mac mini at home), pair your phone, and control Claude, Codex, or GitHub Copilot from anywhere.
         The source code is available at{' '}
         <ExternalLink href="https://github.com/kessenma/PocketDev">github.com/kessenma/PocketDev</ExternalLink>.
       </p>
 
       <h2>Prerequisites</h2>
       <ul>
-        <li>A Linux server (<ExternalLink href="https://releases.ubuntu.com/24.04/">Ubuntu 24.04+</ExternalLink> has been tested but other distributions may work) with SSH access</li>
+        <li>A Linux server (<ExternalLink href="https://releases.ubuntu.com/24.04/">Ubuntu 24.04+</ExternalLink> has been tested but other distributions may work) with SSH access, <strong>or</strong> a Mac running macOS — see <Link to="/home-servers">Running on a Home Server</Link></li>
         <li>At least 1 GB of RAM and 2 GB of disk space</li>
         <li>
           A mobile device running iOS 16+{' '}
@@ -35,7 +35,13 @@ function GetStartedPage() {
       </p>
       <InstallCommand />
       <p>
-        The installer will set up the PocketDev agent as a systemd service on port <code>4387</code>.
+        On Linux, run it as root; the installer sets up the PocketDev agent as a systemd service on port <code>4387</code>.
+        On a Mac, run it as your normal user without sudo; it installs a per-user launchd service on the same port.
+      </p>
+      <p>
+        <strong>Running it at home?</strong> A computer behind your home router can only be reached on the same Wi-Fi.
+        Read <Link to="/home-servers">Running on a Home Server</Link> to set up Tailscale <em>before</em> pairing, so
+        your phone can reach it from anywhere.
       </p>
 
       <h2>Logging into the PocketDev Agent web app</h2>

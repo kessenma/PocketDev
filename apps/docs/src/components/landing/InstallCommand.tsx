@@ -3,11 +3,11 @@ import { docsTokens } from '#/components/docs/theme'
 
 const INSTALL_CMD = 'curl -fsSL https://pocketdev.run/install.sh | bash'
 
-export function InstallCommand() {
+export function InstallCommand({ command = INSTALL_CMD }: { command?: string } = {}) {
   const [copied, setCopied] = useState(false)
 
   function handleCopy() {
-    navigator.clipboard.writeText(INSTALL_CMD)
+    navigator.clipboard.writeText(command)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -23,7 +23,7 @@ export function InstallCommand() {
       >
         <span style={{ color: docsTokens.colors.textTertiary }} className="select-none">$</span>
         <code className="flex-1 overflow-x-auto" style={{ color: docsTokens.colors.text }}>
-          {INSTALL_CMD}
+          {command}
         </code>
         <button
           onClick={handleCopy}

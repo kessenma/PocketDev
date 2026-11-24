@@ -37,7 +37,7 @@ function AgentPage() {
         The PocketDev agent is the self-hosted runtime at the center of the system — a single{' '}
         <ExternalLink href="https://bun.sh">Bun</ExternalLink> +{' '}
         <ExternalLink href="https://elysiajs.com">Elysia</ExternalLink> process you install on your
-        own Linux server. It pairs with your phone, spawns and streams AI coding tasks, exposes an
+        own Linux server or Mac. It pairs with your phone, spawns and streams AI coding tasks, exposes an
         interactive terminal, brokers file and git operations, proxies your dev server for preview,
         and serves a browser-based admin console — all over one port.
       </p>
@@ -52,7 +52,10 @@ function AgentPage() {
       <DemoButton />
 
       <h2>Install</h2>
-      <p>Run this on your server to install the agent as a systemd service on port <code>4387</code>:</p>
+      <p>
+        Run this on your server to install the agent on port <code>4387</code>: a systemd service on Linux, or a
+        per-user launchd service on macOS (see <Link to="/home-servers">Running on a Home Server</Link>):
+      </p>
       <InstallCommand />
       <p>
         On first boot the agent generates an Ed25519 keypair and a short-lived setup code, then
