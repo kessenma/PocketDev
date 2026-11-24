@@ -88,9 +88,9 @@ export function HomeServerIllustration() {
         <line x1={24} y1={240} x2={616} y2={240} stroke={GROUND} strokeWidth={3} strokeLinecap="round" />
       </svg>
       <figcaption className="mt-2 text-center text-sm" style={{ color: '#998d79' }}>
-        Your Mac stays put, your phone can roam —
+        Left at home, but never alone —
         <br />
-        a private path that leads it home.
+        your Mac&apos;s a tap away by phone.
       </figcaption>
     </figure>
   )
