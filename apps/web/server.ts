@@ -1,6 +1,6 @@
 import path from 'node:path'
 import fs from 'node:fs'
-import { handleInstallScript } from './src/server/install-script'
+import { handleInstallScript, isInstallScriptPath } from './src/server/install-script'
 import { handleVersionCheck, handleBundleDownload } from './src/server/agent-version'
 import { handlePushProvision, handlePushRegisterDevice, handlePushSend } from './src/server/push'
 
@@ -50,9 +50,9 @@ async function start() {
         return handlePushSend(req)
       }
 
-      // Serve install script and track downloads
-      if (url.pathname === '/install.sh') {
-        return handleInstallScript(req)
+      // Serve install scripts (Linux + macOS) and track downloads
+      if (isInstallScriptPath(url.pathname)) {
+        return handleInstallScript(req, url.pathname)
       }
 
       // Agent version check

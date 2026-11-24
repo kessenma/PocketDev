@@ -76,6 +76,7 @@ COPY --from=build /app/packages/db /app/packages/db
 
 # Install script and canonical version file
 COPY apps/web/install.sh ./install.sh
+COPY apps/web/install-macos.sh ./install-macos.sh
 COPY VERSION ./VERSION
 
 ENV NODE_ENV=production

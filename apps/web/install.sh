@@ -34,6 +34,22 @@ for arg in "$@"; do
   esac
 done
 
+# ─── macOS hand-off ──────────────────────────────────────────────
+# macOS installs run as the logged-in user under launchd, not as root under
+# systemd, so they use a separate installer. Flags are passed through.
+if [ "$(uname -s)" = "Darwin" ]; then
+  MACOS_INSTALLER_URL="${POCKETDEV_MACOS_INSTALLER_URL:-https://pocketdev.run/install-macos.sh}"
+  MACOS_INSTALLER="$(mktemp)"
+  if ! curl -fsSL "$MACOS_INSTALLER_URL" -o "$MACOS_INSTALLER"; then
+    rm -f "$MACOS_INSTALLER"
+    fail "Failed to download the macOS installer from $MACOS_INSTALLER_URL"
+  fi
+  STATUS=0
+  bash "$MACOS_INSTALLER" "$@" </dev/null || STATUS=$?
+  rm -f "$MACOS_INSTALLER"
+  exit $STATUS
+fi
+
 # Beta track: pull the nightly-latest pre-release instead of the stable bundle.
 # The web proxy serves /agent/bundle/nightly from the `nightly-latest` GitHub
 # release produced by .github/workflows/agent-beta.yml.
@@ -56,7 +72,7 @@ fi
 step "Step 0/5: Pre-flight checks"
 
 if [ "$(uname -s)" != "Linux" ]; then
-  fail "PocketDev agent requires Linux. Detected: $(uname -s)"
+  fail "PocketDev agent requires Linux or macOS. Detected: $(uname -s)"
 fi
 
 if [ "$(id -u)" -ne 0 ]; then

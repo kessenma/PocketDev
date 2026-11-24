@@ -22,14 +22,14 @@ function devMiddleware(): Plugin {
         }
 
         // Serve install script
-        if (req.url === '/install.sh') {
+        if (req.url === '/install.sh' || req.url === '/install-macos.sh') {
           const { handleInstallScript } = await server.ssrLoadModule('./src/server/install-script.ts')
           const headers = new Headers()
           for (const [key, value] of Object.entries(req.headers)) {
             if (typeof value === 'string') headers.set(key, value)
           }
           const request = new Request(`http://localhost${req.url}`, { headers })
-          const response: Response = await handleInstallScript(request)
+          const response: Response = await handleInstallScript(request, req.url)
           res.writeHead(response.status, Object.fromEntries(response.headers.entries()))
           res.end(await response.text())
           return
