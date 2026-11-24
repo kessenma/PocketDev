@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native'
 import { useTheme } from '../contexts/ThemeContext'
 import { fetchPrerequisites, pairWithServer } from '../services/api'
@@ -27,6 +28,7 @@ import { ArrowRight, Link, Lock, ScanLine, Server, Unplug } from 'lucide-react-n
 import PairingAnimation from '../components/animations/PairingAnimation'
 import UnlockAnimation from '../components/animations/UnlockAnimation'
 import type { PrerequisitesReport } from '@pocketdev/shared/types'
+import { isNetworkFailure, reachabilityHint, TAILSCALE_STORE_URL, type ReachabilityHint } from '../utils/network-hints'
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Connect'>
@@ -46,6 +48,9 @@ export default function ConnectScreen({ navigation }: Props) {
   const [connectionInput, setConnectionInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Shown with network errors: why this address may be unreachable (Tailscale off, different Wi-Fi…)
+  const [hint, setHint] = useState<ReachabilityHint | null>(null)
+  const [lastAttempt, setLastAttempt] = useState<{ host: string; port: number; code: string; secure: boolean } | null>(null)
   const [scannerVisible, setScannerVisible] = useState(false)
   const [showPairing, setShowPairing] = useState(false)
   const [showUnlocking, setShowUnlocking] = useState(false)
@@ -107,11 +112,17 @@ export default function ConnectScreen({ navigation }: Props) {
     return () => clearTimeout(timeout)
   }, [connectionStatus, showUnlocking, navigation])
 
+  const reportConnectError = useCallback((e: unknown, host: string, secure: boolean, fallback: string) => {
+    setError(e instanceof Error ? e.message : fallback)
+    setHint(isNetworkFailure(e) ? reachabilityHint(host, { secure, platform: Platform.OS }) : null)
+  }, [])
+
   const reconnectToExistingServer = useCallback(async () => {
     if (!existingServer || loading) return
 
     console.log('[ConnectScreen] Reconnecting to existing server:', existingServer)
     setError(null)
+    setHint(null)
     setLoading(true)
 
     try {
@@ -123,11 +134,11 @@ export default function ConnectScreen({ navigation }: Props) {
       }
       navigation.replace('ServerSetup')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to reconnect')
+      reportConnectError(e, existingServer.ip, existingServer.secure ?? false, 'Failed to reconnect')
     } finally {
       setLoading(false)
     }
-  }, [connect, existingServer, loading, navigation, resolvePostPairDestination])
+  }, [connect, existingServer, loading, navigation, resolvePostPairDestination, reportConnectError])
 
   const parsed = parseConnectionString(connectionInput)
   const canSubmit = parsed !== null && !loading
@@ -135,23 +146,28 @@ export default function ConnectScreen({ navigation }: Props) {
   const inputStyle = {
     backgroundColor: isDark ? 'rgba(23, 23, 23, 0.7)' : 'rgba(250, 250, 250, 0.92)',
   }
-  async function handleConnect() {
-    if (!parsed) return
+  async function attemptPair(host: string, port: number, code: string, secure: boolean) {
     setError(null)
+    setHint(null)
     setLoading(true)
+    setLastAttempt({ host, port, code, secure })
 
     try {
-      const secure = parsed.secure ?? false
-      const result = await pairWithServer(parsed.host, parsed.port, parsed.code, secure)
-      setPaired({ ip: parsed.host, port: parsed.port, deviceId: result.deviceId, secure })
-      const setupReady = await resolvePostPairDestination(parsed.host, parsed.port)
+      const result = await pairWithServer(host, port, code, secure)
+      setPaired({ ip: host, port, deviceId: result.deviceId, secure })
+      const setupReady = await resolvePostPairDestination(host, port)
       setPostPairSetupReady(setupReady)
       setShowPairing(true)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to connect')
+      reportConnectError(e, host, secure, 'Failed to connect')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleConnect() {
+    if (!parsed) return
+    await attemptPair(parsed.host, parsed.port, parsed.code, parsed.secure ?? false)
   }
 
   function handleQRScan(result: QRScanResult) {
@@ -160,21 +176,43 @@ export default function ConnectScreen({ navigation }: Props) {
     const scheme = qrSecure ? 'pocketdevs' : 'pocketdev'
     setConnectionInput(`${scheme}://${result.host}:${result.port}/${result.code}`)
     setTimeout(() => {
-      setError(null)
-      setLoading(true)
-      pairWithServer(result.host, result.port, normalizeSetupCode(result.code).trim(), qrSecure)
-        .then(async (pairResult) => {
-          setPaired({ ip: result.host, port: result.port, deviceId: pairResult.deviceId, secure: qrSecure })
-          const setupReady = await resolvePostPairDestination(result.host, result.port)
-          setPostPairSetupReady(setupReady)
-          setShowPairing(true)
-        })
-        .catch((e) => {
-          setError(e instanceof Error ? e.message : 'Failed to connect')
-        })
-        .finally(() => setLoading(false))
+      void attemptPair(result.host, result.port, normalizeSetupCode(result.code).trim(), qrSecure)
     }, 100)
   }
+
+  function retryLastAttempt() {
+    if (lastAttempt) {
+      void attemptPair(lastAttempt.host, lastAttempt.port, lastAttempt.code, lastAttempt.secure)
+    } else if (existingServer) {
+      void reconnectToExistingServer()
+    }
+  }
+
+  const hintBox = hint ? (
+    <View style={[styles.hintBox, { borderColor: colors.border, backgroundColor: isDark ? 'rgba(250,204,21,0.08)' : 'rgba(234,179,8,0.08)' }]}>
+      <Text style={[styles.hintTitle, { color: colors.text }]}>{hint.title}</Text>
+      <Text style={[styles.helperText, { color: colors.textSecondary }]}>{hint.body}</Text>
+      <View style={styles.hintActions}>
+        {hint.suggestTailscale ? (
+          <TouchableOpacity
+            style={[styles.hintButton, { borderColor: colors.border }]}
+            onPress={() => Linking.openURL(Platform.OS === 'android' ? TAILSCALE_STORE_URL.android : TAILSCALE_STORE_URL.ios)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.hintButtonText, { color: colors.text }]}>Get Tailscale</Text>
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity
+          style={[styles.hintButton, { borderColor: colors.border }]}
+          onPress={retryLastAttempt}
+          disabled={loading}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.hintButtonText, { color: colors.text }]}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  ) : null
 
   const form = (
     <Card style={styles.formCard}>
@@ -274,6 +312,7 @@ export default function ConnectScreen({ navigation }: Props) {
             <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
           </View>
         ) : null}
+        {hintBox}
 
         <TouchableOpacity
           style={[
@@ -462,6 +501,30 @@ const styles = StyleSheet.create({
   errorText: {
     ...typographyScale.sm,
     textAlign: 'center',
+  },
+  hintBox: {
+    padding: spacing[3],
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    gap: spacing[2],
+  },
+  hintTitle: {
+    ...typographyScale.sm,
+    fontWeight: '600',
+  },
+  hintActions: {
+    flexDirection: 'row',
+    gap: spacing[2],
+  },
+  hintButton: {
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+  },
+  hintButtonText: {
+    ...typographyScale.sm,
+    fontWeight: '600',
   },
   button: {
     borderRadius: borderRadius.lg,

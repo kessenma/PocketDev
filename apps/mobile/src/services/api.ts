@@ -94,6 +94,8 @@ export function buildApiUrl(ip: string, port: number, path: string): string {
   return apiUrl(ip, port, path)
 }
 
+const PAIR_TIMEOUT_MS = 20_000
+
 export async function pairWithServer(
   ip: string,
   port: number,
@@ -107,16 +109,31 @@ export async function pairWithServer(
   const keypair = generateDeviceKeypair()
   const publicKeyHex = Buffer.from(keypair.publicKey).toString('hex')
 
-  const response = await fetch(apiUrl(ip, port, '/pair'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      code,
-      publicKey: publicKeyHex,
-      deviceName: `${Platform.OS} device`,
-      platform: Platform.OS,
-    }),
-  })
+  // Bounded so an unreachable address (e.g. Tailscale off on this phone)
+  // fails fast enough to show a useful hint instead of hanging for minutes.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), PAIR_TIMEOUT_MS)
+  let response: Response
+  try {
+    response = await fetch(apiUrl(ip, port, '/pair'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        publicKey: publicKeyHex,
+        deviceName: `${Platform.OS} device`,
+        platform: Platform.OS,
+      }),
+      signal: controller.signal,
+    })
+  } catch (e) {
+    if (controller.signal.aborted) {
+      throw new Error(`Timed out connecting to ${ip}:${port}`)
+    }
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
 
   if (!response.ok) {
     const text = await response.text()
