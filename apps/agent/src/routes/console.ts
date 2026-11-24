@@ -68,7 +68,16 @@ import {
   restartAgentShell,
   spawnDetachedScript,
 } from '../services/system/platform.ts'
-import { getTailscaleInfo, choosePairingAddress, isUnreachableFromPhone } from '../services/system/tailscale.ts'
+import {
+  getTailscaleInfo,
+  getTailscaleSetupStatus,
+  choosePairingAddress,
+  isUnreachableFromPhone,
+  getNetworkSummary,
+  startTailscaleLogin,
+  enableTailscaleServe,
+  disableTailscaleServe,
+} from '../services/system/tailscale.ts'
 import {
   listEnvVars,
   createEnvVar,
@@ -317,6 +326,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
     const requestHost = extractHostIp(request)
     const [caddyActive, tailscale] = await Promise.all([isCaddyActive(), getTailscaleInfo()])
+    const network = getNetworkSummary()
     const pairing = choosePairingAddress({
       requestHost,
       domain,
@@ -325,6 +335,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       agentHost: process.env.POCKETDEV_HOST ?? '0.0.0.0',
       tailscale,
       preferTailnet: IS_MACOS || isUnreachableFromPhone(requestHost),
+      lanIpv4: network.lanIpv4,
     })
 
     return {
@@ -339,8 +350,39 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       secure: pairing.secure,
       pairingHint: pairing.hint,
       tailscale,
+      platform: process.platform,
+      serviceManager: getServiceManager(),
+      network,
       lastUpgradeAt: getLastUpgradeAt(),
     }
+  })
+
+  // ─── Remote access via Tailscale ──────────────────────
+  // Read-only checklist for any console user; changing Tailscale state
+  // (login, Serve on/off) requires an owner/admin. See docs/macos/tailscale.md.
+  .get('/tailscale', async ({ request, set }) => {
+    if (!requireConsoleSession(request, set)) return { error: 'Unauthorized' }
+    const url = new URL(request.url)
+    const status = await getTailscaleSetupStatus({ forceRefresh: url.searchParams.get('refresh') === '1' })
+    return { ...status, network: getNetworkSummary(), platform: process.platform }
+  })
+
+  .post('/tailscale/login', async ({ request, set }) => {
+    const user = requireUserManagementAccess(request, set)
+    if (!user) return { error: set.status === 403 ? 'Forbidden' : 'Unauthorized' }
+    return startTailscaleLogin()
+  })
+
+  .post('/tailscale/serve', async ({ request, set }) => {
+    const user = requireUserManagementAccess(request, set)
+    if (!user) return { error: set.status === 403 ? 'Forbidden' : 'Unauthorized' }
+    return enableTailscaleServe()
+  })
+
+  .delete('/tailscale/serve', async ({ request, set }) => {
+    const user = requireUserManagementAccess(request, set)
+    if (!user) return { error: set.status === 403 ? 'Forbidden' : 'Unauthorized' }
+    return disableTailscaleServe()
   })
 
   // ─── User management (requires elevated session) ─────
