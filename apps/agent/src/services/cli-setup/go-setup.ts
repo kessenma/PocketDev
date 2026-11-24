@@ -1,4 +1,5 @@
 import type { GoSetupStatus } from '@pocketdev/shared/types'
+import { IS_MACOS } from '../system/platform.ts'
 
 /** Run a command in a login shell */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
@@ -55,8 +56,9 @@ export async function verifyGo(): Promise<GoSetupStatus> {
   return checkGoStatus()
 }
 
-/** Returns the shell command to install Go via apt, safe for non-interactive use. */
+/** Returns the shell command to install Go (apt on Linux, Homebrew on macOS), safe for non-interactive use. */
 export function getGoInstallCommand(): string {
+  if (IS_MACOS) return 'brew install go'
   return [
     'export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a',
     'apt-get update -q',

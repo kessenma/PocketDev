@@ -1,4 +1,5 @@
 import type { DockerSetupStatus } from '@pocketdev/shared/types'
+import { IS_MACOS } from '../system/platform.ts'
 
 /** Run a command in a login shell so PATH entries are visible */
 async function exec(cmd: string, timeoutMs = 15_000): Promise<{ stdout: string; stderr: string; exitCode: number }> {
@@ -48,10 +49,14 @@ export async function checkDockerStatus(): Promise<DockerSetupStatus> {
   // If docker info failed, check if it's a permission issue (daemon running but user not in group)
   let daemonActuallyRunning = daemonRunning
   if (!daemonRunning) {
-    // Check if daemon is running via systemctl (doesn't require docker group)
-    const { exitCode: systemctlExit } = await exec('systemctl is-active docker 2>/dev/null')
-    if (systemctlExit === 0) {
-      daemonActuallyRunning = true
+    // Check if daemon is running via systemctl (doesn't require docker group).
+    // macOS has no docker group — Docker Desktop / OrbStack / Colima expose a
+    // user-owned socket, so a failed `docker info` there means it's not running.
+    if (!IS_MACOS) {
+      const { exitCode: systemctlExit } = await exec('systemctl is-active docker 2>/dev/null')
+      if (systemctlExit === 0) {
+        daemonActuallyRunning = true
+      }
     }
   }
 

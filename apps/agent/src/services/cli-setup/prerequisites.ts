@@ -11,6 +11,7 @@ import {
 import { checkCopilotStatus } from './copilot-setup.ts'
 import { checkOpenCodeStatus } from './opencode-setup.ts'
 import { checkMinimaxStatus } from './minimax-setup.ts'
+import { platformCommand } from '../system/platform.ts'
 
 const EXEC_TIMEOUT_MS = 15_000
 const PREREQUISITES_CACHE_TTL_MS = 2 * 60_000
@@ -70,7 +71,7 @@ async function checkGit(): Promise<ToolCheck> {
     return {
       id: 'git', name: 'Git', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: true,
-      install_command: 'sudo apt-get install -y git',
+      install_command: platformCommand({ linux: 'sudo apt-get install -y git', macos: 'xcode-select --install' }),
       auth_command: 'git config --global user.name "Your Name" && git config --global user.email "you@example.com"',
       details: {},
     }
@@ -135,7 +136,7 @@ async function checkGitHubCli(): Promise<ToolCheck> {
     return {
       id: 'github_cli', name: 'GitHub CLI', status: 'missing', auth_status: 'unauthenticated',
       version: null, path: null, required: false,
-      install_command: 'type gh >/dev/null 2>&1 || (curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y)',
+      install_command: platformCommand({ linux: 'type gh >/dev/null 2>&1 || (curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y)', macos: 'brew install gh' }),
       auth_command: 'gh auth login',
       details: {},
     }
@@ -176,7 +177,7 @@ async function checkNode(): Promise<ToolCheck> {
     return {
       id: 'node', name: 'Node.js', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: true,
-      install_command: 'curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs',
+      install_command: platformCommand({ linux: 'curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs', macos: 'brew install node' }),
       auth_command: null, details: {},
     }
   }
@@ -216,7 +217,7 @@ async function checkClaudeCli(): Promise<ToolCheck> {
     return {
       id: 'claude_cli', name: 'Claude CLI', status: 'missing', auth_status: 'unauthenticated',
       version: null, path: null, required: true,
-      install_command: 'sudo npm install -g @anthropic-ai/claude-code',
+      install_command: platformCommand({ linux: 'sudo npm install -g @anthropic-ai/claude-code', macos: 'npm install -g @anthropic-ai/claude-code' }),
       auth_command: 'claude auth login', details: {},
     }
   }
@@ -245,7 +246,7 @@ async function checkCodexCli(): Promise<ToolCheck> {
     return {
       id: 'codex_cli', name: 'Codex CLI', status: 'missing', auth_status: 'unauthenticated',
       version: null, path: null, required: true,
-      install_command: 'sudo npm install -g @openai/codex',
+      install_command: platformCommand({ linux: 'sudo npm install -g @openai/codex', macos: 'npm install -g @openai/codex' }),
       auth_command: 'codex login', details: {},
     }
   }
@@ -353,7 +354,7 @@ async function checkBun(): Promise<ToolCheck> {
     return {
       id: 'bun', name: 'Bun', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo npm install -g bun',
+      install_command: platformCommand({ linux: 'sudo npm install -g bun', macos: 'curl -fsSL https://bun.sh/install | bash' }),
       auth_command: null, details: {},
     }
   }
@@ -373,7 +374,7 @@ async function checkPnpm(): Promise<ToolCheck> {
     return {
       id: 'pnpm', name: 'pnpm', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo npm install -g pnpm',
+      install_command: platformCommand({ linux: 'sudo npm install -g pnpm', macos: 'npm install -g pnpm' }),
       auth_command: null, details: {},
     }
   }
@@ -398,7 +399,7 @@ async function checkChromium(): Promise<ToolCheck> {
     return {
       id: 'chromium', name: 'Chromium', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo apt-get install -y chromium-browser',
+      install_command: platformCommand({ linux: 'sudo apt-get install -y chromium-browser', macos: 'brew install --cask chromium' }),
       auth_command: null, details: {},
     }
   }
@@ -419,7 +420,7 @@ async function checkDocker(): Promise<ToolCheck> {
     return {
       id: 'docker', name: 'Docker', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo apt-get update && sudo apt-get install -y ca-certificates curl gnupg && sudo install -m 0755 -d /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg && sudo chmod a+r /etc/apt/keyrings/docker.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null && sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && sudo usermod -aG docker $USER',
+      install_command: platformCommand({ linux: 'sudo apt-get update && sudo apt-get install -y ca-certificates curl gnupg && sudo install -m 0755 -d /etc/apt/keyrings && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg && sudo chmod a+r /etc/apt/keyrings/docker.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null && sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && sudo usermod -aG docker $USER', macos: 'brew install --cask orbstack' }),
       auth_command: null, details: {},
     }
   }
@@ -441,7 +442,7 @@ async function checkDocker(): Promise<ToolCheck> {
       id: 'docker', name: 'Docker', status: 'misconfigured', auth_status: 'not_applicable',
       version, path, required: false,
       install_command: null,
-      auth_command: 'sudo systemctl start docker',
+      auth_command: platformCommand({ linux: 'sudo systemctl start docker', macos: 'open -a OrbStack || open -a Docker' }),
       details: { daemon_running: 'false', has_compose: hasCompose ? 'true' : 'false' },
     }
   }
@@ -461,7 +462,7 @@ async function checkPython(): Promise<ToolCheck> {
     return {
       id: 'python', name: 'Python', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo apt install python3',
+      install_command: platformCommand({ linux: 'sudo apt install python3', macos: 'brew install python' }),
       auth_command: null, details: {},
     }
   }
@@ -486,7 +487,7 @@ async function checkPython(): Promise<ToolCheck> {
   return {
     id: 'python', name: 'Python', status, auth_status: 'not_applicable',
     version, path, required: false,
-    install_command: fullyConfigured ? null : `sudo apt install ${basename}-venv`,
+    install_command: fullyConfigured ? null : platformCommand({ linux: `sudo apt install ${basename}-venv`, macos: 'brew install python' }),
     auth_command: null,
     details: { pip_version: pipVersion, venv_available: venvAvailable ? 'true' : 'false', binary: basename },
   }
@@ -539,7 +540,7 @@ async function checkGo(): Promise<ToolCheck> {
     return {
       id: 'go', name: 'Go', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo apt install -y golang-go',
+      install_command: platformCommand({ linux: 'sudo apt install -y golang-go', macos: 'brew install go' }),
       auth_command: null, details: {},
     }
   }
@@ -600,7 +601,7 @@ async function checkTmux(): Promise<ToolCheck> {
     return {
       id: 'tmux', name: 'tmux', status: 'missing', auth_status: 'not_applicable',
       version: null, path: null, required: false,
-      install_command: 'sudo apt-get install -y tmux',
+      install_command: platformCommand({ linux: 'sudo apt-get install -y tmux', macos: 'brew install tmux' }),
       auth_command: null, details: {},
     }
   }
@@ -805,6 +806,9 @@ async function getOsInfo(): Promise<{ os: string; arch: string }> {
     } catch {
       // /etc/os-release may not exist
     }
+  } else if (process.platform === 'darwin') {
+    const { stdout, exitCode } = await exec('sw_vers -productVersion')
+    if (exitCode === 0 && stdout.trim()) os = `macOS ${stdout.trim()} ${arch}`
   }
 
   return { os, arch }

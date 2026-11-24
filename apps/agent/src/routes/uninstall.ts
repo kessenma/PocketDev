@@ -1,20 +1,43 @@
 /**
  * Device-facing uninstall route (Ed25519 auth required).
  *
- * Tears down everything install.sh creates: the pocketdev-agent service,
- * /opt/pocketdev, the sudoers drop-in, the tmp-cleanup timer, and the
- * Caddyfile if we wrote it. The agent can't tear itself down from inside
- * its own cgroup — `systemctl stop` kills the whole cgroup — so we launch
- * the teardown via `systemd-run`, which creates a transient unit outside
- * our scope. That script survives us, stops us, then cleans up.
+ * Linux (systemd): tears down everything install.sh creates — the
+ * pocketdev-agent service, /opt/pocketdev, the sudoers drop-in, the
+ * tmp-cleanup timer, and the Caddyfile if we wrote it.
+ *
+ * macOS (launchd): tears down what install-macos.sh creates — the
+ * LaunchAgent plist and ~/.pocketdev.
+ *
+ * The agent can't tear itself down from inside its own service (stopping the
+ * service kills us mid-teardown), so the script is launched fully detached via
+ * spawnDetachedScript(). That script survives us, stops us, then cleans up.
  */
 
 import { Elysia } from 'elysia'
-import { writeFileSync, chmodSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { authenticateRequest } from '../services/auth/auth.ts'
 import { killAllTasks } from '../services/tasks/task-manager.ts'
+import {
+  getServiceManager,
+  launchAgentPlistPath,
+  launchdServiceTarget,
+  spawnDetachedScript,
+} from '../services/system/platform.ts'
 
-const TEARDOWN_SCRIPT = `#!/bin/sh
+function launchdTeardownScript(): string {
+  const pocketdevHome = process.env.POCKETDEV_HOME ?? join(homedir(), '.pocketdev')
+  return `#!/bin/sh
+sleep 2
+PLIST='${launchAgentPlistPath()}'
+launchctl bootout ${launchdServiceTarget()} 2>/dev/null || launchctl unload "$PLIST" 2>/dev/null || true
+rm -f "$PLIST"
+rm -rf '${pocketdevHome}'
+rm -- "$0"
+`
+}
+
+const SYSTEMD_TEARDOWN_SCRIPT = `#!/bin/sh
 sleep 2
 systemctl stop pocketdev-agent 2>/dev/null || true
 systemctl disable pocketdev-agent 2>/dev/null || true
@@ -42,17 +65,17 @@ export const uninstallRoutes = new Elysia()
       return { error: 'Unauthorized' }
     }
 
+    const manager = getServiceManager()
+    if (manager === 'none') {
+      set.status = 400
+      return { error: 'This agent is not running as an installed service — nothing to uninstall.' }
+    }
+
     killAllTasks()
 
-    const scriptPath = `/tmp/pocketdev-uninstall-${process.pid}.sh`
-    writeFileSync(scriptPath, TEARDOWN_SCRIPT, 'utf8')
-    chmodSync(scriptPath, 0o755)
-
-    // systemd-run spawns the script in its own transient unit, outside our cgroup,
-    // so `systemctl stop pocketdev-agent` won't kill it mid-teardown.
-    Bun.spawn(
-      ['systemd-run', '--quiet', '--no-block', '--unit', `pocketdev-uninstall-${Date.now()}`, '/bin/sh', scriptPath],
-      { stdio: ['ignore', 'ignore', 'ignore'] },
+    spawnDetachedScript(
+      'pocketdev-uninstall',
+      manager === 'launchd' ? launchdTeardownScript() : SYSTEMD_TEARDOWN_SCRIPT,
     )
 
     return { ok: true }

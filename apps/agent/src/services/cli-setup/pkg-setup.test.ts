@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import type { ShellExec, ShellExecResult } from './pkg-setup.ts'
-import { checkBun, checkNode, checkNvm, checkPnpm, installPkgTool } from './pkg-setup.ts'
+import { checkBun, checkNode, checkNvm, checkPnpm, installPkgTool, PKG_INSTALL_COMMANDS } from './pkg-setup.ts'
 
 function createExecMock(handlers: Record<string, ShellExecResult>): ShellExec {
   return async (cmd: string) => handlers[cmd] ?? { stdout: '', stderr: '', exitCode: 1 }
@@ -62,7 +62,7 @@ describe('pkg-setup', () => {
 
   test('returns updated status and output on successful tool install', async () => {
     const exec = createExecMock({
-      'sudo npm install -g pnpm': { stdout: 'pnpm installed', stderr: '', exitCode: 0 },
+      [PKG_INSTALL_COMMANDS.pnpm]: { stdout: 'pnpm installed', stderr: '', exitCode: 0 },
       'command -v npm': { stdout: '', stderr: '', exitCode: 1 },
       'command -v pnpm': { stdout: '/usr/local/bin/pnpm', stderr: '', exitCode: 0 },
       'pnpm --version': { stdout: '9.15.0', stderr: '', exitCode: 0 },
@@ -82,7 +82,7 @@ describe('pkg-setup', () => {
 
   test('returns error details when installation fails', async () => {
     const exec = createExecMock({
-      'sudo npm install -g bun': { stdout: '', stderr: 'network failed', exitCode: 1 },
+      [PKG_INSTALL_COMMANDS.bun]: { stdout: '', stderr: 'network failed', exitCode: 1 },
       'command -v npm': { stdout: '', stderr: '', exitCode: 1 },
       'command -v pnpm': { stdout: '', stderr: '', exitCode: 1 },
       'command -v bun': { stdout: '', stderr: '', exitCode: 1 },

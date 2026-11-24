@@ -62,6 +62,13 @@ import { createBrowserSession } from '../services/preview/proxy.ts'
 import { getAgentVersion, checkForUpdate, clearVersionCache } from '../services/system/version.ts'
 import { disableManagedSwap, enableManagedSwap, getSwapMetrics, getSwapStatus } from '../services/system/swap.ts'
 import {
+  IS_MACOS,
+  INSTALL_SCRIPT_URL,
+  getServiceManager,
+  restartAgentShell,
+  spawnDetachedScript,
+} from '../services/system/platform.ts'
+import {
   listEnvVars,
   createEnvVar,
   updateEnvVarById,
@@ -107,14 +114,26 @@ async function isCaddyActive(): Promise<boolean> {
     return cachedCaddyStatus.active
   }
 
+  const active = await checkCaddyRunning()
+  cachedCaddyStatus = { active, checkedAt: now }
+  return active
+}
+
+/**
+ * Whether the Caddy HTTPS proxy is running. install.sh manages Caddy as a
+ * systemd unit on Linux; macOS installs don't set up Caddy (HTTPS comes from
+ * Tailscale Serve there), but a user-run Caddy is still detected via pgrep.
+ */
+async function checkCaddyRunning(): Promise<boolean> {
   try {
-    const proc = Bun.spawn(['systemctl', 'is-active', 'caddy'], { stdout: 'pipe', stderr: 'pipe' })
-    const output = await new Response(proc.stdout).text()
-    const active = output.trim() === 'active'
-    cachedCaddyStatus = { active, checkedAt: now }
-    return active
+    if (getServiceManager() === 'systemd') {
+      const proc = Bun.spawn(['systemctl', 'is-active', 'caddy'], { stdout: 'pipe', stderr: 'pipe' })
+      const output = await new Response(proc.stdout).text()
+      return output.trim() === 'active'
+    }
+    const proc = Bun.spawn(['pgrep', '-x', 'caddy'], { stdout: 'ignore', stderr: 'ignore' })
+    return (await proc.exited) === 0
   } catch {
-    cachedCaddyStatus = { active: false, checkedAt: now }
     return false
   }
 }
@@ -1059,14 +1078,7 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     }
 
     // Check if Caddy is running
-    let httpsEnabled = false
-    try {
-      const proc = Bun.spawn(['systemctl', 'is-active', 'caddy'], { stdout: 'pipe', stderr: 'pipe' })
-      const output = await new Response(proc.stdout).text()
-      httpsEnabled = output.trim() === 'active'
-    } catch {
-      // systemctl not available or caddy not installed
-    }
+    const httpsEnabled = await checkCaddyRunning()
 
     return {
       domain,
@@ -1086,6 +1098,15 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
     if (domain && !/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/.test(domain)) {
       set.status = 400
       return { error: 'Invalid domain format' }
+    }
+
+    if (getServiceManager() !== 'systemd') {
+      set.status = 400
+      return {
+        error: IS_MACOS
+          ? 'Managed Caddy HTTPS is only set up on Linux installs. On macOS, use Tailscale Serve for HTTPS (see docs/macos/tailscale.md).'
+          : 'Managed Caddy HTTPS requires the systemd install from install.sh.',
+      }
     }
 
     const dataDir = process.env.POCKETDEV_DATA_DIR ?? './data'
@@ -1154,8 +1175,9 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
   //     extracts it over the install dir. Kept for the UpdateBanner rollback
   //     dropdown when previous versions exist.
   //
-  // Both paths run in a detached systemd transient unit so the script survives
-  // the agent being killed when the service restarts.
+  // Both paths run fully detached (systemd transient unit on Linux, new
+  // session on macOS) so the script survives the agent being killed when the
+  // service restarts. install.sh hands off to install-macos.sh on Darwin.
   .post('/update', async ({ request, body, set }) => {
     if (!requireConsoleSession(request, set)) {
       return { error: 'Unauthorized' }
@@ -1167,20 +1189,13 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       // Beta reinstall path: always run install.sh --beta regardless of current version.
       setLastUpgradeAt(new Date().toISOString())
       clearVersionCache()
-      Bun.spawn(
-        [
-          'systemd-run', '--quiet', '--no-block',
-          '--unit', `pocketdev-beta-${Date.now()}`,
-          '/bin/sh', '-c', 'curl -fsSL https://pocketdev.run/install.sh | bash -s -- --beta',
-        ],
-        { stdio: ['ignore', 'ignore', 'ignore'] },
-      )
+      spawnDetachedScript('pocketdev-beta', `#!/bin/sh\ncurl -fsSL ${INSTALL_SCRIPT_URL} | bash -s -- --beta\n`)
       return { ok: true, message: 'Beta reinstall started. The agent will restart shortly.' }
     }
 
     if (targetVersion) {
       // Versioned path: do the download + extract + restart in a detached
-      // systemd transient unit, exactly like the latest-version branch below.
+      // script, exactly like the latest-version branch below.
       // Holding the HTTP response open during the fetch (the previous shape)
       // surfaced "signal timed out" to the user whenever GitHub's S3 redirect
       // was slower than the AbortSignal deadline.
@@ -1192,44 +1207,31 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       setLastUpgradeAt(new Date().toISOString())
       clearVersionCache()
 
-      const ts = Date.now()
-      const tmpFile = `/tmp/pocketdev-update-${ts}.tar.gz`
-      const scriptPath = `/tmp/pocketdev-version-${ts}.sh`
       const installDir = process.cwd()
       const bundleUrl = `https://pocketdev.run/agent/bundle/${targetVersion}`
 
       const installScript = `#!/bin/sh
 set -e
 sleep 1
-curl -fSL -o ${tmpFile} '${bundleUrl}'
-tar -tzf ${tmpFile} >/dev/null
-tar -xzf ${tmpFile} -C ${installDir} --strip-components=1
-rm -f ${tmpFile} ${scriptPath}
-systemctl restart pocketdev-agent
+TMP_BUNDLE="$(mktemp)"
+curl -fSL -o "$TMP_BUNDLE" '${bundleUrl}'
+tar -tzf "$TMP_BUNDLE" >/dev/null
+tar -xzf "$TMP_BUNDLE" -C '${installDir}' --strip-components=1
+rm -f "$TMP_BUNDLE" "$0"
+${restartAgentShell()}
 `
-      await Bun.write(scriptPath, installScript)
-      Bun.spawn(
-        ['systemd-run', '--quiet', '--no-block', '--unit', `pocketdev-version-${ts}`, '/bin/sh', scriptPath],
-        { stdio: ['ignore', 'ignore', 'ignore'] },
-      )
+      spawnDetachedScript('pocketdev-version', installScript)
 
       return { ok: true, message: `Installing v${targetVersion}. The agent will restart shortly.` }
     }
 
-    // Latest-version path: delegate to install.sh. systemd-run puts it in its
-    // own transient unit, outside our cgroup, so install.sh's `systemctl stop
-    // pocketdev-agent` doesn't kill the installer mid-run.
+    // Latest-version path: delegate to install.sh. spawnDetachedScript runs it
+    // outside our service (systemd transient unit / new session), so the
+    // installer stopping the agent doesn't kill the installer mid-run.
     // Record upfront — install.sh will kill this process, so we can't do it after.
     setLastUpgradeAt(new Date().toISOString())
     clearVersionCache()
-    Bun.spawn(
-      [
-        'systemd-run', '--quiet', '--no-block',
-        '--unit', `pocketdev-upgrade-${Date.now()}`,
-        '/bin/sh', '-c', 'curl -fsSL https://pocketdev.run/install.sh | bash',
-      ],
-      { stdio: ['ignore', 'ignore', 'ignore'] },
-    )
+    spawnDetachedScript('pocketdev-upgrade', `#!/bin/sh\ncurl -fsSL ${INSTALL_SCRIPT_URL} | bash\n`)
 
     return { ok: true, message: 'Upgrade started. The agent will restart shortly.' }
   }, {

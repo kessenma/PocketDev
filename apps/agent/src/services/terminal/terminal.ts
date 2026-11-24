@@ -11,6 +11,12 @@ export interface TerminalSession {
 /** Active terminal sessions keyed by session ID */
 const sessions = new Map<string, TerminalSession>()
 
+/** Minimal shape of Bun's native PTY handle (`Bun.spawn({ terminal })`). */
+interface BunTerminal {
+  write(data: string | Uint8Array): void
+  resize(cols: number, rows: number): void
+}
+
 /** Spawn a PTY-backed shell session */
 export function createTerminalSession(
   sessionId: string,
@@ -18,54 +24,83 @@ export function createTerminalSession(
   onExit: (code: number) => void,
   cwd?: string,
 ): TerminalSession {
-  // Use `script` to allocate a real PTY — works on Linux/macOS, zero native deps.
-  // -q: quiet, /dev/null: discard typescript file
   const shell = process.env.SHELL ?? '/bin/bash'
-  const shellCommand = `${shell} -il`
-  const isLinux = process.platform === 'linux'
-  const cmd = isLinux
-    ? ['script', '-q', '-c', shellCommand, '/dev/null']
-    : ['script', '-q', '/dev/null', shellCommand]
-
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
-
-  const proc = Bun.spawn(cmd, {
-    cwd: cwd ?? home,
-    stdin: 'pipe',
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: {
-      ...process.env,
-      HOME: home,
-      SHELL: shell,
-      TERM: 'xterm-256color',
-      COLUMNS: '80',
-      LINES: '24',
-      PATH: process.env.PATH
-        ? `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${process.env.PATH}`
-        : '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
-    },
-  })
+  const env = {
+    ...process.env,
+    HOME: home,
+    SHELL: shell,
+    TERM: 'xterm-256color',
+    COLUMNS: '80',
+    LINES: '24',
+    PATH: process.env.PATH
+      ? `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${process.env.PATH}`
+      : '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+  }
 
   // Auto-accept Claude workspace trust dialog in interactive terminal sessions.
   // The dialog arrives across multiple PTY chunks, so keep a rolling buffer.
   let trustAccepted = false
   let trustBuffer = ''
   const trustRe = /Quick\s*safety\s*check|Is\s*this\s*a\s*project\s*you\s*created/i
+  let write: (data: string) => void = () => {}
   const wrappedOnData = (chunk: string) => {
     if (!trustAccepted) {
       trustBuffer = (trustBuffer + chunk).slice(-2000)
       if (trustRe.test(trustBuffer)) {
         trustAccepted = true
-        proc.stdin.write(new TextEncoder().encode('\r'))
+        write('\r')
       }
     }
     onData(chunk)
   }
 
-  // Stream stdout to WebSocket
-  streamOutput(proc.stdout as ReadableStream<Uint8Array> | null, wrappedOnData)
-  streamOutput(proc.stderr as ReadableStream<Uint8Array> | null, wrappedOnData)
+  let proc: Subprocess
+  let resize: (cols: number, rows: number) => void
+
+  if (process.platform === 'linux') {
+    // util-linux `script` allocates a real PTY even with piped stdio — zero
+    // native deps. -q: quiet, -c: command, /dev/null: discard typescript file.
+    const piped = Bun.spawn(['script', '-q', '-c', `${shell} -il`, '/dev/null'], {
+      cwd: cwd ?? home,
+      stdin: 'pipe',
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env,
+    })
+    proc = piped
+    write = (data) => { piped.stdin.write(new TextEncoder().encode(data)) }
+    // `script` doesn't support resize directly — send stty command.
+    // Best-effort; full PTY resize requires forkpty/ioctl.
+    resize = (cols, rows) => write(`stty cols ${cols} rows ${rows}\n`)
+    streamOutput(piped.stdout as ReadableStream<Uint8Array> | null, wrappedOnData)
+    streamOutput(piped.stderr as ReadableStream<Uint8Array> | null, wrappedOnData)
+  } else {
+    // macOS/BSD `script` calls tcgetattr() on its own stdin and exits with
+    // "Operation not supported on socket" when stdin is a pipe, so use Bun's
+    // native PTY instead (same mechanism as ClaudePtyRunner). It also gives
+    // us a real TIOCSWINSZ resize.
+    const decoder = new TextDecoder()
+    const withPty = Bun.spawn([shell, '-il'], {
+      cwd: cwd ?? home,
+      env,
+      terminal: {
+        cols: 80,
+        rows: 24,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: (_t: unknown, chunk: any) => {
+          wrappedOnData(typeof chunk === 'string'
+            ? chunk
+            : decoder.decode(chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk), { stream: true }))
+        },
+      },
+    } as Parameters<typeof Bun.spawn>[1]) as unknown as Subprocess & { terminal: BunTerminal }
+    proc = withPty
+    write = (data) => { withPty.terminal.write(data) }
+    resize = (cols, rows) => {
+      try { withPty.terminal.resize(cols, rows) } catch { /* exited */ }
+    }
+  }
 
   proc.exited.then((code) => {
     sessions.delete(sessionId)
@@ -76,12 +111,10 @@ export function createTerminalSession(
     id: sessionId,
     proc,
     send(data: string) {
-      proc.stdin.write(new TextEncoder().encode(data))
+      write(data)
     },
     resize(cols: number, rows: number) {
-      // `script` doesn't support resize directly — send stty command
-      // This is a best-effort approach; full PTY resize requires forkpty/ioctl
-      proc.stdin.write(new TextEncoder().encode(`stty cols ${cols} rows ${rows}\n`))
+      resize(cols, rows)
     },
     kill() {
       proc.kill('SIGTERM')

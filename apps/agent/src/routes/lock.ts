@@ -18,6 +18,7 @@ import {
   setFirewallEnabled,
 } from '../services/system/firewall.ts'
 import { broadcast, makeMessage, getConnectedClientCount, closeAllClients } from '../services/terminal/ws.ts'
+import { IS_MACOS } from '../services/system/platform.ts'
 
 const WAKE_PORT = Number(process.env.POCKETDEV_WAKE_PORT ?? 4388)
 const AUTO_LOCK_MINUTES = Number(process.env.POCKETDEV_AUTO_LOCK_MINUTES ?? 0)
@@ -41,7 +42,11 @@ export const lockRoutes = new Elysia({ prefix: '/lock' })
 
     if (!isFirewallAvailable()) {
       set.status = 400
-      return { error: 'iptables unavailable — network-level locking requires root and iptables on the server.' }
+      return {
+        error: IS_MACOS
+          ? 'Network-level port locking is Linux-only (iptables). On macOS, keep the agent off the public internet — reach it over Tailscale instead.'
+          : 'iptables unavailable — network-level locking requires root and iptables on the server.',
+      }
     }
 
     // Mobile is the only locker now (console UI is gone), so a lock request

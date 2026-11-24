@@ -9,6 +9,7 @@ import type {
   CopilotTrustSessionStatus,
   CopilotTrustStartResult,
 } from '@pocketdev/shared/types'
+import { IS_MACOS } from '../system/platform.ts'
 
 const DATA_DIR = process.env.POCKETDEV_DATA_DIR ?? join(process.cwd(), 'data')
 const TRUST_MARKER_FILE = join(DATA_DIR, 'copilot-trust.json')
@@ -263,7 +264,8 @@ function syncPersistedCopilotStatus(status: CopilotSetupStatus) {
   }
 }
 
-async function detectPackageManager(): Promise<'apt-get' | 'dnf' | 'yum' | 'pacman' | 'apk' | null> {
+async function detectPackageManager(): Promise<'brew' | 'apt-get' | 'dnf' | 'yum' | 'pacman' | 'apk' | null> {
+  if (IS_MACOS) return (await which('brew')) ? 'brew' : null
   const candidates = ['apt-get', 'dnf', 'yum', 'pacman', 'apk'] as const
   for (const candidate of candidates) {
     if (await which(candidate)) return candidate
@@ -302,6 +304,9 @@ async function installTmuxIfNeeded(): Promise<{
 
   let command: string
   switch (packageManager) {
+    case 'brew':
+      command = 'brew install tmux'
+      break
     case 'apt-get':
       command = TMUX_APT_INSTALL_COMMAND
       break

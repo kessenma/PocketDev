@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { PkgInstallResult, PkgInstallTool, PkgManagerStatus, PkgToolInfo } from '@pocketdev/shared/types'
+import { platformCommand } from '../system/platform.ts'
 
 const DEFAULT_TIMEOUT_MS = 15_000
 const INSTALL_TIMEOUT_MS = 5 * 60_000
@@ -158,10 +159,24 @@ async function runInstall(
   }
 }
 
+/**
+ * Install commands actually executed by the agent. macOS installs run as the
+ * logged-in user (no root, no passwordless sudo), so use Homebrew / user-level
+ * installs there instead of apt + sudo.
+ */
+export const PKG_INSTALL_COMMANDS: Record<PkgInstallTool, string> = {
+  npm: platformCommand({
+    linux: 'curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs',
+    macos: 'brew install node',
+  }),
+  pnpm: platformCommand({ linux: 'sudo npm install -g pnpm', macos: 'npm install -g pnpm' }),
+  bun: platformCommand({ linux: 'sudo npm install -g bun', macos: 'curl -fsSL https://bun.sh/install | bash' }),
+}
+
 export async function installNodeAndNpm(exec: ShellExec = execShell): Promise<PkgInstallResult> {
   return runInstall(
     'npm',
-    'curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs',
+    PKG_INSTALL_COMMANDS.npm,
     exec,
   )
 }
@@ -169,7 +184,7 @@ export async function installNodeAndNpm(exec: ShellExec = execShell): Promise<Pk
 export async function installPnpm(exec: ShellExec = execShell): Promise<PkgInstallResult> {
   return runInstall(
     'pnpm',
-    'sudo npm install -g pnpm',
+    PKG_INSTALL_COMMANDS.pnpm,
     exec,
   )
 }
@@ -177,7 +192,7 @@ export async function installPnpm(exec: ShellExec = execShell): Promise<PkgInsta
 export async function installBun(exec: ShellExec = execShell): Promise<PkgInstallResult> {
   return runInstall(
     'bun',
-    'sudo npm install -g bun',
+    PKG_INSTALL_COMMANDS.bun,
     exec,
   )
 }

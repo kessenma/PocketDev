@@ -1,4 +1,6 @@
+import { existsSync } from 'node:fs'
 import { deleteToolRecord, upsertToolPath } from '../../db/index.ts'
+import { IS_LINUX } from '../system/platform.ts'
 import type { OpenCodeInstallResult, OpenCodeSetupStatus } from '@pocketdev/shared/types'
 
 const OPENCODE_INSTALL_COMMAND = 'curl -fsSL https://opencode.ai/install | bash'
@@ -51,9 +53,22 @@ async function pathExists(path: string): Promise<boolean> {
 }
 
 async function scanForOpenCodeBinary(): Promise<string | null> {
+  // Never walk a macOS home directory: touching ~/Desktop, ~/Documents,
+  // ~/Downloads, iCloud/File Provider folders etc. raises TCC privacy prompts
+  // and `find` blocks until someone answers them (and it outlives the exec
+  // timeout, since only the wrapping shell gets killed). CANDIDATE_PATHS
+  // already covers the standard install locations there.
+  if (!IS_LINUX) return null
+
   const home = process.env.HOME ?? process.env.USERPROFILE ?? '/root'
+  // Bounded scan: the binaries live at <home>/.opencode/bin or
+  // <home>/.local/bin — depth 3 from a home dir, depth 4 from /home.
+  const roots = [home, '/root', '/home']
+    .filter((root, i, all) => existsSync(root) && all.indexOf(root) === i)
+    .map((root) => `'${root.replace(/'/g, `'\\''`)}'`)
+    .join(' ')
   const { stdout, exitCode } = await exec(
-    `find '${home.replace(/'/g, `'\\''`)}' /root /home \\( -path '*/.opencode/bin/opencode' -o -path '*/.local/bin/opencode' \\) -type f -perm -111 2>/dev/null | head -n 1`,
+    `find ${roots} -maxdepth 4 \\( -name Library -o -name node_modules -o -name .Trash -o -name .git \\) -prune -o \\( -path '*/.opencode/bin/opencode' -o -path '*/.local/bin/opencode' \\) -type f -perm -111 -print 2>/dev/null | head -n 1`,
     20_000,
   )
 
