@@ -23,15 +23,17 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
       <div className="flex flex-1 items-center gap-3">
         <a
           href="https://pocketdev.run"
-          className="flex items-center gap-2 text-sm font-semibold transition-opacity hover:opacity-80"
+          className="flex items-center gap-2 rounded-md py-1 pl-1 pr-3 text-sm font-semibold transition-opacity hover:opacity-70"
           style={{
             fontFamily: docsFonts.display,
             color: docsTokens.colors.text,
+            border: `1px solid ${docsTokens.colors.border}`,
           }}
-          aria-label="PocketDev home"
+          title="Back to pocketdev.run"
         >
-          <img src="/apple-touch-icon.png" alt="" width={28} height={28} className="rounded-lg" />
+          <img src="/apple-touch-icon.png" alt="" width={24} height={24} className="rounded" />
           PocketDev
+          <ArrowUpRight size={13} style={{ color: docsTokens.colors.textSecondary }} />
         </a>
         <span
           className="text-xs"
@@ -47,18 +49,6 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
           Docs
         </Link>
       </div>
-
-      <a
-        href="https://pocketdev.run"
-        className="hidden items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-70 sm:flex"
-        style={{
-          color: docsTokens.colors.textSecondary,
-          border: `1px solid ${docsTokens.colors.border}`,
-        }}
-      >
-        pocketdev.run
-        <ArrowUpRight size={13} />
-      </a>
 
       <a
         href="https://github.com/kessenma/PocketDev"
