@@ -16,6 +16,8 @@
 #   --admin-reset         clear the console admin account + passkeys
 #   --tailscale-serve     serve the agent over HTTPS on your tailnet via
 #                         `tailscale serve` and bind the agent to localhost only
+#   --no-tailscale        don't offer to set up Tailscale (interactive runs
+#                         offer it by default when Tailscale isn't connected)
 #   --uninstall           remove the LaunchAgent and ~/.pocketdev
 #
 # Env overrides (mostly for development):
@@ -74,24 +76,94 @@ find_tailscale() {
   return 1
 }
 
-# Run `tailscale serve` without hanging the installer: if HTTPS certificates
-# aren't enabled for the tailnet it prints a consent URL and waits. Give it
-# 20s, then surface that URL. Returns 0 on success.
-run_tailscale_serve() {
-  local out pid
+# Run a Tailscale CLI command that may block waiting for browser approval
+# (`up` prints a login URL, `serve` prints an HTTPS-consent URL). Waits up to
+# $1 seconds or until a login.tailscale.com URL appears. Sets TS_BG_OUTPUT,
+# TS_BG_URL and TS_BG_PID (non-empty if still running). Returns 0 only if the
+# command finished successfully.
+run_ts_bg() {
+  local wait_s="$1"; shift
+  local out
   out="$(mktemp)"
-  "$TS_BIN" serve --bg "http://127.0.0.1:${PORT}" >"$out" 2>&1 </dev/null &
-  pid=$!
-  for _ in $(seq 1 20); do
-    if ! kill -0 "$pid" 2>/dev/null; then
-      if wait "$pid"; then rm -f "$out"; return 0; fi
+  "$TS_BIN" "$@" >"$out" 2>&1 </dev/null &
+  TS_BG_PID=$!
+  TS_BG_URL=""
+  for _ in $(seq 1 "$wait_s"); do
+    if ! kill -0 "$TS_BG_PID" 2>/dev/null; then
+      if wait "$TS_BG_PID"; then
+        TS_BG_PID=""; TS_BG_OUTPUT="$(cat "$out")"; rm -f "$out"; return 0
+      fi
+      TS_BG_PID=""
       break
     fi
+    TS_BG_URL="$(grep -oE 'https://login\.tailscale\.com/[^[:space:]]+' "$out" | head -1 || true)"
+    [ -n "$TS_BG_URL" ] && break
     sleep 1
   done
-  kill "$pid" 2>/dev/null || true
-  SERVE_OUTPUT="$(cat "$out")"
+  TS_BG_OUTPUT="$(cat "$out")"
   rm -f "$out"
+  return 1
+}
+
+ts_bg_kill() {
+  if [ -n "${TS_BG_PID:-}" ]; then
+    kill "$TS_BG_PID" 2>/dev/null || true
+    wait "$TS_BG_PID" 2>/dev/null || true   # reap quietly (no "Terminated" job notice)
+    TS_BG_PID=""
+  fi
+}
+
+# Re-read Tailscale state into TS_BIN / TS_IP / TS_DNS / TS_CERTS.
+ts_refresh() {
+  TS_BIN="$(find_tailscale || true)"
+  TS_IP=""; TS_DNS=""; TS_CERTS=""
+  [ -z "$TS_BIN" ] && return 0
+  TS_IP="$("$TS_BIN" ip -4 2>/dev/null | head -1 || true)"
+  local parsed
+  parsed="$("$TS_BIN" status --json 2>/dev/null | bun -e "
+let s = ''; process.stdin.on('data', d => s += d).on('end', () => {
+  try {
+    const j = JSON.parse(s)
+    const dns = ((j.Self && j.Self.DNSName) || '').replace(/\.$/, '')
+    const certs = Array.isArray(j.CertDomains) && j.CertDomains.length > 0 ? 'yes' : ''
+    console.log(dns + ' ' + certs)
+  } catch {}
+})" 2>/dev/null || true)"
+  TS_DNS="${parsed%% *}"
+  case "$parsed" in *" yes") TS_CERTS=yes ;; esac
+  return 0
+}
+
+# Can we ask the user questions? (curl | bash keeps /dev/tty; the agent's
+# self-upgrade runs detached with no terminal.)
+can_prompt() {
+  [ "${POCKETDEV_NONINTERACTIVE:-}" = "1" ] && return 1
+  ( : </dev/tty ) 2>/dev/null
+}
+
+ask_yes() {
+  local reply
+  printf '  %b ' "$1" >/dev/tty
+  read -r reply </dev/tty || return 1
+  case "$reply" in ""|y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
+}
+
+# Poll until a condition holds; press "s" to skip. $1 = installed|connected|certs.
+wait_for_tailscale() {
+  local what="$1" waited=0 key=""
+  while [ "$waited" -lt 900 ]; do
+    ts_refresh
+    case "$what" in
+      installed) [ -n "$TS_BIN" ] && return 0 ;;
+      connected) [ -n "$TS_IP" ] && return 0 ;;
+      certs) [ -n "$TS_CERTS" ] && return 0 ;;
+    esac
+    if read -r -s -n 1 -t 5 key </dev/tty 2>/dev/null; then
+      case "$key" in s|S) return 1 ;; esac
+    else
+      waited=$((waited + 5))
+    fi
+  done
   return 1
 }
 
@@ -105,12 +177,14 @@ launchd_stop() {
 ADMIN_RESET=false
 INSTALL_BETA=false
 TAILSCALE_SERVE=false
+NO_TAILSCALE=false
 UNINSTALL=false
 for arg in "$@"; do
   case "$arg" in
     --admin-reset) ADMIN_RESET=true ;;
     --beta|--nightly) INSTALL_BETA=true ;;
     --tailscale-serve) TAILSCALE_SERVE=true ;;
+    --no-tailscale) NO_TAILSCALE=true ;;
     --uninstall) UNINSTALL=true ;;
   esac
 done
@@ -311,35 +385,92 @@ fi
 step "Step 4/5: Network access"
 
 AGENT_HOST="0.0.0.0"
-TS_BIN=""
-TS_IP=""
-TS_DNS=""
-if TS_BIN="$(find_tailscale)"; then
-  TS_IP="$("$TS_BIN" ip -4 2>/dev/null | head -1 || true)"
-  TS_DNS="$("$TS_BIN" status --json 2>/dev/null | bun -e "
-let s = ''; process.stdin.on('data', d => s += d).on('end', () => {
-  try { const j = JSON.parse(s); console.log(((j.Self && j.Self.DNSName) || '').replace(/\.$/, '')) } catch {}
-})" 2>/dev/null || true)"
+SERVE_OK=false
+TS_BIN=""; TS_IP=""; TS_DNS=""; TS_CERTS=""
+ts_refresh
+
+if [ -n "$TS_IP" ]; then
+  ok "Tailscale connected (${TS_DNS:-no MagicDNS name} / $TS_IP)"
+elif [ -n "$TS_BIN" ]; then
+  warn "Tailscale is installed but not connected."
+else
+  info "Tailscale not found."
+fi
+
+# Offer guided setup on interactive runs when Tailscale isn't connected yet.
+if [ -z "$TS_IP" ] && [ "$NO_TAILSCALE" != true ] && can_prompt; then
+  echo ""
+  info "This Mac is on a home network, so your phone can only reach it on the same Wi-Fi."
+  info "Tailscale (free, private, no port forwarding) lets the PocketDev app reach it from anywhere."
+  if ask_yes "Set up Tailscale now? [Y/n]"; then
+    TAILSCALE_SERVE=true
+  else
+    info "Skipped — you can do it later from the console (Security → Remote Access)."
+  fi
+fi
+
+if [ "$TAILSCALE_SERVE" = true ] && [ -z "$TS_BIN" ]; then
+  if can_prompt; then
+    info "Opening the Tailscale download. Install it, open Tailscale, and allow the system extension."
+    info "Then in Tailscale → Settings, choose CLI integration → Install."
+    open "https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg" 2>/dev/null || true
+    info "Waiting for Tailscale to be installed… (press s to skip)"
+    wait_for_tailscale installed || true
+  fi
+  [ -n "$TS_BIN" ] && ok "Tailscale installed" || warn "Tailscale still not installed — skipping remote access."
+fi
+
+if [ "$TAILSCALE_SERVE" = true ] && [ -n "$TS_BIN" ] && [ -z "$TS_IP" ]; then
+  open -a Tailscale 2>/dev/null || true
+  info "Logging this Mac into Tailscale (use the same account as on your phone)…"
+  if run_ts_bg 15 up; then
+    ts_refresh
+  elif [ -n "$TS_BG_URL" ]; then
+    info "Log in here: $TS_BG_URL"
+    open "$TS_BG_URL" 2>/dev/null || true
+  fi
+  if [ -z "$TS_IP" ] && can_prompt; then
+    info "Waiting for Tailscale to connect… (press s to skip)"
+    wait_for_tailscale connected || true
+  fi
+  ts_bg_kill
   if [ -n "$TS_IP" ]; then
     ok "Tailscale connected (${TS_DNS:-no MagicDNS name} / $TS_IP)"
   else
-    warn "Tailscale is installed but not connected — open Tailscale and log in, then re-run this installer."
+    warn "Tailscale isn't connected — skipping remote access. Finish later in the console."
   fi
-else
-  warn "Tailscale not found. A Mac at home is behind your router's NAT — Tailscale is the"
-  info "easiest way to reach it from your phone anywhere without opening ports:"
-  info "  https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg  (Standalone app — recommended)"
-  info "  then Tailscale → Settings → CLI integration → Install, and install Tailscale on your phone."
 fi
 
-if [ "$TAILSCALE_SERVE" = true ]; then
-  if [ -z "$TS_IP" ]; then
-    fail "--tailscale-serve requires a connected Tailscale client."
+# tailscale serve terminates HTTPS on https://<machine>.<tailnet>.ts.net and
+# proxies to the agent on localhost. Done before the agent starts so we only
+# bind to localhost when serve actually works.
+if [ "$TAILSCALE_SERVE" = true ] && [ -n "$TS_IP" ]; then
+  info "Enabling HTTPS via Tailscale Serve…"
+  if ! run_ts_bg 20 serve --bg "http://127.0.0.1:${PORT}" && [ -n "$TS_BG_URL" ]; then
+    ts_bg_kill
+    warn "HTTPS certificates need to be enabled for your tailnet: $TS_BG_URL"
+    if can_prompt; then
+      open "$TS_BG_URL" 2>/dev/null || true
+      info "Approve it in the browser… (press s to skip)"
+      if wait_for_tailscale certs; then
+        run_ts_bg 20 serve --bg "http://127.0.0.1:${PORT}" || true
+      fi
+    fi
   fi
-  # tailscale serve terminates HTTPS on https://<machine>.<tailnet>.ts.net and
-  # proxies to the agent on localhost, so the agent doesn't need to listen on
-  # the LAN at all.
-  AGENT_HOST="127.0.0.1"
+  ts_bg_kill
+  if "$TS_BIN" serve status --json 2>/dev/null | grep -qE "(127\.0\.0\.1|localhost):${PORT}"; then
+    SERVE_OK=true
+    AGENT_HOST="127.0.0.1"
+    ok "Tailscale Serve: https://${TS_DNS} → 127.0.0.1:${PORT}"
+  else
+    warn "Tailscale Serve isn't set up yet (needs MagicDNS + HTTPS Certificates: https://login.tailscale.com/admin/dns)."
+    warn "The agent will listen on your network for now; finish in the console → Security → Remote Access."
+    if [ -n "$TS_BG_OUTPUT" ] && [ -z "$TS_BG_URL" ]; then
+      printf '%s\n' "$TS_BG_OUTPUT" | tail -3 | sed 's/^/      /'
+    fi
+  fi
+elif [ -z "$TS_BIN" ]; then
+  info "Remote access: https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg (then Settings → CLI integration)"
 fi
 
 # ─── Step 5: LaunchAgent ─────────────────────────────────────────
@@ -429,24 +560,6 @@ if [ -z "$HEALTH" ]; then
 fi
 ok "Agent is running on port $PORT"
 
-if [ "$TAILSCALE_SERVE" = true ]; then
-  SERVE_OUTPUT=""
-  if run_tailscale_serve; then
-    ok "Tailscale Serve: https://${TS_DNS} → 127.0.0.1:${PORT}"
-  else
-    CONSENT_URL="$(printf '%s' "$SERVE_OUTPUT" | grep -oE 'https://login\.tailscale\.com/[^ ]+' | head -1 || true)"
-    warn "tailscale serve didn't complete. It needs MagicDNS + HTTPS Certificates enabled for your tailnet."
-    if [ -n "$CONSENT_URL" ]; then
-      warn "Enable it here: $CONSENT_URL"
-    else
-      warn "Admin console → DNS: https://login.tailscale.com/admin/dns"
-      [ -n "$SERVE_OUTPUT" ] && printf '%s\n' "$SERVE_OUTPUT" | tail -5 | sed 's/^/      /'
-    fi
-    warn "Then re-run this installer with --tailscale-serve."
-    warn "Until then the agent only listens on localhost — re-run without the flag to listen on the network."
-  fi
-fi
-
 # ─── Always-on checks (Mac mini as a server) ─────────────────────
 ADVICE=""
 SLEEP_MIN="$(pmset -g 2>/dev/null | awk '$1 == "sleep" {print $2}')"
@@ -470,7 +583,7 @@ echo ""
 echo -e "  Open one of these in a browser to complete setup:"
 echo ""
 echo -e "    ${CYAN}http://localhost:${PORT}/PocketDev/setup${NC}      (on this Mac)"
-if [ "$TAILSCALE_SERVE" = true ] && [ -n "$TS_DNS" ]; then
+if [ "$SERVE_OK" = true ] && [ -n "$TS_DNS" ]; then
   echo -e "    ${CYAN}https://${TS_DNS}/PocketDev/setup${NC}   (any device on your tailnet)"
 else
   if [ -n "$TS_IP" ]; then
@@ -484,12 +597,16 @@ echo ""
 echo "  Create your admin account, then pair your mobile device."
 if [ -z "$TS_IP" ]; then
   echo ""
-  echo -e "  ${BOLD}Remote access:${NC} install Tailscale on this Mac and your phone, then re-run with"
-  echo -e "  ${CYAN}--tailscale-serve${NC} for an HTTPS URL that works from anywhere. Don't port-forward ${PORT}."
-elif [ "$TAILSCALE_SERVE" != true ]; then
+  echo -e "  ${BOLD}Remote access:${NC} to use the app away from home, set up Tailscale from the console"
+  echo -e "  (Security → Remote Access) or re-run with ${CYAN}--tailscale-serve${NC}. Don't port-forward ${PORT}."
+elif [ "$SERVE_OK" != true ]; then
   echo ""
-  echo -e "  ${BOLD}HTTPS:${NC} re-run with ${CYAN}--tailscale-serve${NC} to get https://${TS_DNS:-<machine>.<tailnet>.ts.net}"
-  echo "  (needed for passkey login; also keeps the agent off your LAN)."
+  echo -e "  ${BOLD}HTTPS:${NC} enable Tailscale Serve (console → Security → Remote Access, or re-run with"
+  echo -e "  ${CYAN}--tailscale-serve${NC}) to get https://${TS_DNS:-<machine>.<tailnet>.ts.net} — needed for passkeys."
+fi
+if [ -n "$TS_IP" ]; then
+  echo ""
+  echo -e "  ${BOLD}On your phone:${NC} install Tailscale, log in with the same account, keep it connected."
 fi
 if [ -n "$TS_IP" ]; then
   ADVICE="${ADVICE}    • Tailscale admin console → Machines → this Mac → Disable key expiry, so it doesn't\n      drop off your tailnet every 180 days.\n"
