@@ -105,6 +105,27 @@ export function createSecurePromptMatcher(
   }
 }
 
+/**
+ * Make raw PTY output readable for display: drop ANSI sequences and
+ * backspaces, hide the echoed wizard wrapper command, and apply
+ * carriage-return overwrites (progress bars redraw lines with `\r`).
+ */
+export function cleanTerminalOutput(raw: string): string {
+  return stripAnsi(raw)
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, (c) => (c === '\r' ? c : ''))
+    .split('\n')
+    // Lines carrying PocketDev's result markers are the echoed wrapper command
+    // (redrawn by the shell's line editor) or the markers themselves.
+    .filter((line) => !line.includes('__PD_'))
+    .map((line) => {
+      const parts = line.replace(/\r+$/, '').split('\r')
+      return parts[parts.length - 1]
+    })
+    .join('\n')
+    .replace(/^\n+/, '')
+}
+
 /** True when `line` appears on its own line in the output (ignores the echoed command that printed it). */
 export function outputHasLine(output: string, line: string): boolean {
   return stripAnsi(output)

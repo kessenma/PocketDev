@@ -5,6 +5,7 @@ import { borderRadius, spacing } from '@pocketdev/shared/theme'
 import { typeStyles } from '../../../theme/typography'
 import { useTheme } from '../../../contexts/ThemeContext'
 import CopyButton from '../../ui/CopyButton'
+import { cleanTerminalOutput } from '../../../utils/secure-prompts'
 
 interface Props {
   visible: boolean
@@ -26,6 +27,7 @@ export default function SetupTerminalPanel({
   placeholder = 'Waiting for output...',
 }: Props) {
   const { colors } = useTheme()
+  const text = cleanTerminalOutput(output)
 
   return (
     <>
@@ -49,10 +51,10 @@ export default function SetupTerminalPanel({
             nestedScrollEnabled
           >
             <Text style={[styles.outputText, { color: colors.textSecondary }]} selectable>
-              {output || placeholder}
+              {text || placeholder}
             </Text>
           </ScrollView>
-          {output ? <CopyButton value={output} label={copyLabel} /> : null}
+          {text ? <CopyButton value={text} label={copyLabel} /> : null}
         </>
       )}
     </>

@@ -82,7 +82,7 @@ export default function AscStep({ status, onStatus, onContinue }: AppleStepProps
 
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.switchRow}>
-          <Text style={[styles.cardTitle, styles.flex, { color: colors.text }]}>Share anonymous usage data</Text>
+          <Text style={[styles.cardTitle, styles.flex, { color: colors.text }]}>Share usage statistics with asc</Text>
           <Switch
             value={telemetryOn}
             onValueChange={(value) => {
@@ -95,8 +95,8 @@ export default function AscStep({ status, onStatus, onContinue }: AppleStepProps
         </View>
         <Text style={[styles.cardBody, { color: colors.textSecondary }]}>
           {asc.installed
-            ? 'asc sends anonymous usage statistics to its developers by default. You can turn it off here.'
-            : 'asc sends anonymous usage statistics by default. PocketDev turns this off after installing unless you switch it on.'}
+            ? 'asc sends pseudonymous usage statistics (which commands ran, not your apps or keys) by default. You can turn it off here.'
+            : 'asc sends pseudonymous usage statistics by default. PocketDev turns this off after installing unless you switch it on.'}
         </Text>
         {telemetryError ? <Text style={[styles.cardBody, { color: colors.error }]}>{telemetryError}</Text> : null}
       </View>

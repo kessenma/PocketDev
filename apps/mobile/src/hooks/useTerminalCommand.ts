@@ -86,7 +86,8 @@ export function useTerminalCommand(
 
   const handleSudoNeeded = useCallback(async () => {
     if (!server) return
-    const stored = await getSudoPassword(server.ip)
+    // A Keychain failure must not swallow the prompt — fall back to asking.
+    const stored = await getSudoPassword(server.ip).catch(() => null)
     if (stored && wsRef.current && readyRef.current && sessionIdRef.current) {
       wsRef.current.send(JSON.stringify({ type: 'terminal.input', sessionId: sessionIdRef.current, data: stored + '\n' }))
       return

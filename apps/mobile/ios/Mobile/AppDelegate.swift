@@ -10,6 +10,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   var reactNativeDelegate: ReactNativeDelegate?
   var reactNativeFactory: RCTReactNativeFactory?
+  var launchOptions: [UIApplication.LaunchOptionsKey: Any]?
 
   func application(
     _ application: UIApplication,
@@ -21,14 +22,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     reactNativeDelegate = delegate
     reactNativeFactory = factory
-
-    window = UIWindow(frame: UIScreen.main.bounds)
-
-    factory.startReactNative(
-      withModuleName: "Mobile",
-      in: window,
-      launchOptions: launchOptions
-    )
+    self.launchOptions = launchOptions
+    // The window is created in SceneDelegate: iOS 27 SDK builds must adopt the
+    // UIScene lifecycle or UIKit traps at launch.
 
     // APNs registration is triggered from JS after the user opts in and grants permission.
     // We only set up the notification center delegate here so delivered notifications
@@ -57,11 +53,59 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   func application(
+    _ application: UIApplication,
+    configurationForConnecting connectingSceneSession: UISceneSession,
+    options: UIScene.ConnectionOptions
+  ) -> UISceneConfiguration {
+    let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    config.delegateClass = SceneDelegate.self
+    return config
+  }
+
+  func application(
     _ app: UIApplication,
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
     RCTLinkingManager.application(app, open: url, options: options)
+  }
+}
+
+/// Hosts the React Native root view in the app's window scene.
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+  var window: UIWindow?
+
+  func scene(
+    _ scene: UIScene,
+    willConnectTo session: UISceneSession,
+    options connectionOptions: UIScene.ConnectionOptions
+  ) {
+    guard
+      let windowScene = scene as? UIWindowScene,
+      let appDelegate = UIApplication.shared.delegate as? AppDelegate,
+      let factory = appDelegate.reactNativeFactory
+    else { return }
+
+    let window = UIWindow(windowScene: windowScene)
+    self.window = window
+    appDelegate.window = window
+
+    factory.startReactNative(
+      withModuleName: "Mobile",
+      in: window,
+      launchOptions: appDelegate.launchOptions
+    )
+
+    // Cold start from a URL (pocketdev://…) arrives here instead of application(_:open:)
+    if let url = connectionOptions.urlContexts.first?.url {
+      RCTLinkingManager.application(UIApplication.shared, open: url, options: [:])
+    }
+  }
+
+  func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+    for context in URLContexts {
+      RCTLinkingManager.application(UIApplication.shared, open: context.url, options: [:])
+    }
   }
 }
 

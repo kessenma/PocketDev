@@ -112,3 +112,17 @@ describe('outputHasLine', () => {
     expect(outputHasLine(echo, 'PocketDev: API key created.')).toBe(false)
   })
 })
+
+describe('cleanTerminalOutput', () => {
+  const { cleanTerminalOutput } = require('./secure-prompts')
+  it('strips ANSI codes, backspaces and carriage-return redraws', () => {
+    const raw = "(\x08( sudo xcode-select -s '/Applications/Xcode.app/Contents/D \r\x1b[Ke\reveloper' ) && printf __PD_x1 OK\x1b[?2004l\r\r\n[sudo] password for ke: "
+    expect(cleanTerminalOutput(raw)).toBe('[sudo] password for ke: ')
+  })
+  it('applies carriage-return progress redraws', () => {
+    expect(cleanTerminalOutput('Downloading 10%\rDownloading 55%\rDownloading 100%\ndone')).toBe('Downloading 100%\ndone')
+  })
+  it('keeps plain output unchanged', () => {
+    expect(cleanTerminalOutput('line one\nline two')).toBe('line one\nline two')
+  })
+})
