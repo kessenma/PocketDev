@@ -144,7 +144,66 @@ export interface ConsoleStatus {
     httpsCertsEnabled: boolean
     serveActive: boolean
   }
+  platform?: string
+  serviceManager?: 'systemd' | 'launchd' | 'none'
+  network?: NetworkSummary
   lastUpgradeAt: string | null
+}
+
+export interface NetworkSummary {
+  lanIpv4: string | null
+  hasPublicIpv4: boolean
+  likelyPrivateNetwork: boolean
+}
+
+export interface TailscaleSetupStatus {
+  installed: boolean
+  running: boolean
+  dnsName: string | null
+  ipv4: string | null
+  httpsCertsEnabled: boolean
+  serveActive: boolean
+  cliPath: string | null
+  backendState: string | null
+  authUrl: string | null
+  magicDnsEnabled: boolean
+  keyExpiryDisabled: boolean
+  serveConflict: string | null
+  agentLoopbackOnly: boolean
+  agentPort: number
+  network: NetworkSummary
+  platform: string
+}
+
+export interface TailscaleActionResult {
+  ok: boolean
+  actionUrl: string | null
+  message: string
+  status: TailscaleSetupStatus
+}
+
+export async function fetchTailscaleStatus(refresh = false): Promise<TailscaleSetupStatus> {
+  const res = await get(`/tailscale${refresh ? '?refresh=1' : ''}`)
+  if (!res.ok) throw new Error('Failed to load Tailscale status')
+  return res.json()
+}
+
+async function tailscaleAction(res: Response): Promise<TailscaleActionResult> {
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error ?? 'Tailscale action failed')
+  return data as TailscaleActionResult
+}
+
+export async function startTailscaleLogin(): Promise<TailscaleActionResult> {
+  return tailscaleAction(await post('/tailscale/login'))
+}
+
+export async function enableTailscaleServe(): Promise<TailscaleActionResult> {
+  return tailscaleAction(await post('/tailscale/serve'))
+}
+
+export async function disableTailscaleServe(): Promise<TailscaleActionResult> {
+  return tailscaleAction(await del('/tailscale/serve'))
 }
 
 export async function fetchStatus(): Promise<ConsoleStatus> {

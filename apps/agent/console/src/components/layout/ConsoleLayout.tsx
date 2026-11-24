@@ -60,11 +60,13 @@ export function ConsoleLayout() {
               <h1 className="font-heading text-lg font-semibold uppercase leading-none tracking-[0.08em] sm:text-xl">Server Control Board</h1>
             </div>
 
-            <div className="hidden shrink-0 flex-wrap items-center gap-2 text-sm sm:flex">
+            <div className="hidden min-w-0 flex-wrap items-center justify-end gap-2 text-sm sm:flex">
               <Badge variant="outline" className="border-border text-foreground">
                 Build v{agentVersion}
               </Badge>
-              <Badge className="bg-secondary text-secondary-foreground">{status.serverIp}:{status.port}</Badge>
+              <Badge className="max-w-[18rem] bg-secondary text-secondary-foreground" title={`${status.serverIp}:${status.port}`}>
+                <span className="truncate">{status.serverIp}:{status.port}</span>
+              </Badge>
               <Badge className={status.paired ? 'bg-[var(--bauhaus-yellow)] text-black' : 'bg-secondary text-secondary-foreground'}>
                 {status.paired ? 'Paired' : 'Awaiting Pairing'}
               </Badge>

@@ -107,7 +107,9 @@ export function PasskeySettings({ disabled }: { disabled?: boolean }) {
         {disabled && (
           <div className="rounded-lg border border-border bg-secondary px-3 py-3">
             <p className="text-sm text-muted-foreground">
-              Configure a custom domain above to enable passkey registration.
+              {window.location.protocol === 'https:'
+                ? 'Configure a custom domain above to enable passkey registration.'
+                : 'Passkeys need HTTPS on a domain name — configure a custom domain, or enable Tailscale Serve (Remote Access) and open this console at its https://….ts.net address.'}
             </p>
           </div>
         )}
