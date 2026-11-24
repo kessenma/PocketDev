@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { DB } from '@op-engineering/op-sqlite'
-import { listDirectory, fetchFileContent } from '../services/api'
+import { listDirectory, fetchFileContent, buildApiUrl } from '../services/api'
 import { inferLanguage } from '../components/files/model'
 import {
   upsertOfflineSnapshot,
@@ -286,7 +286,7 @@ async function reportSnapshotToAgent(
     if (!server) return
     const { buildPocketDevAuthorizationHeader } = await import('../services/auth')
     const header = await buildPocketDevAuthorizationHeader()
-    await fetch(`http://${server.ip}:${server.port}/PocketDev/api/console/offline-snapshots`, {
+    await fetch(buildApiUrl(server.ip, server.port, '/console/offline-snapshots'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: header },
       body: JSON.stringify({ projectId, branch, fileCount, totalBytes, downloadedAt }),
@@ -305,7 +305,7 @@ async function deleteSnapshotFromAgent(projectId: string, branch: string): Promi
     const header = await buildPocketDevAuthorizationHeader()
     const encodedBranch = encodeURIComponent(branch)
     await fetch(
-      `http://${server.ip}:${server.port}/PocketDev/api/console/offline-snapshots/${encodeURIComponent(projectId)}/${encodedBranch}`,
+      buildApiUrl(server.ip, server.port, `/console/offline-snapshots/${encodeURIComponent(projectId)}/${encodedBranch}`),
       { method: 'DELETE', headers: { Authorization: header } },
     )
   } catch {

@@ -89,6 +89,11 @@ function apiUrl(ip: string, port: number, path: string): string {
   return `${protocol}://${ip}:${port}/PocketDev/api${path}`
 }
 
+/** Public form of apiUrl() for stores that call fetch() directly. */
+export function buildApiUrl(ip: string, port: number, path: string): string {
+  return apiUrl(ip, port, path)
+}
+
 export async function pairWithServer(
   ip: string,
   port: number,
