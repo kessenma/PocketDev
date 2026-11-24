@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ExternalLink } from '#/components/ui/ExternalLink'
 import { ShipIosIllustration } from '#/components/illustrations/ShipIosIllustration'
+import { Screenshot, ScreenshotRow } from '#/components/docs/Screenshot'
 
 export const Route = createFileRoute('/ios-developers')({
   staticData: { navLabel: 'iOS & the App Store', navOrder: 1.6 },
@@ -64,6 +65,15 @@ function IosDevelopersPage() {
         don't need. Anything that needs a password runs in the app's terminal on the Mac, and you type the
         password into a secure prompt on your phone.
       </p>
+      <div className="not-prose my-6 mx-auto max-w-sm">
+        <Screenshot
+          src="/screenshots/app-store/01-section.webp"
+          width={700}
+          height={473}
+          alt="The App Store section in Workspace Tools, showing Xcode, asc CLI and App Store Connect key status"
+          caption="The App Store section shows what's already set up."
+        />
+      </div>
 
       <h3>1. Xcode</h3>
       <p>
@@ -88,6 +98,24 @@ function IosDevelopersPage() {
         can't be used here: App Store Connect rejects builds made with one. Install the release version next
         to the beta if you need both.
       </p>
+      <ScreenshotRow>
+        <Screenshot
+          src="/screenshots/app-store/02-xcode.webp"
+          width={600}
+          height={1304}
+          variant="phone"
+          alt="The Xcode step: Xcode 27.2 is installed, with a Finish Xcode setup button"
+          caption="Xcode is installed but needs its one-time setup."
+        />
+        <Screenshot
+          src="/screenshots/app-store/03-mac-password.webp"
+          width={600}
+          height={1304}
+          variant="phone"
+          alt="A secure prompt on the phone asking for the Mac's password"
+          caption="The Mac's password goes into a secure prompt."
+        />
+      </ScreenshotRow>
 
       <h3>2. The asc command-line tool</h3>
       <p>
@@ -100,6 +128,16 @@ function IosDevelopersPage() {
         asc sends pseudonymous usage statistics by default (which commands ran, not your apps, keys or
         files). The setup has a switch to turn that off.
       </p>
+      <div className="not-prose my-6">
+        <Screenshot
+          src="/screenshots/app-store/04-asc.webp"
+          width={600}
+          height={1304}
+          variant="phone"
+          alt="The asc CLI step: asc 7.3.1 is installed, with a switch for sharing usage statistics"
+          caption="The usage-statistics switch."
+        />
+      </div>
 
       <h3>3. Connect your Apple account</h3>
       <p>
@@ -121,6 +159,32 @@ function IosDevelopersPage() {
           PocketDev checks the key with Apple before saving it.
         </li>
       </ul>
+      <ScreenshotRow columns={3}>
+        <Screenshot
+          src="/screenshots/app-store/05-create-key.webp"
+          width={600}
+          height={1304}
+          variant="phone"
+          alt="The Apple account step with Create a key for me and the Admin role selected"
+          caption="Create a key for me, with the Admin role."
+        />
+        <Screenshot
+          src="/screenshots/app-store/07-apple-password.webp"
+          width={600}
+          height={1304}
+          variant="phone"
+          alt="A secure prompt for the Apple Account password"
+          caption="Your Apple Account password goes straight to Apple's sign-in on the Mac."
+        />
+        <Screenshot
+          src="/screenshots/app-store/06-existing-key.webp"
+          width={600}
+          height={1304}
+          variant="phone"
+          alt="The Use an existing key option with a .p8 file picker, Key ID and Issuer ID fields"
+          caption="Or use an existing .p8 key."
+        />
+      </ScreenshotRow>
       <p>
         You can choose the key's role. <strong>Admin</strong> is the default because Xcode's automatic
         signing with an API key needs it. <strong>App Manager</strong> is more limited and works for

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { InstallCommand } from '#/components/landing/InstallCommand'
 import { ExternalLink } from '#/components/ui/ExternalLink'
 import { HomeServerIllustration } from '#/components/illustrations/HomeServerIllustration'
+import { Screenshot, ScreenshotRow } from '#/components/docs/Screenshot'
 
 export const Route = createFileRoute('/home-servers')({
   staticData: { navLabel: 'Running on a Home Server', navOrder: 1.5 },
@@ -83,6 +84,50 @@ function HomeServersPage() {
       <h2>Set up Tailscale</h2>
       <p>You can do this from the installer or from the web console. Both run the same steps.</p>
 
+      <h3>Installing the Tailscale app on a Mac</h3>
+      <p>
+        Both options start by installing the Tailscale app. This is what it looks like (red boxes mark what
+        to click):
+      </p>
+      <ScreenshotRow>
+        <Screenshot
+          src="/screenshots/tailscale/01-installer.webp"
+          width={1000}
+          height={723}
+          alt="The Tailscale installer on the Install step"
+          caption="1. Run the installer: Continue, then Install, and enter your Mac's password."
+        />
+        <Screenshot
+          src="/screenshots/tailscale/02-grant-permissions.webp"
+          width={1100}
+          height={310}
+          alt="Tailscale's Required permissions screen with a Grant permissions button for the system extension"
+          caption="2. Open Tailscale. Under Required permissions, click Grant permissions."
+        />
+      </ScreenshotRow>
+      <ScreenshotRow>
+        <Screenshot
+          src="/screenshots/tailscale/03-approve-extension.webp"
+          width={520}
+          height={754}
+          variant="dialog"
+          alt="macOS dialog: System Extension Approval Required, with an Open Settings button"
+          caption={
+            <>
+              3. Click Open Settings, then turn on Tailscale under General → Login Items &amp; Extensions →
+              Network Extensions.
+            </>
+          }
+        />
+        <Screenshot
+          src="/screenshots/tailscale/04-start-at-login.webp"
+          width={1100}
+          height={378}
+          alt="Tailscale's Quality of life settings with the Start at login switch"
+          caption="4. Turn on Start at login, so Tailscale comes back after a restart. Then click Next and Log In."
+        />
+      </ScreenshotRow>
+
       <h3>Option A: let the installer walk you through it</h3>
       <p>
         If Tailscale isn't connected, the installer asks <code>Set up Tailscale now? [Y/n]</code>. Press
@@ -113,6 +158,13 @@ function HomeServersPage() {
         On home networks, the <strong>Security</strong> page starts with a <strong>Remote Access</strong> card
         that asks how your phone will reach this machine:
       </p>
+      <Screenshot
+        src="/screenshots/tailscale/console-remote-access.webp"
+        width={1200}
+        height={562}
+        alt="The Remote Access card in the PocketDev console, showing the Tailscale checklist"
+        caption="The Remote Access card after choosing From anywhere."
+      />
       <ul>
         <li>
           <strong>From anywhere (recommended):</strong> a live checklist that updates as you go:
@@ -181,7 +233,7 @@ function HomeServersPage() {
           never leaves the house is a security trade-off you'll have to weigh yourself.
         </li>
         <li>
-          <strong>Tailscale:</strong> turn on <em>Launch at login</em> in the Tailscale app, and disable key
+          <strong>Tailscale:</strong> turn on <em>Start at login</em> in the Tailscale app, and disable key
           expiry for the machine.
         </li>
         <li>
