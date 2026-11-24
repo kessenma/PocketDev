@@ -15,10 +15,12 @@ interface Props {
   serverIp: string
   port: number
   secure?: boolean
+  /** Shown under the server address, e.g. a localhost warning or "via Tailscale". */
+  hint?: string | null
   onPasscodeChanged: (code: string) => void
 }
 
-export function ConnectionWizard({ passcode, serverIp, port, secure = false, onPasscodeChanged }: Props) {
+export function ConnectionWizard({ passcode, serverIp, port, secure = false, hint = null, onPasscodeChanged }: Props) {
   const [customCode, setCustomCode] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -118,6 +120,7 @@ export function ConnectionWizard({ passcode, serverIp, port, secure = false, onP
               </div>
               <div className="space-y-0.5 px-1 text-xs text-foreground/55">
                 <p>Server: {serverIp}:{port}</p>
+                {hint && <p className="text-amber-600">{hint}</p>}
                 <p>Passcode: {passcode}</p>
               </div>
               <CopyButton

@@ -14,6 +14,7 @@ export function PairingPanel() {
         serverIp={status.serverIp}
         port={status.port}
         secure={status.secure}
+        hint={status.pairingHint ?? null}
         onPasscodeChanged={updatePasscode}
       />
       <DeviceList

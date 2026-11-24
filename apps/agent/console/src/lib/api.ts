@@ -134,6 +134,16 @@ export interface ConsoleStatus {
   serverIp: string
   port: number
   secure: boolean
+  /** Why the pairing address may not work from a phone (e.g. localhost), or how it's reached. */
+  pairingHint?: string | null
+  tailscale?: {
+    installed: boolean
+    running: boolean
+    dnsName: string | null
+    ipv4: string | null
+    httpsCertsEnabled: boolean
+    serveActive: boolean
+  }
   lastUpgradeAt: string | null
 }
 

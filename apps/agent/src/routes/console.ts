@@ -68,6 +68,7 @@ import {
   restartAgentShell,
   spawnDetachedScript,
 } from '../services/system/platform.ts'
+import { getTailscaleInfo, choosePairingAddress, isUnreachableFromPhone } from '../services/system/tailscale.ts'
 import {
   listEnvVars,
   createEnvVar,
@@ -305,23 +306,26 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       lastSeenAt: d.lastSeenAt,
     }))
 
-    // Detect if Caddy is running (HTTPS reverse proxy in front of agent)
-    let secure = false
-    let externalPort = PORT
-    if (await isCaddyActive()) {
-      secure = true
-      externalPort = 443
-    }
-
-    // Use domain from domain.txt if available
+    // Pick the address for the pairing QR: domain.txt > Caddy/Tailscale Serve
+    // HTTPS > Tailscale IP (macOS) > the Host the browser used.
     const dataDir = process.env.POCKETDEV_DATA_DIR ?? './data'
-    let serverHost = extractHostIp(request)
+    let domain: string | null = null
     try {
-      const domain = (await readFile(join(dataDir, 'domain.txt'), 'utf-8')).trim()
-      if (domain) serverHost = domain
+      domain = (await readFile(join(dataDir, 'domain.txt'), 'utf-8')).trim() || null
     } catch {
       // No domain file
     }
+    const requestHost = extractHostIp(request)
+    const [caddyActive, tailscale] = await Promise.all([isCaddyActive(), getTailscaleInfo()])
+    const pairing = choosePairingAddress({
+      requestHost,
+      domain,
+      caddyActive,
+      agentPort: PORT,
+      agentHost: process.env.POCKETDEV_HOST ?? '0.0.0.0',
+      tailscale,
+      preferTailnet: IS_MACOS || isUnreachableFromPhone(requestHost),
+    })
 
     return {
       currentUser: serializeConsoleUser(currentUser),
@@ -330,9 +334,11 @@ export const consoleRoutes = new Elysia({ prefix: '/api/console' })
       paired: hasDevices(),
       devices,
       passcode: getActivePasscode(),
-      serverIp: serverHost,
-      port: externalPort,
-      secure,
+      serverIp: pairing.host,
+      port: pairing.port,
+      secure: pairing.secure,
+      pairingHint: pairing.hint,
+      tailscale,
       lastUpgradeAt: getLastUpgradeAt(),
     }
   })
