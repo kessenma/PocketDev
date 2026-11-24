@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { UserAgreementIllustration } from '#/components/illustrations/UserAgreementIllustration'
 
 export const Route = createFileRoute('/user-agreement')({
   staticData: { navLabel: 'User Agreement', navOrder: 9 },
@@ -16,6 +17,7 @@ function UserAgreementPage() {
         This User Agreement governs the use of PocketDev. By installing, accessing, or using
         PocketDev, you agree to these terms.
       </p>
+      <UserAgreementIllustration />
 
       <h2>Beta Software</h2>
       <p>

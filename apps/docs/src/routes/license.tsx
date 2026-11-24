@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { LicenseIllustration } from '#/components/illustrations/LicenseIllustration'
 
 export const Route = createFileRoute('/license')({
   staticData: { navLabel: 'License', navOrder: 7 },
@@ -14,6 +15,7 @@ function LicensePage() {
         <strong>Functional Source License, Version 1.1, Apache 2.0 Future License</strong>{' '}
         (FSL-1.1-Apache-2.0).
       </p>
+      <LicenseIllustration />
 
       <h2>What you can do</h2>
       <p>

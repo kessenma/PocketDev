@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { MobileAppIllustration } from '#/components/illustrations/MobileAppIllustration'
 
 export const Route = createFileRoute('/mobile-app')({
   staticData: { navLabel: 'Mobile App', navOrder: 5 },
@@ -13,6 +14,7 @@ function MobileAppPage() {
         PocketDev includes a mobile app for connecting to your self-hosted PocketDev agent and
         managing coding tasks remotely.
       </p>
+      <MobileAppIllustration />
 
       <h2>Features</h2>
       <ul>

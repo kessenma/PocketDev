@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { PrivacyIllustration } from '#/components/illustrations/PrivacyIllustration'
 
 export const Route = createFileRoute('/privacy-policy')({
   staticData: { navLabel: 'Privacy Policy', navOrder: 8 },
@@ -17,6 +18,7 @@ function PrivacyPolicyPage() {
         PocketDev is designed so that users run the agent-side app on their own servers and
         manage their own accounts and credentials there.
       </p>
+      <PrivacyIllustration />
 
       <h2>Information Collected</h2>
       <p>

@@ -3,6 +3,7 @@ import { DEMO_URL } from '@pocketdev/shared/links'
 import { InstallCommand } from '#/components/landing/InstallCommand'
 import { ExternalLink } from '#/components/ui/ExternalLink'
 import { docsTokens } from '#/components/docs/theme'
+import { AgentIllustration } from '#/components/illustrations/AgentIllustration'
 
 export const Route = createFileRoute('/agent')({
   staticData: { navLabel: 'Agent', navOrder: 3 },
@@ -41,6 +42,7 @@ function AgentPage() {
         interactive terminal, brokers file and git operations, proxies your dev server for preview,
         and serves a browser-based admin console — all over one port.
       </p>
+      <AgentIllustration />
 
       <h2>Try the console</h2>
       <p>

@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ExternalLink } from '#/components/ui/ExternalLink'
+import { EncryptionIllustration } from '#/components/illustrations/EncryptionIllustration'
 
 export const Route = createFileRoute('/encryption')({
   staticData: { navLabel: 'Encryption', navOrder: 6 },
@@ -14,6 +15,7 @@ function EncryptionPage() {
         This document describes the encryption used by the PocketDev iOS app, provided for Apple
         App Store compliance review and US export classification purposes.
       </p>
+      <EncryptionIllustration />
 
       <h2>Encryption Algorithms Used</h2>
 

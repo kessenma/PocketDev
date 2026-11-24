@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ExternalLink } from '#/components/ui/ExternalLink'
+import { ArchitectureIllustration } from '#/components/illustrations/ArchitectureIllustration'
 
 export const Route = createFileRoute('/architecture')({
   staticData: { navLabel: 'Architecture', navOrder: 2 },
@@ -16,6 +17,7 @@ function ArchitecturePage() {
         products. Your live server state, paired devices, terminal sessions, and workspace actions
         stay with the agent running on your own machine.
       </p>
+      <ArchitectureIllustration />
 
       <h2>System Overview</h2>
       <p>

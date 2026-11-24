@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { InstallCommand } from '#/components/landing/InstallCommand'
 import { ExternalLink } from '#/components/ui/ExternalLink'
+import { GetStartedIllustration } from '#/components/illustrations/GetStartedIllustration'
 
 export const Route = createFileRoute('/get-started')({
   staticData: { navLabel: 'Get Started', navOrder: 1 },
@@ -17,6 +18,7 @@ function GetStartedPage() {
         The source code is available at{' '}
         <ExternalLink href="https://github.com/kessenma/PocketDev">github.com/kessenma/PocketDev</ExternalLink>.
       </p>
+      <GetStartedIllustration />
 
       <h2>Prerequisites</h2>
       <ul>

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { TasksIllustration } from '#/components/illustrations/TasksIllustration'
 
 export const Route = createFileRoute('/tasks')({
   staticData: { navLabel: 'Tasks', navOrder: 4 },
@@ -14,6 +15,7 @@ function TasksPage() {
         in real time. You can start a task from anywhere, monitor it as the agent works, respond to
         questions and permission prompts, and continue a conversation after the task completes.
       </p>
+      <TasksIllustration />
 
       <h2>Providers</h2>
       <p>
