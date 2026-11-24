@@ -5,8 +5,8 @@ const ALUMINIUM = '#d9d9d6'
 const GROUND = '#7d7468'
 
 /**
- * Bauhaus-style illustration for the User Agreement page: a yellow "beta, as
- * is" caution sign, a phone where you approve each proposed action, and the
+ * Bauhaus-style illustration for the User Agreement page: the agreement
+ * sheet, a phone where you approve each proposed action, and the
  * Mac mini on your own desk that you look after.
  */
 export function UserAgreementIllustration() {
@@ -19,24 +19,28 @@ export function UserAgreementIllustration() {
         className="mx-auto block h-auto w-full max-w-xl"
       >
         <title id="user-agreement-illustration-title">
-          A beta caution sign, a phone asking you to approve an action, and your own Mac mini
+          An agreement sheet, a phone asking you to approve an action, and your own Mac mini
         </title>
         <style>{`
-          .pd-terms-sign { transform-box: view-box; transform-origin: 140px 160px; animation: pd-terms-sway 7s ease-in-out infinite; }
           .pd-terms-link { stroke-dasharray: 2 10; animation: pd-terms-flow 3.2s linear infinite; }
-          .pd-terms-ok, .pd-terms-led { animation: pd-terms-pulse 3.6s ease-in-out infinite; }
-          @keyframes pd-terms-sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+          .pd-terms-ok, .pd-terms-led, .pd-terms-seal { animation: pd-terms-pulse 3.6s ease-in-out infinite; }
           @keyframes pd-terms-flow { to { stroke-dashoffset: -24; } }
           @keyframes pd-terms-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-          @media (prefers-reduced-motion: reduce) { .pd-terms-sign, .pd-terms-link, .pd-terms-ok, .pd-terms-led { animation: none; } }
+          @media (prefers-reduced-motion: reduce) { .pd-terms-link, .pd-terms-ok, .pd-terms-led, .pd-terms-seal { animation: none; } }
         `}</style>
 
-        {/* Beta, as is: a caution sign on a post */}
-        <g className="pd-terms-sign">
-          <rect x={137} y={96} width={6} height={64} fill={GROUND} />
-          <polygon points="140,30 180,98 100,98" fill={yellow} stroke={yellow} strokeWidth={8} strokeLinejoin="round" />
-          <rect x={136.5} y={52} width={7} height={26} rx={3.5} fill={black} />
-          <circle cx={140} cy={88} r={4} fill={black} />
+        {/* The agreement: a sheet with a signed check */}
+        <g transform="translate(110 34)">
+          <polygon points="0,0 64,0 80,16 80,112 0,112" fill={cream} />
+          <polygon points="64,0 64,16 80,16" fill={ALUMINIUM} />
+          <rect x={12} y={26} width={44} height={5} rx={2.5} fill={black} />
+          <rect x={12} y={38} width={56} height={5} rx={2.5} fill={GROUND} />
+          <rect x={12} y={50} width={48} height={5} rx={2.5} fill={GROUND} />
+          <rect x={12} y={62} width={52} height={5} rx={2.5} fill={GROUND} />
+          <g className="pd-terms-seal">
+            <circle cx={58} cy={92} r={12} fill={blue} />
+            <path d="M52 92 l4 4 l7 -8" fill="none" stroke={cream} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          </g>
         </g>
 
         {/* Phone: one proposed action, waiting for your approval */}
@@ -72,9 +76,9 @@ export function UserAgreementIllustration() {
         <line x1={24} y1={160} x2={616} y2={160} stroke={GROUND} strokeWidth={3} strokeLinecap="round" />
       </svg>
       <figcaption className="mt-2 text-center text-sm" style={{ color: '#998d79' }}>
-        Free for now, and still in beta too —
+        Your server, your keys, your say —
         <br />
-        your server, your call; each step&apos;s up to you.
+        you approve each step along the way.
       </figcaption>
     </figure>
   )
