@@ -232,6 +232,9 @@ function HeroDescription({ onOpenBeta }: { onOpenBeta: () => void }) {
         From pocket to production
       </p>
       <div className="mt-5 w-full max-w-[min(92vw,40rem)] rounded-2xl border border-border/50 bg-background/70 p-3 text-left shadow-sm backdrop-blur-sm">
+        <p className="mb-2 px-1 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          Agent install · Linux + macOS
+        </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <code className="min-w-0 flex-1 rounded-xl bg-muted/70 px-3 py-2 font-mono text-[0.72rem] leading-relaxed text-foreground/85 sm:text-xs">
             {INSTALL_COMMAND_LINES.map((line) => (
