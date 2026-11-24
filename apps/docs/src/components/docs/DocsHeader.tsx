@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Menu } from 'lucide-react'
+import { ArrowUpRight, Menu } from 'lucide-react'
 import githubIcon from '../../../../../packages/shared/assets/brands/github-white.png'
 import { docsFonts, docsTokens } from './theme'
 
@@ -23,12 +23,14 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
       <div className="flex flex-1 items-center gap-3">
         <a
           href="https://pocketdev.run"
-          className="text-sm font-semibold transition-colors hover:opacity-80"
+          className="flex items-center gap-2 text-sm font-semibold transition-opacity hover:opacity-80"
           style={{
             fontFamily: docsFonts.display,
             color: docsTokens.colors.text,
           }}
+          aria-label="PocketDev home"
         >
+          <img src="/apple-touch-icon.png" alt="" width={28} height={28} className="rounded-lg" />
           PocketDev
         </a>
         <span
@@ -45,6 +47,18 @@ export function DocsHeader({ onMenuToggle }: { onMenuToggle: () => void }) {
           Docs
         </Link>
       </div>
+
+      <a
+        href="https://pocketdev.run"
+        className="hidden items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-70 sm:flex"
+        style={{
+          color: docsTokens.colors.textSecondary,
+          border: `1px solid ${docsTokens.colors.border}`,
+        }}
+      >
+        pocketdev.run
+        <ArrowUpRight size={13} />
+      </a>
 
       <a
         href="https://github.com/kessenma/PocketDev"
