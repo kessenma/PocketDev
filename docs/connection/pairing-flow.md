@@ -47,7 +47,7 @@ One-time use: Disabled after successful pairing
 ```
 
 The code is displayed as:
-- **QR code**: JSON payload `{ host, port, code }` rendered via qrcode library
+- **QR code**: JSON payload `{ host, port, code, secure }` rendered via qrcode library. `secure: true` makes the app use `https://`/`wss://`. The address comes from `choosePairingAddress()` (`apps/agent/src/services/system/tailscale.ts`): domain.txt → Caddy/Tailscale Serve (443, secure) → Tailscale IP (macOS) → browser `Host`. See `docs/macos/tailscale.md`.
 - **Connection URL**: `pocketdev://host:port/code`
 - **Manual display**: Host, port, and code shown separately
 
