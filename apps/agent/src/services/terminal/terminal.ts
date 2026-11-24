@@ -1,4 +1,5 @@
 import type { Subprocess } from 'bun'
+import { IS_MACOS } from '../system/platform.ts'
 
 export interface TerminalSession {
   id: string
@@ -33,6 +34,8 @@ export function createTerminalSession(
     TERM: 'xterm-256color',
     COLUMNS: '80',
     LINES: '24',
+    // macOS sudo prompts "Password:"; match Linux's wording so the app's sudo sheet detects it.
+    ...(IS_MACOS ? { SUDO_PROMPT: '[sudo] password for %p: ' } : {}),
     PATH: process.env.PATH
       ? `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${process.env.PATH}`
       : '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',

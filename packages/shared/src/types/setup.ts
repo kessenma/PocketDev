@@ -55,6 +55,100 @@ export interface PrerequisitesReport {
   ready: boolean
 }
 
+// ─── Apple / App Store Connect (macOS hosts only) ────────────────────
+
+export type AppleApiKeyRole = 'ADMIN' | 'APP_MANAGER' | 'DEVELOPER'
+
+export interface AppleXcodeStatus {
+  /** A full Xcode.app exists in /Applications */
+  installed: boolean
+  app_path: string | null
+  version: string | null
+  build: string | null
+  /** Beta builds can't upload to the App Store */
+  beta: boolean
+  /** `xcode-select -p` points at a full Xcode (not the Command Line Tools) */
+  selected: boolean
+  developer_dir: string | null
+  license_accepted: boolean
+  first_launch_done: boolean
+  ios_platform_installed: boolean
+}
+
+export interface AppleAscStatus {
+  installed: boolean
+  path: string | null
+  version: string | null
+  telemetry_enabled: boolean | null
+}
+
+export interface AppleAccountStatus {
+  /** asc has a stored App Store Connect API key profile */
+  configured: boolean
+  profile_name: string | null
+  key_id: string | null
+  /** Result of the last network validation: 'ok' | 'failed' | null when not validated */
+  validation: string | null
+  validation_error: string | null
+  /** A temporary Apple Account web session (only needed while creating a key) */
+  web_session: boolean
+}
+
+/** Shell commands the wizard runs in the setup terminal (sudo prompts handled by the app). */
+export interface AppleSetupCommands {
+  install_xcode_app_store: string
+  install_xcode_xcodes: string
+  finish_xcode: string | null
+  download_ios_platform: string | null
+  install_asc: string
+}
+
+export interface AppleSetupStatus {
+  supported: boolean
+  xcode: AppleXcodeStatus
+  asc: AppleAscStatus
+  account: AppleAccountStatus
+  signing_identities: number
+  commands: AppleSetupCommands
+  /** Xcode ready + asc installed + a key configured */
+  ready: boolean
+}
+
+export interface AppleCreateKeyRequest {
+  apple_id: string
+  key_name?: string
+  role?: AppleApiKeyRole
+}
+
+export interface AppleCreateKeyCommand {
+  command: string
+  key_name: string
+  role: AppleApiKeyRole
+}
+
+export interface AppleImportKeyRequest {
+  key_id: string
+  issuer_id: string
+  /** Contents of the AuthKey_<KEY_ID>.p8 file */
+  private_key: string
+  name?: string
+}
+
+export interface AppleKeyResult {
+  ok: boolean
+  error: string | null
+  key_id: string | null
+  profile_name: string | null
+  status: AppleSetupStatus
+}
+
+export interface AppleVerifyResult {
+  ok: boolean
+  error: string | null
+  apps: Array<{ id: string; name: string; bundle_id: string | null }>
+  status: AppleSetupStatus
+}
+
 // ─── Git wizard types ────────────────────────────────────────────────
 
 export interface GitSetupStatus {

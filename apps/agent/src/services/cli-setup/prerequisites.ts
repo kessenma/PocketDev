@@ -11,7 +11,8 @@ import {
 import { checkCopilotStatus } from './copilot-setup.ts'
 import { checkOpenCodeStatus } from './opencode-setup.ts'
 import { checkMinimaxStatus } from './minimax-setup.ts'
-import { platformCommand } from '../system/platform.ts'
+import { platformCommand, IS_MACOS } from '../system/platform.ts'
+import { appleClaudeMdLines, appleToolChecks, getAppleSetupStatus } from './apple-setup.ts'
 
 const EXEC_TIMEOUT_MS = 15_000
 const PREREQUISITES_CACHE_TTL_MS = 2 * 60_000
@@ -868,6 +869,8 @@ function buildServerClaudeMd(report: PrerequisitesReport): string {
     '- **projects** — known repositories (name, absolute_path, remote_url)',
   )
 
+  lines.push(...appleClaudeMdLines(report.tools))
+
   lines.push('', `*Updated: ${new Date().toISOString()}*`)
   return lines.join('\n')
 }
@@ -907,6 +910,14 @@ async function checkAllPrerequisitesUncached(): Promise<PrerequisitesReport> {
     }
     return tool
   })
+  // Optional Apple tooling (Xcode + asc) — macOS hosts only, never affects `ready`.
+  if (IS_MACOS) {
+    try {
+      tools.push(...appleToolChecks(await getAppleSetupStatus()))
+    } catch {
+      // Non-critical — the Apple section just won't show
+    }
+  }
 
   const gitTool = toolsById.get('git')
   const githubCliTool = toolsById.get('github_cli')
